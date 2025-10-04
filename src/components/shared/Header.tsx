@@ -238,7 +238,11 @@ interface BreadcrumbProps {
 const Breadcrumb: React.FC<BreadcrumbProps> = ({ pathname, className }) => {
   const router = useRouter();
   
-  const generateBreadcrumbs = useCallback((): BreadcrumbItem[] => {
+  const handleBreadcrumbClick = React.useCallback((href: string) => {
+    router.push(href);
+  }, [router]);
+  
+  const breadcrumbs = React.useMemo((): BreadcrumbItem[] => {
     const segments = pathname.split('/').filter(Boolean);
     const breadcrumbs: BreadcrumbItem[] = [
       { label: 'Home', href: '/', icon: Home }
@@ -266,21 +270,19 @@ const Breadcrumb: React.FC<BreadcrumbProps> = ({ pathname, className }) => {
     return breadcrumbs.slice(-3); // Max 3 levels
   }, [pathname]);
   
-  const breadcrumbs = generateBreadcrumbs();
-  
   return (
-    <nav className={cn('flex items-center space-x-1 text-sm', className)}>
-      {breadcrumbs.map((item, index) => {
-        const Icon = item.icon;
-        const isLast = index === breadcrumbs.length - 1;
-        
-        return (
-          <React.Fragment key={item.href}>
-            <TooltipProvider>
+    <TooltipProvider>
+      <nav className={cn('flex items-center space-x-1 text-sm', className)}>
+        {breadcrumbs.map((item, index) => {
+          const Icon = item.icon;
+          const isLast = index === breadcrumbs.length - 1;
+          
+          return (
+            <React.Fragment key={`${item.href}-${index}`}>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
-                    onClick={() => router.push(item.href)}
+                    onClick={() => handleBreadcrumbClick(item.href)}
                     className={cn(
                       'flex items-center gap-1 px-2 py-1 rounded-md transition-colors',
                       'hover:bg-zinc-100 dark:hover:bg-zinc-800',
@@ -297,15 +299,15 @@ const Breadcrumb: React.FC<BreadcrumbProps> = ({ pathname, className }) => {
                   <p>{item.label}</p>
                 </TooltipContent>
               </Tooltip>
-            </TooltipProvider>
-            
-            {!isLast && (
-              <ChevronRight className="h-3 w-3 text-zinc-400" />
-            )}
-          </React.Fragment>
-        );
-      })}
-    </nav>
+              
+              {!isLast && (
+                <ChevronRight className="h-3 w-3 text-zinc-400" />
+              )}
+            </React.Fragment>
+          );
+        })}
+      </nav>
+    </TooltipProvider>
   );
 };
 
@@ -755,9 +757,12 @@ export const Header: React.FC<HeaderProps> = ({ className, onMenuToggle }) => {
               <Menu className="h-5 w-5" />
             </Button>
             
-            {/* Breadcrumbs - Desktop Only */}
+            {/* Breadcrumbs - Desktop Only - Temporarily disabled */}
             <div className="hidden lg:block">
-              <Breadcrumb pathname={pathname} />
+              {/* <Breadcrumb pathname={pathname} /> */}
+              <div className="text-sm text-zinc-600 dark:text-zinc-400">
+                {pathname === '/' ? 'Home' : pathname.split('/').pop()?.charAt(0).toUpperCase() + pathname.split('/').pop()?.slice(1)}
+              </div>
             </div>
           </div>
           

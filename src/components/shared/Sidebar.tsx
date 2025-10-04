@@ -504,14 +504,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
   // ============================================================================
 
   useEffect(() => {
-    const savedState = localStorage.getItem('sidebar-collapsed');
-    if (savedState !== null) {
-      setIsCollapsed(JSON.parse(savedState));
+    if (typeof window !== 'undefined') {
+      const savedState = localStorage.getItem('sidebar-collapsed');
+      if (savedState !== null) {
+        setIsCollapsed(JSON.parse(savedState));
+      }
     }
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('sidebar-collapsed', JSON.stringify(isCollapsed));
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('sidebar-collapsed', JSON.stringify(isCollapsed));
+    }
   }, [isCollapsed]);
 
   useEffect(() => {

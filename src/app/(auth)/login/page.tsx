@@ -2,27 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/SupabaseAuthContext';
 import AuthLayout from '@/components/shared/AuthLayout';
-
-// Validation schema
-const loginSchema = z.object({
-  email: z
-    .string()
-    .min(1, 'Email is required')
-    .email('Please enter a valid email address'),
-  password: z
-    .string()
-    .min(1, 'Password is required')
-    .min(6, 'Password must be at least 6 characters'),
-  rememberMe: z.boolean().optional(),
-});
-
-type LoginFormData = z.infer<typeof loginSchema>;
 
 interface DemoAccount {
   id: string;
@@ -67,23 +49,19 @@ const demoAccounts: DemoAccount[] = [
 const LoginPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [emailValue, setEmailValue] = useState('');
+  const [passwordValue, setPasswordValue] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const router = useRouter();
   const { login, loginWithGoogle, loginWithGithub, loading, error, isInitialized, getRedirectPath } = useAuth();
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isValid },
-    setValue,
-    watch,
-    trigger
-  } = useForm<LoginFormData>({
-    resolver: zodResolver(loginSchema),
-    mode: 'onChange',
+  // Debug: Log form state
+  console.log('Login form state:', {
+    emailValue,
+    passwordValue,
+    loading,
+    isInitialized
   });
-
-  const emailValue = watch('email');
-  const passwordValue = watch('password');
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -99,10 +77,17 @@ const LoginPage: React.FC = () => {
     }
   }, [error]);
 
-  const onSubmit = async (data: LoginFormData) => {
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setLoginError(null);
     
-    const success = await login(data.email, data.password, data.rememberMe);
+    // Basic validation
+    if (!emailValue || !passwordValue) {
+      setLoginError('Please fill in all fields');
+      return;
+    }
+    
+    const success = await login(emailValue, passwordValue, rememberMe);
     
     if (success) {
       // Redirect will happen automatically via useEffect
@@ -111,9 +96,8 @@ const LoginPage: React.FC = () => {
   };
 
   const handleDemoLogin = async (account: DemoAccount) => {
-    setValue('email', account.email);
-    setValue('password', account.password);
-    await trigger();
+    setEmailValue(account.email);
+    setPasswordValue(account.password);
     
     const success = await login(account.email, account.password, false);
     
@@ -151,7 +135,7 @@ const LoginPage: React.FC = () => {
         className="space-y-6"
       >
         {/* Login Form */}
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={onSubmit} className="space-y-4">
           {/* Email Input */}
           <div className="space-y-2">
             <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -163,21 +147,24 @@ const LoginPage: React.FC = () => {
               transition={{ duration: 0.2 }}
             >
               <input
-                {...register('email')}
                 type="email"
                 id="email"
+                name="email"
                 autoComplete="email"
                 autoFocus
+                disabled={loading === 'authenticating'}
+                value={emailValue}
+                onChange={(e) => {
+                  setEmailValue(e.target.value);
+                }}
                 className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 transition-all duration-200 ${
-                  errors.email
-                    ? 'border-red-500 focus:ring-red-500/20 bg-red-50 dark:bg-red-900/20'
-                    : emailValue && !errors.email
-                    ? 'border-green-500 focus:ring-green-500/20 bg-green-50 dark:bg-green-900/20'
+                  loading === 'authenticating'
+                    ? 'bg-gray-100 dark:bg-gray-800 cursor-not-allowed'
                     : 'border-gray-300 dark:border-gray-600 focus:ring-indigo-500/20 bg-white dark:bg-gray-700'
                 }`}
                 placeholder="Enter your email"
               />
-              {emailValue && !errors.email && (
+              {emailValue && (
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
@@ -187,19 +174,6 @@ const LoginPage: React.FC = () => {
                 </motion.div>
               )}
             </motion.div>
-            <AnimatePresence>
-              {errors.email && (
-                <motion.p
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="text-red-500 text-sm flex items-center space-x-1"
-                >
-                  <span>⚠️</span>
-                  <span>{errors.email.message}</span>
-                </motion.p>
-              )}
-            </AnimatePresence>
           </div>
 
           {/* Password Input */}
@@ -213,15 +187,18 @@ const LoginPage: React.FC = () => {
               transition={{ duration: 0.2 }}
             >
               <input
-                {...register('password')}
                 type={showPassword ? 'text' : 'password'}
                 id="password"
+                name="password"
                 autoComplete="current-password"
+                disabled={loading === 'authenticating'}
+                value={passwordValue}
+                onChange={(e) => {
+                  setPasswordValue(e.target.value);
+                }}
                 className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 transition-all duration-200 pr-12 ${
-                  errors.password
-                    ? 'border-red-500 focus:ring-red-500/20 bg-red-50 dark:bg-red-900/20'
-                    : passwordValue && !errors.password
-                    ? 'border-green-500 focus:ring-green-500/20 bg-green-50 dark:bg-green-900/20'
+                  loading === 'authenticating'
+                    ? 'bg-gray-100 dark:bg-gray-800 cursor-not-allowed'
                     : 'border-gray-300 dark:border-gray-600 focus:ring-indigo-500/20 bg-white dark:bg-gray-700'
                 }`}
                 placeholder="Enter your password"
@@ -234,7 +211,7 @@ const LoginPage: React.FC = () => {
               >
                 {showPassword ? '👁️' : '👁️‍🗨️'}
               </button>
-              {passwordValue && !errors.password && (
+              {passwordValue && (
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
@@ -244,19 +221,6 @@ const LoginPage: React.FC = () => {
                 </motion.div>
               )}
             </motion.div>
-            <AnimatePresence>
-              {errors.password && (
-                <motion.p
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="text-red-500 text-sm flex items-center space-x-1"
-                >
-                  <span>⚠️</span>
-                  <span>{errors.password.message}</span>
-                </motion.p>
-              )}
-            </AnimatePresence>
           </div>
 
           {/* Remember Me & Forgot Password */}
@@ -267,8 +231,9 @@ const LoginPage: React.FC = () => {
               transition={{ duration: 0.2 }}
             >
               <input
-                {...register('rememberMe')}
                 type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
                 className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
               />
               <span className="text-sm text-gray-700 dark:text-gray-300">Remember me</span>
@@ -303,14 +268,14 @@ const LoginPage: React.FC = () => {
           {/* Submit Button */}
           <motion.button
             type="submit"
-            disabled={!isValid || loading === 'authenticating'}
+            disabled={!emailValue || !passwordValue || loading === 'authenticating'}
             className={`w-full py-3 px-4 rounded-xl font-medium transition-all duration-200 ${
-              isValid && loading !== 'authenticating'
+              emailValue && passwordValue && loading !== 'authenticating'
                 ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg hover:shadow-xl'
                 : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
             }`}
-            whileHover={isValid && loading !== 'authenticating' ? { scale: 1.02, y: -1 } : {}}
-            whileTap={isValid && loading !== 'authenticating' ? { scale: 0.98 } : {}}
+            whileHover={emailValue && passwordValue && loading !== 'authenticating' ? { scale: 1.02, y: -1 } : {}}
+            whileTap={emailValue && passwordValue && loading !== 'authenticating' ? { scale: 0.98 } : {}}
           >
             {loading === 'authenticating' ? (
               <div className="flex items-center justify-center space-x-2">

@@ -19,16 +19,18 @@ export type Database = {
           email: string
           name: string
           phone?: string
-          avatar?: string
+          role: 'SUPER_ADMIN' | 'ADMIN' | 'TOUR_OPERATOR' | 'TRAVEL_AGENT'
+          profile: Json
           created_at: string
           updated_at: string
         }
         Insert: {
           id?: string
           email: string
-          name: string
+          name?: string
           phone?: string
-          avatar?: string
+          role?: 'SUPER_ADMIN' | 'ADMIN' | 'TOUR_OPERATOR' | 'TRAVEL_AGENT'
+          profile?: Json
           created_at?: string
           updated_at?: string
         }
@@ -37,7 +39,8 @@ export type Database = {
           email?: string
           name?: string
           phone?: string
-          avatar?: string
+          role?: 'SUPER_ADMIN' | 'ADMIN' | 'TOUR_OPERATOR' | 'TRAVEL_AGENT'
+          profile?: Json
           created_at?: string
           updated_at?: string
         }

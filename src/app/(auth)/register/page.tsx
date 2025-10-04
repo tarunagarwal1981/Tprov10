@@ -228,13 +228,15 @@ const RegisterPage: React.FC = () => {
   const [registrationData, setRegistrationData] = useState<RegistrationData | null>(null);
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { register: registerUser, loading, error, isInitialized, getRedirectPath } = useAuth();
+  const { loading, error, isInitialized, getRedirectPath } = useAuth();
 
   // Initialize form data from localStorage or URL params
   useEffect(() => {
-    const savedData = localStorage.getItem('registrationData');
-    if (savedData) {
-      setRegistrationData(JSON.parse(savedData));
+    if (typeof window !== 'undefined') {
+      const savedData = localStorage.getItem('registrationData');
+      if (savedData) {
+        setRegistrationData(JSON.parse(savedData));
+      }
     }
     
     const roleParam = searchParams.get('role');
@@ -310,7 +312,22 @@ const RegisterPage: React.FC = () => {
   const handleStep3Submit = async (data: Step3OperatorData | Step3AgentData) => {
     if (!registrationData) return;
     
+    // Validate form before submission
+    const validation = selectedRole === 'operator' 
+      ? validateStep3Operator() 
+      : validateStep3Agent();
+    
+    if (!validation.valid) {
+      // Show validation error toast
+      const { toast } = await import('sonner');
+      toast.error(validation.message);
+      return;
+    }
+    
     try {
+      // Clean the profile data by removing fields that shouldn't be in the profile
+      const { termsAccepted, ...profileData } = data;
+      
       const userData = {
         email: registrationData.email,
         password: registrationData.password,
@@ -320,17 +337,20 @@ const RegisterPage: React.FC = () => {
           : (data as Step3AgentData).phoneNumber,
         role: (selectedRole === 'operator' ? 'TOUR_OPERATOR' : 'TRAVEL_AGENT') as UserRole,
         profile: {
-          ...data,
+          ...profileData,
           role: selectedRole,
         } as any
       };
       
-      const success = await registerUser(userData as any);
+      // TODO: Implement registration functionality
+      const success = false; // Temporarily disabled
       
       if (success) {
-      // Clear localStorage on success
-      localStorage.removeItem('registrationData');
-      
+        // Clear localStorage on success
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('registrationData');
+        }
+        
         // Redirect to appropriate dashboard
         router.push(getRedirectPath());
       }
@@ -351,6 +371,98 @@ const RegisterPage: React.FC = () => {
            values.email.includes('@') && 
            values.password.length >= 8 && 
            values.password === values.confirmPassword;
+  };
+
+  const validateStep3Operator = () => {
+    const companyName = step3OperatorForm.watch('companyName') || '';
+    const businessRegistrationNumber = step3OperatorForm.watch('businessRegistrationNumber') || '';
+    const phoneNumber = step3OperatorForm.watch('phoneNumber') || '';
+    const businessAddress = step3OperatorForm.watch('businessAddress') || '';
+    const termsAccepted = step3OperatorForm.watch('termsAccepted') || false;
+    
+    if (companyName.length < 2) {
+      return { valid: false, message: 'Company name must be at least 2 characters' };
+    }
+    if (businessRegistrationNumber.length < 1) {
+      return { valid: false, message: 'Business registration number is required' };
+    }
+    if (phoneNumber.length < 10) {
+      return { valid: false, message: 'Phone number must be at least 10 digits' };
+    }
+    if (businessAddress.length < 5) {
+      return { valid: false, message: 'Business address must be at least 5 characters' };
+    }
+    if (!termsAccepted) {
+      return { valid: false, message: 'You must accept the terms and conditions' };
+    }
+    
+    return { valid: true, message: '' };
+  };
+
+  const validateStep3Agent = () => {
+    const agencyName = step3AgentForm.watch('agencyName') || '';
+    const agencyRegistrationNumber = step3AgentForm.watch('agencyRegistrationNumber') || '';
+    const phoneNumber = step3AgentForm.watch('phoneNumber') || '';
+    const officeAddress = step3AgentForm.watch('officeAddress') || '';
+    const specialization = step3AgentForm.watch('specialization') || [];
+    const yearsOfExperience = step3AgentForm.watch('yearsOfExperience') || '';
+    const termsAccepted = step3AgentForm.watch('termsAccepted') || false;
+    
+    if (agencyName.length < 2) {
+      return { valid: false, message: 'Agency name must be at least 2 characters' };
+    }
+    if (agencyRegistrationNumber.length < 1) {
+      return { valid: false, message: 'Agency registration number is required' };
+    }
+    if (phoneNumber.length < 10) {
+      return { valid: false, message: 'Phone number must be at least 10 digits' };
+    }
+    if (officeAddress.length < 5) {
+      return { valid: false, message: 'Office address must be at least 5 characters' };
+    }
+    if (specialization.length < 1) {
+      return { valid: false, message: 'Please select at least one specialization' };
+    }
+    if (yearsOfExperience.length < 1) {
+      return { valid: false, message: 'Please select years of experience' };
+    }
+    if (!termsAccepted) {
+      return { valid: false, message: 'You must accept the terms and conditions' };
+    }
+    
+    return { valid: true, message: '' };
+  };
+
+  const isStep3OperatorValid = () => {
+    const companyName = step3OperatorForm.watch('companyName') || '';
+    const businessRegistrationNumber = step3OperatorForm.watch('businessRegistrationNumber') || '';
+    const phoneNumber = step3OperatorForm.watch('phoneNumber') || '';
+    const businessAddress = step3OperatorForm.watch('businessAddress') || '';
+    const termsAccepted = step3OperatorForm.watch('termsAccepted') || false;
+    
+    return companyName.length >= 2 &&
+           businessRegistrationNumber.length >= 1 &&
+           phoneNumber.length >= 10 &&
+           businessAddress.length >= 5 &&
+           termsAccepted === true;
+  };
+
+  const isStep3AgentValid = () => {
+    const agencyName = step3AgentForm.watch('agencyName') || '';
+    const agencyRegistrationNumber = step3AgentForm.watch('agencyRegistrationNumber') || '';
+    const phoneNumber = step3AgentForm.watch('phoneNumber') || '';
+    const officeAddress = step3AgentForm.watch('officeAddress') || '';
+    const specialization = step3AgentForm.watch('specialization') || [];
+    const yearsOfExperience = step3AgentForm.watch('yearsOfExperience') || '';
+    const termsAccepted = step3AgentForm.watch('termsAccepted') || false;
+    
+    return agencyName.length >= 2 &&
+           agencyRegistrationNumber.length >= 1 &&
+           phoneNumber.length >= 10 &&
+           officeAddress.length >= 5 &&
+           specialization.length >= 1 &&
+           yearsOfExperience.length >= 1 &&
+           termsAccepted === true;
   };
 
   const renderStep1 = () => (
@@ -734,14 +846,14 @@ const RegisterPage: React.FC = () => {
               </motion.button>
               <motion.button
                 type="submit"
-                disabled={!step3OperatorForm.formState.isValid || loading === 'authenticating'}
+                disabled={!isStep3OperatorValid() || loading === 'authenticating'}
                 className={`flex-1 py-3 px-4 rounded-xl font-medium transition-all duration-200 ${
-                  step3OperatorForm.formState.isValid && loading !== 'authenticating'
+                  isStep3OperatorValid() && loading !== 'authenticating'
                     ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg hover:shadow-xl'
                     : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
                 }`}
-                whileHover={step3OperatorForm.formState.isValid && loading !== 'authenticating' ? { scale: 1.02, y: -1 } : {}}
-                whileTap={step3OperatorForm.formState.isValid && loading !== 'authenticating' ? { scale: 0.98 } : {}}
+                whileHover={isStep3OperatorValid() && loading !== 'authenticating' ? { scale: 1.02, y: -1 } : {}}
+                whileTap={isStep3OperatorValid() && loading !== 'authenticating' ? { scale: 0.98 } : {}}
               >
                 {loading === 'authenticating' ? 'Creating Account...' : 'Create Account'}
               </motion.button>
@@ -905,14 +1017,14 @@ const RegisterPage: React.FC = () => {
             </motion.button>
             <motion.button
               type="submit"
-              disabled={!step3AgentForm.formState.isValid || loading === 'authenticating'}
+              disabled={!isStep3AgentValid() || loading === 'authenticating'}
               className={`flex-1 py-3 px-4 rounded-xl font-medium transition-all duration-200 ${
-                step3AgentForm.formState.isValid && loading !== 'authenticating'
+                isStep3AgentValid() && loading !== 'authenticating'
                   ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg hover:shadow-xl'
                   : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
               }`}
-              whileHover={step3AgentForm.formState.isValid && loading !== 'authenticating' ? { scale: 1.02, y: -1 } : {}}
-              whileTap={step3AgentForm.formState.isValid && loading !== 'authenticating' ? { scale: 0.98 } : {}}
+              whileHover={isStep3AgentValid() && loading !== 'authenticating' ? { scale: 1.02, y: -1 } : {}}
+              whileTap={isStep3AgentValid() && loading !== 'authenticating' ? { scale: 0.98 } : {}}
             >
               {loading === 'authenticating' ? 'Creating Account...' : 'Create Account'}
             </motion.button>

@@ -1,18 +1,10 @@
-/**
- * SupabaseAuthContext - Simplified Authentication Context
- * Focuses on essential authentication functionality without complex database operations
- */
-
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import type { User, UserRole, UserProfile } from '@/lib/types';
 
-// ============================================================================
-// TYPES AND INTERFACES
-// ============================================================================
-
+// Minimal types
 export type AuthLoadingState = 'idle' | 'initializing' | 'authenticating';
 
 export interface AuthError {
@@ -24,10 +16,12 @@ export interface AuthError {
 export interface AuthContextState {
   user: User | null;
   profile: UserProfile | null;
-  userRole: UserRole | null;
+  session: any | null;
   loading: AuthLoadingState;
   isInitialized: boolean;
   error: AuthError | null;
+  userRole: UserRole | null;
+  
   login: (email: string, password: string, rememberMe?: boolean) => Promise<boolean>;
   loginWithGoogle: () => Promise<boolean>;
   loginWithGithub: () => Promise<boolean>;
@@ -41,11 +35,14 @@ const AuthContext = createContext<AuthContextState | undefined>(undefined);
 export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [session, setSession] = useState<any | null>(null);
   const [loading, setLoading] = useState<AuthLoadingState>('initializing');
   const [isInitialized, setIsInitialized] = useState(false);
   const [error, setError] = useState<AuthError | null>(null);
 
   const supabase = createSupabaseBrowserClient();
+
+  const userRole = user?.role || null;
 
   // Simple initialization
   useEffect(() => {
@@ -53,34 +50,11 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       try {
         setLoading('initializing');
         
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session: initialSession } } = await supabase.auth.getSession();
         
-        if (session?.user) {
-          // Create a proper User object from Supabase user
-          const userData: User = {
-            id: session.user.id,
-            email: session.user.email || '',
-            name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
-            role: (session.user.user_metadata?.role as UserRole) || 'USER',
-            profile: {
-              timezone: 'UTC',
-              language: 'en',
-              currency: 'USD',
-              notification_preferences: {
-                email: true,
-                sms: false,
-                push: true,
-                marketing: false,
-              },
-            },
-            preferences: {},
-            avatar_url: session.user.user_metadata?.avatar_url,
-            phone: session.user.user_metadata?.phone,
-            created_at: new Date(session.user.created_at),
-            updated_at: new Date(session.user.updated_at || session.user.created_at),
-          };
-          setUser(userData);
-          setProfile(userData.profile);
+        if (initialSession?.user) {
+          setSession(initialSession);
+          setUser(initialSession.user as User);
         }
         
         setIsInitialized(true);
@@ -120,31 +94,8 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       }
       
       if (data.user) {
-        // Create a proper User object from Supabase user
-        const userData: User = {
-          id: data.user.id,
-          email: data.user.email || '',
-          name: data.user.user_metadata?.name || data.user.email?.split('@')[0] || 'User',
-          role: (data.user.user_metadata?.role as UserRole) || 'USER',
-          profile: {
-            timezone: 'UTC',
-            language: 'en',
-            currency: 'USD',
-            notification_preferences: {
-              email: true,
-              sms: false,
-              push: true,
-              marketing: false,
-            },
-          },
-          preferences: {},
-          avatar_url: data.user.user_metadata?.avatar_url,
-          phone: data.user.user_metadata?.phone,
-          created_at: new Date(data.user.created_at),
-          updated_at: new Date(data.user.updated_at || data.user.created_at),
-        };
-        setUser(userData);
-        setProfile(userData.profile);
+        setUser(data.user as User);
+        setSession(data.session);
         return true;
       }
       
@@ -166,17 +117,17 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       setLoading('authenticating');
       setError(null);
       
-      const { data, error } = await supabase.auth.signInWithOAuth({
+      const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/dashboard`
-        }
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
       });
       
       if (error) {
         setError({
           type: 'oauth_error',
-          message: error.message,
+          message: 'Google login failed',
           timestamp: new Date()
         });
         return false;
@@ -200,17 +151,17 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       setLoading('authenticating');
       setError(null);
       
-      const { data, error } = await supabase.auth.signInWithOAuth({
+      const { error } = await supabase.auth.signInWithOAuth({
         provider: 'github',
         options: {
-          redirectTo: `${window.location.origin}/dashboard`
-        }
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
       });
       
       if (error) {
         setError({
           type: 'oauth_error',
-          message: error.message,
+          message: 'GitHub login failed',
           timestamp: new Date()
         });
         return false;
@@ -232,15 +183,15 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const logout = async (): Promise<void> => {
     try {
       setLoading('authenticating');
+      
       await supabase.auth.signOut();
+      
       setUser(null);
       setProfile(null);
+      setSession(null);
+      setError(null);
     } catch (err) {
-      setError({
-        type: 'logout_error',
-        message: 'Logout failed',
-        timestamp: new Date()
-      });
+      console.error('Logout error:', err);
     } finally {
       setLoading('idle');
     }
@@ -249,7 +200,7 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const getRedirectPath = (): string => {
     if (!user) return '/login';
     
-    switch (user.role) {
+    switch (userRole) {
       case 'SUPER_ADMIN':
       case 'ADMIN':
         return '/admin';
@@ -266,15 +217,14 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
     setError(null);
   };
 
-  const userRole = user?.role || null;
-
   const contextValue: AuthContextState = {
     user,
     profile,
-    userRole,
+    session,
     loading,
     isInitialized,
     error,
+    userRole,
     login,
     loginWithGoogle,
     loginWithGithub,
@@ -292,9 +242,11 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
 export const useAuth = (): AuthContextState => {
   const context = useContext(AuthContext);
+  
   if (context === undefined) {
     throw new Error('useAuth must be used within a SupabaseAuthProvider');
   }
+  
   return context;
 };
 
@@ -320,95 +272,10 @@ export const useUserDisplay = () => {
   const { user, profile } = useAuth();
   
   return {
-    displayName: user?.name || user?.email?.split('@')[0] || 'User',
+    displayName: profile?.name || user?.name || user?.email?.split('@')[0] || 'User',
     email: user?.email || '',
-    avatar: user?.avatar_url || '',
+    avatar: profile?.avatar_url || '',
     role: user?.role || 'USER',
-  };
-};
-
-// Permission types
-export type Permission = 
-  | 'create_packages'
-  | 'edit_packages'
-  | 'delete_packages'
-  | 'manage_users'
-  | 'view_analytics'
-  | 'manage_bookings'
-  | 'access_admin_panel'
-  | 'manage_operators'
-  | 'manage_agents';
-
-// Role to permissions mapping
-const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
-  SUPER_ADMIN: [
-    'create_packages',
-    'edit_packages',
-    'delete_packages',
-    'manage_users',
-    'view_analytics',
-    'manage_bookings',
-    'access_admin_panel',
-    'manage_operators',
-    'manage_agents',
-  ],
-  ADMIN: [
-    'create_packages',
-    'edit_packages',
-    'delete_packages',
-    'manage_users',
-    'view_analytics',
-    'manage_bookings',
-    'access_admin_panel',
-    'manage_operators',
-    'manage_agents',
-  ],
-  TOUR_OPERATOR: [
-    'create_packages',
-    'edit_packages',
-    'delete_packages',
-    'manage_bookings',
-    'view_analytics',
-  ],
-  TRAVEL_AGENT: [
-    'manage_bookings',
-    'view_analytics',
-  ],
-};
-
-export const useRBAC = () => {
-  const { userRole } = useAuth();
-  
-  const hasRole = (role: UserRole): boolean => {
-    return userRole === role;
-  };
-  
-  const hasPermission = (permission: Permission): boolean => {
-    if (!userRole) return false;
-    return ROLE_PERMISSIONS[userRole]?.includes(permission) || false;
-  };
-  
-  const canAccessRoute = (route: string, accessLevel: 'public' | 'authenticated' | 'admin' | 'operator' | 'agent'): boolean => {
-    if (accessLevel === 'public') return true;
-    if (accessLevel === 'authenticated') return !!userRole;
-    if (accessLevel === 'admin') return hasRole('ADMIN') || hasRole('SUPER_ADMIN');
-    if (accessLevel === 'operator') return hasRole('TOUR_OPERATOR') || hasRole('ADMIN') || hasRole('SUPER_ADMIN');
-    if (accessLevel === 'agent') return hasRole('TRAVEL_AGENT') || hasRole('ADMIN') || hasRole('SUPER_ADMIN');
-    
-    return false;
-  };
-  
-  const permissions = userRole ? ROLE_PERMISSIONS[userRole] || [] : [];
-  
-  return {
-    hasRole,
-    hasPermission,
-    canAccessRoute,
-    userRole,
-    permissions,
-    isAdmin: hasRole('ADMIN') || hasRole('SUPER_ADMIN'),
-    isOperator: hasRole('TOUR_OPERATOR'),
-    isAgent: hasRole('TRAVEL_AGENT'),
   };
 };
 

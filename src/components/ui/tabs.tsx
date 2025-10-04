@@ -75,7 +75,7 @@ const TabsList = React.forwardRef<
         setActiveTab(visibleTabs[0])
       }
     }
-  }, [responsive, tabValues, maxVisibleTabs, activeTab])
+  }, [responsive, tabValues, maxVisibleTabs])
 
   if (responsive && isMobile && tabValues.length > maxVisibleTabs) {
     const visibleTabs = tabValues.slice(0, maxVisibleTabs - 1)
