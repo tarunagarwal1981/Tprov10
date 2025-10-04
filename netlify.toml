@@ -13,7 +13,7 @@
 
 [build.environment]
   # Node.js version
-  NODE_VERSION = "18"
+  NODE_VERSION = "20"
   
   # Next.js configuration
   NEXT_TELEMETRY_DISABLED = "1"
@@ -82,9 +82,9 @@
 [build.processing.html]
   pretty_urls = true
 
-# Plugin configuration
-[[plugins]]
-  package = "@netlify/plugin-nextjs"
+# Plugin configuration - removed for static export
+# [[plugins]]
+#   package = "@netlify/plugin-nextjs"
 
 # Branch-specific settings
 [context.production]
