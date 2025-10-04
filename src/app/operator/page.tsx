@@ -1,224 +1,471 @@
 'use client';
 
-import React from 'react';
-import { useAuth } from '@/context/SupabaseAuthContext';
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
-  FiHome, 
-  FiPackage, 
-  FiUsers, 
-  FiTrendingUp, 
-  FiLogOut, 
-  FiSettings, 
-  FiBell 
-} from 'react-icons/fi';
+  FaBox as Package, 
+  FaCalendarAlt as Calendar, 
+  FaUsers as Users, 
+  FaChartLine as TrendingUp, 
+  FaDollarSign as DollarSign,
+  FaStar as Star,
+  FaPlus as Plus,
+  FaChartBar as BarChart3,
+  FaComments as MessageSquare,
+  FaDownload as Download,
+  FaArrowUp as ArrowUpRight,
+  FaArrowDown as ArrowDownRight,
+  FaClock as Clock,
+  FaCheckCircle as CheckCircle,
+  FaExclamationCircle as AlertCircle
+} from 'react-icons/fa';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { useAuth } from '@/context/SupabaseAuthContext';
+import Link from 'next/link';
 
-export default function OperatorDashboard() {
-  const { user, logout, loading, isInitialized, userRole } = useAuth();
-  const router = useRouter();
+// Stats Card Component with Premium Design
+interface StatsCardProps {
+  title: string;
+  value: string | number;
+  change?: number;
+  changeLabel?: string;
+  icon: React.ElementType;
+  color: 'blue' | 'green' | 'purple' | 'orange' | 'red' | 'indigo';
+  loading?: boolean;
+}
 
-  // Redirect if not authenticated or not an operator
-  useEffect(() => {
-    if (isInitialized && !loading) {
-      if (!user) {
-        router.push('/login');
-        return;
-      }
-      
-      if (userRole !== 'TOUR_OPERATOR') {
-        router.push('/dashboard');
-        return;
-      }
+function StatsCard({ title, value, change, changeLabel, icon: Icon, color, loading }: StatsCardProps) {
+  const colorClasses = {
+    blue: {
+      gradient: 'from-blue-500 to-blue-600',
+      bg: 'bg-blue-50',
+      text: 'text-blue-600',
+      border: 'border-blue-200'
+    },
+    green: {
+      gradient: 'from-green-500 to-green-600',
+      bg: 'bg-green-50',
+      text: 'text-green-600',
+      border: 'border-green-200'
+    },
+    purple: {
+      gradient: 'from-purple-500 to-purple-600',
+      bg: 'bg-purple-50',
+      text: 'text-purple-600',
+      border: 'border-purple-200'
+    },
+    orange: {
+      gradient: 'from-orange-500 to-orange-600',
+      bg: 'bg-orange-50',
+      text: 'text-orange-600',
+      border: 'border-orange-200'
+    },
+    red: {
+      gradient: 'from-red-500 to-red-600',
+      bg: 'bg-red-50',
+      text: 'text-red-600',
+      border: 'border-red-200'
+    },
+    indigo: {
+      gradient: 'from-indigo-500 to-indigo-600',
+      bg: 'bg-indigo-50',
+      text: 'text-indigo-600',
+      border: 'border-indigo-200'
     }
-  }, [user, loading, isInitialized, userRole, router]);
-
-  const handleLogout = async () => {
-    await logout();
-    router.push('/');
   };
 
-  if (loading === 'initializing' || !isInitialized) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-indigo-600"></div>
+  const colors = colorClasses[color];
+  const isPositive = change && change > 0;
+  const isNegative = change && change < 0;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      whileHover={{ y: -4, scale: 1.02 }}
+      transition={{ duration: 0.3 }}
+    >
+      <Card className="bg-white/80 backdrop-blur-sm border-slate-200 shadow-lg hover:shadow-xl transition-all duration-300 h-full">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <p className="text-sm font-medium text-slate-600 mb-2">{title}</p>
+              <p className="text-3xl font-bold text-slate-900 mb-2">
+                {loading ? '...' : value}
+              </p>
+              {change !== undefined && (
+                <div className="flex items-center gap-1 text-sm">
+                  {isPositive ? (
+                    <ArrowUpRight className="w-4 h-4 text-green-600" />
+                  ) : isNegative ? (
+                    <ArrowDownRight className="w-4 h-4 text-red-600" />
+                  ) : null}
+                  <span className={isPositive ? 'text-green-600 font-semibold' : isNegative ? 'text-red-600 font-semibold' : 'text-slate-600'}>
+                    {Math.abs(change)}%
+                  </span>
+                  {changeLabel && (
+                    <span className="text-slate-500 ml-1">{changeLabel}</span>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${colors.gradient} flex items-center justify-center shadow-lg`}>
+              <Icon className="w-7 h-7 text-white" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+}
+
+// Activity Item Component
+interface ActivityItemProps {
+  icon: React.ElementType;
+  title: string;
+  description: string;
+  time: string;
+  type: 'booking' | 'package' | 'agent' | 'payment';
+}
+
+function ActivityItem({ icon: Icon, title, description, time, type }: ActivityItemProps) {
+  const typeColors = {
+    booking: 'bg-blue-50 text-blue-600',
+    package: 'bg-purple-50 text-purple-600',
+    agent: 'bg-green-50 text-green-600',
+    payment: 'bg-orange-50 text-orange-600'
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      className="flex items-start gap-4 p-4 rounded-lg hover:bg-slate-50 transition-colors group"
+    >
+      <div className={`w-10 h-10 rounded-full ${typeColors[type]} flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform`}>
+        <Icon className="w-5 h-5" />
       </div>
-    );
-  }
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-slate-900">{title}</p>
+        <p className="text-sm text-slate-600 truncate">{description}</p>
+        <p className="text-xs text-slate-400 mt-1 flex items-center gap-1">
+          <Clock className="w-3 h-3" />
+          {time}
+        </p>
+      </div>
+    </motion.div>
+  );
+}
 
-  if (!user || userRole !== 'TOUR_OPERATOR') {
-    return null; // Will redirect
-  }
+export default function OperatorDashboard() {
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    totalPackages: 24,
+    activeBookings: 156,
+    partnerAgents: 42,
+    monthlyRevenue: 24580,
+    averageRating: 4.8,
+    conversionRate: 68
+  });
 
-  const stats = [
+  useEffect(() => {
+    // Simulate loading - replace with real Supabase query
+    const fetchDashboardData = async () => {
+      try {
+        // TODO: Fetch from Supabase
+        // const { data } = await dashboardService.getOperatorStats();
+        // setStats(data);
+        setTimeout(() => setLoading(false), 1000);
+      } catch (error) {
+        console.error('Failed to fetch dashboard data:', error);
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
+
+  const recentActivities = [
     {
-      title: 'Total Packages',
-      value: '12',
-      change: '+2 this month',
-      icon: FiPackage,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-100'
+      icon: CheckCircle,
+      title: 'New Booking Confirmed',
+      description: 'Dubai Adventure Package - Sarah Johnson',
+      time: '5 minutes ago',
+      type: 'booking' as const
     },
     {
-      title: 'Active Bookings',
-      value: '48',
-      change: '+12 this week',
-      icon: FiUsers,
-      color: 'text-green-600',
-      bgColor: 'bg-green-100'
+      icon: Package,
+      title: 'Package Published',
+      description: 'Maldives Luxury Escape is now live',
+      time: '1 hour ago',
+      type: 'package' as const
     },
     {
-      title: 'Revenue',
-      value: '$24,580',
-      change: '+15% this month',
-      icon: FiTrendingUp,
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-100'
+      icon: Users,
+      title: 'New Agent Partnership',
+      description: 'Global Travel Co. joined your network',
+      time: '2 hours ago',
+      type: 'agent' as const
     },
     {
-      title: 'Customer Rating',
-      value: '4.8',
-      change: '+0.2 this month',
-      icon: FiHome,
-      color: 'text-orange-600',
-      bgColor: 'bg-orange-100'
+      icon: DollarSign,
+      title: 'Payment Received',
+      description: '£2,499 from Tokyo Tour booking',
+      time: '3 hours ago',
+      type: 'payment' as const
+    },
+    {
+      icon: Star,
+      title: 'New 5-Star Review',
+      description: 'Amazing experience! - Michael Chen',
+      time: '5 hours ago',
+      type: 'booking' as const
     }
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <FiHome className="h-8 w-8 text-indigo-600" />
-              <h1 className="ml-2 text-xl font-semibold text-gray-900">
-                Tour Operator Dashboard
-              </h1>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              <button className="p-2 text-gray-400 hover:text-gray-600">
-                <FiBell className="h-5 w-5" />
-              </button>
-              <button className="p-2 text-gray-400 hover:text-gray-600">
-                <FiSettings className="h-5 w-5" />
-              </button>
-              <button
-                onClick={handleLogout}
-                className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-600 hover:text-gray-900"
-              >
-                <FiLogOut className="h-4 w-4" />
-                <span>Logout</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
+    <div className="p-6 space-y-8 bg-gradient-to-br from-slate-50 to-white min-h-screen">
+      {/* Welcome Header */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="space-y-2"
+      >
+        <h1 className="text-3xl font-bold text-slate-900">
+          Welcome back, {user?.name || 'Operator'}! 👋
+        </h1>
+        <p className="text-slate-600">
+          Here&apos;s what&apos;s happening with your business today
+        </p>
+      </motion.div>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Welcome Section */}
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <StatsCard
+          title="Total Packages"
+          value={stats.totalPackages}
+          change={12}
+          changeLabel="vs last month"
+          icon={Package}
+          color="blue"
+          loading={loading}
+        />
+        <StatsCard
+          title="Active Bookings"
+          value={stats.activeBookings}
+          change={8}
+          changeLabel="vs last month"
+          icon={Calendar}
+          color="green"
+          loading={loading}
+        />
+        <StatsCard
+          title="Partner Agents"
+          value={stats.partnerAgents}
+          change={5}
+          changeLabel="vs last month"
+          icon={Users}
+          color="purple"
+          loading={loading}
+        />
+        <StatsCard
+          title="Monthly Revenue"
+          value={`£${stats.monthlyRevenue.toLocaleString()}`}
+          change={15}
+          changeLabel="vs last month"
+          icon={DollarSign}
+          color="orange"
+          loading={loading}
+        />
+        <StatsCard
+          title="Average Rating"
+          value={stats.averageRating}
+          change={2}
+          changeLabel="vs last month"
+          icon={Star}
+          color="indigo"
+          loading={loading}
+        />
+        <StatsCard
+          title="Conversion Rate"
+          value={`${stats.conversionRate}%`}
+          change={-3}
+          changeLabel="vs last month"
+          icon={TrendingUp}
+          color="red"
+          loading={loading}
+        />
+      </div>
+
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Quick Actions - 2 columns */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
+          transition={{ delay: 0.2 }}
+          className="lg:col-span-2"
         >
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            Welcome back, {user.name || user.email}!
-          </h2>
-          <p className="text-gray-600">
-            Here&apos;s what&apos;s happening with your tour operation business today.
-          </p>
-        </motion.div>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {stats.map((stat, index) => (
-            <motion.div
-              key={stat.title}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className="bg-white rounded-lg shadow-sm p-6"
-            >
-              <div className="flex items-center">
-                <div className={`p-3 rounded-lg ${stat.bgColor}`}>
-                  <stat.icon className={`h-6 w-6 ${stat.color}`} />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">{stat.title}</p>
-                  <p className="text-2xl font-semibold text-gray-900">{stat.value}</p>
-                  <p className="text-sm text-green-600">{stat.change}</p>
-                </div>
+          <Card className="bg-gradient-to-br from-blue-600 to-purple-600 border-0 shadow-xl text-white">
+            <CardHeader>
+              <CardTitle className="text-white">Quick Actions</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Link href="/operator/packages/create">
+                <Button 
+                  size="lg"
+                  className="w-full bg-white text-blue-600 hover:bg-slate-100 font-semibold h-14 shadow-lg group"
+                >
+                  <Plus className="w-5 h-5 mr-2 group-hover:rotate-90 transition-transform" />
+                  Create New Package
+                </Button>
+              </Link>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <Link href="/operator/analytics">
+                  <Button 
+                    variant="secondary"
+                    className="w-full bg-white/20 backdrop-blur-sm hover:bg-white/30 border-white/30 text-white"
+                  >
+                    <BarChart3 className="w-4 h-4 mr-2" />
+                    Analytics
+                  </Button>
+                </Link>
+                <Link href="/operator/communication">
+                  <Button 
+                    variant="secondary"
+                    className="w-full bg-white/20 backdrop-blur-sm hover:bg-white/30 border-white/30 text-white"
+                  >
+                    <MessageSquare className="w-4 h-4 mr-2" />
+                    Messages
+                  </Button>
+                </Link>
+                <Link href="/operator/bookings">
+                  <Button 
+                    variant="secondary"
+                    className="w-full bg-white/20 backdrop-blur-sm hover:bg-white/30 border-white/30 text-white"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Export Data
+                  </Button>
+                </Link>
               </div>
-            </motion.div>
-          ))}
-        </div>
+            </CardContent>
+          </Card>
+        </motion.div>
 
-        {/* Quick Actions */}
+        {/* Performance Summary - 1 column */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="bg-white rounded-lg shadow-sm p-6 mb-8"
+          transition={{ delay: 0.3 }}
         >
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <button className="flex items-center justify-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-indigo-500 hover:bg-indigo-50 transition-colors">
-              <FiPackage className="h-5 w-5 text-gray-400 mr-2" />
-              <span className="text-gray-600">Create New Package</span>
-            </button>
-            <button className="flex items-center justify-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-indigo-500 hover:bg-indigo-50 transition-colors">
-              <FiUsers className="h-5 w-5 text-gray-400 mr-2" />
-              <span className="text-gray-600">Manage Bookings</span>
-            </button>
-            <button className="flex items-center justify-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-indigo-500 hover:bg-indigo-50 transition-colors">
-              <FiTrendingUp className="h-5 w-5 text-gray-400 mr-2" />
-              <span className="text-gray-600">View Analytics</span>
-            </button>
-          </div>
+          <Card className="bg-white/80 backdrop-blur-sm border-slate-200 shadow-lg h-full">
+            <CardHeader>
+              <CardTitle className="text-slate-900">Today&apos;s Overview</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <Calendar className="w-5 h-5 text-blue-600" />
+                  <span className="text-sm font-medium text-slate-700">Bookings</span>
+                </div>
+                <span className="text-lg font-bold text-blue-600">12</span>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <DollarSign className="w-5 h-5 text-green-600" />
+                  <span className="text-sm font-medium text-slate-700">Revenue</span>
+                </div>
+                <span className="text-lg font-bold text-green-600">£3,240</span>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <Users className="w-5 h-5 text-purple-600" />
+                  <span className="text-sm font-medium text-slate-700">New Agents</span>
+                </div>
+                <span className="text-lg font-bold text-purple-600">3</span>
+              </div>
+            </CardContent>
+          </Card>
         </motion.div>
+      </div>
 
+      {/* Recent Activity & Top Packages */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Activity */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6 }}
-          className="bg-white rounded-lg shadow-sm p-6"
+          transition={{ delay: 0.4 }}
         >
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
-          <div className="space-y-4">
-            <div className="flex items-center space-x-3">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <div className="flex-1">
-                <p className="text-sm text-gray-900">New booking received for &quot;Paris City Tour&quot;</p>
-                <p className="text-xs text-gray-500">2 hours ago</p>
+          <Card className="bg-white/80 backdrop-blur-sm border-slate-200 shadow-lg">
+            <CardHeader className="border-b border-slate-200">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-slate-900">Recent Activity</CardTitle>
+                <Link href="/operator/activity">
+                  <Button variant="ghost" size="sm" className="text-blue-600">
+                    View All
+                  </Button>
+                </Link>
               </div>
-            </div>
-            <div className="flex items-center space-x-3">
-              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-              <div className="flex-1">
-                <p className="text-sm text-gray-900">Package &quot;Rome Historical Tour&quot; updated</p>
-                <p className="text-xs text-gray-500">4 hours ago</p>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="divide-y divide-slate-100">
+                {recentActivities.map((activity, index) => (
+                  <ActivityItem key={index} {...activity} />
+                ))}
               </div>
-            </div>
-            <div className="flex items-center space-x-3">
-              <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-              <div className="flex-1">
-                <p className="text-sm text-gray-900">Customer review received (5 stars)</p>
-                <p className="text-xs text-gray-500">1 day ago</p>
-              </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </motion.div>
-      </main>
+
+        {/* Top Performing Packages */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+        >
+          <Card className="bg-white/80 backdrop-blur-sm border-slate-200 shadow-lg">
+            <CardHeader className="border-b border-slate-200">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-slate-900">Top Packages</CardTitle>
+                <Link href="/operator/packages">
+                  <Button variant="ghost" size="sm" className="text-blue-600">
+                    View All
+                  </Button>
+                </Link>
+              </div>
+            </CardHeader>
+            <CardContent className="p-6 space-y-4">
+              {[
+                { name: 'Dubai Adventure', bookings: 45, revenue: '£12,450', rating: 4.9 },
+                { name: 'Maldives Luxury', bookings: 32, revenue: '£18,200', rating: 5.0 },
+                { name: 'Tokyo Explorer', bookings: 28, revenue: '£8,960', rating: 4.8 },
+              ].map((pkg, index) => (
+                <div 
+                  key={index}
+                  className="flex items-center justify-between p-4 bg-gradient-to-r from-slate-50 to-transparent rounded-lg border border-slate-200 hover:border-blue-300 hover:shadow-md transition-all group"
+                >
+                  <div>
+                    <p className="font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">
+                      {pkg.name}
+                    </p>
+                    <p className="text-sm text-slate-600">
+                      {pkg.bookings} bookings &middot; {pkg.revenue}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1 text-yellow-500">
+                    <Star className="w-4 h-4 fill-current" />
+                    <span className="text-sm font-semibold text-slate-900">{pkg.rating}</span>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
     </div>
   );
 }
-
-
-
-
