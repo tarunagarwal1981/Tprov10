@@ -127,11 +127,11 @@ const StepIndicator: React.FC<{ currentStep: number; totalSteps: number }> = ({ 
 
   return (
     <div className="mb-8">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 px-2">
         {steps.map((step, index) => (
-          <div key={step.number} className="flex items-center">
+          <div key={step.number} className="flex items-center flex-1 min-w-0">
             <motion.div
-              className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+              className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0 ${
                 step.number < currentStep
                   ? 'bg-green-500 text-white'
                   : step.number === currentStep
@@ -144,13 +144,13 @@ const StepIndicator: React.FC<{ currentStep: number; totalSteps: number }> = ({ 
             >
               {step.number < currentStep ? <CheckCircle className="h-4 w-4" /> : step.number}
             </motion.div>
-            <span className={`ml-2 text-sm font-medium ${
+            <span className={`ml-2 text-xs font-medium ${
               step.number <= currentStep ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'
             }`}>
               {step.label}
             </span>
             {index < steps.length - 1 && (
-              <div className={`w-12 h-0.5 mx-4 ${
+              <div className={`w-8 h-0.5 mx-2 flex-shrink-0 ${
                 step.number < currentStep ? 'bg-green-500' : 'bg-gray-200 dark:bg-gray-700'
               }`} />
             )}
@@ -223,6 +223,8 @@ const RoleSelectionCard: React.FC<{
 const RegisterPage: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedRole, setSelectedRole] = useState<'operator' | 'agent' | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [registrationData, setRegistrationData] = useState<RegistrationData | null>(null);
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -252,18 +254,6 @@ const RegisterPage: React.FC = () => {
       confirmPassword: '',
     },
   });
-
-  // Populate form with saved data if it exists
-  useEffect(() => {
-    if (registrationData && step1Form) {
-      step1Form.reset({
-        fullName: registrationData.fullName || '',
-        email: registrationData.email || '',
-        password: registrationData.password || '',
-        confirmPassword: registrationData.confirmPassword || '',
-      });
-    }
-  }, [registrationData, step1Form]);
 
   const step2Form = useForm<Step2Data>({
     resolver: zodResolver(step2Schema),
@@ -355,6 +345,14 @@ const RegisterPage: React.FC = () => {
     }
   };
 
+  const isStep1Valid = () => {
+    const values = step1Form.getValues();
+    return values.fullName.length >= 2 && 
+           values.email.includes('@') && 
+           values.password.length >= 8 && 
+           values.password === values.confirmPassword;
+  };
+
   const renderStep1 = () => (
     <motion.div
       key="step1"
@@ -368,75 +366,113 @@ const RegisterPage: React.FC = () => {
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
             Full Name
           </label>
-          <Input
-            {...step1Form.register('fullName')}
-            type="text"
-            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
-            placeholder="Enter your full name"
-            leftIcon={<User className="h-4 w-4 text-gray-400" />}
-            error={!!step1Form.formState.errors.fullName}
-            errorMessage={step1Form.formState.errors.fullName?.message}
-          />
+          <div className="relative">
+            <input
+              type="text"
+              value={step1Form.watch('fullName') || ''}
+              onChange={(e) => step1Form.setValue('fullName', e.target.value)}
+              className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
+              placeholder="Enter your full name"
+            />
+            <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          </div>
+          {step1Form.formState.errors.fullName && (
+            <p className="text-red-500 text-sm">{step1Form.formState.errors.fullName.message}</p>
+          )}
         </div>
 
         <div className="space-y-2">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
             Email Address
           </label>
-          <Input
-            {...step1Form.register('email')}
-            type="email"
-            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
-            placeholder="Enter your email"
-            leftIcon={<Mail className="h-4 w-4 text-gray-400" />}
-            error={!!step1Form.formState.errors.email}
-            errorMessage={step1Form.formState.errors.email?.message}
-          />
+          <div className="relative">
+            <input
+              type="email"
+              value={step1Form.watch('email') || ''}
+              onChange={(e) => step1Form.setValue('email', e.target.value)}
+              className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
+              placeholder="Enter your email"
+            />
+            <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          </div>
+          {step1Form.formState.errors.email && (
+            <p className="text-red-500 text-sm">{step1Form.formState.errors.email.message}</p>
+          )}
         </div>
 
         <div className="space-y-2">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
             Password
           </label>
-          <Input
-            {...step1Form.register('password')}
-            type="password"
-            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
-            placeholder="Create a password"
-            leftIcon={<Lock className="h-4 w-4 text-gray-400" />}
-            showPasswordToggle={true}
-            error={!!step1Form.formState.errors.password}
-            errorMessage={step1Form.formState.errors.password?.message}
-          />
+          <div className="relative">
+            <input
+              type={showPassword ? 'text' : 'password'}
+              value={step1Form.watch('password') || ''}
+              onChange={(e) => step1Form.setValue('password', e.target.value)}
+              className="w-full px-4 py-3 pl-12 pr-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
+              placeholder="Create a password"
+            />
+            <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+            >
+              {showPassword ? (
+                <EyeOff className="h-5 w-5" />
+              ) : (
+                <Eye className="h-5 w-5" />
+              )}
+            </button>
+          </div>
           <PasswordStrengthMeter password={step1Form.watch('password') || ''} />
+          {step1Form.formState.errors.password && (
+            <p className="text-red-500 text-sm">{step1Form.formState.errors.password.message}</p>
+          )}
         </div>
 
         <div className="space-y-2">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
             Confirm Password
           </label>
-          <Input
-            {...step1Form.register('confirmPassword')}
-            type="password"
-            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
-            placeholder="Confirm your password"
-            leftIcon={<Lock className="h-4 w-4 text-gray-400" />}
-            showPasswordToggle={true}
-            error={!!step1Form.formState.errors.confirmPassword}
-            errorMessage={step1Form.formState.errors.confirmPassword?.message}
-          />
+          <div className="relative">
+            <input
+              type={showConfirmPassword ? 'text' : 'password'}
+              value={step1Form.watch('confirmPassword') || ''}
+              onChange={(e) => step1Form.setValue('confirmPassword', e.target.value)}
+              className="w-full px-4 py-3 pl-12 pr-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
+              placeholder="Confirm your password"
+            />
+            <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+              aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+            >
+              {showConfirmPassword ? (
+                <EyeOff className="h-5 w-5" />
+              ) : (
+                <Eye className="h-5 w-5" />
+              )}
+            </button>
+          </div>
+          {step1Form.formState.errors.confirmPassword && (
+            <p className="text-red-500 text-sm">{step1Form.formState.errors.confirmPassword.message}</p>
+          )}
         </div>
 
         <motion.button
           type="submit"
-          disabled={!step1Form.formState.isValid}
+          disabled={!isStep1Valid()}
           className={`w-full py-3 px-4 rounded-xl font-medium transition-all duration-200 ${
-            step1Form.formState.isValid
+            isStep1Valid()
               ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg hover:shadow-xl'
               : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
           }`}
-          whileHover={step1Form.formState.isValid ? { scale: 1.02, y: -1 } : {}}
-          whileTap={step1Form.formState.isValid ? { scale: 0.98 } : {}}
+          whileHover={isStep1Valid() ? { scale: 1.02, y: -1 } : {}}
+          whileTap={isStep1Valid() ? { scale: 0.98 } : {}}
         >
           Continue
         </motion.button>

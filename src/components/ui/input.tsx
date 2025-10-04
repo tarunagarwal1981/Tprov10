@@ -72,7 +72,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
       : type
 
     const currentVariant = error ? "error" : success ? "success" : variant
-    const currentValue = value as string || ""
+    const currentValue = (value as string) || ""
     const characterCount = currentValue.length
 
     const handleClear = () => {
@@ -130,8 +130,6 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
               isSuccess && "animate-pulse"
             )}
             ref={ref}
-            value={value}
-            onChange={onChange}
             maxLength={maxLength}
             {...props}
           />
