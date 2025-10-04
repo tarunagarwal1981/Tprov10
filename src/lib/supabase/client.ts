@@ -74,16 +74,19 @@ export async function withErrorHandling<T>(
  * @returns User data or null
  */
 export async function getBrowserUser(supabase: SupabaseClientType) {
-  const { data: { user }, error } = await withErrorHandling(() =>
-    supabase.auth.getUser()
-  );
-  
-  if (error) {
-    console.error('Error getting user:', error);
+  try {
+    const { data, error } = await supabase.auth.getUser();
+    
+    if (error) {
+      console.error('Error getting user:', error);
+      return null;
+    }
+    
+    return data?.user || null;
+  } catch (err) {
+    console.error('Unexpected error getting user:', err);
     return null;
   }
-  
-  return user;
 }
 
 /**
@@ -92,16 +95,19 @@ export async function getBrowserUser(supabase: SupabaseClientType) {
  * @returns Success status
  */
 export async function signOutBrowser(supabase: SupabaseClientType) {
-  const { error } = await withErrorHandling(() =>
-    supabase.auth.signOut()
-  );
-  
-  if (error) {
-    console.error('Error signing out:', error);
+  try {
+    const { error } = await supabase.auth.signOut();
+    
+    if (error) {
+      console.error('Error signing out:', error);
+      return false;
+    }
+    
+    return true;
+  } catch (err) {
+    console.error('Unexpected error signing out:', err);
     return false;
   }
-  
-  return true;
 }
 
 // Export default browser client for backward compatibility

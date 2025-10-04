@@ -4,18 +4,13 @@
 export {
   // Client creation functions
   createSupabaseBrowserClient,
-  createSupabaseServerClient,
-  createSupabaseAdminClient,
-  createSupabaseMiddlewareClient,
   
   // Error handling
   SupabaseError,
   withErrorHandling,
   
   // Helper functions
-  getServerUser,
   getBrowserUser,
-  signOutServer,
   signOutBrowser,
   
   // Default client
@@ -23,7 +18,6 @@ export {
   
   // Type exports
   type SupabaseClientType,
-  type SupabaseServerClientType,
 } from './client';
 
 // Database types

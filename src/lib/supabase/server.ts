@@ -27,8 +27,8 @@ if (!supabaseServiceRoleKey) {
  * Creates a Supabase client for server-side usage with SSR support
  * Use this in Server Components, API routes, and server actions
  */
-export const createSupabaseServerClient = (): SupabaseServerClientType => {
-  const cookieStore = cookies();
+export const createSupabaseServerClient = async (): Promise<SupabaseServerClientType> => {
+  const cookieStore = await cookies();
 
   return createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
     cookies: {

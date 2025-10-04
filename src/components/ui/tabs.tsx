@@ -58,12 +58,13 @@ const TabsList = React.forwardRef<
 
   // Get tab values from children
   const tabValues = React.useMemo(() => {
+    if (!children) return []
     return React.Children.map(children, (child) => {
-      if (React.isValidElement(child) && child.props.value) {
-        return child.props.value
+      if (React.isValidElement(child) && (child.props as any)?.value) {
+        return (child.props as any).value
       }
       return null
-    }).filter(Boolean) as string[]
+    })?.filter(Boolean) as string[] || []
   }, [children])
 
   React.useEffect(() => {
@@ -72,7 +73,7 @@ const TabsList = React.forwardRef<
       const hidden = tabValues.slice(maxVisibleTabs - 1)
       setHiddenTabs(hidden)
       if (!activeTab && visibleTabs.length > 0) {
-        setActiveTab(visibleTabs[0])
+        setActiveTab(visibleTabs[0]!)
       }
     }
   }, [responsive, tabValues, maxVisibleTabs, activeTab])
@@ -106,8 +107,8 @@ const TabsList = React.forwardRef<
             {hidden.map((tabValue) => (
               <DropdownMenuItem key={tabValue} onClick={() => setActiveTab(tabValue)}>
                 {React.Children.map(children, (child) => {
-                  if (React.isValidElement(child) && child.props.value === tabValue) {
-                    return child.props.children
+                  if (React.isValidElement(child) && (child.props as any).value === tabValue) {
+                    return (child.props as any).children
                   }
                   return null
                 })}
@@ -259,7 +260,7 @@ const AnimatedTabs = React.forwardRef<HTMLDivElement, AnimatedTabsProps>(
                   size={size}
                   icon={tab.icon}
                   badge={tab.badge}
-                  ref={(el) => (tabRefs.current[index] = el)}
+                  ref={(el) => { tabRefs.current[index] = el }}
                 >
                   {tab.label}
                 </TabsTrigger>

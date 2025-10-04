@@ -2,7 +2,7 @@ import * as React from "react"
 import { FiChevronUp, FiChevronDown, FiMoreVertical } from "react-icons/fi"
 import { cva, type VariantProps } from "class-variance-authority"
 import { Button } from "@/components/ui/button"
-import { Checkbox as CheckboxPrimitive } from "@/components/ui/checkbox"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Skeleton } from "@/components/ui/skeleton"
 
 import { cn } from "@/lib/utils"
@@ -132,7 +132,7 @@ const TableFooter = React.forwardRef<
 TableFooter.displayName = "TableFooter"
 
 export interface TableRowProps
-  extends React.HTMLAttributes<HTMLTableRowElement> {
+  extends Omit<React.HTMLAttributes<HTMLTableRowElement>, 'onSelect'> {
   selected?: boolean
   selectable?: boolean
   onSelect?: (selected: boolean) => void
@@ -226,18 +226,16 @@ TableCaption.displayName = "TableCaption"
 // Selection components
 export interface TableSelectAllProps {
   checked?: boolean
-  indeterminate?: boolean
   onCheckedChange?: (checked: boolean) => void
 }
 
 const TableSelectAll = React.forwardRef<
   HTMLButtonElement,
   TableSelectAllProps
->(({ checked = false, indeterminate = false, onCheckedChange, ...props }, ref) => (
-  <CheckboxPrimitive
+>(({ checked = false, onCheckedChange, ...props }, ref) => (
+  <Checkbox
     ref={ref}
     checked={checked}
-    indeterminate={indeterminate}
     onCheckedChange={onCheckedChange}
     {...props}
   />
@@ -253,7 +251,7 @@ const TableSelectRow = React.forwardRef<
   HTMLButtonElement,
   TableSelectRowProps
 >(({ checked = false, onCheckedChange, ...props }, ref) => (
-  <CheckboxPrimitive
+  <Checkbox
     ref={ref}
     checked={checked}
     onCheckedChange={onCheckedChange}

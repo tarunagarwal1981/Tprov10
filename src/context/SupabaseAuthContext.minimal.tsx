@@ -54,7 +54,7 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         
         if (initialSession?.user) {
           setSession(initialSession);
-          setUser(initialSession.user as User);
+          setUser(initialSession.user as unknown as User);
         }
         
         setIsInitialized(true);
@@ -94,7 +94,7 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       }
       
       if (data.user) {
-        setUser(data.user as User);
+        setUser(data.user as unknown as User);
         setSession(data.session);
         return true;
       }
@@ -272,9 +272,9 @@ export const useUserDisplay = () => {
   const { user, profile } = useAuth();
   
   return {
-    displayName: profile?.name || user?.name || user?.email?.split('@')[0] || 'User',
+    displayName: user?.name || user?.email?.split('@')[0] || 'User',
     email: user?.email || '',
-    avatar: profile?.avatar_url || '',
+    avatar: user?.avatar_url || '',
     role: user?.role || 'USER',
   };
 };

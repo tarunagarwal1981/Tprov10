@@ -1,7 +1,8 @@
 // Legacy Supabase configuration - DEPRECATED
 // Use src/lib/supabase/client.ts for new implementations
 
-import { createSupabaseBrowserClient, type Database } from './supabase/client';
+import { createSupabaseBrowserClient } from './supabase/client';
+import type { Database } from './supabase/types';
 
 // Legacy exports for backward compatibility
 export const supabase = createSupabaseBrowserClient();
