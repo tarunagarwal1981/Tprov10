@@ -1,0 +1,16 @@
+# Netlify Redirects Configuration
+# This file handles client-side routing for your SPA
+
+# Redirect all routes to index.html for client-side routing
+/*    /index.html   200
+
+# API routes (if using Netlify Functions)
+/api/*  /.netlify/functions/:splat  200
+
+# Auth routes
+/login    /index.html   200
+/register /index.html   200
+/dashboard /index.html  200
+
+# Catch-all for any other routes
+/*    /index.html   200
