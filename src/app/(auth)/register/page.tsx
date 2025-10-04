@@ -582,30 +582,38 @@ const RegisterPage: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Company Name *
                 </label>
-                <Input
-                  {...step3OperatorForm.register('companyName')}
-                  type="text"
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
-                  placeholder="Your company name"
-                  leftIcon={<Building className="h-4 w-4 text-gray-400" />}
-                  error={!!step3OperatorForm.formState.errors.companyName}
-                  errorMessage={step3OperatorForm.formState.errors.companyName?.message}
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={step3OperatorForm.watch('companyName') || ''}
+                    onChange={(e) => step3OperatorForm.setValue('companyName', e.target.value)}
+                    className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
+                    placeholder="Your company name"
+                  />
+                  <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                </div>
+                {step3OperatorForm.formState.errors.companyName && (
+                  <p className="text-red-500 text-sm">{step3OperatorForm.formState.errors.companyName.message}</p>
+                )}
               </div>
 
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Business Registration Number *
                 </label>
-                <Input
-                  {...step3OperatorForm.register('businessRegistrationNumber')}
-                  type="text"
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
-                  placeholder="Registration number"
-                  leftIcon={<Building className="h-4 w-4 text-gray-400" />}
-                  error={!!step3OperatorForm.formState.errors.businessRegistrationNumber}
-                  errorMessage={step3OperatorForm.formState.errors.businessRegistrationNumber?.message}
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={step3OperatorForm.watch('businessRegistrationNumber') || ''}
+                    onChange={(e) => step3OperatorForm.setValue('businessRegistrationNumber', e.target.value)}
+                    className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
+                    placeholder="Registration number"
+                  />
+                  <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                </div>
+                {step3OperatorForm.formState.errors.businessRegistrationNumber && (
+                  <p className="text-red-500 text-sm">{step3OperatorForm.formState.errors.businessRegistrationNumber.message}</p>
+                )}
               </div>
             </div>
 
@@ -613,13 +621,16 @@ const RegisterPage: React.FC = () => {
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Website URL
               </label>
-              <Input
-                {...step3OperatorForm.register('websiteUrl')}
-                type="url"
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
-                placeholder="https://yourwebsite.com"
-                leftIcon={<Building className="h-4 w-4 text-gray-400" />}
-              />
+              <div className="relative">
+                <input
+                  type="url"
+                  value={step3OperatorForm.watch('websiteUrl') || ''}
+                  onChange={(e) => step3OperatorForm.setValue('websiteUrl', e.target.value)}
+                  className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
+                  placeholder="https://yourwebsite.com"
+                />
+                <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              </div>
             </div>
 
             <div className="grid md:grid-cols-2 gap-6">
@@ -627,30 +638,38 @@ const RegisterPage: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Phone Number *
                 </label>
-                <Input
-                  {...step3OperatorForm.register('phoneNumber')}
-                  type="tel"
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
-                  placeholder="+1 (555) 123-4567"
-                  leftIcon={<Phone className="h-4 w-4 text-gray-400" />}
-                  error={!!step3OperatorForm.formState.errors.phoneNumber}
-                  errorMessage={step3OperatorForm.formState.errors.phoneNumber?.message}
-                />
+                <div className="relative">
+                  <input
+                    type="tel"
+                    value={step3OperatorForm.watch('phoneNumber') || ''}
+                    onChange={(e) => step3OperatorForm.setValue('phoneNumber', e.target.value)}
+                    className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
+                    placeholder="+1 (555) 123-4567"
+                  />
+                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                </div>
+                {step3OperatorForm.formState.errors.phoneNumber && (
+                  <p className="text-red-500 text-sm">{step3OperatorForm.formState.errors.phoneNumber.message}</p>
+                )}
               </div>
 
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Business Address *
                 </label>
-                <Input
-                  {...step3OperatorForm.register('businessAddress')}
-                  type="text"
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
-                  placeholder="123 Main St, City, State"
-                  leftIcon={<MapPin className="h-4 w-4 text-gray-400" />}
-                  error={!!step3OperatorForm.formState.errors.businessAddress}
-                  errorMessage={step3OperatorForm.formState.errors.businessAddress?.message}
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={step3OperatorForm.watch('businessAddress') || ''}
+                    onChange={(e) => step3OperatorForm.setValue('businessAddress', e.target.value)}
+                    className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
+                    placeholder="123 Main St, City, State"
+                  />
+                  <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                </div>
+                {step3OperatorForm.formState.errors.businessAddress && (
+                  <p className="text-red-500 text-sm">{step3OperatorForm.formState.errors.businessAddress.message}</p>
+                )}
               </div>
             </div>
 
@@ -659,7 +678,8 @@ const RegisterPage: React.FC = () => {
                 Company Description
               </label>
               <textarea
-                {...step3OperatorForm.register('companyDescription')}
+                value={step3OperatorForm.watch('companyDescription') || ''}
+                onChange={(e) => step3OperatorForm.setValue('companyDescription', e.target.value)}
                 rows={4}
                 maxLength={500}
                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700 resize-none"
@@ -686,8 +706,9 @@ const RegisterPage: React.FC = () => {
 
             <div className="flex items-start space-x-2">
               <input
-                {...step3OperatorForm.register('termsAccepted')}
                 type="checkbox"
+                checked={step3OperatorForm.watch('termsAccepted') || false}
+                onChange={(e) => step3OperatorForm.setValue('termsAccepted', e.target.checked)}
                 className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 mt-1"
               />
               <label className="text-sm text-gray-700 dark:text-gray-300">
@@ -856,8 +877,9 @@ const RegisterPage: React.FC = () => {
 
           <div className="flex items-start space-x-2">
             <input
-              {...step3AgentForm.register('termsAccepted')}
               type="checkbox"
+              checked={step3AgentForm.watch('termsAccepted') || false}
+              onChange={(e) => step3AgentForm.setValue('termsAccepted', e.target.checked)}
               className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 mt-1"
             />
             <label className="text-sm text-gray-700 dark:text-gray-300">
