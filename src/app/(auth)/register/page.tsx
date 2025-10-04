@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useForm, useFormContext } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -220,7 +220,8 @@ const RoleSelectionCard: React.FC<{
   </motion.div>
 );
 
-const RegisterPage: React.FC = () => {
+// Component that handles search params logic
+const RegisterPageWithSearchParams: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedRole, setSelectedRole] = useState<'operator' | 'agent' | null>(null);
   const [showPassword, setShowPassword] = useState(false);
