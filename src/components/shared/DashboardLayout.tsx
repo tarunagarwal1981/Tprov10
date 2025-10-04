@@ -382,6 +382,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
       
       return () => clearInterval(interval);
     }
+    return undefined;
   }, [routeLoading]);
   
   // ============================================================================
@@ -512,7 +513,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
       <div className={getContentClasses()}>
         {/* Header */}
         {showHeader && variant !== 'fullwidth' && (
-          <Header onMenuToggle={handleSidebarToggle} />
+          <Header />
         )}
         
         {/* Content */}

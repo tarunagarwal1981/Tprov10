@@ -11,32 +11,29 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useAuth, useRBAC, useUserDisplay } from '@/context/SupabaseAuthContext';
 import { cn } from '@/lib/utils';
 import {
-  LayoutDashboard,
-  Users,
-  Building2,
-  Briefcase,
-  Package,
-  Calendar,
-  BarChart3,
-  Settings,
-  Star,
-  CalendarDays,
-  DollarSign,
-  ShoppingBag,
-  MapPin,
-  UserCircle,
-  ChevronDown,
-  ChevronRight,
-  Menu,
-  X,
-  LogOut,
-  User,
-  Moon,
-  Sun,
-  Bell,
-  HelpCircle,
-  Crown,
-} from 'lucide-react';
+  FiHome,
+  FiUsers,
+  FiBriefcase,
+  FiPackage,
+  FiCalendar,
+  FiBarChart,
+  FiSettings,
+  FiStar,
+  FiDollarSign,
+  FiShoppingBag,
+  FiMapPin,
+  FiUser,
+  FiChevronDown,
+  FiChevronRight,
+  FiMenu,
+  FiX,
+  FiLogOut,
+  FiMoon,
+  FiSun,
+  FiBell,
+  FiHelpCircle,
+  FiAward,
+} from 'react-icons/fi';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -69,54 +66,54 @@ const ADMIN_NAVIGATION: NavigationItem[] = [
     id: 'dashboard',
     label: 'Dashboard',
     href: '/admin/dashboard',
-    icon: LayoutDashboard,
+    icon: FiHome,
   },
   {
     id: 'users',
     label: 'Users Management',
     href: '/admin/users',
-    icon: Users,
+    icon: FiUsers,
     badge: 12,
   },
   {
     id: 'operators',
     label: 'Tour Operators',
     href: '/admin/operators',
-    icon: Building2,
+    icon: FiHome,
     badge: 5,
   },
   {
     id: 'agents',
     label: 'Travel Agents',
     href: '/admin/agents',
-    icon: Briefcase,
+    icon: FiBriefcase,
     badge: 23,
   },
   {
     id: 'packages',
     label: 'Packages',
     href: '/admin/packages',
-    icon: Package,
+    icon: FiPackage,
     badge: 8,
   },
   {
     id: 'bookings',
     label: 'Bookings',
     href: '/admin/bookings',
-    icon: Calendar,
+    icon: FiCalendar,
     badge: 156,
   },
   {
     id: 'analytics',
     label: 'Analytics',
     href: '/admin/analytics',
-    icon: BarChart3,
+    icon: FiBarChart,
   },
   {
     id: 'settings',
     label: 'Settings',
     href: '/admin/settings',
-    icon: Settings,
+    icon: FiSettings,
   },
 ];
 
@@ -125,31 +122,31 @@ const TOUR_OPERATOR_NAVIGATION: NavigationItem[] = [
     id: 'dashboard',
     label: 'Dashboard',
     href: '/operator/dashboard',
-    icon: LayoutDashboard,
+    icon: FiHome,
   },
   {
     id: 'packages',
     label: 'My Packages',
     href: '/operator/packages',
-    icon: Package,
+    icon: FiPackage,
     submenu: [
       {
         id: 'all-packages',
         label: 'All Packages',
         href: '/operator/packages',
-        icon: Package,
+        icon: FiPackage,
       },
       {
         id: 'create-package',
         label: 'Create New',
         href: '/operator/packages/create',
-        icon: Package,
+        icon: FiPackage,
       },
       {
         id: 'drafts',
         label: 'Drafts',
         href: '/operator/packages/drafts',
-        icon: Package,
+        icon: FiPackage,
         badge: 3,
       },
     ],
@@ -158,32 +155,32 @@ const TOUR_OPERATOR_NAVIGATION: NavigationItem[] = [
     id: 'bookings',
     label: 'Bookings',
     href: '/operator/bookings',
-    icon: Calendar,
+    icon: FiCalendar,
     submenu: [
       {
         id: 'all-bookings',
         label: 'All Bookings',
         href: '/operator/bookings',
-        icon: Calendar,
+        icon: FiCalendar,
       },
       {
         id: 'pending-bookings',
         label: 'Pending',
         href: '/operator/bookings/pending',
-        icon: Calendar,
+        icon: FiCalendar,
         badge: 7,
       },
       {
         id: 'confirmed-bookings',
         label: 'Confirmed',
         href: '/operator/bookings/confirmed',
-        icon: Calendar,
+        icon: FiCalendar,
       },
       {
         id: 'completed-bookings',
         label: 'Completed',
         href: '/operator/bookings/completed',
-        icon: Calendar,
+        icon: FiCalendar,
       },
     ],
   },
@@ -191,32 +188,32 @@ const TOUR_OPERATOR_NAVIGATION: NavigationItem[] = [
     id: 'reviews',
     label: 'Reviews',
     href: '/operator/reviews',
-    icon: Star,
+    icon: FiStar,
     badge: 24,
   },
   {
     id: 'analytics',
     label: 'Analytics',
     href: '/operator/analytics',
-    icon: BarChart3,
+    icon: FiBarChart,
   },
   {
     id: 'availability',
     label: 'Availability',
     href: '/operator/availability',
-    icon: CalendarDays,
+    icon: FiCalendar,
   },
   {
     id: 'earnings',
     label: 'Earnings',
     href: '/operator/earnings',
-    icon: DollarSign,
+    icon: FiDollarSign,
   },
   {
     id: 'settings',
     label: 'Settings',
     href: '/operator/settings',
-    icon: Settings,
+    icon: FiSettings,
   },
 ];
 
@@ -225,32 +222,32 @@ const TRAVEL_AGENT_NAVIGATION: NavigationItem[] = [
     id: 'dashboard',
     label: 'Dashboard',
     href: '/agent/dashboard',
-    icon: LayoutDashboard,
+    icon: FiHome,
   },
   {
     id: 'leads',
     label: 'Leads',
     href: '/agent/leads',
-    icon: Users,
+    icon: FiUsers,
     badge: 8,
     submenu: [
       {
         id: 'all-leads',
         label: 'All Leads',
         href: '/agent/leads',
-        icon: Users,
+        icon: FiUsers,
       },
       {
         id: 'pipeline',
         label: 'Pipeline',
         href: '/agent/leads/pipeline',
-        icon: Users,
+        icon: FiUsers,
       },
       {
         id: 'add-lead',
         label: 'Add New',
         href: '/agent/leads/new',
-        icon: Users,
+        icon: FiUsers,
       },
     ],
   },
@@ -258,26 +255,26 @@ const TRAVEL_AGENT_NAVIGATION: NavigationItem[] = [
     id: 'marketplace',
     label: 'Marketplace',
     href: '/agent/marketplace',
-    icon: ShoppingBag,
+    icon: FiShoppingBag,
     submenu: [
       {
         id: 'browse-packages',
         label: 'Browse Packages',
         href: '/agent/marketplace',
-        icon: ShoppingBag,
+        icon: FiShoppingBag,
       },
       {
         id: 'favorites',
         label: 'Favorites',
         href: '/agent/marketplace/favorites',
-        icon: ShoppingBag,
+        icon: FiShoppingBag,
         badge: 12,
       },
       {
         id: 'recent',
         label: 'Recent',
         href: '/agent/marketplace/recent',
-        icon: ShoppingBag,
+        icon: FiShoppingBag,
       },
     ],
   },
@@ -285,25 +282,25 @@ const TRAVEL_AGENT_NAVIGATION: NavigationItem[] = [
     id: 'itineraries',
     label: 'Itineraries',
     href: '/agent/itineraries',
-    icon: MapPin,
+    icon: FiMapPin,
     submenu: [
       {
         id: 'all-itineraries',
         label: 'All Itineraries',
         href: '/agent/itineraries',
-        icon: MapPin,
+        icon: FiMapPin,
       },
       {
         id: 'create-itinerary',
         label: 'Create New',
         href: '/agent/itineraries/create',
-        icon: MapPin,
+        icon: FiMapPin,
       },
       {
         id: 'templates',
         label: 'Templates',
         href: '/agent/itineraries/templates',
-        icon: MapPin,
+        icon: FiMapPin,
       },
     ],
   },
@@ -311,27 +308,27 @@ const TRAVEL_AGENT_NAVIGATION: NavigationItem[] = [
     id: 'bookings',
     label: 'Bookings',
     href: '/agent/bookings',
-    icon: Calendar,
+    icon: FiCalendar,
     badge: 15,
     submenu: [
       {
         id: 'all-bookings',
         label: 'All Bookings',
         href: '/agent/bookings',
-        icon: Calendar,
+        icon: FiCalendar,
       },
       {
         id: 'pending-bookings',
         label: 'Pending',
         href: '/agent/bookings/pending',
-        icon: Calendar,
+        icon: FiCalendar,
         badge: 5,
       },
       {
         id: 'confirmed-bookings',
         label: 'Confirmed',
         href: '/agent/bookings/confirmed',
-        icon: Calendar,
+        icon: FiCalendar,
       },
     ],
   },
@@ -339,19 +336,19 @@ const TRAVEL_AGENT_NAVIGATION: NavigationItem[] = [
     id: 'customers',
     label: 'Customers',
     href: '/agent/customers',
-    icon: UserCircle,
+    icon: FiUser,
   },
   {
     id: 'commissions',
     label: 'Commissions',
     href: '/agent/commissions',
-    icon: DollarSign,
+    icon: FiDollarSign,
   },
   {
     id: 'settings',
     label: 'Settings',
     href: '/agent/settings',
-    icon: Settings,
+    icon: FiSettings,
   },
 ];
 
@@ -496,7 +493,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
   const router = useRouter();
   const { user, logout } = useAuth();
   const { userRole, hasRole } = useRBAC();
-  const { displayName, displayAvatar, initials } = useUserDisplay();
+  const { displayName, avatar, role } = useUserDisplay();
   const { theme, setTheme } = useTheme();
 
   // ============================================================================
@@ -610,7 +607,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
             animate={{ rotate: isCollapsed ? 180 : 0 }}
             transition={{ duration: 0.2 }}
           >
-            <ChevronDown className="h-4 w-4" />
+            <FiChevronDown className="h-4 w-4" />
           </motion.div>
         </Button>
       </div>
@@ -621,7 +618,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
           {navigationItems.map((item) => {
             const isExpanded = expandedItems.has(item.id);
             const hasSubmenu = item.submenu && item.submenu.length > 0;
-            const isActive = pathname === item.href || (hasSubmenu && item.submenu?.some(sub => pathname === sub.href));
+            const isActive = pathname === item.href || (hasSubmenu && item.submenu?.some(sub => pathname === sub.href)) || false;
 
             return (
               <div key={item.id}>
@@ -669,9 +666,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
             {/* User Profile Card */}
             <div className="flex items-center gap-3 p-3 rounded-lg bg-zinc-50/50 dark:bg-zinc-800/50">
               <Avatar className="h-10 w-10">
-                <AvatarImage src={displayAvatar || undefined} />
+                <AvatarImage src={avatar || undefined} />
                 <AvatarFallback className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white">
-                  {initials}
+                  {displayName?.split(' ').map(n => n[0]).join('')}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
@@ -679,7 +676,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
                   {displayName}
                 </p>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">
-                  {userRole}
+                  {role}
                 </p>
               </div>
             </div>
@@ -692,7 +689,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
                 onClick={() => handleNavigate('/profile')}
                 className="justify-start text-xs"
               >
-                <User className="h-3 w-3 mr-2" />
+                <FiUser className="h-3 w-3 mr-2" />
                 Profile
               </Button>
               <Button
@@ -701,7 +698,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
                 onClick={() => handleNavigate('/settings')}
                 className="justify-start text-xs"
               >
-                <Settings className="h-3 w-3 mr-2" />
+                <FiSettings className="h-3 w-3 mr-2" />
                 Settings
               </Button>
             </div>
@@ -714,9 +711,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
               className="w-full justify-start text-xs"
             >
               {theme === 'dark' ? (
-                <Sun className="h-3 w-3 mr-2" />
+                <FiSun className="h-3 w-3 mr-2" />
               ) : (
-                <Moon className="h-3 w-3 mr-2" />
+                <FiMoon className="h-3 w-3 mr-2" />
               )}
               {theme === 'dark' ? 'Light' : 'Dark'} Mode
             </Button>
@@ -728,7 +725,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
               onClick={handleLogout}
               className="w-full justify-start text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/20"
             >
-              <LogOut className="h-3 w-3 mr-2" />
+              <FiLogOut className="h-3 w-3 mr-2" />
               Sign Out
             </Button>
           </motion.div>
@@ -743,7 +740,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
                     onClick={() => handleNavigate('/profile')}
                     className="h-8 w-8 p-0"
                   >
-                    <User className="h-4 w-4" />
+                    <FiUser className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="right">
@@ -762,9 +759,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
                     className="h-8 w-8 p-0"
                   >
                     {theme === 'dark' ? (
-                      <Sun className="h-4 w-4" />
+                      <FiSun className="h-4 w-4" />
                     ) : (
-                      <Moon className="h-4 w-4" />
+                      <FiMoon className="h-4 w-4" />
                     )}
                   </Button>
                 </TooltipTrigger>
@@ -783,7 +780,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
                     onClick={handleLogout}
                     className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/20"
                   >
-                    <LogOut className="h-4 w-4" />
+                    <FiLogOut className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="right">
@@ -813,7 +810,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
           onClick={() => setIsMobileOpen(true)}
           className="fixed top-4 left-4 z-50 lg:hidden"
         >
-          <Menu className="h-5 w-5" />
+          <FiMenu className="h-5 w-5" />
         </Button>
 
         {/* Mobile Overlay */}
@@ -845,7 +842,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
                     onClick={() => setIsMobileOpen(false)}
                     className="absolute top-4 right-4 h-8 w-8 p-0"
                   >
-                    <X className="h-4 w-4" />
+                    <FiX className="h-4 w-4" />
                   </Button>
                 </div>
               </motion.div>
@@ -858,4 +855,3 @@ export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
 };
 
 export default Sidebar;
-

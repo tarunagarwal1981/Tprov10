@@ -1,6 +1,6 @@
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
-import { X } from "lucide-react"
+import { FiX } from 'react-icons/fi'
 
 import { cn } from "@/lib/utils"
 
@@ -87,7 +87,7 @@ function Badge({
           className="ml-1 h-3 w-3 rounded-full hover:bg-current/20 transition-colors"
           aria-label="Remove"
         >
-          <X className="h-2 w-2" />
+          <FiX className="h-2 w-2" />
         </button>
       )}
     </div>
@@ -101,13 +101,13 @@ export interface StatusBadgeProps extends Omit<BadgeProps, 'variant'> {
 
 function StatusBadge({ status, ...props }: StatusBadgeProps) {
   const statusConfig = {
-    online: { variant: 'success' as const, icon: <div className="h-1.5 w-1.5 rounded-full bg-current" /> },
-    offline: { variant: 'secondary' as const, icon: <div className="h-1.5 w-1.5 rounded-full bg-current" /> },
-    away: { variant: 'warning' as const, icon: <div className="h-1.5 w-1.5 rounded-full bg-current" /> },
-    busy: { variant: 'destructive' as const, icon: <div className="h-1.5 w-1.5 rounded-full bg-current" /> },
-    pending: { variant: 'warning' as const, animation: 'pulse' as const },
-    approved: { variant: 'success' as const },
-    rejected: { variant: 'destructive' as const },
+    online: { variant: 'success' as const, icon: <div className="h-1.5 w-1.5 rounded-full bg-current" />, animation: undefined },
+    offline: { variant: 'secondary' as const, icon: <div className="h-1.5 w-1.5 rounded-full bg-current" />, animation: undefined },
+    away: { variant: 'warning' as const, icon: <div className="h-1.5 w-1.5 rounded-full bg-current" />, animation: undefined },
+    busy: { variant: 'destructive' as const, icon: <div className="h-1.5 w-1.5 rounded-full bg-current" />, animation: undefined },
+    pending: { variant: 'warning' as const, animation: 'pulse' as const, icon: undefined },
+    approved: { variant: 'success' as const, animation: undefined, icon: undefined },
+    rejected: { variant: 'destructive' as const, animation: undefined, icon: undefined },
   }
 
   const config = statusConfig[status]

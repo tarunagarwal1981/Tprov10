@@ -2,7 +2,7 @@
 
 import { useTheme } from "next-themes"
 import { Toaster as Sonner, toast } from "sonner"
-import { CheckCircle, AlertCircle, AlertTriangle, Info, X } from "lucide-react"
+import { FiCheckCircle, FiAlertCircle, FiAlertTriangle, FiInfo, FiX } from "react-icons/fi"
 import { Button } from "@/components/ui/button"
 
 type ToasterProps = React.ComponentProps<typeof Sonner>
@@ -45,7 +45,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
 const toastSuccess = (message: string, description?: string, action?: { label: string; onClick: () => void }) => {
   return toast.success(message, {
     description,
-    icon: <CheckCircle className="h-4 w-4 text-green-500" />,
+    icon: <FiCheckCircle className="h-4 w-4 text-green-500" />,
     action: action ? {
       label: action.label,
       onClick: action.onClick,
@@ -57,7 +57,7 @@ const toastSuccess = (message: string, description?: string, action?: { label: s
 const toastError = (message: string, description?: string, action?: { label: string; onClick: () => void }) => {
   return toast.error(message, {
     description,
-    icon: <AlertCircle className="h-4 w-4 text-red-500" />,
+    icon: <FiAlertCircle className="h-4 w-4 text-red-500" />,
     action: action ? {
       label: action.label,
       onClick: action.onClick,
@@ -69,7 +69,7 @@ const toastError = (message: string, description?: string, action?: { label: str
 const toastWarning = (message: string, description?: string, action?: { label: string; onClick: () => void }) => {
   return toast.warning(message, {
     description,
-    icon: <AlertTriangle className="h-4 w-4 text-yellow-500" />,
+    icon: <FiAlertTriangle className="h-4 w-4 text-yellow-500" />,
     action: action ? {
       label: action.label,
       onClick: action.onClick,
@@ -81,7 +81,7 @@ const toastWarning = (message: string, description?: string, action?: { label: s
 const toastInfo = (message: string, description?: string, action?: { label: string; onClick: () => void }) => {
   return toast.info(message, {
     description,
-    icon: <Info className="h-4 w-4 text-blue-500" />,
+    icon: <FiInfo className="h-4 w-4 text-blue-500" />,
     action: action ? {
       label: action.label,
       onClick: action.onClick,

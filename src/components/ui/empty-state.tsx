@@ -1,6 +1,6 @@
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
-import { FileX, Search, Inbox, AlertCircle, Plus, RefreshCw } from "lucide-react"
+import { FiFile, FiSearch, FiInbox, FiAlertCircle, FiPlus, FiRefreshCw } from "react-icons/fi"
 import { Button } from "@/components/ui/button"
 
 import { cn } from "@/lib/utils"
@@ -88,7 +88,7 @@ const EmptyState = React.forwardRef<HTMLDivElement, EmptyStateProps>(
             </div>
           ) : (
             <div className="rounded-full bg-muted p-3 mb-4">
-              <FileX className="h-6 w-6" />
+              <FiFile className="h-6 w-6" />
             </div>
           )}
         </div>
@@ -144,7 +144,7 @@ const NoDataEmptyState = React.forwardRef<HTMLDivElement, NoDataEmptyStateProps>
     return (
       <EmptyState
         ref={ref}
-        icon={<FileX className="h-6 w-6" />}
+        icon={<FiFile className="h-6 w-6" />}
         title={`No ${dataType} found`}
         description={`There are no ${dataType} to display at the moment.`}
         action={onCreate ? {
@@ -174,7 +174,7 @@ const SearchEmptyState = React.forwardRef<HTMLDivElement, SearchEmptyStateProps>
     return (
       <EmptyState
         ref={ref}
-        icon={<Search className="h-6 w-6" />}
+        icon={<FiSearch className="h-6 w-6" />}
         title="No results found"
         description={searchTerm ? `No results found for "${searchTerm}". Try adjusting your search terms.` : "No results found for your search."}
         action={onNewSearch ? {
@@ -205,7 +205,7 @@ const ErrorEmptyState = React.forwardRef<HTMLDivElement, ErrorEmptyStateProps>(
       <EmptyState
         ref={ref}
         variant="error"
-        icon={<AlertCircle className="h-6 w-6" />}
+        icon={<FiAlertCircle className="h-6 w-6" />}
         title="Something went wrong"
         description={error || "An unexpected error occurred. Please try again."}
         action={onRetry ? {
@@ -234,7 +234,7 @@ const InboxEmptyState = React.forwardRef<HTMLDivElement, InboxEmptyStateProps>(
     return (
       <EmptyState
         ref={ref}
-        icon={<Inbox className="h-6 w-6" />}
+        icon={<FiInbox className="h-6 w-6" />}
         title={`Your ${inboxType} inbox is empty`}
         description={`You don't have any ${inboxType} yet. When you do, they'll appear here.`}
         action={onCreate ? {
@@ -249,7 +249,7 @@ const InboxEmptyState = React.forwardRef<HTMLDivElement, InboxEmptyStateProps>(
 InboxEmptyState.displayName = "InboxEmptyState"
 
 // Loading empty state
-export interface LoadingEmptyStateProps extends Omit<EmptyStateProps, 'loading'> {
+export interface LoadingEmptyStateProps extends Omit<EmptyStateProps, 'loading' | 'title'> {
   message?: string
 }
 

@@ -1,6 +1,6 @@
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
-import { TrendingUp, TrendingDown, Minus, ArrowUpRight, ArrowDownRight } from "lucide-react"
+import { FiTrendingUp, FiTrendingDown, FiMinus, FiArrowUpRight, FiArrowDownRight } from "react-icons/fi"
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 
@@ -100,11 +100,11 @@ const StatCard = React.forwardRef<HTMLDivElement, StatCardProps>(
       if (!trend) return null
       
       if (trend.value > 0) {
-        return <TrendingUp className="h-4 w-4 text-green-500" />
+        return <FiTrendingUp className="h-4 w-4 text-green-500" />
       } else if (trend.value < 0) {
-        return <TrendingDown className="h-4 w-4 text-red-500" />
+        return <FiTrendingDown className="h-4 w-4 text-red-500" />
       } else {
-        return <Minus className="h-4 w-4 text-gray-500" />
+        return <FiMinus className="h-4 w-4 text-gray-500" />
       }
     }
 
@@ -124,26 +124,136 @@ const StatCard = React.forwardRef<HTMLDivElement, StatCardProps>(
       if (!trend) return null
       
       if (trend.value > 0) {
-        return <ArrowUpRight className="h-3 w-3" />
+        return <FiArrowUpRight className="h-3 w-3" />
       } else if (trend.value < 0) {
-        return <ArrowDownRight className="h-3 w-3" />
+        return <FiArrowDownRight className="h-3 w-3" />
       }
       return null
     }
 
-    const CardComponent = href ? "a" : onClick ? "button" : Card
+    if (href) {
+      return (
+        <a
+          ref={ref as React.Ref<HTMLAnchorElement>}
+          className={cn(
+            statCardVariants({ variant, size }),
+            "cursor-pointer hover:scale-[1.02] active:scale-[0.98]",
+            className
+          )}
+          href={href}
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+        >
+          <CardContent className="space-y-3">
+            {/* Header with title and icon */}
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-medium text-muted-foreground">{title}</h3>
+              {icon && (
+                <div className={cn("rounded-lg p-2 transition-colors", iconColor)}>
+                  {icon}
+                </div>
+              )}
+            </div>
+
+            {/* Value */}
+            <div className="space-y-1">
+              <div className="text-2xl font-bold tracking-tight">{value}</div>
+              {description && (
+                <p className="text-xs text-muted-foreground">{description}</p>
+              )}
+            </div>
+
+            {/* Trend */}
+            {trend && (
+              <div className="flex items-center gap-1 text-sm">
+                <div className="flex items-center gap-1">
+                  {getTrendIcon()}
+                  <span className={cn("font-medium", getTrendColor())}>
+                    {Math.abs(trend.value)}%
+                  </span>
+                  {getTrendArrow()}
+                </div>
+                <span className="text-muted-foreground">
+                  {trend.label}
+                  {trend.period && ` ${trend.period}`}
+                </span>
+              </div>
+            )}
+          </CardContent>
+
+          {/* Hover effect overlay */}
+          {isHovered && (
+            <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent pointer-events-none" />
+          )}
+        </a>
+      )
+    }
+
+    if (onClick) {
+      return (
+        <button
+          ref={ref as React.Ref<HTMLButtonElement>}
+          className={cn(
+            statCardVariants({ variant, size }),
+            "cursor-pointer hover:scale-[1.02] active:scale-[0.98]",
+            className
+          )}
+          onClick={onClick}
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+        >
+          <CardContent className="space-y-3">
+            {/* Header with title and icon */}
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-medium text-muted-foreground">{title}</h3>
+              {icon && (
+                <div className={cn("rounded-lg p-2 transition-colors", iconColor)}>
+                  {icon}
+                </div>
+              )}
+            </div>
+
+            {/* Value */}
+            <div className="space-y-1">
+              <div className="text-2xl font-bold tracking-tight">{value}</div>
+              {description && (
+                <p className="text-xs text-muted-foreground">{description}</p>
+              )}
+            </div>
+
+            {/* Trend */}
+            {trend && (
+              <div className="flex items-center gap-1 text-sm">
+                <div className="flex items-center gap-1">
+                  {getTrendIcon()}
+                  <span className={cn("font-medium", getTrendColor())}>
+                    {Math.abs(trend.value)}%
+                  </span>
+                  {getTrendArrow()}
+                </div>
+                <span className="text-muted-foreground">
+                  {trend.label}
+                  {trend.period && ` ${trend.period}`}
+                </span>
+              </div>
+            )}
+          </CardContent>
+
+          {/* Hover effect overlay */}
+          {isHovered && (
+            <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent pointer-events-none" />
+          )}
+        </button>
+      )
+    }
 
     return (
-      <CardComponent
+      <Card
         ref={ref}
         className={cn(
           statCardVariants({ variant, size }),
-          onClick && "cursor-pointer hover:scale-[1.02] active:scale-[0.98]",
-          href && "cursor-pointer hover:scale-[1.02] active:scale-[0.98]",
           className
         )}
-        onClick={onClick}
-        href={href}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         {...props}
@@ -184,12 +294,7 @@ const StatCard = React.forwardRef<HTMLDivElement, StatCardProps>(
             </div>
           )}
         </CardContent>
-
-        {/* Hover effect overlay */}
-        {isHovered && (onClick || href) && (
-          <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent pointer-events-none" />
-        )}
-      </CardComponent>
+      </Card>
     )
   }
 )

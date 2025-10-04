@@ -1,5 +1,5 @@
 import * as React from "react"
-import { ChevronUp, ChevronDown, ChevronsUpDown, Checkbox } from "lucide-react"
+import { FiChevronUp, FiChevronDown, FiMoreVertical } from "react-icons/fi"
 import { cva, type VariantProps } from "class-variance-authority"
 import { Button } from "@/components/ui/button"
 import { Checkbox as CheckboxPrimitive } from "@/components/ui/checkbox"
@@ -182,11 +182,11 @@ const TableHead = React.forwardRef<HTMLTableCellElement, TableHeadProps>(
             className="h-4 w-4 p-0 hover:bg-transparent"
           >
             {sortDirection === "asc" ? (
-              <ChevronUp className="h-3 w-3" />
+              <FiChevronUp className="h-3 w-3" />
             ) : sortDirection === "desc" ? (
-              <ChevronDown className="h-3 w-3" />
+              <FiChevronDown className="h-3 w-3" />
             ) : (
-              <ChevronsUpDown className="h-3 w-3 opacity-50" />
+              <FiMoreVertical className="h-3 w-3 opacity-50" />
             )}
           </Button>
         )}

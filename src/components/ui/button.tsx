@@ -1,7 +1,7 @@
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
-import { Loader2 } from "lucide-react"
+import { FiLoader } from 'react-icons/fi'
 
 import { cn } from "@/lib/utils"
 
@@ -64,7 +64,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         disabled={isDisabled}
         {...props}
       >
-        {loading && <Loader2 className="animate-spin" />}
+        {loading && <FiLoader className="animate-spin" />}
         {!loading && leftIcon && leftIcon}
         {children}
         {!loading && rightIcon && rightIcon}

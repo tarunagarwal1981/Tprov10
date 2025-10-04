@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import * as SelectPrimitive from "@radix-ui/react-select"
-import { Check, ChevronDown, ChevronUp, Search, X, Loader2 } from "lucide-react"
+import { FiCheck, FiChevronDown, FiChevronUp, FiSearch, FiX, FiLoader } from "react-icons/fi"
 import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
@@ -59,7 +59,7 @@ const SelectTrigger = React.forwardRef<
       {hasLeftContent && (
         <div className="flex items-center mr-2">
           {loading ? (
-            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            <FiLoader className="h-4 w-4 animate-spin text-muted-foreground" />
           ) : (
             leftIcon
           )}
@@ -76,11 +76,11 @@ const SelectTrigger = React.forwardRef<
             }}
             className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors"
           >
-            <X className="h-3 w-3" />
+            <FiX className="h-3 w-3" />
           </button>
         )}
         <SelectPrimitive.Icon asChild>
-          <ChevronDown className="h-4 w-4 opacity-50" />
+          <FiChevronDown className="h-4 w-4 opacity-50" />
         </SelectPrimitive.Icon>
       </div>
     </SelectPrimitive.Trigger>
@@ -100,7 +100,7 @@ const SelectScrollUpButton = React.forwardRef<
     )}
     {...props}
   >
-    <ChevronUp className="h-4 w-4" />
+    <FiChevronUp className="h-4 w-4" />
   </SelectPrimitive.ScrollUpButton>
 ))
 SelectScrollUpButton.displayName = SelectPrimitive.ScrollUpButton.displayName
@@ -117,7 +117,7 @@ const SelectScrollDownButton = React.forwardRef<
     )}
     {...props}
   >
-    <ChevronDown className="h-4 w-4" />
+    <FiChevronDown className="h-4 w-4" />
   </SelectPrimitive.ScrollDownButton>
 ))
 SelectScrollDownButton.displayName = SelectPrimitive.ScrollDownButton.displayName
@@ -180,7 +180,7 @@ const SelectContent = React.forwardRef<
         {searchable && (
           <div className="p-2 border-b">
             <div className="relative">
-              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <FiSearch className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <input
                 type="text"
                 placeholder={searchPlaceholder}
@@ -201,7 +201,7 @@ const SelectContent = React.forwardRef<
         >
           {loading ? (
             <div className="flex items-center justify-center py-4">
-              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              <FiLoader className="h-4 w-4 animate-spin text-muted-foreground" />
             </div>
           ) : emptyState ? (
             <div className="flex items-center justify-center py-4 text-sm text-muted-foreground">
@@ -260,7 +260,7 @@ const SelectItem = React.forwardRef<
     </div>
     <span className="absolute right-2 flex h-3.5 w-3.5 items-center justify-center">
       <SelectPrimitive.ItemIndicator>
-        <Check className="h-4 w-4" />
+        <FiCheck className="h-4 w-4" />
       </SelectPrimitive.ItemIndicator>
     </span>
   </SelectPrimitive.Item>

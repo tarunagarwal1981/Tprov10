@@ -1,8 +1,3 @@
-/**
- * Modern Header Component
- * Clean, minimal header with glassmorphism effect and premium features
- */
-
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
@@ -11,26 +6,26 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useAuth, useUserDisplay } from '@/context/SupabaseAuthContext';
 import { cn } from '@/lib/utils';
 import {
-  Search,
-  Bell,
-  User,
-  Settings,
-  CreditCard,
-  HelpCircle,
-  LogOut,
-  ChevronRight,
-  Home,
-  Menu,
-  X,
-  Package,
-  Calendar,
-  Users,
-  Clock,
-  CheckCircle,
-  AlertCircle,
-  Info,
-  Star,
-} from 'lucide-react';
+  FiSearch,
+  FiBell,
+  FiUser,
+  FiSettings,
+  FiCreditCard,
+  FiHelpCircle,
+  FiLogOut,
+  FiChevronRight,
+  FiHome,
+  FiMenu,
+  FiX,
+  FiPackage,
+  FiCalendar,
+  FiUsers,
+  FiClock,
+  FiCheckCircle,
+  FiAlertCircle,
+  FiInfo,
+  FiStar,
+} from 'react-icons/fi';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -44,24 +39,26 @@ import {
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
 import { 
-  Command, 
-  CommandEmpty, 
-  CommandGroup, 
-  CommandInput, 
-  CommandItem, 
-  CommandList 
-} from '@/components/ui/command';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle 
-} from '@/components/ui/dialog';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+  Sheet, 
+  SheetContent, 
+  SheetHeader, 
+  SheetTitle, 
+  SheetTrigger 
+} from '@/components/ui/sheet';
 
 // ============================================================================
 // TYPES AND INTERFACES
 // ============================================================================
+
+interface SearchResult {
+  id: string;
+  title: string;
+  subtitle: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  thumbnail?: string;
+  badge?: string;
+}
 
 interface BreadcrumbItem {
   label: string;
@@ -69,112 +66,87 @@ interface BreadcrumbItem {
   icon?: React.ComponentType<{ className?: string }>;
 }
 
-interface SearchResult {
+interface NotificationItem {
   id: string;
-  type: 'package' | 'booking' | 'customer' | 'recent';
-  title: string;
-  subtitle?: string;
-  href: string;
-  icon?: React.ComponentType<{ className?: string }>;
-  thumbnail?: string;
-  avatar?: string;
-  badge?: string;
-}
-
-interface Notification {
-  id: string;
-  type: 'booking' | 'payment' | 'review' | 'system' | 'promotion';
+  type: 'booking' | 'payment' | 'review' | 'system' | 'marketing';
   title: string;
   message: string;
-  time: Date;
-  read: boolean;
+  timestamp: Date;
+  isRead: boolean;
   href?: string;
 }
 
 interface HeaderProps {
   className?: string;
-  onMenuToggle?: () => void;
+  variant?: 'default' | 'compact' | 'transparent';
+  showSearch?: boolean;
+  showNotifications?: boolean;
+  showUserMenu?: boolean;
+  showBreadcrumbs?: boolean;
+  title?: string;
+  subtitle?: string;
+  actions?: React.ReactNode;
 }
 
 // ============================================================================
-// MOCK DATA
+// DATA AND CONSTANTS
 // ============================================================================
 
-const mockNotifications: Notification[] = [
+const searchResults: SearchResult[] = [
   {
     id: '1',
-    type: 'booking',
-    title: 'New Booking Received',
-    message: 'John Doe booked "Mountain Adventure Package"',
-    time: new Date(Date.now() - 5 * 60 * 1000), // 5 minutes ago
-    read: false,
-    href: '/bookings/123',
-  },
-  {
-    id: '2',
-    type: 'payment',
-    title: 'Payment Confirmed',
-    message: 'Payment of $1,250 received for booking #BK-2024-001',
-    time: new Date(Date.now() - 15 * 60 * 1000), // 15 minutes ago
-    read: false,
-    href: '/bookings/123',
-  },
-  {
-    id: '3',
-    type: 'review',
-    title: 'New Review',
-    message: 'Sarah Wilson left a 5-star review for "Beach Paradise"',
-    time: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-    read: true,
-    href: '/reviews/456',
-  },
-  {
-    id: '4',
-    type: 'system',
-    title: 'System Update',
-    message: 'New features available in your dashboard',
-    time: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
-    read: true,
-    href: '/dashboard',
-  },
-];
-
-const mockSearchResults: SearchResult[] = [
-  {
-    id: '1',
-    type: 'package',
     title: 'Mountain Adventure Package',
     subtitle: '7 days • $1,250 per person',
     href: '/packages/mountain-adventure',
-    icon: Package,
+    icon: FiPackage,
     thumbnail: '/images/mountain.jpg',
     badge: 'Popular',
   },
   {
     id: '2',
-    type: 'booking',
-    title: 'Booking #BK-2024-001',
-    subtitle: 'John Doe • Mountain Adventure',
-    href: '/bookings/bk-2024-001',
-    icon: Calendar,
+    title: 'City Tour Booking',
+    subtitle: 'Paris • Tomorrow 2:00 PM',
+    href: '/bookings/city-tour',
+    icon: FiCalendar,
+    thumbnail: '/images/paris.jpg',
     badge: 'Confirmed',
   },
   {
     id: '3',
-    type: 'customer',
-    title: 'John Doe',
-    subtitle: 'john.doe@email.com • 3 bookings',
-    href: '/customers/john-doe',
-    icon: Users,
-    avatar: '/avatars/john.jpg',
+    title: 'Customer Support',
+    subtitle: 'Help center and documentation',
+    href: '/support',
+    icon: FiHelpCircle,
+  },
+];
+
+const notifications: NotificationItem[] = [
+  {
+    id: '1',
+    type: 'booking',
+    title: 'New Booking Received',
+    message: 'Sarah Johnson booked "Paris City Tour" for 4 people',
+    timestamp: new Date(Date.now() - 1000 * 60 * 15), // 15 minutes ago
+    isRead: false,
+    href: '/bookings/123',
   },
   {
-    id: '4',
-    type: 'recent',
-    title: 'Beach Paradise Package',
-    subtitle: 'Recently viewed',
-    href: '/packages/beach-paradise',
-    icon: Package,
+    id: '2',
+    type: 'payment',
+    title: 'Payment Processed',
+    message: 'Payment of $2,500 received for Mountain Adventure',
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
+    isRead: true,
+    href: '/payments/456',
+  },
+  {
+    id: '3',
+    type: 'review',
+    title: 'New 5-Star Review',
+    message: 'Amazing experience! Highly recommend this tour.',
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 4), // 4 hours ago
+    isRead: false,
+    href: '/reviews/789',
   },
 ];
 
@@ -182,137 +154,66 @@ const mockSearchResults: SearchResult[] = [
 // UTILITY FUNCTIONS
 // ============================================================================
 
-const getNotificationIcon = (type: Notification['type']) => {
+const getNotificationIcon = (type: NotificationItem['type']) => {
   switch (type) {
     case 'booking':
-      return Calendar;
+      return FiCalendar;
     case 'payment':
-      return CreditCard;
+      return FiCreditCard;
     case 'review':
-      return Star;
+      return FiUsers;
     case 'system':
-      return Info;
-    case 'promotion':
-      return AlertCircle;
+      return FiClock;
+    case 'marketing':
+      return FiCheckCircle;
     default:
-      return Bell;
+      return FiBell;
   }
 };
 
-const getNotificationColor = (type: Notification['type']) => {
-  switch (type) {
-    case 'booking':
-      return 'text-blue-600 dark:text-blue-400';
-    case 'payment':
-      return 'text-green-600 dark:text-green-400';
-    case 'review':
-      return 'text-yellow-600 dark:text-yellow-400';
-    case 'system':
-      return 'text-purple-600 dark:text-purple-400';
-    case 'promotion':
-      return 'text-orange-600 dark:text-orange-400';
-    default:
-      return 'text-gray-600 dark:text-gray-400';
-  }
+const getBreadcrumbs = (pathname: string): BreadcrumbItem[] => {
+  const segments = pathname.split('/').filter(Boolean);
+  const breadcrumbs: BreadcrumbItem[] = [
+    { label: 'Home', href: '/', icon: FiHome }
+  ];
+  
+  let currentPath = '';
+  segments.forEach((segment, index) => {
+    currentPath += `/${segment}`;
+    
+    // Add icons for specific segments
+    let icon;
+    if (segment === 'dashboard') icon = FiHome;
+    else if (segment === 'packages') icon = FiPackage;
+    else if (segment === 'bookings') icon = FiCalendar;
+    else if (segment === 'customers') icon = FiUsers;
+    
+    breadcrumbs.push({
+      label: segment.charAt(0).toUpperCase() + segment.slice(1),
+      href: currentPath,
+      icon,
+    });
+  });
+  
+  return breadcrumbs;
 };
 
 const formatTimeAgo = (date: Date): string => {
   const now = new Date();
-  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+  const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
   
-  if (diffInSeconds < 60) return 'Just now';
-  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
-  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
-  return `${Math.floor(diffInSeconds / 86400)}d ago`;
+  if (diffInMinutes < 1) return 'Just now';
+  if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+  
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  if (diffInHours < 24) return `${diffInHours}h ago`;
+  
+  const diffInDays = Math.floor(diffInHours / 24);
+  return `${diffInDays}d ago`;
 };
 
 // ============================================================================
-// BREADCRUMB COMPONENT
-// ============================================================================
-
-interface BreadcrumbProps {
-  pathname: string;
-  className?: string;
-}
-
-const Breadcrumb: React.FC<BreadcrumbProps> = ({ pathname, className }) => {
-  const router = useRouter();
-  
-  const handleBreadcrumbClick = React.useCallback((href: string) => {
-    router.push(href);
-  }, [router]);
-  
-  const breadcrumbs = React.useMemo((): BreadcrumbItem[] => {
-    const segments = pathname.split('/').filter(Boolean);
-    const breadcrumbs: BreadcrumbItem[] = [
-      { label: 'Home', href: '/', icon: Home }
-    ];
-    
-    let currentPath = '';
-    segments.forEach((segment, index) => {
-      currentPath += `/${segment}`;
-      const label = segment.charAt(0).toUpperCase() + segment.slice(1);
-      
-      // Add icons for specific segments
-      let icon;
-      if (segment === 'dashboard') icon = Home;
-      else if (segment === 'packages') icon = Package;
-      else if (segment === 'bookings') icon = Calendar;
-      else if (segment === 'customers') icon = Users;
-      
-      breadcrumbs.push({
-        label,
-        href: currentPath,
-        icon,
-      });
-    });
-    
-    return breadcrumbs.slice(-3); // Max 3 levels
-  }, [pathname]);
-  
-  return (
-    <TooltipProvider>
-      <nav className={cn('flex items-center space-x-1 text-sm', className)}>
-        {breadcrumbs.map((item, index) => {
-          const Icon = item.icon;
-          const isLast = index === breadcrumbs.length - 1;
-          
-          return (
-            <React.Fragment key={`${item.href}-${index}`}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={() => handleBreadcrumbClick(item.href)}
-                    className={cn(
-                      'flex items-center gap-1 px-2 py-1 rounded-md transition-colors',
-                      'hover:bg-zinc-100 dark:hover:bg-zinc-800',
-                      isLast 
-                        ? 'text-zinc-900 dark:text-zinc-100 font-medium' 
-                        : 'text-zinc-600 dark:text-zinc-400'
-                    )}
-                  >
-                    {Icon && <Icon className="h-3 w-3" />}
-                    <span className="truncate max-w-20">{item.label}</span>
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{item.label}</p>
-                </TooltipContent>
-              </Tooltip>
-              
-              {!isLast && (
-                <ChevronRight className="h-3 w-3 text-zinc-400" />
-              )}
-            </React.Fragment>
-          );
-        })}
-      </nav>
-    </TooltipProvider>
-  );
-};
-
-// ============================================================================
-// SEARCH COMPONENT
+// COMPONENTS
 // ============================================================================
 
 interface SearchComponentProps {
@@ -326,257 +227,218 @@ const SearchComponent: React.FC<SearchComponentProps> = ({ isOpen, onClose }) =>
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   
-  useEffect(() => {
-    if (query.length > 2) {
-      setIsLoading(true);
-      // Simulate search delay
-      setTimeout(() => {
-        const filtered = mockSearchResults.filter(item =>
-          item.title.toLowerCase().includes(query.toLowerCase()) ||
-          item.subtitle?.toLowerCase().includes(query.toLowerCase())
-        );
-        setResults(filtered);
-        setIsLoading(false);
-      }, 300);
-    } else {
+  const handleSearch = useCallback(async (searchQuery: string) => {
+    if (!searchQuery.trim()) {
       setResults([]);
+      return;
     }
-  }, [query]);
+    
+    setIsLoading(true);
+    
+    // Simulate API call
+    setTimeout(() => {
+      const filteredResults = searchResults.filter(result =>
+        result.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        result.subtitle.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      setResults(filteredResults);
+      setIsLoading(false);
+    }, 300);
+  }, []);
   
-  const handleSelect = (href: string) => {
-    router.push(href);
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      handleSearch(query);
+    }, 300);
+    
+    return () => clearTimeout(timeoutId);
+  }, [query, handleSearch]);
+  
+  const handleResultClick = (result: SearchResult) => {
+    router.push(result.href);
     onClose();
-    setQuery('');
   };
   
+  if (!isOpen) return null;
+  
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl p-0">
-        <Command className="border-0">
-          <CommandInput
-            placeholder="Search packages, bookings, customers..."
-            value={query}
-            onValueChange={setQuery}
-            className="h-12 text-base"
-          />
-          <CommandList className="max-h-96">
-            {isLoading && (
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
-              </div>
-            )}
-            
-            {!isLoading && query.length > 2 && results.length === 0 && (
-              <CommandEmpty>No results found.</CommandEmpty>
-            )}
-            
-            {!isLoading && results.length > 0 && (
-              <>
-                <CommandGroup heading="Results">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: -20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: -20 }}
+        className="mx-auto mt-20 max-w-2xl bg-white rounded-lg shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="p-4">
+          <div className="relative">
+            <FiSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search packages, bookings, customers..."
+              className="pl-10 pr-4 py-3 text-lg border-0 focus:ring-0 bg-gray-50"
+              autoFocus
+            />
+          </div>
+          
+          {query && (
+            <div className="mt-4 max-h-96 overflow-y-auto">
+              {isLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                </div>
+              ) : results.length > 0 ? (
+                <div className="space-y-2">
                   {results.map((result) => {
-                    const Icon = result.icon;
+                    const IconComponent = result.icon;
                     return (
-                      <CommandItem
+                      <button
                         key={result.id}
-                        onSelect={() => handleSelect(result.href)}
-                        className="flex items-center gap-3 p-3"
+                        onClick={() => handleResultClick(result)}
+                        className="w-full p-3 text-left hover:bg-gray-50 rounded-lg transition-colors"
                       >
-                        {result.avatar ? (
-                          <Avatar className="h-8 w-8">
-                            <AvatarImage src={result.avatar} />
-                            <AvatarFallback>
-                              {result.title.charAt(0)}
-                            </AvatarFallback>
-                          </Avatar>
-                        ) : Icon ? (
-                          <div className="h-8 w-8 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
-                            <Icon className="h-4 w-4" />
+                        <div className="flex items-center gap-3">
+                          <div className="flex-shrink-0">
+                            <IconComponent className="h-5 w-5 text-gray-400" />
                           </div>
-                        ) : null}
-                        
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate">{result.title}</p>
-                          {result.subtitle && (
-                            <p className="text-sm text-zinc-500 dark:text-zinc-400 truncate">
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-gray-900 truncate">
+                              {result.title}
+                            </div>
+                            <div className="text-sm text-gray-500 truncate">
                               {result.subtitle}
-                            </p>
+                            </div>
+                          </div>
+                          {result.badge && (
+                            <Badge variant="secondary" className="text-xs">
+                              {result.badge}
+                            </Badge>
                           )}
                         </div>
-                        
-                        {result.badge && (
-                          <Badge variant="secondary" className="text-xs">
-                            {result.badge}
-                          </Badge>
-                        )}
-                      </CommandItem>
+                      </button>
                     );
                   })}
-                </CommandGroup>
-                
-                <CommandGroup heading="Recent Searches">
-                  {mockSearchResults
-                    .filter(r => r.type === 'recent')
-                    .slice(0, 3)
-                    .map((result) => {
-                      const Icon = result.icon;
-                      return (
-                        <CommandItem
-                          key={result.id}
-                          onSelect={() => handleSelect(result.href)}
-                          className="flex items-center gap-3 p-3"
-                        >
-                          <Clock className="h-4 w-4 text-zinc-400" />
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium truncate">{result.title}</p>
-                            <p className="text-sm text-zinc-500 dark:text-zinc-400 truncate">
-                              {result.subtitle}
-                            </p>
-                          </div>
-                        </CommandItem>
-                      );
-                    })}
-                </CommandGroup>
-              </>
-            )}
-          </CommandList>
-        </Command>
-      </DialogContent>
-    </Dialog>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  No results found for &quot;{query}&quot;
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </motion.div>
+    </motion.div>
   );
 };
 
-// ============================================================================
-// NOTIFICATIONS COMPONENT
-// ============================================================================
-
 interface NotificationsProps {
-  notifications: Notification[];
-  unreadCount: number;
+  notifications: NotificationItem[];
+  onMarkAsRead: (id: string) => void;
+  onViewAll: () => void;
 }
 
-const Notifications: React.FC<NotificationsProps> = ({ notifications, unreadCount }) => {
+const NotificationsComponent: React.FC<NotificationsProps> = ({
+  notifications,
+  onMarkAsRead,
+  onViewAll,
+}) => {
   const router = useRouter();
+  const unreadCount = notifications.filter(n => !n.isRead).length;
   
-  const handleNotificationClick = (notification: Notification) => {
+  const handleNotificationClick = (notification: NotificationItem) => {
+    onMarkAsRead(notification.id);
     if (notification.href) {
       router.push(notification.href);
     }
   };
   
-  const handleMarkAllRead = () => {
-    // Implement mark all as read
-    console.log('Mark all as read');
-  };
-  
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="relative h-9 w-9 p-0 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-        >
-          <Bell className="h-4 w-4" />
+        <Button variant="ghost" size="sm" className="relative">
+          <FiBell className="h-5 w-5" />
           {unreadCount > 0 && (
             <Badge 
               variant="destructive" 
               className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
             >
-              {unreadCount > 9 ? '9+' : unreadCount}
+              {unreadCount}
             </Badge>
           )}
         </Button>
       </DropdownMenuTrigger>
-      
-      <DropdownMenuContent 
-        align="end" 
-        className="w-80 p-0"
-        sideOffset={8}
-      >
-        <div className="p-4 border-b border-zinc-200 dark:border-zinc-800">
-          <div className="flex items-center justify-between">
-            <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">
-              Notifications
-            </h3>
-            {unreadCount > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleMarkAllRead}
-                className="text-xs text-indigo-600 hover:text-indigo-700"
-              >
-                Mark all read
-              </Button>
-            )}
-          </div>
-        </div>
+      <DropdownMenuContent align="end" className="w-80">
+        <DropdownMenuLabel className="flex items-center justify-between">
+          <span>Notifications</span>
+          {unreadCount > 0 && (
+            <Badge variant="secondary">{unreadCount} new</Badge>
+          )}
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
         
-        <div className="max-h-80 overflow-y-auto">
-          {notifications.length === 0 ? (
-            <div className="p-8 text-center text-zinc-500 dark:text-zinc-400">
-              <Bell className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p>No notifications yet</p>
-            </div>
-          ) : (
-            notifications.slice(0, 5).map((notification) => {
-              const Icon = getNotificationIcon(notification.type);
-              const iconColor = getNotificationColor(notification.type);
-              
+        {notifications.length > 0 ? (
+          <>
+            {notifications.slice(0, 5).map((notification) => {
+              const IconComponent = getNotificationIcon(notification.type);
               return (
-                <div
+                <DropdownMenuItem
                   key={notification.id}
                   onClick={() => handleNotificationClick(notification)}
-                  className={cn(
-                    'flex items-start gap-3 p-4 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 cursor-pointer transition-colors',
-                    !notification.read && 'bg-blue-50/50 dark:bg-blue-900/10'
-                  )}
+                  className="p-3 cursor-pointer"
                 >
-                  <div className={cn('h-8 w-8 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center', iconColor)}>
-                    <Icon className="h-4 w-4" />
-                  </div>
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                        {notification.title}
-                      </p>
-                      {!notification.read && (
-                        <div className="h-2 w-2 rounded-full bg-blue-500 flex-shrink-0 mt-1" />
-                      )}
+                  <div className="flex items-start gap-3 w-full">
+                    <div className={`flex-shrink-0 mt-0.5 ${
+                      notification.isRead ? 'text-gray-400' : 'text-blue-600'
+                    }`}>
+                      <IconComponent className="h-4 w-4" />
                     </div>
-                    <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
-                      {notification.message}
-                    </p>
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                      {formatTimeAgo(notification.time)}
-                    </p>
+                    <div className="flex-1 min-w-0">
+                      <div className={`text-sm font-medium ${
+                        notification.isRead ? 'text-gray-600' : 'text-gray-900'
+                      }`}>
+                        {notification.title}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1 line-clamp-2">
+                        {notification.message}
+                      </div>
+                      <div className="text-xs text-gray-400 mt-1">
+                        {formatTimeAgo(notification.timestamp)}
+                      </div>
+                    </div>
+                    {!notification.isRead && (
+                      <div className="flex-shrink-0 w-2 h-2 bg-blue-600 rounded-full mt-2"></div>
+                    )}
                   </div>
-                </div>
+                </DropdownMenuItem>
               );
-            })
-          )}
-        </div>
-        
-        {notifications.length > 5 && (
-          <div className="p-3 border-t border-zinc-200 dark:border-zinc-800">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full"
-              onClick={() => router.push('/notifications')}
-            >
-              View all notifications
-            </Button>
+            })}
+            
+            {notifications.length > 5 && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={onViewAll} className="text-center">
+                  View all notifications
+                </DropdownMenuItem>
+              </>
+            )}
+          </>
+        ) : (
+          <div className="p-4 text-center text-gray-500 text-sm">
+            No notifications yet
           </div>
         )}
       </DropdownMenuContent>
     </DropdownMenu>
   );
 };
-
-// ============================================================================
-// USER PROFILE COMPONENT
-// ============================================================================
 
 interface UserProfileProps {
   user: any;
@@ -585,7 +447,7 @@ interface UserProfileProps {
 
 const UserProfile: React.FC<UserProfileProps> = ({ user, onLogout }) => {
   const router = useRouter();
-  const { displayName, displayAvatar, initials, userRole } = useUserDisplay();
+  const { displayName, avatar, role } = useUserDisplay();
   
   const handleProfileClick = () => {
     router.push('/profile');
@@ -595,81 +457,42 @@ const UserProfile: React.FC<UserProfileProps> = ({ user, onLogout }) => {
     router.push('/settings');
   };
   
-  const handleBillingClick = () => {
-    router.push('/billing');
-  };
-  
-  const handleHelpClick = () => {
-    router.push('/help');
-  };
-  
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          className="relative h-9 w-9 rounded-full p-0 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-        >
+        <Button variant="ghost" className="relative h-8 w-8 rounded-full">
           <Avatar className="h-8 w-8">
-            <AvatarImage src={displayAvatar || undefined} />
-            <AvatarFallback className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-sm">
-              {initials}
-            </AvatarFallback>
+            <AvatarImage src={avatar} alt={displayName} />
+            <AvatarFallback className="text-xs">{displayName?.split(' ').map(n => n[0]).join('')}</AvatarFallback>
           </Avatar>
-          <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-green-500 border-2 border-white dark:border-zinc-900" />
         </Button>
       </DropdownMenuTrigger>
-      
-      <DropdownMenuContent align="end" className="w-64" sideOffset={8}>
-        <DropdownMenuLabel className="p-4">
-          <div className="flex items-center gap-3">
-            <Avatar className="h-10 w-10">
-              <AvatarImage src={displayAvatar || undefined} />
-              <AvatarFallback className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white">
-                {initials}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex-1 min-w-0">
-              <p className="font-medium text-zinc-900 dark:text-zinc-100 truncate">
-                {displayName}
-              </p>
-              <p className="text-sm text-zinc-500 dark:text-zinc-400 truncate">
-                {userRole}
-              </p>
-            </div>
+      <DropdownMenuContent className="w-56" align="end" forceMount>
+        <DropdownMenuLabel className="font-normal">
+          <div className="flex flex-col space-y-1">
+            <p className="text-sm font-medium leading-none">{displayName}</p>
+            <p className="text-xs leading-none text-muted-foreground">
+              {role}
+            </p>
           </div>
         </DropdownMenuLabel>
-        
         <DropdownMenuSeparator />
-        
-        <DropdownMenuItem onClick={handleProfileClick} className="cursor-pointer">
-          <User className="mr-2 h-4 w-4" />
-          My Profile
+        <DropdownMenuItem onClick={handleProfileClick}>
+          <FiUser className="mr-2 h-4 w-4" />
+          <span>Profile</span>
         </DropdownMenuItem>
-        
-        <DropdownMenuItem onClick={handleSettingsClick} className="cursor-pointer">
-          <Settings className="mr-2 h-4 w-4" />
-          Account Settings
+        <DropdownMenuItem onClick={handleSettingsClick}>
+          <FiSettings className="mr-2 h-4 w-4" />
+          <span>Settings</span>
         </DropdownMenuItem>
-        
-        <DropdownMenuItem onClick={handleBillingClick} className="cursor-pointer">
-          <CreditCard className="mr-2 h-4 w-4" />
-          Billing
+        <DropdownMenuItem>
+          <FiCreditCard className="mr-2 h-4 w-4" />
+          <span>Billing</span>
         </DropdownMenuItem>
-        
-        <DropdownMenuItem onClick={handleHelpClick} className="cursor-pointer">
-          <HelpCircle className="mr-2 h-4 w-4" />
-          Help Center
-        </DropdownMenuItem>
-        
         <DropdownMenuSeparator />
-        
-        <DropdownMenuItem 
-          onClick={onLogout} 
-          className="cursor-pointer text-red-600 focus:text-red-600 dark:text-red-400 dark:focus:text-red-400"
-        >
-          <LogOut className="mr-2 h-4 w-4" />
-          Logout
+        <DropdownMenuItem onClick={onLogout}>
+          <FiLogOut className="mr-2 h-4 w-4" />
+          <span>Log out</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -677,140 +500,173 @@ const UserProfile: React.FC<UserProfileProps> = ({ user, onLogout }) => {
 };
 
 // ============================================================================
-// MAIN HEADER COMPONENT
+// MAIN COMPONENT
 // ============================================================================
 
-export const Header: React.FC<HeaderProps> = ({ className, onMenuToggle }) => {
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [notifications] = useState<Notification[]>(mockNotifications);
-  const [unreadCount] = useState(2); // Mock unread count
-  
+export function Header({
+  className,
+  variant = 'default',
+  showSearch = true,
+  showNotifications = true,
+  showUserMenu = true,
+  showBreadcrumbs = true,
+  title,
+  subtitle,
+  actions,
+}: HeaderProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const { user, logout } = useAuth();
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [notificationsState, setNotificationsState] = useState(notifications);
   
-  // ============================================================================
-  // EFFECTS
-  // ============================================================================
+  const breadcrumbs = getBreadcrumbs(pathname);
+  const unreadNotifications = notificationsState.filter(n => !n.isRead).length;
   
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 0);
-    };
-    
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  const handleSearchToggle = () => {
+    setIsSearchOpen(!isSearchOpen);
+  };
   
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        setIsSearchOpen(true);
-      }
-      if (e.key === 'Escape') {
-        setIsSearchOpen(false);
-      }
-    };
-    
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  const handleNotificationMarkAsRead = (id: string) => {
+    setNotificationsState(prev => 
+      prev.map(n => n.id === id ? { ...n, isRead: true } : n)
+    );
+  };
   
-  // ============================================================================
-  // HANDLERS
-  // ============================================================================
+  const handleViewAllNotifications = () => {
+    router.push('/notifications');
+  };
   
-  const handleLogout = useCallback(async () => {
+  const handleLogout = async () => {
     await logout();
-  }, [logout]);
+    router.push('/');
+  };
   
-  // ============================================================================
-  // RENDER
-  // ============================================================================
+  const isCompact = variant === 'compact';
+  const isTransparent = variant === 'transparent';
   
   return (
     <>
-      <motion.header
-        className={cn(
-          'sticky top-0 z-40 w-full',
-          'bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl',
-          'border-b border-zinc-200/50 dark:border-zinc-800/50',
-          'transition-shadow duration-200',
-          isScrolled && 'shadow-sm shadow-zinc-200/20 dark:shadow-zinc-900/20',
-          className
-        )}
-        initial={{ y: -100 }}
-        animate={{ y: 0 }}
-        transition={{ duration: 0.3 }}
-      >
-        <div className="flex h-16 items-center justify-between px-6 lg:px-8">
-          {/* Left Section */}
-          <div className="flex items-center gap-4">
-            {/* Mobile Menu Button */}
+      <header className={cn(
+        'sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60',
+        isTransparent && 'bg-transparent border-transparent',
+        className
+      )}>
+        <div className="container flex h-14 items-center">
+          {/* Mobile Menu Button */}
+          <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="sm" className="md:hidden">
+                <FiMenu className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-64">
+              <SheetHeader>
+                <SheetTitle>Menu</SheetTitle>
+              </SheetHeader>
+              <div className="mt-6 space-y-4">
+                <Button variant="ghost" className="w-full justify-start">
+                  <FiHome className="mr-2 h-4 w-4" />
+                  Dashboard
+                </Button>
+                <Button variant="ghost" className="w-full justify-start">
+                  <FiPackage className="mr-2 h-4 w-4" />
+                  Packages
+                </Button>
+                <Button variant="ghost" className="w-full justify-start">
+                  <FiCalendar className="mr-2 h-4 w-4" />
+                  Bookings
+                </Button>
+                <Button variant="ghost" className="w-full justify-start">
+                  <FiUsers className="mr-2 h-4 w-4" />
+                  Customers
+                </Button>
+              </div>
+            </SheetContent>
+          </Sheet>
+          
+          {/* Breadcrumbs */}
+          {showBreadcrumbs && !isCompact && (
+            <nav className="hidden md:flex items-center space-x-2 text-sm">
+              {breadcrumbs.map((breadcrumb, index) => {
+                const isLast = index === breadcrumbs.length - 1;
+                const IconComponent = breadcrumb.icon;
+                
+                return (
+                  <React.Fragment key={breadcrumb.href}>
+                    {index > 0 && (
+                      <FiChevronRight className="h-4 w-4 text-gray-400" />
+                    )}
+                    <button
+                      onClick={() => router.push(breadcrumb.href)}
+                      className={cn(
+                        'flex items-center gap-1 hover:text-foreground transition-colors',
+                        isLast ? 'text-foreground font-medium' : 'text-muted-foreground'
+                      )}
+                    >
+                      {IconComponent && <IconComponent className="h-4 w-4" />}
+                      <span>{breadcrumb.label}</span>
+                    </button>
+                  </React.Fragment>
+                );
+              })}
+            </nav>
+          )}
+          
+          {/* Title and Subtitle */}
+          {(title || subtitle) && !isCompact && (
+            <div className="hidden md:block ml-6">
+              {title && (
+                <h1 className="text-lg font-semibold">{title}</h1>
+              )}
+              {subtitle && (
+                <p className="text-sm text-muted-foreground">{subtitle}</p>
+              )}
+            </div>
+          )}
+          
+          {/* Spacer */}
+          <div className="flex-1" />
+          
+          {/* Actions */}
+          {actions && (
+            <div className="hidden md:flex items-center gap-2 mr-4">
+              {actions}
+            </div>
+          )}
+          
+          {/* Search */}
+          {showSearch && (
             <Button
               variant="ghost"
               size="sm"
-              onClick={onMenuToggle}
-              className="lg:hidden h-9 w-9 p-0"
+              onClick={handleSearchToggle}
+              className="hidden md:flex items-center gap-2 text-muted-foreground hover:text-foreground"
             >
-              <Menu className="h-5 w-5" />
+              <FiSearch className="h-4 w-4" />
+              <span className="hidden lg:inline">Search...</span>
             </Button>
-            
-            {/* Breadcrumbs - Desktop Only - Temporarily disabled */}
-            <div className="hidden lg:block">
-              {/* <Breadcrumb pathname={pathname} /> */}
-              <div className="text-sm text-zinc-600 dark:text-zinc-400">
-                {pathname === '/' ? 'Home' : pathname.split('/').pop()?.charAt(0).toUpperCase() + pathname.split('/').pop()?.slice(1)}
-              </div>
-            </div>
-          </div>
+          )}
           
-          {/* Center Section - Search */}
-          <div className="flex-1 max-w-md mx-4">
-            <div className="relative">
-              <Button
-                variant="ghost"
-                onClick={() => setIsSearchOpen(true)}
-                className="w-full justify-start text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 h-9 px-3"
-              >
-                <Search className="mr-2 h-4 w-4" />
-                <span className="hidden sm:inline">Search packages, bookings, customers...</span>
-                <span className="sm:hidden">Search...</span>
-                <kbd className="ml-auto hidden lg:inline-flex h-5 select-none items-center gap-1 rounded border bg-zinc-100 px-1.5 font-mono text-[10px] font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
-                  <span className="text-xs">⌘</span>K
-                </kbd>
-              </Button>
-            </div>
-          </div>
-          
-          {/* Right Section */}
-          <div className="flex items-center gap-2">
-            {/* Notifications */}
-            <Notifications 
-              notifications={notifications} 
-              unreadCount={unreadCount} 
+          {/* Notifications */}
+          {showNotifications && (
+            <NotificationsComponent
+              notifications={notificationsState}
+              onMarkAsRead={handleNotificationMarkAsRead}
+              onViewAll={handleViewAllNotifications}
             />
-            
-            {/* User Profile */}
-            {user && (
-              <UserProfile 
-                user={user} 
-                onLogout={handleLogout} 
-              />
-            )}
-          </div>
+          )}
+          
+          {/* User Menu */}
+          {showUserMenu && user && (
+            <UserProfile user={user} onLogout={handleLogout} />
+          )}
         </div>
-      </motion.header>
+      </header>
       
       {/* Search Modal */}
-      <SearchComponent 
-        isOpen={isSearchOpen} 
-        onClose={() => setIsSearchOpen(false)} 
-      />
+      <SearchComponent isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
     </>
   );
-};
-
-export default Header;
-
+}

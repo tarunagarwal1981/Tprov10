@@ -1,6 +1,6 @@
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
-import { Eye, EyeOff, X, Loader2, CheckCircle, AlertCircle } from "lucide-react"
+import { FiEye, FiEyeOff, FiX, FiLoader, FiCheckCircle, FiAlertCircle } from "react-icons/fi"
 
 import { cn } from "@/lib/utils"
 
@@ -27,7 +27,7 @@ const inputVariants = cva(
 )
 
 export interface InputProps
-  extends React.ComponentProps<"input">,
+  extends Omit<React.ComponentProps<"input">, 'size'>,
     VariantProps<typeof inputVariants> {
   leftIcon?: React.ReactNode
   rightIcon?: React.ReactNode
@@ -94,6 +94,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         const timer = setTimeout(() => setIsShaking(false), 500)
         return () => clearTimeout(timer)
       }
+      return undefined
     }, [error])
 
     React.useEffect(() => {
@@ -102,6 +103,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         const timer = setTimeout(() => setIsSuccess(false), 2000)
         return () => clearTimeout(timer)
       }
+      return undefined
     }, [success])
 
     const hasLeftContent = leftIcon || loading
@@ -113,7 +115,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           {hasLeftContent && (
             <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center">
               {loading ? (
-                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                <FiLoader className="h-4 w-4 animate-spin text-muted-foreground" />
               ) : (
                 leftIcon
               )}
@@ -136,12 +138,12 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
 
           {hasRightContent && (
             <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
-              {loading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+              {loading && <FiLoader className="h-4 w-4 animate-spin text-muted-foreground" />}
               {!loading && success && (
-                <CheckCircle className="h-4 w-4 text-green-500 animate-pulse" />
+                <FiCheckCircle className="h-4 w-4 text-green-500 animate-pulse" />
               )}
               {!loading && error && (
-                <AlertCircle className="h-4 w-4 text-destructive animate-pulse" />
+                <FiAlertCircle className="h-4 w-4 text-destructive animate-pulse" />
               )}
               {!loading && showClear && currentValue && (
                 <button
@@ -149,7 +151,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
                   onClick={handleClear}
                   className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  <X className="h-3 w-3" />
+                  <FiX className="h-3 w-3" />
                 </button>
               )}
               {!loading && showPasswordToggle && (
@@ -159,9 +161,9 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
                   className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors"
                 >
                   {showPassword ? (
-                    <EyeOff className="h-3 w-3" />
+                    <FiEyeOff className="h-3 w-3" />
                   ) : (
-                    <Eye className="h-3 w-3" />
+                    <FiEye className="h-3 w-3" />
                   )}
                 </button>
               )}
