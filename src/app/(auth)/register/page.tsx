@@ -7,7 +7,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/SupabaseAuthContext';
+import type { UserRole } from '@/lib/types';
 import AuthLayout from '@/components/shared/AuthLayout';
+import { Input } from '@/components/ui/input';
+import { Eye, EyeOff, CheckCircle, User, Mail, Lock, Building, MapPin, Phone, Upload, Check } from 'lucide-react';
 
 // Validation schemas for each step
 const step1Schema = z.object({
@@ -22,7 +25,7 @@ const step1Schema = z.object({
 
 const step2Schema = z.object({
   role: z.enum(['operator', 'agent'], {
-    required_error: 'Please select a role',
+    message: 'Please select a role',
   }),
 });
 
@@ -106,9 +109,7 @@ const PasswordStrengthMeter: React.FC<{ password: string }> = ({ password }) => 
           { label: 'Special char', met: /[!@#$%^&*(),.?":{}|<>]/.test(password) },
         ].map((check, index) => (
           <div key={index} className="flex items-center space-x-1">
-            <span className={check.met ? 'text-green-500' : 'text-gray-400'}>
-              {check.met ? '✓' : '○'}
-            </span>
+            <CheckCircle className={`h-3 w-3 ${check.met ? 'text-green-500' : 'text-gray-400'}`} />
             <span>{check.label}</span>
           </div>
         ))}
@@ -141,7 +142,7 @@ const StepIndicator: React.FC<{ currentStep: number; totalSteps: number }> = ({ 
               animate={{ scale: 1 }}
               transition={{ delay: index * 0.1 }}
             >
-              {step.number < currentStep ? '✓' : step.number}
+              {step.number < currentStep ? <CheckCircle className="h-4 w-4" /> : step.number}
             </motion.div>
             <span className={`ml-2 text-sm font-medium ${
               step.number <= currentStep ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'
@@ -222,8 +223,6 @@ const RoleSelectionCard: React.FC<{
 const RegisterPage: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedRole, setSelectedRole] = useState<'operator' | 'agent' | null>(null);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [registrationData, setRegistrationData] = useState<RegistrationData | null>(null);
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -246,8 +245,25 @@ const RegisterPage: React.FC = () => {
   const step1Form = useForm<Step1Data>({
     resolver: zodResolver(step1Schema),
     mode: 'onChange',
-    defaultValues: registrationData || {},
+    defaultValues: {
+      fullName: '',
+      email: '',
+      password: '',
+      confirmPassword: '',
+    },
   });
+
+  // Populate form with saved data if it exists
+  useEffect(() => {
+    if (registrationData && step1Form) {
+      step1Form.reset({
+        fullName: registrationData.fullName || '',
+        email: registrationData.email || '',
+        password: registrationData.password || '',
+        confirmPassword: registrationData.confirmPassword || '',
+      });
+    }
+  }, [registrationData, step1Form]);
 
   const step2Form = useForm<Step2Data>({
     resolver: zodResolver(step2Schema),
@@ -258,11 +274,30 @@ const RegisterPage: React.FC = () => {
   const step3OperatorForm = useForm<Step3OperatorData>({
     resolver: zodResolver(step3OperatorSchema),
     mode: 'onChange',
+    defaultValues: {
+      companyName: '',
+      businessRegistrationNumber: '',
+      websiteUrl: '',
+      phoneNumber: '',
+      businessAddress: '',
+      companyDescription: '',
+      businessLicense: undefined,
+      termsAccepted: false,
+    },
   });
 
   const step3AgentForm = useForm<Step3AgentData>({
     resolver: zodResolver(step3AgentSchema),
     mode: 'onChange',
+    defaultValues: {
+      agencyName: '',
+      agencyRegistrationNumber: '',
+      phoneNumber: '',
+      officeAddress: '',
+      specialization: [],
+      yearsOfExperience: '',
+      termsAccepted: false,
+    },
   });
 
   const saveToLocalStorage = (data: any) => {
@@ -270,14 +305,14 @@ const RegisterPage: React.FC = () => {
   };
 
   const handleStep1Submit = (data: Step1Data) => {
-    setRegistrationData(prev => ({ ...prev, ...data }));
+    setRegistrationData(prev => prev ? { ...prev, ...data } : { ...data, role: 'operator' as const });
     saveToLocalStorage({ ...registrationData, ...data });
     setCurrentStep(2);
   };
 
   const handleStep2Submit = (data: Step2Data) => {
     setSelectedRole(data.role);
-    setRegistrationData(prev => ({ ...prev, ...data }));
+    setRegistrationData(prev => prev ? { ...prev, ...data } : { fullName: '', email: '', password: '', confirmPassword: '', ...data });
     saveToLocalStorage({ ...registrationData, ...data });
     setCurrentStep(3);
   };
@@ -293,11 +328,11 @@ const RegisterPage: React.FC = () => {
         phone: selectedRole === 'operator' 
           ? (data as Step3OperatorData).phoneNumber 
           : (data as Step3AgentData).phoneNumber,
-        role: selectedRole === 'operator' ? 'TOUR_OPERATOR' : 'TRAVEL_AGENT',
+        role: (selectedRole === 'operator' ? 'TOUR_OPERATOR' : 'TRAVEL_AGENT') as UserRole,
         profile: {
           ...data,
           role: selectedRole,
-        }
+        } as any
       };
       
       const success = await registerUser(userData);
@@ -333,79 +368,63 @@ const RegisterPage: React.FC = () => {
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
             Full Name
           </label>
-          <input
+          <Input
             {...step1Form.register('fullName')}
             type="text"
             className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
             placeholder="Enter your full name"
+            leftIcon={<User className="h-4 w-4 text-gray-400" />}
+            error={!!step1Form.formState.errors.fullName}
+            errorMessage={step1Form.formState.errors.fullName?.message}
           />
-          {step1Form.formState.errors.fullName && (
-            <p className="text-red-500 text-sm">{step1Form.formState.errors.fullName.message}</p>
-          )}
         </div>
 
         <div className="space-y-2">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
             Email Address
           </label>
-          <input
+          <Input
             {...step1Form.register('email')}
             type="email"
             className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
             placeholder="Enter your email"
+            leftIcon={<Mail className="h-4 w-4 text-gray-400" />}
+            error={!!step1Form.formState.errors.email}
+            errorMessage={step1Form.formState.errors.email?.message}
           />
-          {step1Form.formState.errors.email && (
-            <p className="text-red-500 text-sm">{step1Form.formState.errors.email.message}</p>
-          )}
         </div>
 
         <div className="space-y-2">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
             Password
           </label>
-          <div className="relative">
-            <input
-              {...step1Form.register('password')}
-              type={showPassword ? 'text' : 'password'}
-              className="w-full px-4 py-3 pr-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
-              placeholder="Create a password"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-            >
-              {showPassword ? '👁️' : '👁️‍🗨️'}
-            </button>
-          </div>
+          <Input
+            {...step1Form.register('password')}
+            type="password"
+            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
+            placeholder="Create a password"
+            leftIcon={<Lock className="h-4 w-4 text-gray-400" />}
+            showPasswordToggle={true}
+            error={!!step1Form.formState.errors.password}
+            errorMessage={step1Form.formState.errors.password?.message}
+          />
           <PasswordStrengthMeter password={step1Form.watch('password') || ''} />
-          {step1Form.formState.errors.password && (
-            <p className="text-red-500 text-sm">{step1Form.formState.errors.password.message}</p>
-          )}
         </div>
 
         <div className="space-y-2">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
             Confirm Password
           </label>
-          <div className="relative">
-            <input
-              {...step1Form.register('confirmPassword')}
-              type={showConfirmPassword ? 'text' : 'password'}
-              className="w-full px-4 py-3 pr-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
-              placeholder="Confirm your password"
-            />
-            <button
-              type="button"
-              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-            >
-              {showConfirmPassword ? '👁️' : '👁️‍🗨️'}
-            </button>
-          </div>
-          {step1Form.formState.errors.confirmPassword && (
-            <p className="text-red-500 text-sm">{step1Form.formState.errors.confirmPassword.message}</p>
-          )}
+          <Input
+            {...step1Form.register('confirmPassword')}
+            type="password"
+            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
+            placeholder="Confirm your password"
+            leftIcon={<Lock className="h-4 w-4 text-gray-400" />}
+            showPasswordToggle={true}
+            error={!!step1Form.formState.errors.confirmPassword}
+            errorMessage={step1Form.formState.errors.confirmPassword?.message}
+          />
         </div>
 
         <motion.button
@@ -451,7 +470,7 @@ const RegisterPage: React.FC = () => {
               setSelectedRole('operator');
               step2Form.setValue('role', 'operator');
             }}
-            icon="🏢"
+            icon="??"
             title="I'm a Tour Operator"
             description="List your packages, manage bookings, grow your business"
             features={['Package Management', 'Booking System', 'Analytics']}
@@ -465,7 +484,7 @@ const RegisterPage: React.FC = () => {
               setSelectedRole('agent');
               step2Form.setValue('role', 'agent');
             }}
-            icon="💼"
+            icon="✈️"
             title="I'm a Travel Agent"
             description="Browse packages, create itineraries, manage customers"
             features={['Lead Management', 'Itinerary Builder', 'Commission Tracking']}
@@ -527,30 +546,30 @@ const RegisterPage: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Company Name *
                 </label>
-                <input
+                <Input
                   {...step3OperatorForm.register('companyName')}
                   type="text"
                   className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
                   placeholder="Your company name"
+                  leftIcon={<Building className="h-4 w-4 text-gray-400" />}
+                  error={!!step3OperatorForm.formState.errors.companyName}
+                  errorMessage={step3OperatorForm.formState.errors.companyName?.message}
                 />
-                {step3OperatorForm.formState.errors.companyName && (
-                  <p className="text-red-500 text-sm">{step3OperatorForm.formState.errors.companyName.message}</p>
-                )}
               </div>
 
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Business Registration Number *
                 </label>
-                <input
+                <Input
                   {...step3OperatorForm.register('businessRegistrationNumber')}
                   type="text"
                   className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
                   placeholder="Registration number"
+                  leftIcon={<Building className="h-4 w-4 text-gray-400" />}
+                  error={!!step3OperatorForm.formState.errors.businessRegistrationNumber}
+                  errorMessage={step3OperatorForm.formState.errors.businessRegistrationNumber?.message}
                 />
-                {step3OperatorForm.formState.errors.businessRegistrationNumber && (
-                  <p className="text-red-500 text-sm">{step3OperatorForm.formState.errors.businessRegistrationNumber.message}</p>
-                )}
               </div>
             </div>
 
@@ -558,11 +577,12 @@ const RegisterPage: React.FC = () => {
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Website URL
               </label>
-              <input
+              <Input
                 {...step3OperatorForm.register('websiteUrl')}
                 type="url"
                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
                 placeholder="https://yourwebsite.com"
+                leftIcon={<Building className="h-4 w-4 text-gray-400" />}
               />
             </div>
 
@@ -571,30 +591,30 @@ const RegisterPage: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Phone Number *
                 </label>
-                <input
+                <Input
                   {...step3OperatorForm.register('phoneNumber')}
                   type="tel"
                   className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
                   placeholder="+1 (555) 123-4567"
+                  leftIcon={<Phone className="h-4 w-4 text-gray-400" />}
+                  error={!!step3OperatorForm.formState.errors.phoneNumber}
+                  errorMessage={step3OperatorForm.formState.errors.phoneNumber?.message}
                 />
-                {step3OperatorForm.formState.errors.phoneNumber && (
-                  <p className="text-red-500 text-sm">{step3OperatorForm.formState.errors.phoneNumber.message}</p>
-                )}
               </div>
 
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Business Address *
                 </label>
-                <input
+                <Input
                   {...step3OperatorForm.register('businessAddress')}
                   type="text"
                   className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
                   placeholder="123 Main St, City, State"
+                  leftIcon={<MapPin className="h-4 w-4 text-gray-400" />}
+                  error={!!step3OperatorForm.formState.errors.businessAddress}
+                  errorMessage={step3OperatorForm.formState.errors.businessAddress?.message}
                 />
-                {step3OperatorForm.formState.errors.businessAddress && (
-                  <p className="text-red-500 text-sm">{step3OperatorForm.formState.errors.businessAddress.message}</p>
-                )}
               </div>
             </div>
 
@@ -620,7 +640,7 @@ const RegisterPage: React.FC = () => {
               </label>
               <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-8 text-center hover:border-indigo-500 transition-colors">
                 <div className="text-gray-500 dark:text-gray-400">
-                  <span className="text-4xl mb-2 block">📄</span>
+                  <Upload className="h-12 w-12 mx-auto mb-2 text-gray-400" />
                   <p>Drag & drop your business license here</p>
                   <p className="text-sm">or click to browse</p>
                   <p className="text-xs mt-2">PDF, JPG, PNG up to 5MB</p>
@@ -698,30 +718,30 @@ const RegisterPage: React.FC = () => {
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Agency Name *
               </label>
-              <input
+              <Input
                 {...step3AgentForm.register('agencyName')}
                 type="text"
                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
                 placeholder="Your agency name"
+                leftIcon={<Building className="h-4 w-4 text-gray-400" />}
+                error={!!step3AgentForm.formState.errors.agencyName}
+                errorMessage={step3AgentForm.formState.errors.agencyName?.message}
               />
-              {step3AgentForm.formState.errors.agencyName && (
-                <p className="text-red-500 text-sm">{step3AgentForm.formState.errors.agencyName.message}</p>
-              )}
             </div>
 
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Agency Registration Number *
               </label>
-              <input
+              <Input
                 {...step3AgentForm.register('agencyRegistrationNumber')}
                 type="text"
                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
                 placeholder="Registration number"
+                leftIcon={<Building className="h-4 w-4 text-gray-400" />}
+                error={!!step3AgentForm.formState.errors.agencyRegistrationNumber}
+                errorMessage={step3AgentForm.formState.errors.agencyRegistrationNumber?.message}
               />
-              {step3AgentForm.formState.errors.agencyRegistrationNumber && (
-                <p className="text-red-500 text-sm">{step3AgentForm.formState.errors.agencyRegistrationNumber.message}</p>
-              )}
             </div>
           </div>
 
@@ -730,30 +750,30 @@ const RegisterPage: React.FC = () => {
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Phone Number *
               </label>
-              <input
+              <Input
                 {...step3AgentForm.register('phoneNumber')}
                 type="tel"
                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
                 placeholder="+1 (555) 123-4567"
+                leftIcon={<Phone className="h-4 w-4 text-gray-400" />}
+                error={!!step3AgentForm.formState.errors.phoneNumber}
+                errorMessage={step3AgentForm.formState.errors.phoneNumber?.message}
               />
-              {step3AgentForm.formState.errors.phoneNumber && (
-                <p className="text-red-500 text-sm">{step3AgentForm.formState.errors.phoneNumber.message}</p>
-              )}
             </div>
 
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Office Address *
               </label>
-              <input
+              <Input
                 {...step3AgentForm.register('officeAddress')}
                 type="text"
                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
                 placeholder="123 Main St, City, State"
+                leftIcon={<MapPin className="h-4 w-4 text-gray-400" />}
+                error={!!step3AgentForm.formState.errors.officeAddress}
+                errorMessage={step3AgentForm.formState.errors.officeAddress?.message}
               />
-              {step3AgentForm.formState.errors.officeAddress && (
-                <p className="text-red-500 text-sm">{step3AgentForm.formState.errors.officeAddress.message}</p>
-              )}
             </div>
           </div>
 
@@ -881,7 +901,12 @@ const RegisterPage: React.FC = () => {
                 whileHover={{ scale: 1.02, y: -1 }}
                 whileTap={{ scale: 0.98 }}
               >
-                <span className="text-lg">🔍</span>
+                <svg className="w-5 h-5" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                </svg>
                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Google</span>
               </motion.button>
 
@@ -891,7 +916,9 @@ const RegisterPage: React.FC = () => {
                 whileHover={{ scale: 1.02, y: -1 }}
                 whileTap={{ scale: 0.98 }}
               >
-                <span className="text-lg">🐙</span>
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                </svg>
                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300">GitHub</span>
               </motion.button>
             </div>
@@ -918,909 +945,3 @@ const RegisterPage: React.FC = () => {
 };
 
 export default RegisterPage;
-
-
-
-            features={['Lead Management', 'Itinerary Builder', 'Commission Tracking']}
-
-            gradient="from-green-500 to-green-700"
-
-          />
-
-        </div>
-
-
-
-        <div className="flex space-x-4">
-
-          <motion.button
-
-            type="button"
-
-            onClick={goToPreviousStep}
-
-            className="flex-1 py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200"
-
-            whileHover={{ scale: 1.02 }}
-
-            whileTap={{ scale: 0.98 }}
-
-          >
-
-            Previous
-
-          </motion.button>
-
-          <motion.button
-
-            type="button"
-
-            onClick={step2Form.handleSubmit(handleStep2Submit)}
-
-            disabled={!selectedRole}
-
-            className={`flex-1 py-3 px-4 rounded-xl font-medium transition-all duration-200 ${
-
-              selectedRole
-
-                ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg hover:shadow-xl'
-
-                : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-
-            }`}
-
-            whileHover={selectedRole ? { scale: 1.02, y: -1 } : {}}
-
-            whileTap={selectedRole ? { scale: 0.98 } : {}}
-
-          >
-
-            Continue
-
-          </motion.button>
-
-        </div>
-
-      </div>
-
-    </motion.div>
-
-  );
-
-
-
-  const renderStep3 = () => {
-
-    if (selectedRole === 'operator') {
-
-      return (
-
-        <motion.div
-
-          key="step3-operator"
-
-          initial={{ opacity: 0, x: 50 }}
-
-          animate={{ opacity: 1, x: 0 }}
-
-          exit={{ opacity: 0, x: -50 }}
-
-          transition={{ duration: 0.3 }}
-
-        >
-
-          <form onSubmit={step3OperatorForm.handleSubmit(handleStep3Submit)} className="space-y-6">
-
-            <div className="text-center mb-6">
-
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-
-                Business Information
-
-              </h2>
-
-              <p className="text-gray-600 dark:text-gray-400">
-
-                Tell us about your tour operation business
-
-              </p>
-
-            </div>
-
-
-
-            <div className="grid md:grid-cols-2 gap-6">
-
-              <div className="space-y-2">
-
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-
-                  Company Name *
-
-                </label>
-
-                <input
-
-                  {...step3OperatorForm.register('companyName')}
-
-                  type="text"
-
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
-
-                  placeholder="Your company name"
-
-                />
-
-                {step3OperatorForm.formState.errors.companyName && (
-
-                  <p className="text-red-500 text-sm">{step3OperatorForm.formState.errors.companyName.message}</p>
-
-                )}
-
-              </div>
-
-
-
-              <div className="space-y-2">
-
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-
-                  Business Registration Number *
-
-                </label>
-
-                <input
-
-                  {...step3OperatorForm.register('businessRegistrationNumber')}
-
-                  type="text"
-
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
-
-                  placeholder="Registration number"
-
-                />
-
-                {step3OperatorForm.formState.errors.businessRegistrationNumber && (
-
-                  <p className="text-red-500 text-sm">{step3OperatorForm.formState.errors.businessRegistrationNumber.message}</p>
-
-                )}
-
-              </div>
-
-            </div>
-
-
-
-            <div className="space-y-2">
-
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-
-                Website URL
-
-              </label>
-
-              <input
-
-                {...step3OperatorForm.register('websiteUrl')}
-
-                type="url"
-
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
-
-                placeholder="https://yourwebsite.com"
-
-              />
-
-            </div>
-
-
-
-            <div className="grid md:grid-cols-2 gap-6">
-
-              <div className="space-y-2">
-
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-
-                  Phone Number *
-
-                </label>
-
-                <input
-
-                  {...step3OperatorForm.register('phoneNumber')}
-
-                  type="tel"
-
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
-
-                  placeholder="+1 (555) 123-4567"
-
-                />
-
-                {step3OperatorForm.formState.errors.phoneNumber && (
-
-                  <p className="text-red-500 text-sm">{step3OperatorForm.formState.errors.phoneNumber.message}</p>
-
-                )}
-
-              </div>
-
-
-
-              <div className="space-y-2">
-
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-
-                  Business Address *
-
-                </label>
-
-                <input
-
-                  {...step3OperatorForm.register('businessAddress')}
-
-                  type="text"
-
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
-
-                  placeholder="123 Main St, City, State"
-
-                />
-
-                {step3OperatorForm.formState.errors.businessAddress && (
-
-                  <p className="text-red-500 text-sm">{step3OperatorForm.formState.errors.businessAddress.message}</p>
-
-                )}
-
-              </div>
-
-            </div>
-
-
-
-            <div className="space-y-2">
-
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-
-                Company Description
-
-              </label>
-
-              <textarea
-
-                {...step3OperatorForm.register('companyDescription')}
-
-                rows={4}
-
-                maxLength={500}
-
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700 resize-none"
-
-                placeholder="Describe your tour operation business..."
-
-              />
-
-              <div className="text-right text-sm text-gray-500 dark:text-gray-400">
-
-                {step3OperatorForm.watch('companyDescription')?.length || 0}/500
-
-              </div>
-
-            </div>
-
-
-
-            <div className="space-y-2">
-
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-
-                Business License
-
-              </label>
-
-              <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-8 text-center hover:border-indigo-500 transition-colors">
-
-                <div className="text-gray-500 dark:text-gray-400">
-
-                  <span className="text-4xl mb-2 block">📄</span>
-
-                  <p>Drag & drop your business license here</p>
-
-                  <p className="text-sm">or click to browse</p>
-
-                  <p className="text-xs mt-2">PDF, JPG, PNG up to 5MB</p>
-
-                </div>
-
-              </div>
-
-            </div>
-
-
-
-            <div className="flex items-start space-x-2">
-
-              <input
-
-                {...step3OperatorForm.register('termsAccepted')}
-
-                type="checkbox"
-
-                className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 mt-1"
-
-              />
-
-              <label className="text-sm text-gray-700 dark:text-gray-300">
-
-                I agree to the{' '}
-
-                <a href="#" className="text-indigo-600 hover:text-indigo-500">Terms of Service</a>
-
-                {' '}and{' '}
-
-                <a href="#" className="text-indigo-600 hover:text-indigo-500">Privacy Policy</a>
-
-              </label>
-
-            </div>
-
-            {step3OperatorForm.formState.errors.termsAccepted && (
-
-              <p className="text-red-500 text-sm">{step3OperatorForm.formState.errors.termsAccepted.message}</p>
-
-            )}
-
-
-
-            <div className="flex space-x-4">
-
-              <motion.button
-
-                type="button"
-
-                onClick={goToPreviousStep}
-
-                className="flex-1 py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200"
-
-                whileHover={{ scale: 1.02 }}
-
-                whileTap={{ scale: 0.98 }}
-
-              >
-
-                Previous
-
-              </motion.button>
-
-              <motion.button
-
-                type="submit"
-
-                disabled={!step3OperatorForm.formState.isValid || isSubmitting}
-
-                className={`flex-1 py-3 px-4 rounded-xl font-medium transition-all duration-200 ${
-
-                  step3OperatorForm.formState.isValid && !isSubmitting
-
-                    ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg hover:shadow-xl'
-
-                    : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-
-                }`}
-
-                whileHover={step3OperatorForm.formState.isValid && !isSubmitting ? { scale: 1.02, y: -1 } : {}}
-
-                whileTap={step3OperatorForm.formState.isValid && !isSubmitting ? { scale: 0.98 } : {}}
-
-              >
-
-                {isSubmitting ? 'Creating Account...' : 'Create Account'}
-
-              </motion.button>
-
-            </div>
-
-          </form>
-
-        </motion.div>
-
-      );
-
-    }
-
-
-
-    // Agent form (similar structure but different fields)
-
-    return (
-
-      <motion.div
-
-        key="step3-agent"
-
-        initial={{ opacity: 0, x: 50 }}
-
-        animate={{ opacity: 1, x: 0 }}
-
-        exit={{ opacity: 0, x: -50 }}
-
-        transition={{ duration: 0.3 }}
-
-      >
-
-        <form onSubmit={step3AgentForm.handleSubmit(handleStep3Submit)} className="space-y-6">
-
-          <div className="text-center mb-6">
-
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-
-              Agency Information
-
-            </h2>
-
-            <p className="text-gray-600 dark:text-gray-400">
-
-              Tell us about your travel agency
-
-            </p>
-
-          </div>
-
-
-
-          <div className="grid md:grid-cols-2 gap-6">
-
-            <div className="space-y-2">
-
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-
-                Agency Name *
-
-              </label>
-
-              <input
-
-                {...step3AgentForm.register('agencyName')}
-
-                type="text"
-
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
-
-                placeholder="Your agency name"
-
-              />
-
-              {step3AgentForm.formState.errors.agencyName && (
-
-                <p className="text-red-500 text-sm">{step3AgentForm.formState.errors.agencyName.message}</p>
-
-              )}
-
-            </div>
-
-
-
-            <div className="space-y-2">
-
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-
-                Agency Registration Number *
-
-              </label>
-
-              <input
-
-                {...step3AgentForm.register('agencyRegistrationNumber')}
-
-                type="text"
-
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
-
-                placeholder="Registration number"
-
-              />
-
-              {step3AgentForm.formState.errors.agencyRegistrationNumber && (
-
-                <p className="text-red-500 text-sm">{step3AgentForm.formState.errors.agencyRegistrationNumber.message}</p>
-
-              )}
-
-            </div>
-
-          </div>
-
-
-
-          <div className="grid md:grid-cols-2 gap-6">
-
-            <div className="space-y-2">
-
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-
-                Phone Number *
-
-              </label>
-
-              <input
-
-                {...step3AgentForm.register('phoneNumber')}
-
-                type="tel"
-
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
-
-                placeholder="+1 (555) 123-4567"
-
-              />
-
-              {step3AgentForm.formState.errors.phoneNumber && (
-
-                <p className="text-red-500 text-sm">{step3AgentForm.formState.errors.phoneNumber.message}</p>
-
-              )}
-
-            </div>
-
-
-
-            <div className="space-y-2">
-
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-
-                Office Address *
-
-              </label>
-
-              <input
-
-                {...step3AgentForm.register('officeAddress')}
-
-                type="text"
-
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
-
-                placeholder="123 Main St, City, State"
-
-              />
-
-              {step3AgentForm.formState.errors.officeAddress && (
-
-                <p className="text-red-500 text-sm">{step3AgentForm.formState.errors.officeAddress.message}</p>
-
-              )}
-
-            </div>
-
-          </div>
-
-
-
-          <div className="space-y-2">
-
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-
-              Specialization *
-
-            </label>
-
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-
-              {['Honeymoon', 'Adventure', 'Luxury', 'Family', 'Business', 'Cultural'].map((spec) => (
-
-                <label key={spec} className="flex items-center space-x-2 cursor-pointer">
-
-                  <input
-
-                    type="checkbox"
-
-                    value={spec}
-
-                    {...step3AgentForm.register('specialization')}
-
-                    className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
-
-                  />
-
-                  <span className="text-sm text-gray-700 dark:text-gray-300">{spec}</span>
-
-                </label>
-
-              ))}
-
-            </div>
-
-            {step3AgentForm.formState.errors.specialization && (
-
-              <p className="text-red-500 text-sm">{step3AgentForm.formState.errors.specialization.message}</p>
-
-            )}
-
-          </div>
-
-
-
-          <div className="space-y-2">
-
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-
-              Years of Experience *
-
-            </label>
-
-            <select
-
-              {...step3AgentForm.register('yearsOfExperience')}
-
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
-
-            >
-
-              <option value="">Select experience</option>
-
-              <option value="0-1">0-1 years</option>
-
-              <option value="2-5">2-5 years</option>
-
-              <option value="6-10">6-10 years</option>
-
-              <option value="10+">10+ years</option>
-
-            </select>
-
-            {step3AgentForm.formState.errors.yearsOfExperience && (
-
-              <p className="text-red-500 text-sm">{step3AgentForm.formState.errors.yearsOfExperience.message}</p>
-
-            )}
-
-          </div>
-
-
-
-          <div className="flex items-start space-x-2">
-
-            <input
-
-              {...step3AgentForm.register('termsAccepted')}
-
-              type="checkbox"
-
-              className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 mt-1"
-
-            />
-
-            <label className="text-sm text-gray-700 dark:text-gray-300">
-
-              I agree to the{' '}
-
-              <a href="#" className="text-indigo-600 hover:text-indigo-500">Terms of Service</a>
-
-              {' '}and{' '}
-
-              <a href="#" className="text-indigo-600 hover:text-indigo-500">Privacy Policy</a>
-
-            </label>
-
-          </div>
-
-          {step3AgentForm.formState.errors.termsAccepted && (
-
-            <p className="text-red-500 text-sm">{step3AgentForm.formState.errors.termsAccepted.message}</p>
-
-          )}
-
-
-
-          <div className="flex space-x-4">
-
-            <motion.button
-
-              type="button"
-
-              onClick={goToPreviousStep}
-
-              className="flex-1 py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200"
-
-              whileHover={{ scale: 1.02 }}
-
-              whileTap={{ scale: 0.98 }}
-
-            >
-
-              Previous
-
-            </motion.button>
-
-            <motion.button
-
-              type="submit"
-
-              disabled={!step3AgentForm.formState.isValid || isSubmitting}
-
-              className={`flex-1 py-3 px-4 rounded-xl font-medium transition-all duration-200 ${
-
-                step3AgentForm.formState.isValid && !isSubmitting
-
-                  ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg hover:shadow-xl'
-
-                  : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-
-              }`}
-
-              whileHover={step3AgentForm.formState.isValid && !isSubmitting ? { scale: 1.02, y: -1 } : {}}
-
-              whileTap={step3AgentForm.formState.isValid && !isSubmitting ? { scale: 0.98 } : {}}
-
-            >
-
-              {isSubmitting ? 'Creating Account...' : 'Create Account'}
-
-            </motion.button>
-
-          </div>
-
-        </form>
-
-      </motion.div>
-
-    );
-
-  };
-
-
-
-  return (
-
-    <AuthLayout
-
-      title="Create Your Account"
-
-      subtitle="Join thousands of travel professionals"
-
-      showTestimonials={false}
-
-      showFeatures={false}
-
-    >
-
-      <div className="space-y-8">
-
-        <StepIndicator currentStep={currentStep} totalSteps={3} />
-
-        
-
-        <AnimatePresence mode="wait">
-
-          {currentStep === 1 && renderStep1()}
-
-          {currentStep === 2 && renderStep2()}
-
-          {currentStep === 3 && renderStep3()}
-
-        </AnimatePresence>
-
-
-
-        {/* Social Registration */}
-
-        {currentStep === 1 && (
-
-          <div className="space-y-4">
-
-            <div className="relative">
-
-              <div className="absolute inset-0 flex items-center">
-
-                <div className="w-full border-t border-gray-300 dark:border-gray-600" />
-
-              </div>
-
-              <div className="relative flex justify-center text-sm">
-
-                <span className="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">
-
-                  Or sign up with
-
-                </span>
-
-              </div>
-
-            </div>
-
-
-
-            <div className="grid grid-cols-2 gap-3">
-
-              <motion.button
-
-                type="button"
-
-                className="flex items-center justify-center space-x-2 py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200"
-
-                whileHover={{ scale: 1.02, y: -1 }}
-
-                whileTap={{ scale: 0.98 }}
-
-              >
-
-                <span className="text-lg">🔍</span>
-
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Google</span>
-
-              </motion.button>
-
-
-
-              <motion.button
-
-                type="button"
-
-                className="flex items-center justify-center space-x-2 py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200"
-
-                whileHover={{ scale: 1.02, y: -1 }}
-
-                whileTap={{ scale: 0.98 }}
-
-              >
-
-                <span className="text-lg">🐙</span>
-
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">GitHub</span>
-
-              </motion.button>
-
-            </div>
-
-          </div>
-
-        )}
-
-
-
-        {/* Bottom Links */}
-
-        <div className="text-center">
-
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-
-            Already have an account?{' '}
-
-            <motion.a
-
-              href="/login"
-
-              className="text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 font-medium"
-
-              whileHover={{ scale: 1.05 }}
-
-              transition={{ duration: 0.2 }}
-
-            >
-
-              Sign in
-
-            </motion.a>
-
-          </p>
-
-        </div>
-
-      </div>
-
-    </AuthLayout>
-
-  );
-
-};
-
-
-
-export default RegisterPage;
-
-
-
-

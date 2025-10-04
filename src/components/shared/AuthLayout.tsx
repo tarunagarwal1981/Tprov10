@@ -70,28 +70,36 @@ const features = [
   }
 ];
 
-const FloatingParticle: React.FC<{ delay: number; duration: number }> = ({ delay, duration }) => (
-  <motion.div
-    className="absolute w-2 h-2 bg-white/20 rounded-full"
-    initial={{ opacity: 0, scale: 0 }}
-    animate={{
-      opacity: [0, 1, 0],
-      scale: [0, 1, 0],
-      y: [-20, -100],
-      x: [0, Math.random() * 40 - 20]
-    }}
-    transition={{
-      duration,
-      delay,
-      repeat: Infinity,
-      ease: "easeOut"
-    }}
-    style={{
-      left: `${Math.random() * 100}%`,
-      top: `${Math.random() * 100}%`
-    }}
-  />
-);
+const FloatingParticle: React.FC<{ delay: number; duration: number; index: number }> = ({ delay, duration, index }) => {
+  // Use deterministic values based on index to avoid hydration mismatches
+  const seed = index * 0.618033988749895; // Golden ratio for better distribution
+  const left = (Math.sin(seed) * 0.5 + 0.5) * 100; // Convert to 0-100 range
+  const top = (Math.cos(seed * 1.3) * 0.5 + 0.5) * 100; // Convert to 0-100 range
+  const xOffset = (Math.sin(seed * 2.1) * 0.5 + 0.5) * 40 - 20; // Convert to -20 to 20 range
+  
+  return (
+    <motion.div
+      className="absolute w-2 h-2 bg-white/20 rounded-full"
+      initial={{ opacity: 0, scale: 0 }}
+      animate={{
+        opacity: [0, 1, 0],
+        scale: [0, 1, 0],
+        y: [-20, -100],
+        x: [0, xOffset]
+      }}
+      transition={{
+        duration,
+        delay,
+        repeat: Infinity,
+        ease: "easeOut"
+      }}
+      style={{
+        left: `${left}%`,
+        top: `${top}%`
+      }}
+    />
+  );
+};
 
 const FeatureCard: React.FC<{ feature: typeof features[0]; index: number }> = ({ feature, index }) => (
   <motion.div
@@ -174,8 +182,9 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({
             {Array.from({ length: 20 }).map((_, i) => (
               <FloatingParticle
                 key={i}
+                index={i}
                 delay={i * 0.5}
-                duration={8 + Math.random() * 4}
+                duration={8 + (i % 4) * 0.5} // Use deterministic duration based on index
               />
             ))}
           </div>
