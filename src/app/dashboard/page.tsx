@@ -11,18 +11,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { 
-  ArrowUpRight, 
-  Users, 
-  Package, 
-  Calendar,
-  BarChart3,
-  DollarSign,
-  Star,
-  Activity,
-  Download,
-  Plus,
-  RefreshCw
-} from 'lucide-react';
+  FiTrendingUp,
+  FiUsers,
+  FiPackage,
+  FiCalendar,
+  FiBarChart,
+  FiDollarSign,
+  FiStar,
+  FiActivity,
+  FiDownload,
+  FiPlus,
+  FiRefreshCw
+} from 'react-icons/fi';
 
 export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -39,22 +39,22 @@ export default function DashboardPage() {
       actions={
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300">
-            <Activity className="h-3 w-3 mr-1" />
+             <FiActivity className="h-3 w-3 mr-1" />
             Live
           </Badge>
           <Button variant="outline" size="sm">
-            <Download className="h-4 w-4 mr-2" />
+            <FiDownload className="h-4 w-4 mr-2" />
             Export Report
           </Button>
           <Button size="sm" onClick={handleRefresh} disabled={isLoading}>
             {isLoading ? (
               <>
-                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                <FiRefreshCw className="h-4 w-4 mr-2 animate-spin" />
                 Refreshing...
               </>
             ) : (
               <>
-                <Plus className="h-4 w-4 mr-2" />
+                <FiPlus className="h-4 w-4 mr-2" />
                 Add New
               </>
             )}
@@ -72,14 +72,14 @@ export default function DashboardPage() {
               <CardTitle className="text-sm font-medium text-blue-700 dark:text-blue-300">
                 Total Revenue
               </CardTitle>
-              <DollarSign className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+               <FiDollarSign className="h-4 w-4 text-blue-600 dark:text-blue-400" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">
                 $45,231.89
               </div>
               <p className="text-xs text-blue-600 dark:text-blue-400">
-                <ArrowUpRight className="h-3 w-3 inline mr-1" />
+                <FiTrendingUp className="h-3 w-3 inline mr-1" />
                 +20.1% from last month
               </p>
             </CardContent>
@@ -90,14 +90,14 @@ export default function DashboardPage() {
               <CardTitle className="text-sm font-medium text-green-700 dark:text-green-300">
                 New Bookings
               </CardTitle>
-              <Calendar className="h-4 w-4 text-green-600 dark:text-green-400" />
+               <FiCalendar className="h-4 w-4 text-green-600 dark:text-green-400" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-900 dark:text-green-100">
                 +2,350
               </div>
               <p className="text-xs text-green-600 dark:text-green-400">
-                <ArrowUpRight className="h-3 w-3 inline mr-1" />
+                <FiTrendingUp className="h-3 w-3 inline mr-1" />
                 +180.1% from last month
               </p>
             </CardContent>
@@ -108,14 +108,14 @@ export default function DashboardPage() {
               <CardTitle className="text-sm font-medium text-purple-700 dark:text-purple-300">
                 Active Packages
               </CardTitle>
-              <Package className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+               <FiPackage className="h-4 w-4 text-purple-600 dark:text-purple-400" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">
                 12,234
               </div>
               <p className="text-xs text-purple-600 dark:text-purple-400">
-                <ArrowUpRight className="h-3 w-3 inline mr-1" />
+                <FiTrendingUp className="h-3 w-3 inline mr-1" />
                 +19% from last month
               </p>
             </CardContent>
@@ -126,14 +126,14 @@ export default function DashboardPage() {
               <CardTitle className="text-sm font-medium text-orange-700 dark:text-orange-300">
                 Customer Rating
               </CardTitle>
-              <Star className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+               <FiStar className="h-4 w-4 text-orange-600 dark:text-orange-400" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-orange-900 dark:text-orange-100">
                 4.8/5
               </div>
               <p className="text-xs text-orange-600 dark:text-orange-400">
-                <ArrowUpRight className="h-3 w-3 inline mr-1" />
+                <FiTrendingUp className="h-3 w-3 inline mr-1" />
                 +0.2 from last month
               </p>
             </CardContent>
@@ -145,14 +145,14 @@ export default function DashboardPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="h-5 w-5" />
+                 <FiBarChart className="h-5 w-5" />
                 Revenue Overview
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="h-64 flex items-center justify-center text-zinc-500 dark:text-zinc-400">
                 <div className="text-center">
-                  <BarChart3 className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                   <FiBarChart className="h-12 w-12 mx-auto mb-2 opacity-50" />
                   <p>Chart component would go here</p>
                   <p className="text-sm">Integration with recharts or similar</p>
                 </div>
@@ -163,14 +163,14 @@ export default function DashboardPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
+                 <FiUsers className="h-5 w-5" />
                 Customer Analytics
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="h-64 flex items-center justify-center text-zinc-500 dark:text-zinc-400">
                 <div className="text-center">
-                  <Users className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                   <FiUsers className="h-12 w-12 mx-auto mb-2 opacity-50" />
                   <p>Customer analytics chart</p>
                   <p className="text-sm">User engagement metrics</p>
                 </div>
@@ -183,7 +183,7 @@ export default function DashboardPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Activity className="h-5 w-5" />
+               <FiActivity className="h-5 w-5" />
               Recent Activity
             </CardTitle>
           </CardHeader>

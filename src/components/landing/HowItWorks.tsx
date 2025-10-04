@@ -1,7 +1,12 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { UserPlus, Settings, TrendingUp, ArrowRight } from 'lucide-react';
+import { 
+  FiUserPlus, 
+  FiSettings, 
+  FiTrendingUp, 
+  FiArrowRight 
+} from 'react-icons/fi';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,21 +15,21 @@ export function HowItWorks() {
   const steps = [
     {
       number: 1,
-      icon: UserPlus,
+      icon: FiUserPlus,
       title: 'Create Your Account',
       description: 'Sign up in 30 seconds. Choose your role - Tour Operator or Travel Agent. No credit card required.',
       color: 'from-blue-500 to-blue-600'
     },
     {
       number: 2,
-      icon: Settings,
+      icon: FiSettings,
       title: 'Set Up Your Profile',
       description: 'Complete your business profile, add your packages (operators) or connect with operators (agents).',
       color: 'from-purple-500 to-purple-600'
     },
     {
       number: 3,
-      icon: TrendingUp,
+      icon: FiTrendingUp,
       title: 'Start Growing',
       description: 'Receive qualified leads, manage bookings, track commissions, and grow your revenue with our AI-powered tools.',
       color: 'from-green-500 to-green-600'
@@ -95,7 +100,7 @@ export function HowItWorks() {
                 {index < steps.length - 1 && (
                   <div className="md:hidden flex justify-center mt-6 mb-6">
                     <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${step.color} flex items-center justify-center shadow-lg`}>
-                      <ArrowRight className="w-5 h-5 text-white rotate-90" />
+                      <FiArrowRight className="w-5 h-5 text-white rotate-90" />
                     </div>
                   </div>
                 )}

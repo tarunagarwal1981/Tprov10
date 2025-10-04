@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plane, Menu, X } from 'lucide-react';
+import { FiSend, FiMenu, FiX } from 'react-icons/fi';
 import { Button } from '@/components/ui/button';
 
 export function Header() {
@@ -44,7 +44,7 @@ export function Header() {
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg blur-sm opacity-75 group-hover:opacity-100 transition-opacity duration-300"></div>
               <div className="relative bg-gradient-to-r from-blue-600 to-purple-600 p-2 rounded-lg">
-                <Plane className="h-6 w-6 text-white" />
+                <FiSend className="h-6 w-6 text-white" />
               </div>
             </div>
             <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
@@ -95,7 +95,7 @@ export function Header() {
                   exit={{ rotate: 90, opacity: 0 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <X className="h-6 w-6" />
+                  <FiX className="h-6 w-6" />
                 </motion.div>
               ) : (
                 <motion.div
@@ -105,7 +105,7 @@ export function Header() {
                   exit={{ rotate: -90, opacity: 0 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <Menu className="h-6 w-6" />
+                  <FiMenu className="h-6 w-6" />
                 </motion.div>
               )}
             </AnimatePresence>

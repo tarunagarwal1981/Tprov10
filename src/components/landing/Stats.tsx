@@ -2,7 +2,16 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Building2, Users, Globe, DollarSign, TrendingUp, Star, Clock, CheckCircle } from 'lucide-react';
+import { 
+  FiHome, 
+  FiUsers, 
+  FiGlobe, 
+  FiDollarSign, 
+  FiTrendingUp, 
+  FiStar, 
+  FiClock, 
+  FiCheckCircle 
+} from 'react-icons/fi';
 import { StatCard, StatCardGrid } from '@/components/ui/stat-card';
 
 // Animated Counter Component
@@ -60,8 +69,9 @@ export function Stats() {
 
   useEffect(() => {
     const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
+      (entries) => {
+        const entry = entries[0];
+        if (entry?.isIntersecting) {
           setIsInView(true);
         }
       },
@@ -77,7 +87,7 @@ export function Stats() {
 
   const mainStats = [
     {
-      icon: <Building2 className="h-6 w-6" />,
+      icon: <FiHome className="h-6 w-6" />,
       title: 'Tour Operators',
       value: '500+',
       description: 'Growing network',
@@ -86,7 +96,7 @@ export function Stats() {
       iconColor: 'text-blue-600'
     },
     {
-      icon: <Users className="h-6 w-6" />,
+      icon: <FiUsers className="h-6 w-6" />,
       title: 'Travel Agents',
       value: '10,000+',
       description: 'Active professionals',
@@ -95,7 +105,7 @@ export function Stats() {
       iconColor: 'text-green-600'
     },
     {
-      icon: <Globe className="h-6 w-6" />,
+      icon: <FiGlobe className="h-6 w-6" />,
       title: 'Countries',
       value: '50+',
       description: 'Global coverage',
@@ -104,7 +114,7 @@ export function Stats() {
       iconColor: 'text-purple-600'
     },
     {
-      icon: <DollarSign className="h-6 w-6" />,
+      icon: <FiDollarSign className="h-6 w-6" />,
       title: 'Revenue Generated',
       value: '£2M+',
       description: 'For our partners',
@@ -116,7 +126,7 @@ export function Stats() {
 
   const additionalStats = [
     {
-      icon: <Star className="h-5 w-5" />,
+      icon: <FiStar className="h-5 w-5" />,
       title: 'Customer Satisfaction',
       value: '98%',
       description: 'Based on reviews',
@@ -124,7 +134,7 @@ export function Stats() {
       iconColor: 'text-green-600'
     },
     {
-      icon: <Clock className="h-5 w-5" />,
+      icon: <FiClock className="h-5 w-5" />,
       title: 'Support Available',
       value: '24/7',
       description: 'Always here to help',
@@ -132,7 +142,7 @@ export function Stats() {
       iconColor: 'text-blue-600'
     },
     {
-      icon: <CheckCircle className="h-5 w-5" />,
+      icon: <FiCheckCircle className="h-5 w-5" />,
       title: 'Bookings Processed',
       value: '150K+',
       description: 'Successfully completed',
@@ -140,7 +150,7 @@ export function Stats() {
       iconColor: 'text-purple-600'
     },
     {
-      icon: <TrendingUp className="h-5 w-5" />,
+      icon: <FiTrendingUp className="h-5 w-5" />,
       title: 'Response Time',
       value: '<2min',
       description: 'Average response',

@@ -5,10 +5,18 @@ import { useAuth } from '@/context/SupabaseAuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Building2, Package, Users, TrendingUp, LogOut, Settings, Bell } from 'lucide-react';
+import { 
+  FiHome, 
+  FiPackage, 
+  FiUsers, 
+  FiTrendingUp, 
+  FiLogOut, 
+  FiSettings, 
+  FiBell 
+} from 'react-icons/fi';
 
 export default function OperatorDashboard() {
-  const { user, logout, loading, isInitialized, hasRole } = useAuth();
+  const { user, logout, loading, isInitialized, userRole } = useAuth();
   const router = useRouter();
 
   // Redirect if not authenticated or not an operator
@@ -19,12 +27,12 @@ export default function OperatorDashboard() {
         return;
       }
       
-      if (!hasRole('TOUR_OPERATOR')) {
+      if (userRole !== 'TOUR_OPERATOR') {
         router.push('/dashboard');
         return;
       }
     }
-  }, [user, loading, isInitialized, hasRole, router]);
+  }, [user, loading, isInitialized, userRole, router]);
 
   const handleLogout = async () => {
     await logout();
@@ -39,7 +47,7 @@ export default function OperatorDashboard() {
     );
   }
 
-  if (!user || !hasRole('TOUR_OPERATOR')) {
+  if (!user || userRole !== 'TOUR_OPERATOR') {
     return null; // Will redirect
   }
 
@@ -48,7 +56,7 @@ export default function OperatorDashboard() {
       title: 'Total Packages',
       value: '12',
       change: '+2 this month',
-      icon: Package,
+      icon: FiPackage,
       color: 'text-blue-600',
       bgColor: 'bg-blue-100'
     },
@@ -56,7 +64,7 @@ export default function OperatorDashboard() {
       title: 'Active Bookings',
       value: '48',
       change: '+12 this week',
-      icon: Users,
+      icon: FiUsers,
       color: 'text-green-600',
       bgColor: 'bg-green-100'
     },
@@ -64,7 +72,7 @@ export default function OperatorDashboard() {
       title: 'Revenue',
       value: '$24,580',
       change: '+15% this month',
-      icon: TrendingUp,
+      icon: FiTrendingUp,
       color: 'text-purple-600',
       bgColor: 'bg-purple-100'
     },
@@ -72,7 +80,7 @@ export default function OperatorDashboard() {
       title: 'Customer Rating',
       value: '4.8',
       change: '+0.2 this month',
-      icon: Building2,
+      icon: FiHome,
       color: 'text-orange-600',
       bgColor: 'bg-orange-100'
     }
@@ -85,7 +93,7 @@ export default function OperatorDashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
-              <Building2 className="h-8 w-8 text-indigo-600" />
+              <FiHome className="h-8 w-8 text-indigo-600" />
               <h1 className="ml-2 text-xl font-semibold text-gray-900">
                 Tour Operator Dashboard
               </h1>
@@ -93,16 +101,16 @@ export default function OperatorDashboard() {
             
             <div className="flex items-center space-x-4">
               <button className="p-2 text-gray-400 hover:text-gray-600">
-                <Bell className="h-5 w-5" />
+                <FiBell className="h-5 w-5" />
               </button>
               <button className="p-2 text-gray-400 hover:text-gray-600">
-                <Settings className="h-5 w-5" />
+                <FiSettings className="h-5 w-5" />
               </button>
               <button
                 onClick={handleLogout}
                 className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-600 hover:text-gray-900"
               >
-                <LogOut className="h-4 w-4" />
+                <FiLogOut className="h-4 w-4" />
                 <span>Logout</span>
               </button>
             </div>
@@ -160,15 +168,15 @@ export default function OperatorDashboard() {
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <button className="flex items-center justify-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-indigo-500 hover:bg-indigo-50 transition-colors">
-              <Package className="h-5 w-5 text-gray-400 mr-2" />
+              <FiPackage className="h-5 w-5 text-gray-400 mr-2" />
               <span className="text-gray-600">Create New Package</span>
             </button>
             <button className="flex items-center justify-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-indigo-500 hover:bg-indigo-50 transition-colors">
-              <Users className="h-5 w-5 text-gray-400 mr-2" />
+              <FiUsers className="h-5 w-5 text-gray-400 mr-2" />
               <span className="text-gray-600">Manage Bookings</span>
             </button>
             <button className="flex items-center justify-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-indigo-500 hover:bg-indigo-50 transition-colors">
-              <TrendingUp className="h-5 w-5 text-gray-400 mr-2" />
+              <FiTrendingUp className="h-5 w-5 text-gray-400 mr-2" />
               <span className="text-gray-600">View Analytics</span>
             </button>
           </div>

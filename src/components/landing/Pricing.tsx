@@ -1,7 +1,16 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Check, Star, Zap, Crown, ArrowRight, Users, Globe, Shield } from 'lucide-react';
+import { 
+  FiCheck, 
+  FiStar, 
+  FiZap, 
+  FiAward, 
+  FiArrowRight, 
+  FiUsers, 
+  FiGlobe, 
+  FiShield 
+} from 'react-icons/fi';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -14,7 +23,7 @@ export function Pricing() {
       description: 'Perfect for new travel agents',
       price: 'Free',
       period: 'forever',
-      icon: Users,
+      icon: FiUsers,
       color: 'from-blue-500 to-blue-600',
       popular: false,
       features: [
@@ -37,7 +46,7 @@ export function Pricing() {
       description: 'For growing travel businesses',
       price: '£29',
       period: 'per month',
-      icon: Zap,
+      icon: FiZap,
       color: 'from-purple-500 to-purple-600',
       popular: true,
       features: [
@@ -59,7 +68,7 @@ export function Pricing() {
       description: 'For established tour operators',
       price: '£99',
       period: 'per month',
-      icon: Crown,
+      icon: FiAward,
       color: 'from-orange-500 to-orange-600',
       popular: false,
       features: [
@@ -83,14 +92,14 @@ export function Pricing() {
       name: 'AI Lead Generation Plus',
       description: 'Enhanced AI with voice verification',
       price: '£19/month',
-      icon: Globe,
+      icon: FiGlobe,
       features: ['Voice agent verification', 'Advanced lead scoring', 'Custom lead sources']
     },
     {
       name: 'Premium Support',
       description: '24/7 phone and chat support',
       price: '£15/month',
-      icon: Shield,
+      icon: FiShield,
       features: ['24/7 phone support', 'Priority chat', 'Dedicated support agent']
     }
   ];
@@ -126,7 +135,7 @@ export function Pricing() {
           className="text-center mb-16 space-y-4"
         >
           <Badge variant="secondary" className="px-4 py-2 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200/50">
-            <Star className="w-4 h-4 text-blue-600 mr-2" />
+            <FiStar className="w-4 h-4 text-blue-600 mr-2" />
             <span className="font-semibold">Simple Pricing</span>
           </Badge>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900">
@@ -198,7 +207,7 @@ export function Pricing() {
                         className="flex items-center gap-3"
                       >
                         <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-                          <Check className="w-3 h-3 text-green-600" />
+                          <FiCheck className="w-3 h-3 text-green-600" />
                         </div>
                         <span className="text-sm text-slate-700">{feature}</span>
                       </motion.div>
@@ -215,7 +224,7 @@ export function Pricing() {
                     }`}
                   >
                     {plan.cta}
-                    <ArrowRight className="w-4 h-4 ml-2" />
+                    <FiArrowRight className="w-4 h-4 ml-2" />
                   </Button>
 
                   {plan.limitations.length > 0 && (
@@ -266,7 +275,7 @@ export function Pricing() {
                         <div className="space-y-2 mb-4">
                           {addon.features.map((feature, featureIndex) => (
                             <div key={featureIndex} className="flex items-center gap-2">
-                              <Check className="w-3 h-3 text-green-600 flex-shrink-0" />
+                              <FiCheck className="w-3 h-3 text-green-600 flex-shrink-0" />
                               <span className="text-xs text-slate-600">{feature}</span>
                             </div>
                           ))}

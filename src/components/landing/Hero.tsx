@@ -3,13 +3,20 @@
 import React from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Sparkles, Users, TrendingUp, CheckCircle, Globe, Shield } from 'lucide-react';
+import { 
+  FiStar, 
+  FiUsers, 
+  FiTrendingUp, 
+  FiCheckCircle, 
+  FiGlobe, 
+  FiShield 
+} from 'react-icons/fi';
 
 export function Hero() {
   const trustIndicators = [
-    { icon: CheckCircle, text: 'No credit card required' },
-    { icon: TrendingUp, text: 'Free 14-day trial' },
-    { icon: Shield, text: '24/7 support' },
+    { icon: FiCheckCircle, text: 'No credit card required' },
+    { icon: FiTrendingUp, text: 'Free 14-day trial' },
+    { icon: FiShield, text: '24/7 support' },
   ];
 
   return (
@@ -76,7 +83,7 @@ export function Hero() {
               transition={{ duration: 0.5, delay: 0.2 }}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-50 border border-blue-100 mx-auto lg:mx-0"
             >
-              <Sparkles className="w-4 h-4 text-blue-600" />
+              <FiStar className="w-4 h-4 text-blue-600" />
               <span className="text-sm font-semibold text-blue-700">AI-Powered Travel Platform</span>
             </motion.div>
 
@@ -197,7 +204,7 @@ export function Hero() {
                 whileHover={{ scale: 1.05, y: -5 }}
                 className="absolute bg-white/80 backdrop-blur-sm rounded-xl shadow-xl border border-white/20 p-4"
               >
-                <Users className="w-8 h-8 text-blue-600 mb-3" />
+                <FiUsers className="w-8 h-8 text-blue-600 mb-3" />
                 <div className="text-3xl font-bold text-slate-900">10K+</div>
                 <div className="text-sm text-slate-600">Active Agents</div>
               </motion.div>
@@ -206,7 +213,7 @@ export function Hero() {
                 whileHover={{ scale: 1.05, y: -5 }}
                 className="absolute bg-white/80 backdrop-blur-sm rounded-xl shadow-xl border border-white/20 p-4"
               >
-                <Globe className="w-8 h-8 text-purple-600 mb-3" />
+                <FiGlobe className="w-8 h-8 text-purple-600 mb-3" />
                 <div className="text-3xl font-bold text-slate-900">50+</div>
                 <div className="text-sm text-slate-600">Countries</div>
               </motion.div>
@@ -215,7 +222,7 @@ export function Hero() {
                 whileHover={{ scale: 1.05, y: -5 }}
                 className="absolute bg-white/80 backdrop-blur-sm rounded-xl shadow-xl border border-white/20 p-4 col-span-2"
               >
-                <TrendingUp className="w-8 h-8 text-green-600 mb-3" />
+                <FiTrendingUp className="w-8 h-8 text-green-600 mb-3" />
                 <div className="text-3xl font-bold text-slate-900">$2M+</div>
                 <div className="text-sm text-slate-600">Revenue Processed</div>
               </motion.div>

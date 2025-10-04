@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { ArrowRight, Sparkles } from 'lucide-react';
+import { FiArrowRight, FiStar } from 'react-icons/fi';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -47,7 +47,7 @@ export function CTA() {
             transition={{ delay: 0.2 }}
           >
             <Badge variant="secondary" className="px-4 py-2 bg-white/20 backdrop-blur-sm border border-white/30 text-white">
-              <Sparkles className="w-4 h-4 text-white mr-2" />
+              <FiStar className="w-4 h-4 text-white mr-2" />
               Ready to Transform Your Business?
             </Badge>
           </motion.div>
@@ -72,7 +72,7 @@ export function CTA() {
                 className="w-full sm:w-auto h-16 px-10 bg-white hover:bg-slate-50 text-blue-600 font-semibold shadow-2xl hover:shadow-3xl hover:-translate-y-1 transition-all duration-300 text-lg group"
               >
                 Get Started Free
-                <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+                <FiArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
               </Button>
             </Link>
             <Link href="#demo">

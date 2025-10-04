@@ -1,7 +1,12 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Star, Quote, ArrowLeft, ArrowRight } from 'lucide-react';
+import { 
+  FiStar, 
+  FiMessageSquare, 
+  FiChevronLeft, 
+  FiChevronRight 
+} from 'react-icons/fi';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -101,7 +106,7 @@ export function Testimonials() {
           className="text-center mb-16 space-y-4"
         >
           <Badge variant="secondary" className="px-4 py-2 bg-gradient-to-r from-green-50 to-blue-50 border border-green-200/50">
-            <Star className="w-4 h-4 text-green-600 mr-2" />
+            <FiStar className="w-4 h-4 text-green-600 mr-2" />
             <span className="font-semibold">Customer Stories</span>
           </Badge>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900">
@@ -152,7 +157,7 @@ export function Testimonials() {
                 {/* Quote Icon */}
                 <div className="flex-shrink-0">
                   <div className="w-12 h-12 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
-                    <Quote className="w-6 h-6 text-white" />
+                    <FiMessageSquare className="w-6 h-6 text-white" />
                   </div>
                 </div>
 
@@ -169,7 +174,7 @@ export function Testimonials() {
                     {/* Rating */}
                     <div className="flex items-center gap-1">
                       {[...Array(testimonials[currentTestimonial].rating)].map((_, i) => (
-                        <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                        <FiStar key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
                       ))}
                     </div>
 
@@ -234,7 +239,7 @@ export function Testimonials() {
                     onClick={prevTestimonial}
                     className="w-10 h-10 p-0"
                   >
-                    <ArrowLeft className="w-4 h-4" />
+                    <FiChevronLeft className="w-4 h-4" />
                   </Button>
                   <Button
                     variant="outline"
@@ -242,7 +247,7 @@ export function Testimonials() {
                     onClick={nextTestimonial}
                     className="w-10 h-10 p-0"
                   >
-                    <ArrowRight className="w-4 h-4" />
+                    <FiChevronRight className="w-4 h-4" />
                   </Button>
                 </div>
               </div>
@@ -275,7 +280,7 @@ export function Testimonials() {
                   <CardContent className="p-6">
                     <div className="flex items-center gap-1 mb-4">
                       {[...Array(testimonial.rating)].map((_, i) => (
-                        <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                        <FiStar key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
                       ))}
                     </div>
                     <blockquote className="text-sm text-slate-600 mb-4 line-clamp-3">

@@ -1,7 +1,13 @@
 'use client';
 
 import React from 'react';
-import { Plane, Twitter, Linkedin, Facebook, Instagram } from 'lucide-react';
+import { 
+  FiSend, 
+  FiTwitter, 
+  FiLinkedin, 
+  FiFacebook, 
+  FiInstagram 
+} from 'react-icons/fi';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -34,10 +40,10 @@ export function Footer() {
   };
 
   const socialLinks = [
-    { icon: Twitter, href: 'https://twitter.com', label: 'Twitter' },
-    { icon: Linkedin, href: 'https://linkedin.com', label: 'LinkedIn' },
-    { icon: Facebook, href: 'https://facebook.com', label: 'Facebook' },
-    { icon: Instagram, href: 'https://instagram.com', label: 'Instagram' },
+    { icon: FiTwitter, href: 'https://twitter.com', label: 'Twitter' },
+    { icon: FiLinkedin, href: 'https://linkedin.com', label: 'LinkedIn' },
+    { icon: FiFacebook, href: 'https://facebook.com', label: 'Facebook' },
+    { icon: FiInstagram, href: 'https://instagram.com', label: 'Instagram' },
   ];
 
   return (
@@ -49,7 +55,7 @@ export function Footer() {
           <div className="space-y-6">
             <Link href="/" className="flex items-center gap-2 group">
               <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center">
-                <Plane className="w-6 h-6 text-white" />
+                <FiSend className="w-6 h-6 text-white" />
               </div>
               <span className="text-xl font-bold text-white">TravelPro</span>
             </Link>
