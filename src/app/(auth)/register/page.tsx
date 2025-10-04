@@ -335,7 +335,7 @@ const RegisterPage: React.FC = () => {
         } as any
       };
       
-      const success = await registerUser(userData);
+      const success = await registerUser(userData as any);
       
       if (success) {
       // Clear localStorage on success
