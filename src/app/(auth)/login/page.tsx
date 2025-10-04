@@ -1,10 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/SupabaseAuthContext';
 import AuthLayout from '@/components/shared/AuthLayout';
 
 // Validation schema
@@ -64,9 +66,9 @@ const demoAccounts: DemoAccount[] = [
 
 const LoginPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const router = useRouter();
+  const { login, loginWithGoogle, loginWithGithub, loading, error, isInitialized, getRedirectPath } = useAuth();
 
   const {
     register,
@@ -83,29 +85,28 @@ const LoginPage: React.FC = () => {
   const emailValue = watch('email');
   const passwordValue = watch('password');
 
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isInitialized && !loading && getRedirectPath() !== '/login') {
+      router.push(getRedirectPath());
+    }
+  }, [isInitialized, loading, getRedirectPath, router]);
+
+  // Clear error when user starts typing
+  useEffect(() => {
+    if (error) {
+      setLoginError(error.message);
+    }
+  }, [error]);
+
   const onSubmit = async (data: LoginFormData) => {
-    setIsSubmitting(true);
     setLoginError(null);
     
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Check if it's a demo account
-      const demoAccount = demoAccounts.find(
-        account => account.email === data.email && account.password === data.password
-      );
-      
-      if (demoAccount) {
-        console.log(`Demo login successful as ${demoAccount.role}`);
-        // Redirect logic would go here
-      } else {
-        throw new Error('Invalid credentials');
-      }
-    } catch (error) {
-      setLoginError(error instanceof Error ? error.message : 'Login failed');
-    } finally {
-      setIsSubmitting(false);
+    const success = await login(data.email, data.password, data.rememberMe);
+    
+    if (success) {
+      // Redirect will happen automatically via useEffect
+      router.push(getRedirectPath());
     }
   };
 
@@ -114,28 +115,25 @@ const LoginPage: React.FC = () => {
     setValue('password', account.password);
     await trigger();
     
-    setIsLoading(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      console.log(`Demo login as ${account.role}`);
-      // Redirect logic would go here
-    } catch (error) {
-      setLoginError('Demo login failed');
-    } finally {
-      setIsLoading(false);
+    const success = await login(account.email, account.password, false);
+    
+    if (success) {
+      router.push(getRedirectPath());
     }
   };
 
   const handleSocialLogin = async (provider: 'google' | 'github') => {
-    setIsLoading(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      console.log(`Social login with ${provider}`);
-      // Social login logic would go here
-    } catch (error) {
-      setLoginError(`${provider} login failed`);
-    } finally {
-      setIsLoading(false);
+    setLoginError(null);
+    
+    let success = false;
+    if (provider === 'google') {
+      success = await loginWithGoogle();
+    } else if (provider === 'github') {
+      success = await loginWithGithub();
+    }
+    
+    if (success) {
+      router.push(getRedirectPath());
     }
   };
 
@@ -305,16 +303,16 @@ const LoginPage: React.FC = () => {
           {/* Submit Button */}
           <motion.button
             type="submit"
-            disabled={!isValid || isSubmitting}
+            disabled={!isValid || loading === 'authenticating'}
             className={`w-full py-3 px-4 rounded-xl font-medium transition-all duration-200 ${
-              isValid && !isSubmitting
+              isValid && loading !== 'authenticating'
                 ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg hover:shadow-xl'
                 : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
             }`}
-            whileHover={isValid && !isSubmitting ? { scale: 1.02, y: -1 } : {}}
-            whileTap={isValid && !isSubmitting ? { scale: 0.98 } : {}}
+            whileHover={isValid && loading !== 'authenticating' ? { scale: 1.02, y: -1 } : {}}
+            whileTap={isValid && loading !== 'authenticating' ? { scale: 0.98 } : {}}
           >
-            {isSubmitting ? (
+            {loading === 'authenticating' ? (
               <div className="flex items-center justify-center space-x-2">
                 <motion.div
                   animate={{ rotate: 360 }}
@@ -346,7 +344,7 @@ const LoginPage: React.FC = () => {
             <motion.button
               type="button"
               onClick={() => handleSocialLogin('google')}
-              disabled={isLoading}
+              disabled={loading === 'authenticating'}
               className="flex items-center justify-center space-x-2 py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               whileHover={{ scale: 1.02, y: -1 }}
               whileTap={{ scale: 0.98 }}
@@ -358,7 +356,7 @@ const LoginPage: React.FC = () => {
             <motion.button
               type="button"
               onClick={() => handleSocialLogin('github')}
-              disabled={isLoading}
+              disabled={loading === 'authenticating'}
               className="flex items-center justify-center space-x-2 py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               whileHover={{ scale: 1.02, y: -1 }}
               whileTap={{ scale: 0.98 }}
@@ -385,7 +383,7 @@ const LoginPage: React.FC = () => {
               <motion.button
                 key={account.id}
                 onClick={() => handleDemoLogin(account)}
-                disabled={isLoading}
+                disabled={loading === 'authenticating'}
                 className={`w-full p-4 rounded-xl text-white font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed bg-gradient-to-r ${account.gradient} shadow-lg hover:shadow-xl`}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -418,7 +416,7 @@ const LoginPage: React.FC = () => {
           <p className="text-sm text-gray-600 dark:text-gray-400">
             Don't have an account?{' '}
             <motion.a
-              href="#"
+              href="/register"
               className="text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 font-medium"
               whileHover={{ scale: 1.05 }}
               transition={{ duration: 0.2 }}

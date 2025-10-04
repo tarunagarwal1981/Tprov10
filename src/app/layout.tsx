@@ -1,12 +1,14 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
+import { SupabaseAuthProvider } from '@/context/SupabaseAuthContext';
+import { Toaster } from 'sonner';
 
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Next.js 15 App',
-  description: 'A Next.js 15 application with TypeScript and Tailwind CSS',
+  title: 'TravelPro - Travel Business Platform',
+  description: 'Empower your travel business with AI-driven lead generation and seamless package management',
 };
 
 export default function RootLayout({
@@ -16,7 +18,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang='en'>
-      <body className={inter.className}>{children}</body>
+      <body className={inter.className}>
+        <SupabaseAuthProvider>
+          {children}
+          <Toaster position="top-right" />
+        </SupabaseAuthProvider>
+      </body>
     </html>
   );
 }

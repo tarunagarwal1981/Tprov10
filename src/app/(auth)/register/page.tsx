@@ -5,7 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useForm, useFormContext } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { useAuth } from '@/context/SupabaseAuthContext';
 import AuthLayout from '@/components/shared/AuthLayout';
 
 // Validation schemas for each step
@@ -223,9 +224,10 @@ const RegisterPage: React.FC = () => {
   const [selectedRole, setSelectedRole] = useState<'operator' | 'agent' | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [registrationData, setRegistrationData] = useState<RegistrationData | null>(null);
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const { register: registerUser, loading, error, isInitialized, getRedirectPath } = useAuth();
 
   // Initialize form data from localStorage or URL params
   useEffect(() => {
@@ -281,20 +283,34 @@ const RegisterPage: React.FC = () => {
   };
 
   const handleStep3Submit = async (data: Step3OperatorData | Step3AgentData) => {
-    setIsSubmitting(true);
+    if (!registrationData) return;
+    
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const userData = {
+        email: registrationData.email,
+        password: registrationData.password,
+        name: registrationData.fullName,
+        phone: selectedRole === 'operator' 
+          ? (data as Step3OperatorData).phoneNumber 
+          : (data as Step3AgentData).phoneNumber,
+        role: selectedRole === 'operator' ? 'TOUR_OPERATOR' : 'TRAVEL_AGENT',
+        profile: {
+          ...data,
+          role: selectedRole,
+        }
+      };
       
+      const success = await registerUser(userData);
+      
+      if (success) {
       // Clear localStorage on success
       localStorage.removeItem('registrationData');
       
-      // Redirect to success page or dashboard
-      console.log('Registration successful:', { ...registrationData, step3Data: data });
+        // Redirect to appropriate dashboard
+        router.push(getRedirectPath());
+      }
     } catch (error) {
       console.error('Registration failed:', error);
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -641,16 +657,16 @@ const RegisterPage: React.FC = () => {
               </motion.button>
               <motion.button
                 type="submit"
-                disabled={!step3OperatorForm.formState.isValid || isSubmitting}
+                disabled={!step3OperatorForm.formState.isValid || loading === 'authenticating'}
                 className={`flex-1 py-3 px-4 rounded-xl font-medium transition-all duration-200 ${
-                  step3OperatorForm.formState.isValid && !isSubmitting
+                  step3OperatorForm.formState.isValid && loading !== 'authenticating'
                     ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg hover:shadow-xl'
                     : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
                 }`}
-                whileHover={step3OperatorForm.formState.isValid && !isSubmitting ? { scale: 1.02, y: -1 } : {}}
-                whileTap={step3OperatorForm.formState.isValid && !isSubmitting ? { scale: 0.98 } : {}}
+                whileHover={step3OperatorForm.formState.isValid && loading !== 'authenticating' ? { scale: 1.02, y: -1 } : {}}
+                whileTap={step3OperatorForm.formState.isValid && loading !== 'authenticating' ? { scale: 0.98 } : {}}
               >
-                {isSubmitting ? 'Creating Account...' : 'Create Account'}
+                {loading === 'authenticating' ? 'Creating Account...' : 'Create Account'}
               </motion.button>
             </div>
           </form>
@@ -811,16 +827,16 @@ const RegisterPage: React.FC = () => {
             </motion.button>
             <motion.button
               type="submit"
-              disabled={!step3AgentForm.formState.isValid || isSubmitting}
+              disabled={!step3AgentForm.formState.isValid || loading === 'authenticating'}
               className={`flex-1 py-3 px-4 rounded-xl font-medium transition-all duration-200 ${
-                step3AgentForm.formState.isValid && !isSubmitting
+                step3AgentForm.formState.isValid && loading !== 'authenticating'
                   ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg hover:shadow-xl'
                   : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
               }`}
-              whileHover={step3AgentForm.formState.isValid && !isSubmitting ? { scale: 1.02, y: -1 } : {}}
-              whileTap={step3AgentForm.formState.isValid && !isSubmitting ? { scale: 0.98 } : {}}
+              whileHover={step3AgentForm.formState.isValid && loading !== 'authenticating' ? { scale: 1.02, y: -1 } : {}}
+              whileTap={step3AgentForm.formState.isValid && loading !== 'authenticating' ? { scale: 0.98 } : {}}
             >
-              {isSubmitting ? 'Creating Account...' : 'Create Account'}
+              {loading === 'authenticating' ? 'Creating Account...' : 'Create Account'}
             </motion.button>
           </div>
         </form>
@@ -902,4 +918,909 @@ const RegisterPage: React.FC = () => {
 };
 
 export default RegisterPage;
+
+
+
+            features={['Lead Management', 'Itinerary Builder', 'Commission Tracking']}
+
+            gradient="from-green-500 to-green-700"
+
+          />
+
+        </div>
+
+
+
+        <div className="flex space-x-4">
+
+          <motion.button
+
+            type="button"
+
+            onClick={goToPreviousStep}
+
+            className="flex-1 py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200"
+
+            whileHover={{ scale: 1.02 }}
+
+            whileTap={{ scale: 0.98 }}
+
+          >
+
+            Previous
+
+          </motion.button>
+
+          <motion.button
+
+            type="button"
+
+            onClick={step2Form.handleSubmit(handleStep2Submit)}
+
+            disabled={!selectedRole}
+
+            className={`flex-1 py-3 px-4 rounded-xl font-medium transition-all duration-200 ${
+
+              selectedRole
+
+                ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg hover:shadow-xl'
+
+                : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+
+            }`}
+
+            whileHover={selectedRole ? { scale: 1.02, y: -1 } : {}}
+
+            whileTap={selectedRole ? { scale: 0.98 } : {}}
+
+          >
+
+            Continue
+
+          </motion.button>
+
+        </div>
+
+      </div>
+
+    </motion.div>
+
+  );
+
+
+
+  const renderStep3 = () => {
+
+    if (selectedRole === 'operator') {
+
+      return (
+
+        <motion.div
+
+          key="step3-operator"
+
+          initial={{ opacity: 0, x: 50 }}
+
+          animate={{ opacity: 1, x: 0 }}
+
+          exit={{ opacity: 0, x: -50 }}
+
+          transition={{ duration: 0.3 }}
+
+        >
+
+          <form onSubmit={step3OperatorForm.handleSubmit(handleStep3Submit)} className="space-y-6">
+
+            <div className="text-center mb-6">
+
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+
+                Business Information
+
+              </h2>
+
+              <p className="text-gray-600 dark:text-gray-400">
+
+                Tell us about your tour operation business
+
+              </p>
+
+            </div>
+
+
+
+            <div className="grid md:grid-cols-2 gap-6">
+
+              <div className="space-y-2">
+
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+
+                  Company Name *
+
+                </label>
+
+                <input
+
+                  {...step3OperatorForm.register('companyName')}
+
+                  type="text"
+
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
+
+                  placeholder="Your company name"
+
+                />
+
+                {step3OperatorForm.formState.errors.companyName && (
+
+                  <p className="text-red-500 text-sm">{step3OperatorForm.formState.errors.companyName.message}</p>
+
+                )}
+
+              </div>
+
+
+
+              <div className="space-y-2">
+
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+
+                  Business Registration Number *
+
+                </label>
+
+                <input
+
+                  {...step3OperatorForm.register('businessRegistrationNumber')}
+
+                  type="text"
+
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
+
+                  placeholder="Registration number"
+
+                />
+
+                {step3OperatorForm.formState.errors.businessRegistrationNumber && (
+
+                  <p className="text-red-500 text-sm">{step3OperatorForm.formState.errors.businessRegistrationNumber.message}</p>
+
+                )}
+
+              </div>
+
+            </div>
+
+
+
+            <div className="space-y-2">
+
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+
+                Website URL
+
+              </label>
+
+              <input
+
+                {...step3OperatorForm.register('websiteUrl')}
+
+                type="url"
+
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
+
+                placeholder="https://yourwebsite.com"
+
+              />
+
+            </div>
+
+
+
+            <div className="grid md:grid-cols-2 gap-6">
+
+              <div className="space-y-2">
+
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+
+                  Phone Number *
+
+                </label>
+
+                <input
+
+                  {...step3OperatorForm.register('phoneNumber')}
+
+                  type="tel"
+
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
+
+                  placeholder="+1 (555) 123-4567"
+
+                />
+
+                {step3OperatorForm.formState.errors.phoneNumber && (
+
+                  <p className="text-red-500 text-sm">{step3OperatorForm.formState.errors.phoneNumber.message}</p>
+
+                )}
+
+              </div>
+
+
+
+              <div className="space-y-2">
+
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+
+                  Business Address *
+
+                </label>
+
+                <input
+
+                  {...step3OperatorForm.register('businessAddress')}
+
+                  type="text"
+
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
+
+                  placeholder="123 Main St, City, State"
+
+                />
+
+                {step3OperatorForm.formState.errors.businessAddress && (
+
+                  <p className="text-red-500 text-sm">{step3OperatorForm.formState.errors.businessAddress.message}</p>
+
+                )}
+
+              </div>
+
+            </div>
+
+
+
+            <div className="space-y-2">
+
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+
+                Company Description
+
+              </label>
+
+              <textarea
+
+                {...step3OperatorForm.register('companyDescription')}
+
+                rows={4}
+
+                maxLength={500}
+
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700 resize-none"
+
+                placeholder="Describe your tour operation business..."
+
+              />
+
+              <div className="text-right text-sm text-gray-500 dark:text-gray-400">
+
+                {step3OperatorForm.watch('companyDescription')?.length || 0}/500
+
+              </div>
+
+            </div>
+
+
+
+            <div className="space-y-2">
+
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+
+                Business License
+
+              </label>
+
+              <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-8 text-center hover:border-indigo-500 transition-colors">
+
+                <div className="text-gray-500 dark:text-gray-400">
+
+                  <span className="text-4xl mb-2 block">📄</span>
+
+                  <p>Drag & drop your business license here</p>
+
+                  <p className="text-sm">or click to browse</p>
+
+                  <p className="text-xs mt-2">PDF, JPG, PNG up to 5MB</p>
+
+                </div>
+
+              </div>
+
+            </div>
+
+
+
+            <div className="flex items-start space-x-2">
+
+              <input
+
+                {...step3OperatorForm.register('termsAccepted')}
+
+                type="checkbox"
+
+                className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 mt-1"
+
+              />
+
+              <label className="text-sm text-gray-700 dark:text-gray-300">
+
+                I agree to the{' '}
+
+                <a href="#" className="text-indigo-600 hover:text-indigo-500">Terms of Service</a>
+
+                {' '}and{' '}
+
+                <a href="#" className="text-indigo-600 hover:text-indigo-500">Privacy Policy</a>
+
+              </label>
+
+            </div>
+
+            {step3OperatorForm.formState.errors.termsAccepted && (
+
+              <p className="text-red-500 text-sm">{step3OperatorForm.formState.errors.termsAccepted.message}</p>
+
+            )}
+
+
+
+            <div className="flex space-x-4">
+
+              <motion.button
+
+                type="button"
+
+                onClick={goToPreviousStep}
+
+                className="flex-1 py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200"
+
+                whileHover={{ scale: 1.02 }}
+
+                whileTap={{ scale: 0.98 }}
+
+              >
+
+                Previous
+
+              </motion.button>
+
+              <motion.button
+
+                type="submit"
+
+                disabled={!step3OperatorForm.formState.isValid || isSubmitting}
+
+                className={`flex-1 py-3 px-4 rounded-xl font-medium transition-all duration-200 ${
+
+                  step3OperatorForm.formState.isValid && !isSubmitting
+
+                    ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg hover:shadow-xl'
+
+                    : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+
+                }`}
+
+                whileHover={step3OperatorForm.formState.isValid && !isSubmitting ? { scale: 1.02, y: -1 } : {}}
+
+                whileTap={step3OperatorForm.formState.isValid && !isSubmitting ? { scale: 0.98 } : {}}
+
+              >
+
+                {isSubmitting ? 'Creating Account...' : 'Create Account'}
+
+              </motion.button>
+
+            </div>
+
+          </form>
+
+        </motion.div>
+
+      );
+
+    }
+
+
+
+    // Agent form (similar structure but different fields)
+
+    return (
+
+      <motion.div
+
+        key="step3-agent"
+
+        initial={{ opacity: 0, x: 50 }}
+
+        animate={{ opacity: 1, x: 0 }}
+
+        exit={{ opacity: 0, x: -50 }}
+
+        transition={{ duration: 0.3 }}
+
+      >
+
+        <form onSubmit={step3AgentForm.handleSubmit(handleStep3Submit)} className="space-y-6">
+
+          <div className="text-center mb-6">
+
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+
+              Agency Information
+
+            </h2>
+
+            <p className="text-gray-600 dark:text-gray-400">
+
+              Tell us about your travel agency
+
+            </p>
+
+          </div>
+
+
+
+          <div className="grid md:grid-cols-2 gap-6">
+
+            <div className="space-y-2">
+
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+
+                Agency Name *
+
+              </label>
+
+              <input
+
+                {...step3AgentForm.register('agencyName')}
+
+                type="text"
+
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
+
+                placeholder="Your agency name"
+
+              />
+
+              {step3AgentForm.formState.errors.agencyName && (
+
+                <p className="text-red-500 text-sm">{step3AgentForm.formState.errors.agencyName.message}</p>
+
+              )}
+
+            </div>
+
+
+
+            <div className="space-y-2">
+
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+
+                Agency Registration Number *
+
+              </label>
+
+              <input
+
+                {...step3AgentForm.register('agencyRegistrationNumber')}
+
+                type="text"
+
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
+
+                placeholder="Registration number"
+
+              />
+
+              {step3AgentForm.formState.errors.agencyRegistrationNumber && (
+
+                <p className="text-red-500 text-sm">{step3AgentForm.formState.errors.agencyRegistrationNumber.message}</p>
+
+              )}
+
+            </div>
+
+          </div>
+
+
+
+          <div className="grid md:grid-cols-2 gap-6">
+
+            <div className="space-y-2">
+
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+
+                Phone Number *
+
+              </label>
+
+              <input
+
+                {...step3AgentForm.register('phoneNumber')}
+
+                type="tel"
+
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
+
+                placeholder="+1 (555) 123-4567"
+
+              />
+
+              {step3AgentForm.formState.errors.phoneNumber && (
+
+                <p className="text-red-500 text-sm">{step3AgentForm.formState.errors.phoneNumber.message}</p>
+
+              )}
+
+            </div>
+
+
+
+            <div className="space-y-2">
+
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+
+                Office Address *
+
+              </label>
+
+              <input
+
+                {...step3AgentForm.register('officeAddress')}
+
+                type="text"
+
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
+
+                placeholder="123 Main St, City, State"
+
+              />
+
+              {step3AgentForm.formState.errors.officeAddress && (
+
+                <p className="text-red-500 text-sm">{step3AgentForm.formState.errors.officeAddress.message}</p>
+
+              )}
+
+            </div>
+
+          </div>
+
+
+
+          <div className="space-y-2">
+
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+
+              Specialization *
+
+            </label>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+
+              {['Honeymoon', 'Adventure', 'Luxury', 'Family', 'Business', 'Cultural'].map((spec) => (
+
+                <label key={spec} className="flex items-center space-x-2 cursor-pointer">
+
+                  <input
+
+                    type="checkbox"
+
+                    value={spec}
+
+                    {...step3AgentForm.register('specialization')}
+
+                    className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+
+                  />
+
+                  <span className="text-sm text-gray-700 dark:text-gray-300">{spec}</span>
+
+                </label>
+
+              ))}
+
+            </div>
+
+            {step3AgentForm.formState.errors.specialization && (
+
+              <p className="text-red-500 text-sm">{step3AgentForm.formState.errors.specialization.message}</p>
+
+            )}
+
+          </div>
+
+
+
+          <div className="space-y-2">
+
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+
+              Years of Experience *
+
+            </label>
+
+            <select
+
+              {...step3AgentForm.register('yearsOfExperience')}
+
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
+
+            >
+
+              <option value="">Select experience</option>
+
+              <option value="0-1">0-1 years</option>
+
+              <option value="2-5">2-5 years</option>
+
+              <option value="6-10">6-10 years</option>
+
+              <option value="10+">10+ years</option>
+
+            </select>
+
+            {step3AgentForm.formState.errors.yearsOfExperience && (
+
+              <p className="text-red-500 text-sm">{step3AgentForm.formState.errors.yearsOfExperience.message}</p>
+
+            )}
+
+          </div>
+
+
+
+          <div className="flex items-start space-x-2">
+
+            <input
+
+              {...step3AgentForm.register('termsAccepted')}
+
+              type="checkbox"
+
+              className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 mt-1"
+
+            />
+
+            <label className="text-sm text-gray-700 dark:text-gray-300">
+
+              I agree to the{' '}
+
+              <a href="#" className="text-indigo-600 hover:text-indigo-500">Terms of Service</a>
+
+              {' '}and{' '}
+
+              <a href="#" className="text-indigo-600 hover:text-indigo-500">Privacy Policy</a>
+
+            </label>
+
+          </div>
+
+          {step3AgentForm.formState.errors.termsAccepted && (
+
+            <p className="text-red-500 text-sm">{step3AgentForm.formState.errors.termsAccepted.message}</p>
+
+          )}
+
+
+
+          <div className="flex space-x-4">
+
+            <motion.button
+
+              type="button"
+
+              onClick={goToPreviousStep}
+
+              className="flex-1 py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200"
+
+              whileHover={{ scale: 1.02 }}
+
+              whileTap={{ scale: 0.98 }}
+
+            >
+
+              Previous
+
+            </motion.button>
+
+            <motion.button
+
+              type="submit"
+
+              disabled={!step3AgentForm.formState.isValid || isSubmitting}
+
+              className={`flex-1 py-3 px-4 rounded-xl font-medium transition-all duration-200 ${
+
+                step3AgentForm.formState.isValid && !isSubmitting
+
+                  ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg hover:shadow-xl'
+
+                  : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+
+              }`}
+
+              whileHover={step3AgentForm.formState.isValid && !isSubmitting ? { scale: 1.02, y: -1 } : {}}
+
+              whileTap={step3AgentForm.formState.isValid && !isSubmitting ? { scale: 0.98 } : {}}
+
+            >
+
+              {isSubmitting ? 'Creating Account...' : 'Create Account'}
+
+            </motion.button>
+
+          </div>
+
+        </form>
+
+      </motion.div>
+
+    );
+
+  };
+
+
+
+  return (
+
+    <AuthLayout
+
+      title="Create Your Account"
+
+      subtitle="Join thousands of travel professionals"
+
+      showTestimonials={false}
+
+      showFeatures={false}
+
+    >
+
+      <div className="space-y-8">
+
+        <StepIndicator currentStep={currentStep} totalSteps={3} />
+
+        
+
+        <AnimatePresence mode="wait">
+
+          {currentStep === 1 && renderStep1()}
+
+          {currentStep === 2 && renderStep2()}
+
+          {currentStep === 3 && renderStep3()}
+
+        </AnimatePresence>
+
+
+
+        {/* Social Registration */}
+
+        {currentStep === 1 && (
+
+          <div className="space-y-4">
+
+            <div className="relative">
+
+              <div className="absolute inset-0 flex items-center">
+
+                <div className="w-full border-t border-gray-300 dark:border-gray-600" />
+
+              </div>
+
+              <div className="relative flex justify-center text-sm">
+
+                <span className="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">
+
+                  Or sign up with
+
+                </span>
+
+              </div>
+
+            </div>
+
+
+
+            <div className="grid grid-cols-2 gap-3">
+
+              <motion.button
+
+                type="button"
+
+                className="flex items-center justify-center space-x-2 py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200"
+
+                whileHover={{ scale: 1.02, y: -1 }}
+
+                whileTap={{ scale: 0.98 }}
+
+              >
+
+                <span className="text-lg">🔍</span>
+
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Google</span>
+
+              </motion.button>
+
+
+
+              <motion.button
+
+                type="button"
+
+                className="flex items-center justify-center space-x-2 py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200"
+
+                whileHover={{ scale: 1.02, y: -1 }}
+
+                whileTap={{ scale: 0.98 }}
+
+              >
+
+                <span className="text-lg">🐙</span>
+
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">GitHub</span>
+
+              </motion.button>
+
+            </div>
+
+          </div>
+
+        )}
+
+
+
+        {/* Bottom Links */}
+
+        <div className="text-center">
+
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+
+            Already have an account?{' '}
+
+            <motion.a
+
+              href="/login"
+
+              className="text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 font-medium"
+
+              whileHover={{ scale: 1.05 }}
+
+              transition={{ duration: 0.2 }}
+
+            >
+
+              Sign in
+
+            </motion.a>
+
+          </p>
+
+        </div>
+
+      </div>
+
+    </AuthLayout>
+
+  );
+
+};
+
+
+
+export default RegisterPage;
+
+
+
 
