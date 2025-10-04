@@ -10,8 +10,8 @@
     "type-check": "tsc --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "export": "next build && next export",
-    "netlify:build": "npm run build && npm run export",
+    "export": "next build",
+    "netlify:build": "npm run build",
     "netlify:dev": "netlify dev"
   },
   "dependencies": {

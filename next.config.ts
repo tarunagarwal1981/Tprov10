@@ -5,11 +5,6 @@ const nextConfig = {
     // Server actions are enabled by default in Next.js 15
   },
 
-  // Image optimization
-  images: {
-    domains: [],
-    formats: ['image/webp', 'image/avif'],
-  },
 
   // Enable strict mode
   reactStrictMode: true,
@@ -31,8 +26,15 @@ const nextConfig = {
     return config;
   },
 
-  // Output configuration
-  output: 'standalone',
+  // Output configuration for static export
+  output: 'export',
+  
+  // Disable image optimization for static export
+  images: {
+    unoptimized: true,
+    domains: [],
+    formats: ['image/webp', 'image/avif'],
+  },
 };
 
 export default nextConfig;

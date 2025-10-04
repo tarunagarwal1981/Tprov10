@@ -3,7 +3,7 @@
 
 [build]
   # Build command - Next.js static export
-  command = "npm run build && npm run export"
+  command = "npm run build"
   
   # Directory to publish (Next.js static export output)
   publish = "out"
@@ -88,11 +88,11 @@
 
 # Branch-specific settings
 [context.production]
-  command = "npm run build && npm run export"
+  command = "npm run build"
 
 [context.deploy-preview]
-  command = "npm run build && npm run export"
+  command = "npm run build"
 
 [context.branch-deploy]
-  command = "npm run build && npm run export"
+  command = "npm run build"
 
