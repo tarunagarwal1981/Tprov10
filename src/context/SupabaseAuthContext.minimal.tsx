@@ -72,7 +72,7 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
     };
 
     initAuth();
-  }, []); // Empty dependency array
+  }, [supabase.auth]); // Include supabase.auth dependency
 
   const login = async (email: string, password: string, rememberMe?: boolean): Promise<boolean> => {
     try {

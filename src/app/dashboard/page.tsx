@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { 
-  TrendingUp, 
+  ArrowUpRight, 
   Users, 
   Package, 
   Calendar,
@@ -79,7 +79,7 @@ export default function DashboardPage() {
                 $45,231.89
               </div>
               <p className="text-xs text-blue-600 dark:text-blue-400">
-                <TrendingUp className="h-3 w-3 inline mr-1" />
+                <ArrowUpRight className="h-3 w-3 inline mr-1" />
                 +20.1% from last month
               </p>
             </CardContent>
@@ -97,7 +97,7 @@ export default function DashboardPage() {
                 +2,350
               </div>
               <p className="text-xs text-green-600 dark:text-green-400">
-                <TrendingUp className="h-3 w-3 inline mr-1" />
+                <ArrowUpRight className="h-3 w-3 inline mr-1" />
                 +180.1% from last month
               </p>
             </CardContent>
@@ -115,7 +115,7 @@ export default function DashboardPage() {
                 12,234
               </div>
               <p className="text-xs text-purple-600 dark:text-purple-400">
-                <TrendingUp className="h-3 w-3 inline mr-1" />
+                <ArrowUpRight className="h-3 w-3 inline mr-1" />
                 +19% from last month
               </p>
             </CardContent>
@@ -133,7 +133,7 @@ export default function DashboardPage() {
                 4.8/5
               </div>
               <p className="text-xs text-orange-600 dark:text-orange-400">
-                <TrendingUp className="h-3 w-3 inline mr-1" />
+                <ArrowUpRight className="h-3 w-3 inline mr-1" />
                 +0.2 from last month
               </p>
             </CardContent>

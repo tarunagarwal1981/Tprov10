@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import Image from 'next/image';
 
 interface AuthLayoutProps {
   children: React.ReactNode;
@@ -127,9 +128,11 @@ const TestimonialCard: React.FC<{ testimonial: Testimonial; isActive: boolean }>
     transition={{ duration: 0.5 }}
   >
     <div className="flex items-center space-x-3 mb-4">
-      <img
+      <Image
         src={testimonial.avatar}
         alt={testimonial.name}
+        width={48}
+        height={48}
         className="w-12 h-12 rounded-full object-cover"
       />
       <div>
