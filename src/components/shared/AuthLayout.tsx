@@ -165,6 +165,7 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({
       }, 5000);
       return () => clearInterval(interval);
     }
+    return undefined;
   }, [showTestimonials]);
 
   return (
@@ -239,7 +240,14 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({
                 <AnimatePresence mode="wait">
                   <TestimonialCard
                     key={currentTestimonial}
-                    testimonial={testimonials[currentTestimonial]}
+                    testimonial={testimonials[currentTestimonial] || testimonials[0] || {
+                      id: 0,
+                      name: 'Default User',
+                      role: 'Travel Professional',
+                      company: 'TravelPro',
+                      content: 'Great platform for travel professionals!',
+                      avatar: '/placeholder-avatar.jpg'
+                    }}
                     isActive={true}
                   />
                 </AnimatePresence>

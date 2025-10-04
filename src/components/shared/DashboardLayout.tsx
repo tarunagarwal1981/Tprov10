@@ -14,14 +14,14 @@ import { Header } from '@/components/shared/Header';
 import { cn } from '@/lib/utils';
 import type { UserRole } from '@/lib/types';
 import {
-  Loader2,
-  AlertTriangle,
-  Shield,
-  ArrowLeft,
-  RefreshCw,
-  Wifi,
-  WifiOff,
-} from 'lucide-react';
+  FiLoader,
+  FiAlertTriangle,
+  FiShield,
+  FiArrowLeft,
+  FiRefreshCw,
+  FiWifi,
+  FiWifiOff,
+} from 'react-icons/fi';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -154,7 +154,7 @@ const AccessDeniedPage: React.FC<{
     <Card className="w-full max-w-md">
       <CardContent className="p-8 text-center">
         <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
-          <Shield className="h-8 w-8 text-red-600 dark:text-red-400" />
+          <FiShield className="h-8 w-8 text-red-600 dark:text-red-400" />
         </div>
         <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-2">
           {title}
@@ -164,7 +164,7 @@ const AccessDeniedPage: React.FC<{
         </p>
         {onRetry && (
           <Button onClick={onRetry} variant="outline">
-            <RefreshCw className="h-4 w-4 mr-2" />
+            <FiRefreshCw className="h-4 w-4 mr-2" />
             Try Again
           </Button>
         )}
@@ -183,7 +183,7 @@ const OfflinePage: React.FC<{ onRetry: () => void }> = ({ onRetry }) => (
     <Card className="w-full max-w-md">
       <CardContent className="p-8 text-center">
         <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-orange-100 dark:bg-orange-900/20 flex items-center justify-center">
-          <WifiOff className="h-8 w-8 text-orange-600 dark:text-orange-400" />
+          <FiWifiOff className="h-8 w-8 text-orange-600 dark:text-orange-400" />
         </div>
         <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-2">
           You&apos;re Offline
@@ -192,7 +192,7 @@ const OfflinePage: React.FC<{ onRetry: () => void }> = ({ onRetry }) => (
           Please check your internet connection and try again.
         </p>
         <Button onClick={onRetry} variant="outline">
-          <Wifi className="h-4 w-4 mr-2" />
+          <FiWifi className="h-4 w-4 mr-2" />
           Check Connection
         </Button>
       </CardContent>

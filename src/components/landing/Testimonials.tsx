@@ -173,45 +173,45 @@ export function Testimonials() {
                   >
                     {/* Rating */}
                     <div className="flex items-center gap-1">
-                      {[...Array(testimonials[currentTestimonial].rating)].map((_, i) => (
+                      {[...Array(testimonials[currentTestimonial]?.rating || 5)].map((_, i) => (
                         <FiStar key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
                       ))}
                     </div>
 
                     {/* Content */}
                     <blockquote className="text-lg lg:text-xl text-slate-700 leading-relaxed">
-                      &ldquo;{testimonials[currentTestimonial].content}&rdquo;
+                      &ldquo;{testimonials[currentTestimonial]?.content}&rdquo;
                     </blockquote>
 
                     {/* Results Badge */}
                     <Badge variant="outline" className="bg-green-50 border-green-200 text-green-700">
-                      {testimonials[currentTestimonial].results}
+                      {testimonials[currentTestimonial]?.results}
                     </Badge>
 
                     {/* Author Info */}
                     <div className="flex items-center gap-4">
                       <Avatar className="w-12 h-12">
-                        <AvatarImage src={testimonials[currentTestimonial].avatar} />
+                        <AvatarImage src={testimonials[currentTestimonial]?.avatar} />
                         <AvatarFallback>
-                          {testimonials[currentTestimonial].name.split(' ').map(n => n[0]).join('')}
+                          {testimonials[currentTestimonial]?.name?.split(' ').map(n => n[0]).join('')}
                         </AvatarFallback>
                       </Avatar>
                       <div>
                         <div className="flex items-center gap-2">
                           <h4 className="font-semibold text-slate-900">
-                            {testimonials[currentTestimonial].name}
+                            {testimonials[currentTestimonial]?.name}
                           </h4>
-                          {testimonials[currentTestimonial].verified && (
+                          {testimonials[currentTestimonial]?.verified && (
                             <Badge variant="secondary" className="text-xs bg-blue-50 text-blue-700">
                               Verified
                             </Badge>
                           )}
                         </div>
                         <p className="text-sm text-slate-600">
-                          {testimonials[currentTestimonial].role} at {testimonials[currentTestimonial].company}
+                          {testimonials[currentTestimonial]?.role} at {testimonials[currentTestimonial]?.company}
                         </p>
                         <p className="text-xs text-slate-500">
-                          {testimonials[currentTestimonial].location}
+                          {testimonials[currentTestimonial]?.location}
                         </p>
                       </div>
                     </div>
