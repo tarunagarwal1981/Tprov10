@@ -13,7 +13,7 @@ export function Hero() {
   ];
 
   return (
-    <section className="hero-section bg-gradient-to-br from-slate-50 via-white to-blue-50/30">
+    <section className="relative min-h-[calc(100vh-80px)] flex items-center pt-20 pb-16 bg-gradient-to-br from-slate-50 via-white to-blue-50/30">
       {/* Background Elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {/* Primary gradient orbs */}
@@ -60,7 +60,7 @@ export function Hero() {
       </div>
 
       <div className="container relative z-10">
-        <div className="hero-grid">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           
           {/* Left Column - Text Content */}
           <motion.div
@@ -88,7 +88,7 @@ export function Hero() {
               className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-black text-slate-900 leading-tight"
             >
               The Future of{' '}
-              <span className="gradient-text">
+              <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 Travel Booking
               </span>{' '}
               is Here
@@ -109,7 +109,7 @@ export function Hero() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.8 }}
-              className="cta-buttons"
+              className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center sm:justify-center lg:justify-start"
             >
               <Link
                 href="/auth/register?role=tour_operator"
@@ -137,7 +137,7 @@ export function Hero() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.8, delay: 1 }}
-              className="trust-indicators pt-6"
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-3 pt-6"
             >
               {trustIndicators.map((indicator, index) => (
                 <motion.div
@@ -161,7 +161,7 @@ export function Hero() {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.8, delay: 0.4 }}
-            className="floating-cards-container"
+            className="relative h-[500px] w-full hidden lg:block"
           >
             {/* Decorative circles */}
             <div className="absolute inset-0">
@@ -195,7 +195,7 @@ export function Hero() {
             <div className="relative grid grid-cols-2 gap-4 p-8">
               <motion.div
                 whileHover={{ scale: 1.05, y: -5 }}
-                className="floating-card"
+                className="absolute bg-white/80 backdrop-blur-sm rounded-xl shadow-xl border border-white/20 p-4"
               >
                 <Users className="w-8 h-8 text-blue-600 mb-3" />
                 <div className="text-3xl font-bold text-slate-900">10K+</div>
@@ -204,7 +204,7 @@ export function Hero() {
 
               <motion.div
                 whileHover={{ scale: 1.05, y: -5 }}
-                className="floating-card"
+                className="absolute bg-white/80 backdrop-blur-sm rounded-xl shadow-xl border border-white/20 p-4"
               >
                 <Globe className="w-8 h-8 text-purple-600 mb-3" />
                 <div className="text-3xl font-bold text-slate-900">50+</div>
@@ -213,7 +213,7 @@ export function Hero() {
 
               <motion.div
                 whileHover={{ scale: 1.05, y: -5 }}
-                className="floating-card col-span-2"
+                className="absolute bg-white/80 backdrop-blur-sm rounded-xl shadow-xl border border-white/20 p-4 col-span-2"
               >
                 <TrendingUp className="w-8 h-8 text-green-600 mb-3" />
                 <div className="text-3xl font-bold text-slate-900">$2M+</div>
