@@ -404,3 +404,4 @@ export type FlightUpdate = Database['public']['Tables']['flights']['Update']
 export type BookingUpdate = Database['public']['Tables']['bookings']['Update']
 export type PackageUpdate = Database['public']['Tables']['packages']['Update']
 export type ActivityUpdate = Database['public']['Tables']['activities']['Update']
+

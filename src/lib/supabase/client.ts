@@ -232,3 +232,4 @@ export {
   createSupabaseAdminClient as createAdminClient,
   createSupabaseMiddlewareClient as createMiddlewareClient,
 };
+

@@ -11,7 +11,7 @@ import { Footer } from '@/components/landing/Footer';
 
 export default function Home() {
   return (
-    <div className="landing-page bg-gradient-to-br from-slate-50 via-white to-blue-50/30">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50/30">
       <Header />
       <Hero />
       <Stats />
@@ -20,6 +20,6 @@ export default function Home() {
       <Testimonials />
       <CTA />
       <Footer />
-      </div>
+    </div>
   );
 }

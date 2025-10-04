@@ -1,7 +1,74 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Check, Brain, Package, Network, Zap, Shield, BarChart3, Headphones } from 'lucide-react';
+import { Brain, Package, Network, Zap, Shield, BarChart3, Headphones, Check } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+
+// Feature Card Component
+function FeatureCard({ 
+  icon: Icon, 
+  title, 
+  description, 
+  benefits, 
+  gradient,
+  delay = 0 
+}: {
+  icon: any;
+  title: string;
+  description: string;
+  benefits: string[];
+  gradient: string;
+  delay?: number;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 30 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.6, delay }}
+      whileHover={{ y: -8, scale: 1.02 }}
+      className="h-full"
+    >
+      <Card className="h-full bg-white border-slate-200 shadow-lg hover:shadow-2xl transition-all duration-300 group">
+        <CardContent className="p-8 flex flex-col space-y-6">
+          {/* Icon */}
+          <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${gradient} flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300`}>
+            <Icon className="w-8 h-8 text-white" />
+          </div>
+
+          {/* Title */}
+          <h3 className="text-2xl font-bold text-slate-900">
+            {title}
+          </h3>
+
+          {/* Description */}
+          <p className="text-slate-600 leading-relaxed">
+            {description}
+          </p>
+
+          {/* Benefits List */}
+          <ul className="space-y-3 flex-grow">
+            {benefits.map((benefit, index) => (
+              <motion.li
+                key={index}
+                initial={{ opacity: 0, x: -20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: delay + 0.1 * index }}
+                className="flex items-start gap-3"
+              >
+                <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Check className="w-3 h-3 text-green-600" />
+                </div>
+                <span className="text-sm text-slate-700">{benefit}</span>
+              </motion.li>
+            ))}
+          </ul>
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+}
 
 export function Features() {
   const mainFeatures = [
@@ -15,7 +82,7 @@ export function Features() {
         'Voice agent verification system',
         'Real-time lead notifications'
       ],
-      color: 'from-blue-500 to-blue-600'
+      gradient: 'from-blue-500 to-blue-600'
     },
     {
       icon: Package,
@@ -27,7 +94,7 @@ export function Features() {
         'Dynamic pricing management',
         'Inventory tracking and updates'
       ],
-      color: 'from-purple-500 to-purple-600'
+      gradient: 'from-purple-500 to-purple-600'
     },
     {
       icon: Network,
@@ -39,7 +106,7 @@ export function Features() {
         'Commission tracking system',
         'Secure payment processing'
       ],
-      color: 'from-green-500 to-green-600'
+      gradient: 'from-green-500 to-green-600'
     }
   ];
 
@@ -47,144 +114,87 @@ export function Features() {
     {
       icon: Zap,
       title: 'Automated Workflows',
-      description: 'Streamline your operations with intelligent automation'
+      description: 'Save time with intelligent automation'
     },
     {
       icon: Shield,
       title: 'Enterprise Security',
-      description: 'Bank-level security for your business and customers'
+      description: 'Bank-level security for your data'
     },
     {
       icon: BarChart3,
       title: 'Advanced Analytics',
-      description: 'Data-driven insights to grow your business'
+      description: 'Real-time insights and reporting'
     },
     {
       icon: Headphones,
       title: '24/7 Support',
-      description: 'Round-the-clock assistance when you need it'
+      description: 'Always here to help you succeed'
     }
   ];
 
   return (
-    <section id="features" className="py-20 bg-white dark:bg-slate-900">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section className="py-20 lg:py-24 bg-white">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
           viewport={{ once: true }}
-          className="text-center mb-16"
+          transition={{ duration: 0.6 }}
+          className="text-center mb-16 space-y-4"
         >
-          <div className="inline-flex items-center space-x-2 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/50 dark:to-purple-950/50 border border-blue-200 dark:border-blue-800 rounded-full px-4 py-2 mb-6">
-            <Check className="h-4 w-4 text-blue-600" />
-            <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
-              Platform Features
-            </span>
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-100 rounded-full text-sm font-medium text-blue-700 mb-4">
+            <Package className="w-4 h-4" />
+            <span>Platform Features</span>
           </div>
-          
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900 dark:text-slate-100 mb-4">
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900">
             Everything You Need to{' '}
             <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
               Grow Your Business
             </span>
           </h2>
-          
-          <p className="text-lg text-slate-600 dark:text-slate-400 max-w-3xl mx-auto">
+          <p className="text-lg text-slate-600 max-w-2xl mx-auto">
             Powerful features designed specifically for tour operators and travel agents
           </p>
         </motion.div>
 
         {/* Main Features Grid */}
-        <div className="grid lg:grid-cols-3 gap-8 mb-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
           {mainFeatures.map((feature, index) => (
-            <motion.div
-              key={feature.title}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.2, duration: 0.6 }}
-              viewport={{ once: true }}
-              whileHover={{ y: -8, transition: { duration: 0.3 } }}
-              className="group"
-            >
-              <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 border border-slate-200 dark:border-slate-700 h-full">
-                {/* Icon */}
-                <div className={`w-16 h-16 bg-gradient-to-r ${feature.color} rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300`}>
-                  <feature.icon className="h-8 w-8 text-white" />
-                </div>
-
-                {/* Title */}
-                <h3 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">
-                  {feature.title}
-                </h3>
-
-                {/* Description */}
-                <p className="text-slate-600 dark:text-slate-400 mb-6 leading-relaxed">
-                  {feature.description}
-                </p>
-
-                {/* Benefits List */}
-                <ul className="space-y-3">
-                  {feature.benefits.map((benefit, benefitIndex) => (
-                    <motion.li
-                      key={benefit}
-                      initial={{ opacity: 0, x: -20 }}
-                      whileInView={{ opacity: 1, x: 0 }}
-                      transition={{ delay: (index * 0.2) + (benefitIndex * 0.1) + 0.3, duration: 0.4 }}
-                      viewport={{ once: true }}
-                      className="flex items-center space-x-3"
-                    >
-                      <div className="w-5 h-5 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center flex-shrink-0">
-                        <Check className="h-3 w-3 text-green-600 dark:text-green-400" />
-                      </div>
-                      <span className="text-sm text-slate-600 dark:text-slate-400">
-                        {benefit}
-                      </span>
-                    </motion.li>
-                  ))}
-                </ul>
-              </div>
-            </motion.div>
+            <FeatureCard key={index} {...feature} delay={index * 0.1} />
           ))}
         </div>
 
-        {/* Additional Features Grid */}
+        {/* Additional Features */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6, duration: 0.6 }}
           viewport={{ once: true }}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
+          transition={{ duration: 0.6, delay: 0.3 }}
         >
-          {additionalFeatures.map((feature, index) => (
-            <motion.div
-              key={feature.title}
-              initial={{ opacity: 0, scale: 0.8 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.8 + index * 0.1, duration: 0.4 }}
-              viewport={{ once: true }}
-              whileHover={{ y: -4, transition: { duration: 0.3 } }}
-              className="group"
-            >
-              <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-md hover:shadow-lg transition-all duration-300 border border-slate-200 dark:border-slate-700 text-center">
-                {/* Icon */}
-                <div className="w-12 h-12 bg-gradient-to-r from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-600 rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
-                  <feature.icon className="h-6 w-6 text-slate-600 dark:text-slate-400" />
-                </div>
-
-                {/* Title */}
-                <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">
-                  {feature.title}
-                </h3>
-
-                {/* Description */}
-                <p className="text-sm text-slate-600 dark:text-slate-400">
-                  {feature.description}
-                </p>
-              </div>
-            </motion.div>
-          ))}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {additionalFeatures.map((feature, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: 0.4 + index * 0.1 }}
+                whileHover={{ y: -4 }}
+              >
+                <Card className="h-full bg-slate-50 border-slate-200 hover:bg-blue-50 hover:border-blue-300 transition-all">
+                  <CardContent className="p-6 space-y-4">
+                    <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
+                      <feature.icon className="w-6 h-6 text-white" />
+                    </div>
+                    <h4 className="font-semibold text-slate-900">{feature.title}</h4>
+                    <p className="text-sm text-slate-600">{feature.description}</p>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
         </motion.div>
       </div>
     </section>

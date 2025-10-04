@@ -215,3 +215,4 @@ supabase gen types typescript --linked > src/lib/supabase/types.ts
 ```
 
 This will generate the most up-to-date types based on your actual database schema.
+

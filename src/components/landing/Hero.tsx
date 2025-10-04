@@ -2,15 +2,21 @@
 
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { Check, ArrowDown, Sparkles, Globe, MapPin, Users } from 'lucide-react';
+import { Check, ArrowDown, Sparkles, Globe, MapPin, Users, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 
 export function Hero() {
   const floatingCards = [
-    { icon: Globe, title: 'Global Destinations', color: 'from-blue-500 to-cyan-500' },
-    { icon: MapPin, title: 'Local Experiences', color: 'from-purple-500 to-pink-500' },
-    { icon: Users, title: 'Expert Guides', color: 'from-green-500 to-emerald-500' },
+    { icon: Globe, title: 'Global Destinations', description: 'Explore destinations worldwide', color: 'from-blue-500 to-cyan-500' },
+    { icon: MapPin, title: 'Local Experiences', description: 'Discover local hidden gems', color: 'from-purple-500 to-pink-500' },
+    { icon: Users, title: 'Expert Guides', description: 'Connect with expert guides', color: 'from-green-500 to-emerald-500' },
   ];
+
+  const IconComponent1 = floatingCards[0].icon;
+  const IconComponent2 = floatingCards[1].icon;
+  const IconComponent3 = floatingCards[2].icon;
 
   const trustIndicators = [
     'No credit card required',
@@ -19,86 +25,105 @@ export function Hero() {
   ];
 
   return (
-    <section id="home" className="hero-section min-h-screen flex items-center justify-center overflow-hidden pt-20">
-      {/* Animated Background */}
-      <div className="absolute inset-0 -z-10">
-        {/* Gradient Orbs */}
-        <div className="absolute top-20 left-10 w-72 h-72 bg-gradient-to-r from-blue-400/20 to-purple-400/20 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute top-40 right-20 w-96 h-96 bg-gradient-to-r from-purple-400/20 to-pink-400/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-        <div className="absolute bottom-20 left-1/3 w-80 h-80 bg-gradient-to-r from-cyan-400/20 to-blue-400/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
-        
-        {/* Grid Pattern */}
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(59,130,246,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(59,130,246,0.03)_1px,transparent_1px)] bg-[size:50px_50px]"></div>
+    <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-slate-50 via-white to-blue-50/30 pt-20">
+      {/* Animated Background Orbs */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <motion.div
+          animate={{
+            scale: [1, 1.2, 1],
+            rotate: [0, 90, 0],
+          }}
+          transition={{
+            duration: 20,
+            repeat: Infinity,
+            ease: "linear"
+          }}
+          className="absolute top-1/4 -left-1/4 w-96 h-96 bg-blue-400/20 rounded-full blur-3xl"
+        />
+        <motion.div
+          animate={{
+            scale: [1, 1.3, 1],
+            rotate: [0, -90, 0],
+          }}
+          transition={{
+            duration: 25,
+            repeat: Infinity,
+            ease: "linear"
+          }}
+          className="absolute bottom-1/4 -right-1/4 w-96 h-96 bg-purple-400/20 rounded-full blur-3xl"
+        />
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-        <div className="hero-grid">
-          {/* Left Column - Content */}
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+          
+          {/* Left Column - Text Content */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, ease: 'easeOut' }}
-            className="hero-content"
+            transition={{ duration: 0.8 }}
+            className="text-center lg:text-left space-y-8"
           >
             {/* Badge */}
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.2, duration: 0.6 }}
-              className="inline-flex items-center space-x-2 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/50 dark:to-purple-950/50 border border-blue-200 dark:border-blue-800 rounded-full px-4 py-2"
+              transition={{ duration: 0.5, delay: 0.2 }}
             >
-              <Sparkles className="h-4 w-4 text-blue-600" />
-              <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
-                🚀 AI-Powered Travel Platform
-              </span>
+              <Badge variant="secondary" className="px-4 py-2 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200/50">
+                <Sparkles className="w-4 h-4 text-blue-600 mr-2" />
+                AI-Powered Travel Platform
+              </Badge>
             </motion.div>
 
             {/* Main Headline */}
             <motion.h1
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4, duration: 0.8 }}
-              className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold leading-tight"
+              transition={{ duration: 0.8, delay: 0.3 }}
+              className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold text-slate-900 leading-tight"
             >
               The Future of{' '}
-              <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 bg-clip-text text-transparent animate-pulse">
-                AI-Powered
+              <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 bg-clip-text text-transparent animate-gradient">
+                Travel Booking
               </span>{' '}
-              Travel Booking is Here
+              is Here
             </motion.h1>
 
             {/* Subheadline */}
             <motion.p
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6, duration: 0.8 }}
-              className="text-lg sm:text-xl text-slate-600 dark:text-slate-400 leading-relaxed max-w-2xl"
+              transition={{ duration: 0.8, delay: 0.4 }}
+              className="text-lg sm:text-xl text-slate-600 leading-relaxed max-w-2xl"
             >
-              Empower your travel business with AI-driven lead generation, seamless package management, and a global network of partners. Join 10,000+ travel professionals growing with TravelPro.
+              Empower your travel business with <span className="font-semibold text-slate-900">AI-driven lead generation</span>, seamless package management, and a global network of partners. Join <span className="font-semibold text-blue-600">10,000+</span> travel professionals growing with TravelPro.
             </motion.p>
 
-            {/* CTAs */}
+            {/* CTA Buttons */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.8, duration: 0.8 }}
-              className="flex flex-col sm:flex-row gap-4"
+              transition={{ duration: 0.8, delay: 0.5 }}
+              className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start"
             >
-              <Link href="/register?role=tour_operator">
+              <Link href="/auth/register?role=tour_operator">
                 <Button
                   size="lg"
-                  className="h-14 px-8 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+                  className="w-full sm:w-auto h-14 px-8 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group"
                 >
                   I'm a Tour Operator
+                  <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </Link>
-              <Link href="/register?role=travel_agent">
+              <Link href="/auth/register?role=travel_agent">
                 <Button
                   variant="outline"
                   size="lg"
-                  className="h-14 px-8 border-2 border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all duration-300"
+                  className="w-full sm:w-auto h-14 px-8 border-2 border-slate-300 hover:border-blue-600 hover:bg-blue-50 text-slate-700 hover:text-blue-700 font-semibold hover:shadow-md hover:-translate-y-1 transition-all duration-300"
                 >
                   I'm a Travel Agent
+                  <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </Link>
             </motion.div>
@@ -107,68 +132,124 @@ export function Hero() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 1.0, duration: 0.8 }}
-              className="flex flex-wrap gap-6"
+              transition={{ duration: 0.8, delay: 0.6 }}
+              className="flex flex-wrap gap-6 justify-center lg:justify-start"
             >
               {trustIndicators.map((indicator, index) => (
                 <motion.div
                   key={indicator}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 1.2 + index * 0.1, duration: 0.6 }}
-                  className="flex items-center space-x-2 text-slate-600 dark:text-slate-400"
+                  transition={{ delay: 0.7 + index * 0.1 }}
+                  className="flex items-center gap-2 text-slate-600"
                 >
-                  <Check className="h-4 w-4 text-green-500" />
+                  <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                    <Check className="w-3 h-3 text-green-600" />
+                  </div>
                   <span className="text-sm font-medium">{indicator}</span>
                 </motion.div>
               ))}
             </motion.div>
           </motion.div>
 
-          {/* Right Column - Visual */}
+          {/* Right Column - Floating Cards Visual */}
           <motion.div
-            initial={{ opacity: 0, x: 30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.4, duration: 0.8 }}
-            className="hero-visual"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.8, delay: 0.4 }}
+            className="relative hidden lg:block h-[500px]"
           >
-            {/* Floating Cards */}
-            <div className="floating-cards-container">
-              {floatingCards.map((card, index) => (
-                <motion.div
-                  key={card.title}
-                  initial={{ opacity: 0, y: 50, rotate: -10 }}
-                  animate={{ opacity: 1, y: 0, rotate: 0 }}
-                  transition={{ 
-                    delay: 0.6 + index * 0.2, 
-                    duration: 0.8,
-                    type: 'spring',
-                    stiffness: 100
-                  }}
-                  whileHover={{ 
-                    y: -10, 
-                    rotate: index % 2 === 0 ? -5 : 5,
-                    transition: { duration: 0.3 }
-                  }}
-                  className={`floating-card`}
-                >
-                  <div className={`w-12 h-12 bg-gradient-to-r ${card.color} rounded-xl flex items-center justify-center mb-4`}>
-                    <card.icon className="h-6 w-6 text-white" />
+            {/* Card 1 - Top Left */}
+            <motion.div
+              animate={{ 
+                y: [0, -20, 0],
+                rotate: [-2, 2, -2]
+              }}
+              transition={{ 
+                duration: 4, 
+                repeat: Infinity, 
+                ease: "easeInOut" 
+              }}
+              className="absolute top-0 left-0 w-56 h-36"
+            >
+              <Card className="h-full bg-white/90 backdrop-blur-md shadow-2xl border border-white/50 hover:scale-105 transition-transform cursor-pointer">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-4">
+                    <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${floatingCards[0].color} flex items-center justify-center flex-shrink-0`}>
+                      <IconComponent1 className="w-6 h-6 text-white" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs text-slate-600 font-medium">New Lead</div>
+                      <div className="text-sm font-bold text-slate-900 truncate">{floatingCards[0].title}</div>
+                      <div className="text-xs text-green-600 font-semibold">Hot Prospect</div>
+                    </div>
                   </div>
-                  <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">
-                    {card.title}
-                  </h3>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">
-                    {index === 0 && 'Explore destinations worldwide'}
-                    {index === 1 && 'Discover local hidden gems'}
-                    {index === 2 && 'Connect with expert guides'}
-                  </p>
-                </motion.div>
-              ))}
+                </CardContent>
+              </Card>
+            </motion.div>
 
-              {/* Central Glow Effect */}
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-gradient-to-r from-blue-400/30 to-purple-400/30 rounded-full blur-2xl animate-pulse"></div>
-            </div>
+            {/* Card 2 - Middle Right */}
+            <motion.div
+              animate={{ 
+                y: [0, 20, 0],
+                rotate: [2, -2, 2]
+              }}
+              transition={{ 
+                duration: 5, 
+                repeat: Infinity, 
+                ease: "easeInOut",
+                delay: 0.5
+              }}
+              className="absolute top-1/2 -translate-y-1/2 right-0 w-56 h-36"
+            >
+              <Card className="h-full bg-white/90 backdrop-blur-md shadow-2xl border border-white/50 hover:scale-105 transition-transform cursor-pointer">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-4">
+                    <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${floatingCards[1].color} flex items-center justify-center flex-shrink-0`}>
+                      <IconComponent2 className="w-6 h-6 text-white" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs text-slate-600 font-medium">Booking</div>
+                      <div className="text-sm font-bold text-slate-900">£2,499</div>
+                      <div className="text-xs text-purple-600 font-semibold">Confirmed</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Card 3 - Bottom Center */}
+            <motion.div
+              animate={{ 
+                y: [0, -15, 0],
+                rotate: [-1, 1, -1]
+              }}
+              transition={{ 
+                duration: 4.5, 
+                repeat: Infinity, 
+                ease: "easeInOut",
+                delay: 1
+              }}
+              className="absolute bottom-0 left-1/2 -translate-x-1/2 w-56 h-36"
+            >
+              <Card className="h-full bg-white/90 backdrop-blur-md shadow-2xl border border-white/50 hover:scale-105 transition-transform cursor-pointer">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-4">
+                    <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${floatingCards[2].color} flex items-center justify-center flex-shrink-0`}>
+                      <IconComponent3 className="w-6 h-6 text-white" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs text-slate-600 font-medium">Commission</div>
+                      <div className="text-sm font-bold text-slate-900">+£249</div>
+                      <div className="text-xs text-green-600 font-semibold">Earned Today</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Background Glow */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-gradient-to-r from-blue-400/20 to-purple-400/20 rounded-full blur-3xl -z-10" />
           </motion.div>
         </div>
       </div>
@@ -177,16 +258,15 @@ export function Hero() {
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 1.5, duration: 0.8 }}
-        className="absolute bottom-8 left-1/2 -translate-x-1/2"
+        transition={{ delay: 1.5 }}
+        className="absolute bottom-8 left-1/2 -translate-x-1/2 hidden lg:flex flex-col items-center gap-2"
       >
+        <span className="text-sm text-slate-400 font-medium">Scroll to explore</span>
         <motion.div
           animate={{ y: [0, 8, 0] }}
-          transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-          className="flex flex-col items-center space-y-2 text-slate-500 dark:text-slate-400"
+          transition={{ duration: 1.5, repeat: Infinity }}
         >
-          <span className="text-sm font-medium">Scroll to explore</span>
-          <ArrowDown className="h-5 w-5" />
+          <ArrowDown className="w-6 h-6 text-slate-400" />
         </motion.div>
       </motion.div>
     </section>
