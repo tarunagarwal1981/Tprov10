@@ -6,7 +6,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { DefaultLayout } from '@/components/shared/DashboardLayout';
+import { DashboardLayout } from '@/components/shared/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -33,7 +33,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <DefaultLayout
+    <DashboardLayout
       title="Dashboard Overview"
       subtitle="Welcome back! Here's what's happening with your business today."
       actions={

@@ -175,7 +175,7 @@ export function Testimonials() {
 
                     {/* Content */}
                     <blockquote className="text-lg lg:text-xl text-slate-700 leading-relaxed">
-                      "{testimonials[currentTestimonial].content}"
+                      &ldquo;{testimonials[currentTestimonial].content}&rdquo;
                     </blockquote>
 
                     {/* Results Badge */}
@@ -279,7 +279,7 @@ export function Testimonials() {
                       ))}
                     </div>
                     <blockquote className="text-sm text-slate-600 mb-4 line-clamp-3">
-                      "{testimonial.content}"
+                      &ldquo;{testimonial.content}&rdquo;
                     </blockquote>
                     <div className="flex items-center gap-3">
                       <Avatar className="w-8 h-8">
