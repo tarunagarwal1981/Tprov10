@@ -137,7 +137,7 @@ const TestimonialCard: React.FC<{ testimonial: Testimonial; isActive: boolean }>
         <p className="text-white/70 text-sm">{testimonial.role} at {testimonial.company}</p>
       </div>
     </div>
-    <p className="text-white/90 italic">"{testimonial.content}"</p>
+    <p className="text-white/90 italic">&quot;{testimonial.content}&quot;</p>
   </motion.div>
 );
 

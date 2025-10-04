@@ -1,7 +1,4 @@
-// Example usage of the new Supabase client configuration
-// This file demonstrates how to use the different clients in various contexts
-
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   createSupabaseBrowserClient,
   createSupabaseServerClient,

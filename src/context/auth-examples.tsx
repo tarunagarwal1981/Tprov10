@@ -344,7 +344,7 @@ export const AdminPanel: React.FC = () => {
     return (
       <div className="text-center py-8">
         <h2 className="text-2xl font-bold text-red-600">Access Denied</h2>
-        <p className="text-gray-600">You don't have permission to access this page.</p>
+        <p className="text-gray-600">You don&apos;t have permission to access this page.</p>
       </div>
     );
   }

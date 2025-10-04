@@ -186,7 +186,7 @@ const OfflinePage: React.FC<{ onRetry: () => void }> = ({ onRetry }) => (
           <WifiOff className="h-8 w-8 text-orange-600 dark:text-orange-400" />
         </div>
         <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-2">
-          You're Offline
+          You&apos;re Offline
         </h1>
         <p className="text-zinc-600 dark:text-zinc-400 mb-6">
           Please check your internet connection and try again.

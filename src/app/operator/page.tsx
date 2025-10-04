@@ -122,7 +122,7 @@ export default function OperatorDashboard() {
             Welcome back, {user.name || user.email}!
           </h2>
           <p className="text-gray-600">
-            Here's what's happening with your tour operation business today.
+            Here&apos;s what&apos;s happening with your tour operation business today.
           </p>
         </motion.div>
 
@@ -186,14 +186,14 @@ export default function OperatorDashboard() {
             <div className="flex items-center space-x-3">
               <div className="w-2 h-2 bg-green-500 rounded-full"></div>
               <div className="flex-1">
-                <p className="text-sm text-gray-900">New booking received for "Paris City Tour"</p>
+                <p className="text-sm text-gray-900">New booking received for &quot;Paris City Tour&quot;</p>
                 <p className="text-xs text-gray-500">2 hours ago</p>
               </div>
             </div>
             <div className="flex items-center space-x-3">
               <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
               <div className="flex-1">
-                <p className="text-sm text-gray-900">Package "Rome Historical Tour" updated</p>
+                <p className="text-sm text-gray-900">Package &quot;Rome Historical Tour&quot; updated</p>
                 <p className="text-xs text-gray-500">4 hours ago</p>
               </div>
             </div>
