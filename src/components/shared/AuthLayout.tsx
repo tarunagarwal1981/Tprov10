@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 import Image from 'next/image';
 
 interface AuthLayoutProps {
@@ -154,6 +154,10 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({
   const [currentTestimonial, setCurrentTestimonial] = useState(0);
   const [isLoaded, setIsLoaded] = useState(false);
 
+  // Subtle parallax for left-side features
+  const { scrollYProgress } = useScroll();
+  const featuresParallaxY = useTransform(scrollYProgress, [0, 1], [0, -30]);
+
   useEffect(() => {
     setIsLoaded(true);
   }, []);
@@ -215,13 +219,14 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({
               </p>
             </motion.div>
 
-            {/* Features */}
+            {/* Features with subtle parallax */}
             {showFeatures && (
               <motion.div
                 className="space-y-4"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: isLoaded ? 1 : 0, y: 0 }}
                 transition={{ delay: 0.4 }}
+                style={{ y: featuresParallaxY }}
               >
                 {features.map((feature, index) => (
                   <FeatureCard key={index} feature={feature} index={index} />
@@ -288,7 +293,7 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({
           </div>
         </motion.div>
 
-        {/* Right Side - Form Container */}
+        {/* Right Side - Form Container with glass effect */}
         <div className="flex-1 flex items-center justify-center p-12">
           <motion.div
             className="w-full max-w-md"
@@ -296,21 +301,21 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({
             animate={{ opacity: isLoaded ? 1 : 0, x: 0 }}
             transition={{ delay: 0.3, duration: 0.8 }}
           >
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-8">
+            <div className="bg-white/80 dark:bg-gray-900/60 backdrop-blur-xl rounded-2xl shadow-xl border border-white/30 dark:border-white/10 p-8">
               <div className="text-center mb-8">
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
                   {title}
                 </h1>
-                <p className="text-gray-600 dark:text-gray-400">
+                <p className="text-gray-700/80 dark:text-gray-300/80">
                   {subtitle}
                 </p>
               </div>
               {children}
-              <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
-                <div className="flex justify-center space-x-6 text-sm text-gray-500 dark:text-gray-400">
-                  <a href="#" className="hover:text-gray-700 dark:hover:text-gray-300">Privacy</a>
-                  <a href="#" className="hover:text-gray-700 dark:hover:text-gray-300">Terms</a>
-                  <a href="#" className="hover:text-gray-700 dark:hover:text-gray-300">Help</a>
+              <div className="mt-8 pt-6 border-t border-gray-200/50 dark:border-white/10">
+                <div className="flex justify-center space-x-6 text-sm text-gray-600 dark:text-gray-300">
+                  <a href="#" className="hover:text-gray-900 dark:hover:text-white">Privacy</a>
+                  <a href="#" className="hover:text-gray-900 dark:hover:text-white">Terms</a>
+                  <a href="#" className="hover:text-gray-900 dark:hover:text-white">Help</a>
                 </div>
               </div>
             </div>
@@ -339,32 +344,32 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({
               {features.slice(0, 3).map((feature, index) => (
                 <motion.div
                   key={index}
-                  className="text-center p-3 bg-white dark:bg-gray-800 rounded-lg shadow-sm"
+                  className="text-center p-3 bg-white/80 dark:bg-gray-900/60 backdrop-blur rounded-lg shadow-sm border border-white/30 dark:border-white/10"
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: isLoaded ? 1 : 0, scale: 1 }}
                   transition={{ delay: 0.3 + index * 0.1 }}
                 >
                   <div className="text-2xl mb-2">{feature.icon}</div>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">{feature.title}</p>
+                  <p className="text-xs text-gray-700 dark:text-gray-300">{feature.title}</p>
                 </motion.div>
               ))}
             </div>
           )}
         </motion.div>
 
-        {/* Form Container */}
+        {/* Form Container with glass effect */}
         <motion.div
           className="flex-1 px-6 pb-6"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: isLoaded ? 1 : 0, y: 0 }}
           transition={{ delay: 0.4 }}
         >
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-6">
+          <div className="bg-white/80 dark:bg-gray-900/60 backdrop-blur-xl rounded-2xl shadow-xl border border-white/30 dark:border-white/10 p-6">
             <div className="text-center mb-6">
               <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
                 {title}
               </h1>
-              <p className="text-gray-600 dark:text-gray-400 text-sm">
+              <p className="text-gray-700/80 dark:text-gray-300/80 text-sm">
                 {subtitle}
               </p>
             </div>
@@ -379,7 +384,7 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({
           animate={{ opacity: isLoaded ? 1 : 0, y: 0 }}
           transition={{ delay: 0.6 }}
         >
-          <div className="flex justify-center space-x-6 text-sm text-gray-500 dark:text-gray-400">
+          <div className="flex justify-center space-x-6 text-sm text-gray-600 dark:text-gray-300">
             <div className="flex items-center space-x-1">
               <span className="text-green-500">🔒</span>
               <span>Secure</span>
@@ -393,7 +398,7 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({
               <span>24/7</span>
             </div>
           </div>
-          <div className="text-center mt-4 text-sm text-gray-500 dark:text-gray-400">
+          <div className="text-center mt-4 text-sm text-gray-600 dark:text-gray-300">
             Join 10,000+ travel professionals
           </div>
         </motion.div>

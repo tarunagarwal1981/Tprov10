@@ -45,6 +45,17 @@ import {
   SheetTitle, 
   SheetTrigger 
 } from '@/components/ui/sheet';
+import {
+  CommandDialog,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+  CommandShortcut,
+} from '@/components/ui/command';
+import { createClient } from '@/lib/supabase/client';
 
 // ============================================================================
 // TYPES AND INTERFACES
@@ -226,116 +237,67 @@ const SearchComponent: React.FC<SearchComponentProps> = ({ isOpen, onClose }) =>
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
-  
-  const handleSearch = useCallback(async (searchQuery: string) => {
+
+  const performSearch = useCallback(async (searchQuery: string) => {
     if (!searchQuery.trim()) {
       setResults([]);
       return;
     }
-    
     setIsLoading(true);
-    
-    // Simulate API call
     setTimeout(() => {
-      const filteredResults = searchResults.filter(result =>
-        result.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        result.subtitle.toLowerCase().includes(searchQuery.toLowerCase())
+      const q = searchQuery.toLowerCase();
+      // basic fuzzy-like filter
+      const filtered = searchResults.filter(r =>
+        r.title.toLowerCase().includes(q) ||
+        r.subtitle.toLowerCase().includes(q)
       );
-      setResults(filteredResults);
+      setResults(filtered);
       setIsLoading(false);
-    }, 300);
+    }, 250);
   }, []);
-  
+
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      handleSearch(query);
-    }, 300);
-    
-    return () => clearTimeout(timeoutId);
-  }, [query, handleSearch]);
-  
-  const handleResultClick = (result: SearchResult) => {
-    router.push(result.href);
+    const id = setTimeout(() => performSearch(query), 200);
+    return () => clearTimeout(id);
+  }, [query, performSearch]);
+
+  const handleSelect = (res: SearchResult) => {
+    router.push(res.href);
     onClose();
   };
-  
-  if (!isOpen) return null;
-  
+
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
-      onClick={onClose}
-    >
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: -20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: -20 }}
-        className="mx-auto mt-20 max-w-2xl bg-white rounded-lg shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="p-4">
-          <div className="relative">
-            <FiSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-            <Input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search packages, bookings, customers..."
-              className="pl-10 pr-4 py-3 text-lg border-0 focus:ring-0 bg-gray-50"
-              autoFocus
-            />
-          </div>
-          
-          {query && (
-            <div className="mt-4 max-h-96 overflow-y-auto">
-              {isLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-                </div>
-              ) : results.length > 0 ? (
-                <div className="space-y-2">
-                  {results.map((result) => {
-                    const IconComponent = result.icon;
-                    return (
-                      <button
-                        key={result.id}
-                        onClick={() => handleResultClick(result)}
-                        className="w-full p-3 text-left hover:bg-gray-50 rounded-lg transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="flex-shrink-0">
-                            <IconComponent className="h-5 w-5 text-gray-400" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="font-medium text-gray-900 truncate">
-                              {result.title}
-                            </div>
-                            <div className="text-sm text-gray-500 truncate">
-                              {result.subtitle}
-                            </div>
-                          </div>
-                          {result.badge && (
-                            <Badge variant="secondary" className="text-xs">
-                              {result.badge}
-                            </Badge>
-                          )}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-gray-500">
-                  No results found for &quot;{query}&quot;
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </motion.div>
-    </motion.div>
+    <CommandDialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <CommandInput
+        placeholder="Search packages, bookings, customers..."
+        value={query}
+        onValueChange={setQuery}
+      />
+      <CommandList>
+        {isLoading && <div className="py-3 text-center text-sm">Searching…</div>}
+        <CommandEmpty>No results found.</CommandEmpty>
+        {!isLoading && results.length > 0 && (
+          <>
+            <CommandGroup heading="Results">
+              {results.map((res) => (
+                <CommandItem key={res.id} onSelect={() => handleSelect(res)}>
+                  <res.icon className="mr-2 h-4 w-4 opacity-70" />
+                  <span className="truncate">{res.title}</span>
+                  <span className="ml-2 text-xs text-muted-foreground truncate">{res.subtitle}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </>
+        )}
+        <CommandSeparator />
+        <CommandGroup heading="Recent">
+          <CommandItem onSelect={() => { setQuery(''); }}>
+            <FiClock className="mr-2 h-4 w-4 opacity-70" />
+            <span>Recent search 1</span>
+          </CommandItem>
+        </CommandGroup>
+      </CommandList>
+    </CommandDialog>
   );
 };
 
@@ -520,7 +482,55 @@ export function Header({
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [notificationsState, setNotificationsState] = useState(notifications);
-  
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  // Smooth shadow on scroll
+  useEffect(() => {
+    const onScroll = () => setIsScrolled(window.scrollY > 4);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  // Cmd/Ctrl+K to open search
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const isMac = navigator.platform.toUpperCase().includes('MAC');
+      if ((isMac ? e.metaKey : e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsSearchOpen(true);
+      }
+      if (e.key === 'Escape') {
+        setIsSearchOpen(false);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  // Supabase realtime notifications
+  useEffect(() => {
+    let channel: any;
+    try {
+      const supabase = createClient();
+      channel = supabase
+        .channel('notifications-changes')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, (payload: any) => {
+          if (payload.eventType === 'INSERT') {
+            const newItem = payload.new as NotificationItem;
+            setNotificationsState(prev => [
+              { ...newItem, timestamp: new Date(newItem.timestamp) },
+              ...prev,
+            ]);
+          }
+        })
+        .subscribe();
+    } catch {}
+    return () => {
+      try { channel && channel.unsubscribe && channel.unsubscribe(); } catch {}
+    };
+  }, []);
+
   const breadcrumbs = getBreadcrumbs(pathname);
   const unreadNotifications = notificationsState.filter(n => !n.isRead).length;
   
@@ -548,20 +558,25 @@ export function Header({
   
   return (
     <>
-      <header className={cn(
-        'sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60',
-        isTransparent && 'bg-transparent border-transparent',
-        className
-      )}>
-        <div className="container flex h-14 items-center">
+      <header
+        className={cn(
+          'sticky top-0 z-40 w-full border-b border-zinc-200/50 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl transition-shadow',
+          isScrolled ? 'shadow-md shadow-zinc-200/20 dark:shadow-zinc-900/30' : 'shadow-none',
+          isTransparent && 'bg-transparent border-transparent shadow-none',
+          className
+        )}
+        role="banner"
+        aria-label="Global Header"
+      >
+        <div className="flex h-14 md:h-16 items-center px-4 md:px-6">
           {/* Mobile Menu Button */}
           <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="sm" className="md:hidden">
+              <Button variant="ghost" size="sm" className="md:hidden" aria-label="Open menu">
                 <FiMenu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-64">
+            <SheetContent side="left" className="w-64" aria-label="Mobile navigation">
               <SheetHeader>
                 <SheetTitle>Menu</SheetTitle>
               </SheetHeader>
@@ -585,18 +600,17 @@ export function Header({
               </div>
             </SheetContent>
           </Sheet>
-          
+
           {/* Breadcrumbs */}
           {showBreadcrumbs && !isCompact && (
-            <nav className="hidden md:flex items-center space-x-2 text-sm">
+            <nav className="hidden md:flex items-center space-x-2 text-sm" aria-label="Breadcrumb">
               {breadcrumbs.map((breadcrumb, index) => {
                 const isLast = index === breadcrumbs.length - 1;
                 const IconComponent = breadcrumb.icon;
-                
                 return (
                   <React.Fragment key={breadcrumb.href}>
                     {index > 0 && (
-                      <FiChevronRight className="h-4 w-4 text-gray-400" />
+                      <FiChevronRight className="h-4 w-4 text-gray-400" aria-hidden="true" />
                     )}
                     <button
                       onClick={() => router.push(breadcrumb.href)}
@@ -604,51 +618,47 @@ export function Header({
                         'flex items-center gap-1 hover:text-foreground transition-colors',
                         isLast ? 'text-foreground font-medium' : 'text-muted-foreground'
                       )}
+                      aria-current={isLast ? 'page' : undefined}
                     >
-                      {IconComponent && <IconComponent className="h-4 w-4" />}
-                      <span>{breadcrumb.label}</span>
+                      {IconComponent && <IconComponent className="h-4 w-4" aria-hidden="true" />}
+                      <span className="truncate max-w-[200px]" title={breadcrumb.label}>{breadcrumb.label}</span>
                     </button>
                   </React.Fragment>
                 );
               })}
             </nav>
           )}
-          
-          {/* Title and Subtitle */}
-          {(title || subtitle) && !isCompact && (
-            <div className="hidden md:block ml-6">
-              {title && (
-                <h1 className="text-lg font-semibold">{title}</h1>
-              )}
-              {subtitle && (
-                <p className="text-sm text-muted-foreground">{subtitle}</p>
-              )}
-            </div>
-          )}
-          
-          {/* Spacer */}
+
+          {/* Center: Search trigger on desktop, logo on mobile */}
           <div className="flex-1" />
-          
-          {/* Actions */}
-          {actions && (
-            <div className="hidden md:flex items-center gap-2 mr-4">
-              {actions}
-            </div>
-          )}
-          
-          {/* Search */}
+
           {showSearch && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleSearchToggle}
-              className="hidden md:flex items-center gap-2 text-muted-foreground hover:text-foreground"
-            >
-              <FiSearch className="h-4 w-4" />
-              <span className="hidden lg:inline">Search...</span>
-            </Button>
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleSearchToggle}
+                className="hidden md:flex items-center gap-2 text-muted-foreground hover:text-foreground"
+                aria-label="Open search"
+              >
+                <FiSearch className="h-4 w-4" />
+                <span className="hidden lg:inline">Search...</span>
+                <span className="ml-2 hidden lg:inline text-xs text-muted-foreground">⌘K</span>
+              </Button>
+
+              {/* Mobile search icon */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleSearchToggle}
+                className="md:hidden"
+                aria-label="Open search"
+              >
+                <FiSearch className="h-5 w-5" />
+              </Button>
+            </>
           )}
-          
+
           {/* Notifications */}
           {showNotifications && (
             <NotificationsComponent
@@ -657,15 +667,15 @@ export function Header({
               onViewAll={handleViewAllNotifications}
             />
           )}
-          
+
           {/* User Menu */}
           {showUserMenu && user && (
             <UserProfile user={user} onLogout={handleLogout} />
           )}
         </div>
       </header>
-      
-      {/* Search Modal */}
+
+      {/* Search Command Palette */}
       <SearchComponent isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
     </>
   );
