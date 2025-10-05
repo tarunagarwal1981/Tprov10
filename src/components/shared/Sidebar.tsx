@@ -5,8 +5,8 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth, useRBAC, useUserDisplay } from '@/context/SupabaseAuthContext';
 import { cn } from '@/lib/utils';
@@ -375,6 +375,9 @@ const NavigationItemComponent: React.FC<NavigationItemProps> = ({
 
   const itemContent = (
     <motion.div
+      role="menuitem"
+      aria-current={isActive ? 'page' : undefined}
+      tabIndex={0}
       className={cn(
         'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200',
         'hover:bg-white/60 dark:hover:bg-zinc-800/60',
@@ -382,7 +385,8 @@ const NavigationItemComponent: React.FC<NavigationItemProps> = ({
         isActive && 'bg-gradient-to-r from-indigo-50 to-transparent dark:from-indigo-900/20',
         isActive && 'border-l-2 border-indigo-500',
         isSubmenu && 'ml-6 text-sm',
-        isCollapsed && 'justify-center px-2'
+        isCollapsed && 'justify-center px-2',
+        'focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50'
       )}
       whileHover={{ 
         y: -1,
@@ -390,6 +394,12 @@ const NavigationItemComponent: React.FC<NavigationItemProps> = ({
       }}
       whileTap={{ scale: 0.98 }}
       onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick();
+        }
+      }}
     >
       <Icon 
         className={cn(
@@ -397,8 +407,8 @@ const NavigationItemComponent: React.FC<NavigationItemProps> = ({
           isActive && 'text-indigo-600 dark:text-indigo-400',
           !isActive && 'text-zinc-600 dark:text-zinc-400'
         )} 
+        aria-hidden="true"
       />
-      
       {!isCollapsed && (
         <>
           <span 
@@ -410,7 +420,6 @@ const NavigationItemComponent: React.FC<NavigationItemProps> = ({
           >
             {item.label}
           </span>
-          
           {item.badge && (
             <Badge 
               variant="secondary" 
@@ -431,7 +440,7 @@ const NavigationItemComponent: React.FC<NavigationItemProps> = ({
           <TooltipTrigger asChild>
             {itemContent}
           </TooltipTrigger>
-          <TooltipContent side="right" className="ml-2">
+          <TooltipContent side="right" className="ml-2" aria-label={item.label}>
             <p>{item.label}</p>
           </TooltipContent>
         </Tooltip>
@@ -486,15 +495,21 @@ const Submenu: React.FC<SubmenuProps> = ({ items, isCollapsed, activePath, onNav
 
 export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [hoverExpanded, setHoverExpanded] = useState(false);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [supportsHover, setSupportsHover] = useState(true);
   
+  const reduceMotion = useReducedMotion();
+
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuth();
   const { userRole, hasRole } = useRBAC();
   const { displayName, avatar, role } = useUserDisplay();
   const { theme, setTheme } = useTheme();
+
+  const navRef = useRef<HTMLDivElement | null>(null);
 
   // ============================================================================
   // EFFECTS
@@ -506,6 +521,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
       if (savedState !== null) {
         setIsCollapsed(JSON.parse(savedState));
       }
+      setSupportsHover(window.matchMedia('(hover: hover)').matches);
     }
   }, []);
 
@@ -569,52 +585,80 @@ export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
   // RENDER
   // ============================================================================
 
+  // Keyboard navigation within nav (ArrowUp/ArrowDown)
+  const handleNavKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+    const container = navRef.current;
+    if (!container) return;
+    const items = container.querySelectorAll('[role="menuitem"]');
+    if (items.length === 0) return;
+    const active = document.activeElement;
+    const index = Array.from(items).findIndex(el => el === active);
+    let nextIndex = 0;
+    if (e.key === 'ArrowDown') {
+      nextIndex = index < 0 ? 0 : Math.min(index + 1, items.length - 1);
+    } else {
+      nextIndex = index < 0 ? items.length - 1 : Math.max(index - 1, 0);
+    }
+    (items[nextIndex] as HTMLElement).focus();
+    e.preventDefault();
+  }, []);
+
   const sidebarContent = (
     <motion.div
       className={cn(
         'flex flex-col h-full bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl',
         'border-r border-zinc-200/50 dark:border-zinc-800/50',
         'shadow-lg shadow-zinc-200/20 dark:shadow-zinc-900/20',
-        isCollapsed ? 'w-20' : 'w-72',
+        (isCollapsed && !hoverExpanded) ? 'w-20' : 'w-72',
         'transition-all duration-300 ease-in-out'
       )}
       initial={false}
-      animate={{ width: isCollapsed ? 80 : 288 }}
-      transition={{ duration: 0.3, ease: 'easeInOut' }}
+      animate={{ width: (isCollapsed && !hoverExpanded) ? 80 : 288 }}
+      transition={{ duration: reduceMotion ? 0 : 0.3, ease: 'easeInOut' }}
+      aria-label="Primary"
+      role="navigation"
+      onMouseEnter={() => {
+        if (supportsHover && isCollapsed) setHoverExpanded(true);
+      }}
+      onMouseLeave={() => {
+        if (supportsHover) setHoverExpanded(false);
+      }}
     >
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-zinc-200/50 dark:border-zinc-800/50">
-        {!isCollapsed && (
+        {!isCollapsed && !hoverExpanded && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: reduceMotion ? 0 : 0.2 }}
           >
             <h1 className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
               TravelPro
             </h1>
           </motion.div>
         )}
-        
         <Button
           variant="ghost"
           size="sm"
-          onClick={toggleCollapse}
+          onClick={() => setIsCollapsed(prev => !prev)}
           className="h-8 w-8 p-0 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+          aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          aria-pressed={isCollapsed}
         >
           <motion.div
-            animate={{ rotate: isCollapsed ? 180 : 0 }}
-            transition={{ duration: 0.2 }}
+            animate={{ rotate: (isCollapsed && !hoverExpanded) ? 180 : 0 }}
+            transition={{ duration: reduceMotion ? 0 : 0.2 }}
           >
-            <FiChevronDown className="h-4 w-4" />
+            <FiChevronDown className="h-4 w-4" aria-hidden="true" />
           </motion.div>
         </Button>
       </div>
 
       {/* Navigation */}
       <div className="flex-1 overflow-y-auto py-4">
-        <nav className="space-y-1 px-3">
+        <nav className="space-y-1 px-3" role="menu" aria-label="Primary navigation" ref={navRef} onKeyDown={handleNavKeyDown}>
           {navigationItems.map((item) => {
             const isExpanded = expandedItems.has(item.id);
             const hasSubmenu = item.submenu && item.submenu.length > 0;
@@ -622,25 +666,29 @@ export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
 
             return (
               <div key={item.id}>
-                <NavigationItemComponent
-                  item={item}
-                  isCollapsed={isCollapsed}
-                  isActive={isActive}
-                  onClick={() => {
-                    if (hasSubmenu) {
-                      toggleExpanded(item.id);
-                    } else {
-                      handleNavigate(item.href);
-                    }
-                  }}
-                />
-                
+                <div
+                  aria-haspopup={hasSubmenu ? 'menu' : undefined}
+                  aria-expanded={hasSubmenu ? isExpanded : undefined}
+                >
+                  <NavigationItemComponent
+                    item={item}
+                    isCollapsed={isCollapsed && !hoverExpanded}
+                    isActive={isActive}
+                    onClick={() => {
+                      if (hasSubmenu) {
+                        toggleExpanded(item.id);
+                      } else {
+                        handleNavigate(item.href);
+                      }
+                    }}
+                  />
+                </div>
                 {hasSubmenu && (
                   <AnimatePresence>
                     {isExpanded && (
                       <Submenu
                         items={item.submenu!}
-                        isCollapsed={isCollapsed}
+                        isCollapsed={isCollapsed && !hoverExpanded}
                         activePath={pathname}
                         onNavigate={handleNavigate}
                       />
@@ -653,14 +701,38 @@ export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
         </nav>
       </div>
 
-      {/* User Profile Section */}
+      {/* Bottom Section */}
       <div className="border-t border-zinc-200/50 dark:border-zinc-800/50 p-4">
-        {!isCollapsed ? (
+        {/* Upgrade prompt */}
+        {!isCollapsed && !hoverExpanded && (
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: reduceMotion ? 0 : 0.2 }}
+            className="mb-3 rounded-lg p-3 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-indigo-200/40 dark:border-indigo-800/30"
+            aria-label="Upgrade"
+          >
+            <div className="flex items-center gap-2">
+              <FiAward className="h-5 w-5 text-indigo-600 dark:text-indigo-400" aria-hidden="true" />
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">Upgrade to Pro</p>
+                <p className="text-xs text-zinc-600 dark:text-zinc-400 truncate">Unlock advanced analytics and priority support</p>
+              </div>
+            </div>
+            <div className="mt-2">
+              <Button size="sm" className="h-7 px-2 text-xs">
+                Upgrade
+              </Button>
+            </div>
+          </motion.div>
+        )}
+
+        {!((isCollapsed && !hoverExpanded)) ? (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: reduceMotion ? 0 : 0.2 }}
             className="space-y-3"
           >
             {/* User Profile Card */}
@@ -688,8 +760,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
                 size="sm"
                 onClick={() => handleNavigate('/profile')}
                 className="justify-start text-xs"
+                aria-label="Open profile"
               >
-                <FiUser className="h-3 w-3 mr-2" />
+                <FiUser className="h-4 w-4 mr-2" aria-hidden="true" />
                 Profile
               </Button>
               <Button
@@ -697,8 +770,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
                 size="sm"
                 onClick={() => handleNavigate('/settings')}
                 className="justify-start text-xs"
+                aria-label="Open settings"
               >
-                <FiSettings className="h-3 w-3 mr-2" />
+                <FiSettings className="h-4 w-4 mr-2" aria-hidden="true" />
                 Settings
               </Button>
             </div>
@@ -709,11 +783,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
               size="sm"
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
               className="w-full justify-start text-xs"
+              aria-label="Toggle theme"
             >
               {theme === 'dark' ? (
-                <FiSun className="h-3 w-3 mr-2" />
+                <FiSun className="h-4 w-4 mr-2" aria-hidden="true" />
               ) : (
-                <FiMoon className="h-3 w-3 mr-2" />
+                <FiMoon className="h-4 w-4 mr-2" aria-hidden="true" />
               )}
               {theme === 'dark' ? 'Light' : 'Dark'} Mode
             </Button>
@@ -724,8 +799,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
               size="sm"
               onClick={handleLogout}
               className="w-full justify-start text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/20"
+              aria-label="Sign out"
             >
-              <FiLogOut className="h-3 w-3 mr-2" />
+              <FiLogOut className="h-4 w-4 mr-2" aria-hidden="true" />
               Sign Out
             </Button>
           </motion.div>
@@ -739,8 +815,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
                     size="sm"
                     onClick={() => handleNavigate('/profile')}
                     className="h-8 w-8 p-0"
+                    aria-label="Open profile"
                   >
-                    <FiUser className="h-4 w-4" />
+                    <FiUser className="h-4 w-4" aria-hidden="true" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="right">
@@ -757,11 +834,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
                     size="sm"
                     onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
                     className="h-8 w-8 p-0"
+                    aria-label="Toggle theme"
                   >
                     {theme === 'dark' ? (
-                      <FiSun className="h-4 w-4" />
+                      <FiSun className="h-4 w-4" aria-hidden="true" />
                     ) : (
-                      <FiMoon className="h-4 w-4" />
+                      <FiMoon className="h-4 w-4" aria-hidden="true" />
                     )}
                   </Button>
                 </TooltipTrigger>
@@ -779,8 +857,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
                     size="sm"
                     onClick={handleLogout}
                     className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/20"
+                    aria-label="Sign out"
                   >
-                    <FiLogOut className="h-4 w-4" />
+                    <FiLogOut className="h-4 w-4" aria-hidden="true" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="right">
@@ -809,8 +888,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
           size="sm"
           onClick={() => setIsMobileOpen(true)}
           className="fixed top-4 left-4 z-50 lg:hidden"
+          aria-label="Open sidebar"
         >
-          <FiMenu className="h-5 w-5" />
+          <FiMenu className="h-5 w-5" aria-hidden="true" />
         </Button>
 
         {/* Mobile Overlay */}
@@ -821,28 +901,35 @@ export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
+                transition={{ duration: reduceMotion ? 0 : 0.2 }}
                 className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
                 onClick={() => setIsMobileOpen(false)}
+                aria-hidden="true"
               />
-              
               <motion.div
                 initial={{ x: -288 }}
                 animate={{ x: 0 }}
                 exit={{ x: -288 }}
-                transition={{ duration: 0.3, ease: 'easeInOut' }}
+                transition={{ duration: reduceMotion ? 0 : 0.3, ease: 'easeInOut' }}
                 className="fixed left-0 top-0 h-full w-72 z-50"
+                drag="x"
+                dragConstraints={{ left: 0, right: 0 }}
+                onDragEnd={(_, info) => {
+                  if (info.offset.x < -80) setIsMobileOpen(false);
+                }}
+                aria-label="Mobile sidebar"
               >
                 <div className="relative h-full">
                   {sidebarContent}
-                  
                   {/* Close Button */}
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => setIsMobileOpen(false)}
                     className="absolute top-4 right-4 h-8 w-8 p-0"
+                    aria-label="Close sidebar"
                   >
-                    <FiX className="h-4 w-4" />
+                    <FiX className="h-4 w-4" aria-hidden="true" />
                   </Button>
                 </div>
               </motion.div>
