@@ -279,7 +279,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   const router = useRouter();
   const { user, logout } = useAuth();
   const { hasRole, hasPermission, userRole } = useRBAC();
-  const isAuthenticated = useIsAuthenticated();
+  const { isAuthenticated } = useIsAuthenticated();
   const { isInitialized, isLoading } = useAuthLoading();
   
   // ============================================================================

@@ -3,6 +3,161 @@
 @tailwind utilities;
 
 /* ========================================
+   CROSS-BROWSER COMPATIBILITY FIXES
+   ======================================== */
+
+/* Reset and normalize for all browsers */
+* {
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Fix iOS Safari viewport height issues */
+html, body {
+  height: 100%;
+  height: -webkit-fill-available;
+}
+
+/* Fix Chrome flexbox issues */
+.flex {
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+}
+
+/* Fix Chrome grid issues */
+.grid {
+  display: -ms-grid;
+  display: grid;
+}
+
+/* Fix backdrop-blur for all browsers */
+.backdrop-blur-sm {
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+
+.backdrop-blur {
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+/* Fix gradient rendering */
+.bg-gradient-to-br {
+  background-image: -webkit-linear-gradient(135deg, var(--tw-gradient-stops));
+  background-image: -moz-linear-gradient(135deg, var(--tw-gradient-stops));
+  background-image: -o-linear-gradient(135deg, var(--tw-gradient-stops));
+  background-image: linear-gradient(135deg, var(--tw-gradient-stops));
+}
+
+.bg-gradient-to-r {
+  background-image: -webkit-linear-gradient(to right, var(--tw-gradient-stops));
+  background-image: -moz-linear-gradient(to right, var(--tw-gradient-stops));
+  background-image: -o-linear-gradient(to right, var(--tw-gradient-stops));
+  background-image: linear-gradient(to right, var(--tw-gradient-stops));
+}
+
+/* Fix transform for all browsers */
+.transform {
+  -webkit-transform: translateZ(0);
+  -moz-transform: translateZ(0);
+  -ms-transform: translateZ(0);
+  -o-transform: translateZ(0);
+  transform: translateZ(0);
+}
+
+/* Fix transition for all browsers */
+.transition-all {
+  -webkit-transition: all 0.3s ease;
+  -moz-transition: all 0.3s ease;
+  -o-transition: all 0.3s ease;
+  transition: all 0.3s ease;
+}
+
+/* Fix shadow rendering */
+.shadow-lg {
+  -webkit-box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  -moz-box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.shadow-xl {
+  -webkit-box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  -moz-box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* Fix border-radius for all browsers */
+.rounded-lg {
+  -webkit-border-radius: 0.5rem;
+  -moz-border-radius: 0.5rem;
+  border-radius: 0.5rem;
+}
+
+.rounded-xl {
+  -webkit-border-radius: 0.75rem;
+  -moz-border-radius: 0.75rem;
+  border-radius: 0.75rem;
+}
+
+.rounded-2xl {
+  -webkit-border-radius: 1rem;
+  -moz-border-radius: 1rem;
+  border-radius: 1rem;
+}
+
+/* Fix iOS Safari specific issues */
+@supports (-webkit-touch-callout: none) {
+  /* iOS Safari specific fixes */
+  .min-h-screen {
+    min-height: -webkit-fill-available;
+  }
+  
+  /* Fix iOS color rendering */
+  .bg-white\/80 {
+    background-color: rgba(255, 255, 255, 0.8);
+  }
+  
+  .bg-white\/20 {
+    background-color: rgba(255, 255, 255, 0.2);
+  }
+  
+  .bg-white\/30 {
+    background-color: rgba(255, 255, 255, 0.3);
+  }
+}
+
+/* Fix Chrome specific issues */
+@media screen and (-webkit-min-device-pixel-ratio: 0) {
+  /* Chrome specific fixes */
+  .grid {
+    display: -webkit-grid;
+    display: grid;
+  }
+  
+  /* Fix Chrome flexbox bugs */
+  .flex-1 {
+    -webkit-flex: 1 1 0%;
+    -ms-flex: 1 1 0%;
+    flex: 1 1 0%;
+  }
+}
+
+/* ========================================
    CSS VARIABLES (Shadcn Design System)
    ======================================== */
 

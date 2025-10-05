@@ -1,0 +1,215 @@
+/* ========================================
+   OPERATOR DASHBOARD CROSS-BROWSER FIXES
+   ======================================== */
+
+/* Fix Chrome flexbox issues in stats cards */
+.stats-card {
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-orient: vertical;
+  -webkit-box-direction: normal;
+  -webkit-flex-direction: column;
+  -ms-flex-direction: column;
+  flex-direction: column;
+  -webkit-box-pack: justify;
+  -webkit-justify-content: space-between;
+  -ms-flex-pack: justify;
+  justify-content: space-between;
+}
+
+/* Fix Chrome grid issues in dashboard */
+.dashboard-grid {
+  display: -ms-grid;
+  display: -webkit-grid;
+  display: grid;
+  -ms-grid-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+/* Fix iOS Safari backdrop-blur issues */
+.glassmorphism-card {
+  background-color: rgba(255, 255, 255, 0.8);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  -webkit-border-radius: 1rem;
+  -moz-border-radius: 1rem;
+  border-radius: 1rem;
+}
+
+/* Fix iOS Safari gradient issues */
+.gradient-bg {
+  background: -webkit-linear-gradient(135deg, #3b82f6, #8b5cf6);
+  background: -moz-linear-gradient(135deg, #3b82f6, #8b5cf6);
+  background: -o-linear-gradient(135deg, #3b82f6, #8b5cf6);
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+}
+
+/* Fix Chrome transform issues */
+.hover-lift {
+  -webkit-transform: translateZ(0);
+  -moz-transform: translateZ(0);
+  -ms-transform: translateZ(0);
+  -o-transform: translateZ(0);
+  transform: translateZ(0);
+  -webkit-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  -moz-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  -o-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hover-lift:hover {
+  -webkit-transform: translateY(-4px) scale(1.02);
+  -moz-transform: translateY(-4px) scale(1.02);
+  -ms-transform: translateY(-4px) scale(1.02);
+  -o-transform: translateY(-4px) scale(1.02);
+  transform: translateY(-4px) scale(1.02);
+}
+
+/* Fix iOS Safari color rendering issues */
+.ios-color-fix {
+  color: #1f2937 !important;
+  background-color: rgba(255, 255, 255, 0.8) !important;
+}
+
+/* Fix Chrome font rendering */
+.chrome-font-fix {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Fix iOS Safari viewport height */
+.ios-viewport-fix {
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+}
+
+/* Fix Chrome scrollbar issues */
+.chrome-scrollbar-fix {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 #f1f5f9;
+}
+
+.chrome-scrollbar-fix::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chrome-scrollbar-fix::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+.chrome-scrollbar-fix::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.chrome-scrollbar-fix::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Fix iOS Safari touch issues */
+.ios-touch-fix {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Fix Chrome animation issues */
+.chrome-animation-fix {
+  -webkit-transform: translateZ(0);
+  -moz-transform: translateZ(0);
+  -ms-transform: translateZ(0);
+  -o-transform: translateZ(0);
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  -moz-backface-visibility: hidden;
+  -ms-backface-visibility: hidden;
+  backface-visibility: hidden;
+  -webkit-perspective: 1000px;
+  -moz-perspective: 1000px;
+  -ms-perspective: 1000px;
+  perspective: 1000px;
+}
+
+/* Fix iOS Safari button issues */
+.ios-button-fix {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+/* Fix Chrome input issues */
+.chrome-input-fix {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  border: none;
+  outline: none;
+}
+
+/* Fix iOS Safari shadow issues */
+.ios-shadow-fix {
+  -webkit-box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  -moz-box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Fix Chrome border issues */
+.chrome-border-fix {
+  border: 1px solid rgba(226, 232, 240, 1);
+  -webkit-border-radius: 0.5rem;
+  -moz-border-radius: 0.5rem;
+  border-radius: 0.5rem;
+}
+
+/* Fix iOS Safari text issues */
+.ios-text-fix {
+  -webkit-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Fix Chrome layout issues */
+.chrome-layout-fix {
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-orient: vertical;
+  -webkit-box-direction: normal;
+  -webkit-flex-direction: column;
+  -ms-flex-direction: column;
+  flex-direction: column;
+  -webkit-box-align: stretch;
+  -webkit-align-items: stretch;
+  -ms-flex-align: stretch;
+  align-items: stretch;
+}
+
+/* Fix iOS Safari overflow issues */
+.ios-overflow-fix {
+  overflow: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Fix Chrome overflow issues */
+.chrome-overflow-fix {
+  overflow: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.chrome-overflow-fix::-webkit-scrollbar {
+  display: none;
+}

@@ -21,8 +21,10 @@ import {
 } from 'react-icons/fa';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { DashboardLayout } from '@/components/shared/DashboardLayout';
 import { useAuth } from '@/context/SupabaseAuthContext';
 import Link from 'next/link';
+import '@/styles/cross-browser.css';
 
 // Stats Card Component with Premium Design
 interface StatsCardProps {
@@ -86,7 +88,7 @@ function StatsCard({ title, value, change, changeLabel, icon: Icon, color, loadi
       whileHover={{ y: -4, scale: 1.02 }}
       transition={{ duration: 0.3 }}
     >
-      <Card className="bg-white/80 backdrop-blur-sm border-slate-200 shadow-lg hover:shadow-xl transition-all duration-300 h-full">
+      <Card className="glassmorphism-card chrome-border-fix ios-shadow-fix hover-lift chrome-animation-fix h-full">
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
             <div className="flex-1">
@@ -137,7 +139,7 @@ function ActivityItem({ icon: Icon, title, description, time, type }: ActivityIt
     payment: 'bg-orange-50 text-orange-600'
   };
 
-  return (
+    return (
     <motion.div
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
@@ -161,6 +163,7 @@ function ActivityItem({ icon: Icon, title, description, time, type }: ActivityIt
 export default function OperatorDashboard() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
   const [stats, setStats] = useState({
     totalPackages: 24,
     activeBookings: 156,
@@ -171,6 +174,12 @@ export default function OperatorDashboard() {
   });
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+    
     // Simulate loading - replace with real Supabase query
     const fetchDashboardData = async () => {
       try {
@@ -185,7 +194,7 @@ export default function OperatorDashboard() {
     };
 
     fetchDashboardData();
-  }, []);
+  }, [mounted]); // Run only after component is mounted
 
   const recentActivities = [
     {
@@ -225,24 +234,39 @@ export default function OperatorDashboard() {
     }
   ];
 
+  // Prevent hydration mismatch by not rendering until mounted
+  if (!mounted) {
   return (
-    <div className="p-6 space-y-8 bg-gradient-to-br from-slate-50 to-white min-h-screen">
-      {/* Welcome Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="space-y-2"
+      <DashboardLayout
+        title="Loading..."
+        subtitle="Please wait while we load your dashboard"
+        requiredRole={['TOUR_OPERATOR']}
       >
-        <h1 className="text-3xl font-bold text-slate-900">
-          Welcome back, {user?.name || 'Operator'}! 👋
-        </h1>
-        <p className="text-slate-600">
-          Here&apos;s what&apos;s happening with your business today
-        </p>
-      </motion.div>
+        <div className="animate-pulse space-y-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="h-32 bg-slate-200 rounded-lg"></div>
+            ))}
+            </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="h-64 bg-slate-200 rounded-lg"></div>
+            <div className="h-64 bg-slate-200 rounded-lg"></div>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  return (
+    <DashboardLayout
+      title={`Welcome back, ${user?.name || 'Operator'}! 👋`}
+      subtitle="Here's what's happening with your business today"
+      requiredRole={['TOUR_OPERATOR']}
+    >
+      <div className="space-y-8 ios-viewport-fix chrome-layout-fix">
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="dashboard-grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         <StatsCard
           title="Total Packages"
           value={stats.totalPackages}
@@ -308,7 +332,7 @@ export default function OperatorDashboard() {
           transition={{ delay: 0.2 }}
           className="lg:col-span-2"
         >
-          <Card className="bg-gradient-to-br from-blue-600 to-purple-600 border-0 shadow-xl text-white">
+          <Card className="gradient-bg border-0 ios-shadow-fix chrome-animation-fix text-white">
             <CardHeader>
               <CardTitle className="text-white">Quick Actions</CardTitle>
             </CardHeader>
@@ -316,7 +340,7 @@ export default function OperatorDashboard() {
               <Link href="/operator/packages/create">
                 <Button 
                   size="lg"
-                  className="w-full bg-white text-blue-600 hover:bg-slate-100 font-semibold h-14 shadow-lg group"
+                  className="w-full bg-white text-blue-600 hover:bg-slate-100 font-semibold h-14 ios-shadow-fix chrome-animation-fix ios-button-fix chrome-font-fix group"
                 >
                   <Plus className="w-5 h-5 mr-2 group-hover:rotate-90 transition-transform" />
                   Create New Package
@@ -356,9 +380,9 @@ export default function OperatorDashboard() {
         </motion.div>
 
         {/* Performance Summary - 1 column */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
         >
           <Card className="bg-white/80 backdrop-blur-sm border-slate-200 shadow-lg h-full">
@@ -389,8 +413,8 @@ export default function OperatorDashboard() {
               </div>
             </CardContent>
           </Card>
-        </motion.div>
-      </div>
+            </motion.div>
+        </div>
 
       {/* Recent Activity & Top Packages */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -416,7 +440,7 @@ export default function OperatorDashboard() {
                 {recentActivities.map((activity, index) => (
                   <ActivityItem key={index} {...activity} />
                 ))}
-              </div>
+          </div>
             </CardContent>
           </Card>
         </motion.div>
@@ -455,17 +479,18 @@ export default function OperatorDashboard() {
                     <p className="text-sm text-slate-600">
                       {pkg.bookings} bookings &middot; {pkg.revenue}
                     </p>
-                  </div>
+            </div>
                   <div className="flex items-center gap-1 text-yellow-500">
                     <Star className="w-4 h-4 fill-current" />
                     <span className="text-sm font-semibold text-slate-900">{pkg.rating}</span>
-                  </div>
-                </div>
+              </div>
+            </div>
               ))}
             </CardContent>
           </Card>
         </motion.div>
       </div>
     </div>
+    </DashboardLayout>
   );
 }
