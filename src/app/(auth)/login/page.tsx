@@ -55,13 +55,11 @@ const LoginPage: React.FC = () => {
   const router = useRouter();
   const { login, loginWithGoogle, loginWithGithub, loading, error, isInitialized, getRedirectPath } = useAuth();
 
-  // Debug: Log form state
-  console.log('Login form state:', {
-    emailValue,
-    passwordValue,
-    loading,
-    isInitialized
-  });
+  // Debug logging (throttled to first mount only to avoid noisy logs / loops)
+  useEffect(() => {
+    // eslint-disable-next-line no-console
+    console.log('Login page mounted');
+  }, []);
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -138,7 +136,7 @@ const LoginPage: React.FC = () => {
         <form onSubmit={onSubmit} className="space-y-4">
           {/* Email Input */}
           <div className="space-y-2">
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label htmlFor="login-email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
               Email Address
             </label>
             <motion.div
@@ -148,7 +146,7 @@ const LoginPage: React.FC = () => {
             >
               <input
                 type="email"
-                id="email"
+                id="login-email"
                 name="email"
                 autoComplete="email"
                 autoFocus
@@ -178,7 +176,7 @@ const LoginPage: React.FC = () => {
 
           {/* Password Input */}
           <div className="space-y-2">
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label htmlFor="login-password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
               Password
             </label>
             <motion.div
@@ -188,7 +186,7 @@ const LoginPage: React.FC = () => {
             >
               <input
                 type={showPassword ? 'text' : 'password'}
-                id="password"
+                id="login-password"
                 name="password"
                 autoComplete="current-password"
                 disabled={loading === 'authenticating'}

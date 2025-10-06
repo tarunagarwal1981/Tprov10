@@ -1,0 +1,291 @@
+"use client";
+
+import React, { useEffect, useState, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+	LayoutDashboard,
+	Package as PackageIcon,
+	Calendar,
+	Users,
+	BarChart3,
+	MessageSquare,
+	Settings,
+	ChevronLeft,
+	ChevronRight,
+	LogOut,
+	User as UserIcon,
+} from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useAuth } from "@/context/SupabaseAuthContext";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+
+interface NavItem {
+	id: string;
+	label: string;
+	href: string;
+	icon: React.ElementType;
+	badge?: number;
+	submenu?: {
+		label: string;
+		href: string;
+	}[];
+}
+
+export function OperatorSidebar() {
+	const pathname = usePathname();
+	const { user, logout } = useAuth();
+	const [isCollapsed, setIsCollapsed] = useState(false);
+	const [openSubmenus, setOpenSubmenus] = useState<string[]>([]);
+	const [isMobileOpen, setIsMobileOpen] = useState(false);
+	const [hoverExpanded, setHoverExpanded] = useState(false);
+	const [supportsHover, setSupportsHover] = useState(true);
+
+	useEffect(() => {
+		try {
+			const saved = localStorage.getItem("operator-sidebar-collapsed");
+			if (saved) setIsCollapsed(JSON.parse(saved));
+		} catch {}
+		// detect hover-capable devices
+		try {
+			setSupportsHover(window.matchMedia && window.matchMedia('(hover: hover)').matches);
+		} catch {}
+	}, []);
+
+	const toggleCollapsed = useCallback(() => {
+		const newState = !isCollapsed;
+		setIsCollapsed(newState);
+		try { localStorage.setItem("operator-sidebar-collapsed", JSON.stringify(newState)); } catch {}
+	}, [isCollapsed]);
+
+	const toggleSubmenu = (id: string) => {
+		setOpenSubmenus((prev) =>
+			prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+		);
+	};
+
+	const navItems: NavItem[] = [
+		{ id: "dashboard", label: "Dashboard", href: "/operator", icon: LayoutDashboard },
+		{
+			id: "packages",
+			label: "Packages",
+			href: "/operator/packages",
+			icon: PackageIcon,
+			badge: 24,
+			submenu: [
+				{ label: "All Packages", href: "/operator/packages" },
+				{ label: "Create New", href: "/operator/packages/create" },
+				{ label: "Drafts", href: "/operator/packages/drafts" },
+			],
+		},
+		{
+			id: "bookings",
+			label: "Bookings",
+			href: "/operator/bookings",
+			icon: Calendar,
+			badge: 156,
+			submenu: [
+				{ label: "All Bookings", href: "/operator/bookings" },
+				{ label: "Pending", href: "/operator/bookings/pending" },
+				{ label: "Confirmed", href: "/operator/bookings/confirmed" },
+				{ label: "Completed", href: "/operator/bookings/completed" },
+			],
+		},
+		{ id: "agents", label: "Travel Agents", href: "/operator/agents", icon: Users, badge: 42 },
+		{ id: "analytics", label: "Analytics", href: "/operator/analytics", icon: BarChart3 },
+		{ id: "communication", label: "Communication", href: "/operator/communication", icon: MessageSquare, badge: 8 },
+		{ id: "settings", label: "Settings", href: "/operator/settings", icon: Settings },
+	];
+
+	const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
+
+	const effectiveCollapsed = isCollapsed && !hoverExpanded;
+
+	const SidebarInner = (
+		<motion.aside
+			initial={false}
+			animate={{ width: effectiveCollapsed ? 80 : 280 }}
+			transition={{ duration: 0.3, ease: "easeInOut" }}
+			className="h-full bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border-r border-zinc-200/50 dark:border-zinc-800/50 shadow-xl z-40 flex flex-col"
+			aria-label="Operator Sidebar"
+			onMouseEnter={() => { if (supportsHover && isCollapsed) setHoverExpanded(true); }}
+			onMouseLeave={() => { if (supportsHover) setHoverExpanded(false); }}
+		>
+			{/* Logo & Toggle */}
+			<div className="h-20 flex items-center justify-between px-6 border-b border-zinc-200/50 dark:border-zinc-800/50">
+				{!effectiveCollapsed && (
+					<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-3">
+						<div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center shadow-lg">
+							<PackageIcon className="w-6 h-6 text-white" />
+						</div>
+						<span className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+							TravelPro
+						</span>
+					</motion.div>
+				)}
+				<Button
+					variant="ghost"
+					size="icon"
+					onClick={toggleCollapsed}
+					className="w-8 h-8 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800"
+					aria-label={effectiveCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+				>
+					{effectiveCollapsed ? (
+						<ChevronRight className="w-5 h-5 text-zinc-600" />
+					) : (
+						<ChevronLeft className="w-5 h-5 text-zinc-600" />
+					)}
+				</Button>
+			</div>
+
+			{/* Navigation */}
+			<nav className="flex-1 px-3 py-6 space-y-2 overflow-y-auto" aria-label="Primary">
+				{navItems.map((item) => (
+					<div key={item.id}>
+						{/* Main Nav Item */}
+						<Link href={item.href} className="block">
+							<motion.div
+								whileHover={{ x: 4 }}
+								className={cn(
+									"flex items-center gap-3 px-3 py-3 rounded-xl transition-all group cursor-pointer",
+									isActive(item.href)
+										? "bg-gradient-to-r from-indigo-50 to-purple-50 text-indigo-700 border border-indigo-100 shadow-sm dark:from-indigo-900/10 dark:to-purple-900/10"
+										: "text-zinc-600 hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-zinc-800/60"
+								)}
+								role="link"
+								aria-current={isActive(item.href) ? "page" : undefined}
+							>
+								<item.icon className={cn("w-5 h-5 flex-shrink-0", isActive(item.href) ? "text-indigo-600" : "text-zinc-500 group-hover:text-zinc-700 dark:group-hover:text-zinc-100")} />
+								{!effectiveCollapsed && (
+									<>
+										<span className="flex-1 font-medium text-sm">{item.label}</span>
+										{item.badge && (
+											<Badge className="h-6 min-w-[24px] px-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-0 text-xs">
+												{item.badge}
+											</Badge>
+										)}
+									</>
+								)}
+							</motion.div>
+						</Link>
+
+						{/* Submenu Toggle (click item again to toggle) */}
+						{item.submenu && !effectiveCollapsed && (
+							<div className="pl-12 pt-1">
+								<Button variant="ghost" size="sm" onClick={() => toggleSubmenu(item.id)} className="h-7 px-2 text-xs">
+									{openSubmenus.includes(item.id) ? "Hide" : "Show"} {item.label} menu
+								</Button>
+							</div>
+						)}
+
+						{/* Submenu */}
+						<AnimatePresence>
+							{item.submenu && !effectiveCollapsed && openSubmenus.includes(item.id) && (
+								<motion.div
+									initial={{ opacity: 0, height: 0 }}
+									animate={{ opacity: 1, height: "auto" }}
+									exit={{ opacity: 0, height: 0 }}
+									className="ml-12 mt-2 space-y-1"
+								>
+									{item.submenu.map((sub) => (
+										<Link key={sub.href} href={sub.href} className="block">
+											<div
+												className={cn(
+													"px-3 py-2 rounded-lg text-sm transition-colors",
+													pathname === sub.href
+														? "bg-indigo-50 text-indigo-700 font-medium dark:bg-indigo-900/20"
+														: "text-zinc-600 hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-zinc-800/60"
+												)}
+											>
+												{sub.label}
+											</div>
+										</Link>
+									))}
+								</motion.div>
+							)}
+						</AnimatePresence>
+					</div>
+				))}
+			</nav>
+
+			{/* User Section */}
+			<div className="p-4 border-t border-zinc-200/50 dark:border-zinc-800/50">
+				<div className={cn("flex items-center gap-3", effectiveCollapsed ? "justify-center" : "") }>
+					<Avatar className="w-10 h-10">
+						<AvatarImage src={(user as any)?.avatar_url} />
+						<AvatarFallback className="bg-gradient-to-br from-indigo-600 to-purple-600 text-white font-semibold">
+							{((user as any)?.name?.charAt(0) || "T")}
+						</AvatarFallback>
+					</Avatar>
+					{!effectiveCollapsed && (
+						<div className="flex-1 min-w-0">
+							<p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate">{(user as any)?.name || "Tour Operator"}</p>
+							<p className="text-xs text-zinc-500 dark:text-zinc-400">Operator</p>
+						</div>
+					)}
+					{!effectiveCollapsed && (
+						<Button
+							variant="ghost"
+							size="icon"
+							onClick={logout}
+							className="w-8 h-8 text-zinc-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+							aria-label="Log out"
+						>
+							<LogOut className="w-4 h-4" />
+						</Button>
+					)}
+				</div>
+			</div>
+		</motion.aside>
+	);
+
+	return (
+		<>
+			{/* Desktop */}
+			<div className="hidden lg:block fixed left-0 top-0 h-screen" style={{ width: effectiveCollapsed ? 80 : 280 }}>
+				{SidebarInner}
+			</div>
+
+			{/* Mobile */}
+			<div className="lg:hidden">
+				<Button
+					variant="ghost"
+					size="sm"
+					onClick={() => setIsMobileOpen(true)}
+					className="fixed top-4 left-4 z-50"
+					aria-label="Open sidebar"
+				>
+					<LayoutDashboard className="h-5 w-5" />
+				</Button>
+				<AnimatePresence>
+					{isMobileOpen && (
+						<>
+							<motion.div
+								initial={{ opacity: 0 }}
+								animate={{ opacity: 1 }}
+								exit={{ opacity: 0 }}
+								className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
+								onClick={() => setIsMobileOpen(false)}
+							/>
+							<motion.div
+								initial={{ x: -280 }}
+								animate={{ x: 0 }}
+								exit={{ x: -280 }}
+								transition={{ duration: 0.3, ease: "easeInOut" }}
+								className="fixed left-0 top-0 h-full z-50"
+								style={{ width: 280 }}
+							>
+								{SidebarInner}
+							</motion.div>
+						</>
+					)}
+				</AnimatePresence>
+			</div>
+		</>
+	);
+}
+
+export default OperatorSidebar;

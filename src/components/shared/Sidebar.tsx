@@ -121,7 +121,7 @@ const TOUR_OPERATOR_NAVIGATION: NavigationItem[] = [
   {
     id: 'dashboard',
     label: 'Dashboard',
-    href: '/operator/dashboard',
+    href: '/operator',
     icon: FiHome,
   },
   {
