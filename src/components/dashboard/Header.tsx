@@ -3,15 +3,15 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Search, 
-  Bell, 
-  Settings, 
-  User, 
-  LogOut, 
-  ChevronDown,
-  Menu,
-  X
-} from 'lucide-react';
+  FiSearch as Search, 
+  FiBell as Bell, 
+  FiSettings as Settings, 
+  FiUser as User, 
+  FiLogOut as LogOut, 
+  FiChevronDown as ChevronDown,
+  FiMenu as Menu,
+  FiX as X
+} from 'react-icons/fi';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';

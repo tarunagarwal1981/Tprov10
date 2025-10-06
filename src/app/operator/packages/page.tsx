@@ -1,23 +1,23 @@
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
-import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
+import { motion, useMotionValue, useTransform, animate, useMotionValueEvent } from 'framer-motion';
 import {
-	Package as PackageIcon,
-	Plus,
-	Search as SearchIcon,
-	Filter,
-	Grid3x3,
-	List,
-	TrendingUp,
-	DollarSign,
-	Star,
-	Eye,
-	MoreVertical,
-	Edit,
-	Trash,
-	Copy,
-} from 'lucide-react';
+	FiPackage as PackageIcon,
+	FiPlus as Plus,
+	FiSearch as SearchIcon,
+	FiFilter as Filter,
+	FiGrid as Grid3x3,
+	FiList as List,
+	FiTrendingUp as TrendingUp,
+	FiDollarSign as DollarSign,
+	FiStar as Star,
+	FiEye as Eye,
+	FiMoreVertical as MoreVertical,
+	FiEdit as Edit,
+	FiTrash as Trash,
+	FiCopy as Copy,
+} from 'react-icons/fi';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -46,13 +46,19 @@ interface Package {
 
 function AnimatedNumber({ value, prefix = '', suffix = '' }: { value: number; prefix?: string; suffix?: string }) {
 	const motionValue = useMotionValue(0);
-	const rounded = useTransform(motionValue, latest => Math.round(latest));
+	const [displayValue, setDisplayValue] = useState(0);
+	
 	useEffect(() => {
 		const controls = animate(motionValue, value, { duration: 0.8, ease: 'easeOut' });
 		return () => controls.stop();
 	}, [value, motionValue]);
+	
+	useMotionValueEvent(motionValue, 'change', (latest) => {
+		setDisplayValue(Math.round(latest));
+	});
+	
 	return (
-		<motion.span>{prefix}{rounded}{suffix}</motion.span>
+		<motion.span>{prefix}{displayValue}{suffix}</motion.span>
 	);
 }
 

@@ -19,14 +19,14 @@ export function ProtectedRoute({
   requiredPermissions = [],
   fallback 
 }: ProtectedRouteProps) {
-  const { isAuthenticated, isInitialized } = useAuth();
+  const { user, isInitialized } = useAuth();
   const { hasRole, hasPermission, userRole } = useRBAC();
   const router = useRouter();
 
   useEffect(() => {
     if (!isInitialized) return;
 
-    if (!isAuthenticated) {
+    if (!user) {
       router.push('/login');
       return;
     }
@@ -50,10 +50,10 @@ export function ProtectedRoute({
         return;
       }
     }
-  }, [isInitialized, isAuthenticated, requiredRoles, requiredPermissions, hasRole, hasPermission, router]);
+  }, [isInitialized, user, requiredRoles, requiredPermissions, hasRole, hasPermission, router]);
 
   // Show loading while initializing
-  if (!isInitialized) {
+  if (!isInitialized || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
@@ -62,7 +62,7 @@ export function ProtectedRoute({
   }
 
   // Show loading while not authenticated
-  if (!isAuthenticated) {
+  if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
@@ -78,7 +78,7 @@ export function ProtectedRoute({
         <div className="min-h-screen flex items-center justify-center">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
-            <p className="text-gray-600">You don't have permission to access this page.</p>
+            <p className="text-gray-600">You don&apos;t have permission to access this page.</p>
           </div>
         </div>
       );
@@ -95,7 +95,7 @@ export function ProtectedRoute({
         <div className="min-h-screen flex items-center justify-center">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
-            <p className="text-gray-600">You don't have permission to access this page.</p>
+            <p className="text-gray-600">You don&apos;t have permission to access this page.</p>
           </div>
         </div>
       );

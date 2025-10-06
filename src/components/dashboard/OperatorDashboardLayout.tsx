@@ -24,23 +24,12 @@ export function OperatorDashboardLayout({ children }: OperatorDashboardLayoutPro
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
       {/* Sidebar */}
-      <OperatorSidebar
-        isCollapsed={isSidebarCollapsed}
-        onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-        isMobileOpen={isMobileMenuOpen}
-        setIsMobileOpen={setIsMobileMenuOpen}
-      />
+      <OperatorSidebar />
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <Header
-          onMenuToggle={handleMenuToggle}
-          breadcrumbs={[
-            { label: 'Home', href: '/operator' },
-            { label: 'Dashboard' }
-          ]}
-        />
+        <Header />
 
         {/* Page Content */}
         <main className="flex-1 overflow-y-auto">

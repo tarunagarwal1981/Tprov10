@@ -3,8 +3,9 @@
 import React from 'react';
 import { OperatorDashboardLayout } from '@/components/dashboard/OperatorDashboardLayout';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { UserRole } from '@/lib/types';
 
-const OPERATOR_ROLES = ['TOUR_OPERATOR', 'ADMIN', 'SUPER_ADMIN'];
+const OPERATOR_ROLES: UserRole[] = ['TOUR_OPERATOR', 'ADMIN', 'SUPER_ADMIN'];
 
 export default function OperatorLayout({ children }: { children: React.ReactNode }) {
   return (

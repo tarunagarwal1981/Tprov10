@@ -3,29 +3,30 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
-  TrendingUp, 
-  TrendingDown,
-  Package, 
-  DollarSign, 
-  Users, 
-  Star,
-  Calendar,
-  MessageSquare,
-  CheckCircle,
-  Plus,
-  BarChart3,
-  Download,
-  Waves,
-  Mountain,
-  Plane
-} from 'lucide-react';
+  FiTrendingUp as TrendingUp, 
+  FiTrendingDown as TrendingDown,
+  FiPackage as Package, 
+  FiDollarSign as DollarSign, 
+  FiUsers as Users, 
+  FiStar as Star,
+  FiCalendar as Calendar,
+  FiMessageSquare as MessageSquare,
+  FiCheckCircle as CheckCircle,
+  FiPlus as Plus,
+  FiBarChart as BarChart3,
+  FiDownload as Download,
+  FiZap as Waves,
+  FiMapPin as Mountain,
+  FiNavigation as Plane
+} from 'react-icons/fi';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Link from 'next/link';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { UserRole } from '@/lib/types';
 
-const OPERATOR_ROLES = ['TOUR_OPERATOR', 'ADMIN', 'SUPER_ADMIN'];
+const OPERATOR_ROLES: UserRole[] = ['TOUR_OPERATOR', 'ADMIN', 'SUPER_ADMIN'];
 
 // Activity Item Component
 const ActivityItem = ({ icon: Icon, title, time, color }: any) => (
@@ -122,7 +123,7 @@ function OperatorDashboard() {
           className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-8 text-white shadow-xl"
         >
           <h1 className="text-3xl font-bold mb-2">Welcome back, Tour Operator! 👋</h1>
-          <p className="text-blue-100 text-lg">Here's what's happening with your business today.</p>
+          <p className="text-blue-100 text-lg">Here&apos;s what&apos;s happening with your business today.</p>
         </motion.div>
 
         {/* Stats Grid */}
@@ -233,7 +234,7 @@ function OperatorDashboard() {
           >
             <Card className="bg-white/80 backdrop-blur-sm border-slate-200 shadow-lg h-full">
               <CardHeader>
-                <CardTitle className="text-slate-900">Today's Overview</CardTitle>
+                <CardTitle className="text-slate-900">Today&apos;s Overview</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">

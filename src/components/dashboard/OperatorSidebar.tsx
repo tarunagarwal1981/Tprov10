@@ -3,18 +3,18 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-	LayoutDashboard,
-	Package as PackageIcon,
-	Calendar,
-	Users,
-	BarChart3,
-	MessageSquare,
-	Settings,
-	ChevronLeft,
-	ChevronRight,
-	LogOut,
-	User as UserIcon,
-} from "lucide-react";
+	FiLayout as LayoutDashboard,
+	FiPackage as PackageIcon,
+	FiCalendar as Calendar,
+	FiUsers as Users,
+	FiBarChart as BarChart3,
+	FiMessageSquare as MessageSquare,
+	FiSettings as Settings,
+	FiChevronLeft as ChevronLeft,
+	FiChevronRight as ChevronRight,
+	FiLogOut as LogOut,
+	FiUser as UserIcon,
+} from "react-icons/fi";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/SupabaseAuthContext";

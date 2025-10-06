@@ -7,17 +7,16 @@ import {
 	FiMapPin,
 	FiTruck,
 	FiHome,
-	FiAirplay,
+	FiMonitor,
 	FiActivity,
 	FiAnchor,
 	FiCreditCard,
-	FiBed,
+	FiUser,
 	FiCheckCircle,
 	FiArrowRight,
-	FiPlane,
-	FiPlaneDeparture,
+	FiNavigation,
+	FiSend,
 	FiStar,
-	FiCar,
 } from "react-icons/fi";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -66,7 +65,7 @@ const PACKAGE_TYPES: PackageType[] = [
 		title: "Transfer Package",
 		description:
 			"Airport transfers, city transfers, and transportation services",
-		icon: FiCar,
+		icon: FiTruck,
 		gradient: "from-sky-500 to-cyan-400",
 		features: ["Multiple vehicles", "One-way/Round trip", "Real-time tracking"],
 	},
@@ -90,7 +89,7 @@ const PACKAGE_TYPES: PackageType[] = [
 		key: "fixed_departure_flight",
 		title: "Fixed Departure with Flight",
 		description: "Group tours with fixed dates and flight inclusions",
-		icon: FiPlane,
+		icon: FiNavigation,
 		gradient: "from-blue-500 to-indigo-600",
 		features: ["Flight details", "Group discounts", "Departure dates"],
 	},
@@ -114,7 +113,7 @@ const PACKAGE_TYPES: PackageType[] = [
 		key: "hotel_only",
 		title: "Hotel Only",
 		description: "Standalone hotel bookings with various meal plans",
-		icon: FiBed,
+		icon: FiUser,
 		gradient: "from-purple-500 to-pink-500",
 		features: ["Room types", "Amenities", "Flexible dates"],
 	},
@@ -122,7 +121,7 @@ const PACKAGE_TYPES: PackageType[] = [
 		key: "flight_only",
 		title: "Flight Only",
 		description: "Flight bookings with multiple class options",
-		icon: FiPlaneDeparture,
+		icon: FiSend,
 		gradient: "from-orange-500 to-red-500",
 		features: ["One-way/Round trip", "Class selection", "Multi-city flights"],
 	},
@@ -150,7 +149,15 @@ const gridVariants = {
 
 const cardVariants = {
 	hidden: { opacity: 0, y: 12 },
-	show: { opacity: 1, y: 0, transition: { type: "spring", damping: 20, stiffness: 250 } },
+	show: { 
+		opacity: 1, 
+		y: 0, 
+		transition: { 
+			type: "spring" as const, 
+			damping: 20, 
+			stiffness: 250 
+		} 
+	},
 };
 
 export const PackageTypeSelector: React.FC<PackageTypeSelectorProps> = ({ value, onChange, className }) => {
