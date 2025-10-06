@@ -13,8 +13,7 @@ export {
   getBrowserUser,
   signOutBrowser,
   
-  // Default client
-  supabase,
+  // Alias factory (prefer creating clients on demand)
   
   // Type exports
   type SupabaseClientType,

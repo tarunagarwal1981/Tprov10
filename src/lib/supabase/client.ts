@@ -28,7 +28,12 @@ if (process.env.NODE_ENV === 'development') {
  */
 export const createSupabaseBrowserClient = (): SupabaseClientType => {
   if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error('Supabase credentials are not configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY');
+    // During build/prerender some environments may not expose NEXT_PUBLIC_* vars.
+    // Fall back to a non-routable host to avoid accidental network calls.
+    // Consumers should provide real env at runtime.
+    // eslint-disable-next-line no-console
+    console.warn('⚠️  Supabase credentials missing at init time. Using no-op fallback client.');
+    return createBrowserClient<Database>('http://localhost.invalid', 'anon');
   }
   return createBrowserClient<Database>(supabaseUrl, supabaseAnonKey);
 };
@@ -121,10 +126,5 @@ export async function signOutBrowser(supabase: SupabaseClientType) {
   }
 }
 
-// Export default browser client for backward compatibility
-export const supabase = createSupabaseBrowserClient();
-
-// Export all clients with proper types
-export {
-  createSupabaseBrowserClient as createClient,
-};
+// Export factory alias for convenience (avoid eager initialization)
+export { createSupabaseBrowserClient as createClient };
