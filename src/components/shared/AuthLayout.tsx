@@ -153,6 +153,7 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({
 }) => {
   const [currentTestimonial, setCurrentTestimonial] = useState(0);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isLargeScreen, setIsLargeScreen] = useState<boolean | null>(null);
 
   // Subtle parallax for left-side features
   const { scrollYProgress } = useScroll();
@@ -160,6 +161,16 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({
 
   useEffect(() => {
     setIsLoaded(true);
+  }, []);
+
+  // Render the form (children) only once by detecting the current breakpoint on the client
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mq = window.matchMedia('(min-width: 1024px)');
+    const handleChange = () => setIsLargeScreen(mq.matches);
+    handleChange();
+    mq.addEventListener('change', handleChange);
+    return () => mq.removeEventListener('change', handleChange);
   }, []);
 
   useEffect(() => {
@@ -310,7 +321,8 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({
                   {subtitle}
                 </p>
               </div>
-              {children}
+              {/* Render children here only when on large screens to avoid duplicate IDs */}
+              {isLargeScreen === true ? children : null}
               <div className="mt-8 pt-6 border-t border-gray-200/50 dark:border-white/10">
                 <div className="flex justify-center space-x-6 text-sm text-gray-600 dark:text-gray-300">
                   <a href="#" className="hover:text-gray-900 dark:hover:text-white">Privacy</a>
@@ -373,7 +385,8 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({
                 {subtitle}
               </p>
             </div>
-            {children}
+            {/* Render children here only when not on large screens to avoid duplicate IDs */}
+            {isLargeScreen === false ? children : null}
           </div>
         </motion.div>
 
