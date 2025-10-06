@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import OperatorSidebar from './OperatorSidebar';
-import Header from './Header';
+import { Header } from './Header';
 
 interface OperatorDashboardLayoutProps {
   children: React.ReactNode;

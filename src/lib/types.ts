@@ -7,7 +7,7 @@
 // CORE USER TYPES
 // ============================================================================
 
-export type UserRole = 'SUPER_ADMIN' | 'ADMIN' | 'TOUR_OPERATOR' | 'TRAVEL_AGENT';
+export type UserRole = 'SUPER_ADMIN' | 'ADMIN' | 'TOUR_OPERATOR' | 'TRAVEL_AGENT' | 'USER';
 
 export interface UserProfile {
   address?: Address;

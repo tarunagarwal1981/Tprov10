@@ -53,40 +53,92 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       try {
         setLoading('initializing');
         
+        console.log('🔄 Initializing authentication...');
         const { data: { session } } = await supabase.auth.getSession();
         
         if (session?.user) {
-          // Create a proper User object from Supabase user
-          const userData: User = {
-            id: session.user.id,
-            email: session.user.email || '',
-            name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
-            role: (session.user.user_metadata?.role as UserRole) || 'USER',
-            profile: {
-              timezone: 'UTC',
-              language: 'en',
-              currency: 'USD',
-              notification_preferences: {
-                email: true,
-                sms: false,
-                push: true,
-                marketing: false,
+          console.log('👤 Session found, loading user profile from database...');
+          
+          // Load user profile from database to get the correct role
+          const { data: userProfile, error: profileError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+
+          console.log('📊 User profile from database:', userProfile);
+          if (profileError) {
+            console.error('❌ Profile error during init:', profileError);
+          }
+
+          if (userProfile) {
+            // Parse the JSON profile field
+            const profileData = typeof userProfile.profile === 'string' 
+              ? JSON.parse(userProfile.profile) 
+              : userProfile.profile || {};
+            
+            const userData: User = {
+              id: session.user.id,
+              email: session.user.email || '',
+              name: userProfile.name || session.user.email?.split('@')[0] || 'User',
+              role: userProfile.role as UserRole, // Use role from database
+              profile: {
+                timezone: profileData.timezone || 'UTC',
+                language: profileData.language || 'en',
+                currency: profileData.currency || 'USD',
+                notification_preferences: {
+                  email: profileData.notification_preferences?.email ?? true,
+                  sms: profileData.notification_preferences?.sms ?? false,
+                  push: profileData.notification_preferences?.push ?? true,
+                  marketing: profileData.notification_preferences?.marketing ?? false,
+                },
               },
-            },
-            preferences: {},
-            avatar_url: session.user.user_metadata?.avatar_url,
-            phone: session.user.user_metadata?.phone,
-            created_at: new Date(session.user.created_at),
-            updated_at: new Date(session.user.updated_at || session.user.created_at),
-          };
-          setUser(userData);
-          setProfile(userData.profile);
+              preferences: profileData.preferences || {},
+              avatar_url: profileData.avatar_url || session.user.user_metadata?.avatar_url,
+              phone: userProfile.phone || session.user.user_metadata?.phone,
+              created_at: new Date(userProfile.created_at || session.user.created_at),
+              updated_at: new Date(userProfile.updated_at || session.user.updated_at || session.user.created_at),
+            };
+            
+            console.log('👤 User initialized with role:', userData.role);
+            setUser(userData);
+            setProfile(userData.profile);
+          } else {
+            // Fallback if no profile found in database
+            console.warn('⚠️ No user profile found in database during init, using default');
+            const userData: User = {
+              id: session.user.id,
+              email: session.user.email || '',
+              name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
+              role: 'USER', // Default fallback
+              profile: {
+                timezone: 'UTC',
+                language: 'en',
+                currency: 'USD',
+                notification_preferences: {
+                  email: true,
+                  sms: false,
+                  push: true,
+                  marketing: false,
+                },
+              },
+              preferences: {},
+              avatar_url: session.user.user_metadata?.avatar_url,
+              phone: session.user.user_metadata?.phone,
+              created_at: new Date(session.user.created_at),
+              updated_at: new Date(session.user.updated_at || session.user.created_at),
+            };
+            setUser(userData);
+            setProfile(userData.profile);
+          }
+        } else {
+          console.log('🔓 No active session found');
         }
         
         setIsInitialized(true);
         setLoading('idle');
       } catch (err) {
-        console.error('Auth init error:', err);
+        console.error('❌ Auth init error:', err);
         setError({
           type: 'init_error',
           message: 'Failed to initialize authentication',
@@ -105,12 +157,15 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       setLoading('authenticating');
       setError(null);
       
+      console.log('🔐 Starting login process for:', email);
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       
       if (error) {
+        console.error('❌ Supabase auth error:', error);
         setError({
           type: 'login_error',
           message: error.message,
@@ -119,37 +174,91 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         return false;
       }
       
+      console.log('✅ Sign in successful, Supabase user:', data.user);
+      
       if (data.user) {
-        // Create a proper User object from Supabase user
-        const userData: User = {
-          id: data.user.id,
-          email: data.user.email || '',
-          name: data.user.user_metadata?.name || data.user.email?.split('@')[0] || 'User',
-          role: (data.user.user_metadata?.role as UserRole) || 'USER',
-          profile: {
-            timezone: 'UTC',
-            language: 'en',
-            currency: 'USD',
-            notification_preferences: {
-              email: true,
-              sms: false,
-              push: true,
-              marketing: false,
+        // Load user profile from database to get the correct role
+        console.log('🔍 Loading user profile from database...');
+        const { data: userProfile, error: profileError } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', data.user.id)
+          .single();
+
+        console.log('📊 User profile from database:', userProfile);
+        if (profileError) {
+          console.error('❌ Profile error:', profileError);
+        }
+
+        if (userProfile) {
+          // Parse the JSON profile field
+          const profileData = typeof userProfile.profile === 'string' 
+            ? JSON.parse(userProfile.profile) 
+            : userProfile.profile || {};
+          
+          const fullUser: User = {
+            id: data.user.id,
+            email: data.user.email || '',
+            name: userProfile.name || data.user.email?.split('@')[0] || 'User',
+            role: userProfile.role as UserRole, // Use role from database
+            profile: {
+              timezone: profileData.timezone || 'UTC',
+              language: profileData.language || 'en',
+              currency: profileData.currency || 'USD',
+              notification_preferences: {
+                email: profileData.notification_preferences?.email ?? true,
+                sms: profileData.notification_preferences?.sms ?? false,
+                push: profileData.notification_preferences?.push ?? true,
+                marketing: profileData.notification_preferences?.marketing ?? false,
+              },
             },
-          },
-          preferences: {},
-          avatar_url: data.user.user_metadata?.avatar_url,
-          phone: data.user.user_metadata?.phone,
-          created_at: new Date(data.user.created_at),
-          updated_at: new Date(data.user.updated_at || data.user.created_at),
-        };
-        setUser(userData);
-        setProfile(userData.profile);
-        return true;
+            preferences: profileData.preferences || {},
+            avatar_url: profileData.avatar_url || data.user.user_metadata?.avatar_url,
+            phone: userProfile.phone || data.user.user_metadata?.phone,
+            created_at: new Date(userProfile.created_at || data.user.created_at),
+            updated_at: new Date(userProfile.updated_at || data.user.updated_at || data.user.created_at),
+          };
+          
+          console.log('👤 Full user object created:', fullUser);
+          console.log('🎭 User role from database:', fullUser.role);
+          
+          setUser(fullUser);
+          setProfile(fullUser.profile);
+          return true;
+        } else {
+          // Fallback if no profile found in database
+          console.warn('⚠️ No user profile found in database, using default');
+          const userData: User = {
+            id: data.user.id,
+            email: data.user.email || '',
+            name: data.user.user_metadata?.name || data.user.email?.split('@')[0] || 'User',
+            role: 'USER', // Default fallback
+            profile: {
+              timezone: 'UTC',
+              language: 'en',
+              currency: 'USD',
+              notification_preferences: {
+                email: true,
+                sms: false,
+                push: true,
+                marketing: false,
+              },
+            },
+            preferences: {},
+            avatar_url: data.user.user_metadata?.avatar_url,
+            phone: data.user.user_metadata?.phone,
+            created_at: new Date(data.user.created_at),
+            updated_at: new Date(data.user.updated_at || data.user.created_at),
+          };
+          setUser(userData);
+          setProfile(userData.profile);
+          return true;
+        }
       }
       
       return false;
     } catch (err) {
+      console.error('❌ Login error:', err);
       setError({
         type: 'login_error',
         message: 'Login failed',
@@ -247,19 +356,40 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
   };
 
   const getRedirectPath = (): string => {
-    if (!user) return '/login';
+    console.log('🎯 getRedirectPath called with user:', user);
+    console.log('🎯 getRedirectPath user role:', user?.role);
     
-    switch (user.role) {
+    if (!user) {
+      console.log('🎯 No user - redirect to /login');
+      return '/login';
+    }
+    
+    const role = user.role;
+    console.log('🎯 Using role:', role);
+    
+    let dashboardUrl = '/';
+    
+    switch (role) {
       case 'SUPER_ADMIN':
       case 'ADMIN':
-        return '/admin';
+        console.log('🎯 Admin role - redirect to /admin/dashboard');
+        dashboardUrl = '/admin/dashboard';
+        break;
       case 'TOUR_OPERATOR':
-        return '/operator';
+        console.log('🎯 Tour operator role - redirect to /operator/dashboard');
+        dashboardUrl = '/operator/dashboard';
+        break;
       case 'TRAVEL_AGENT':
-        return '/agent';
+        console.log('🎯 Travel agent role - redirect to /agent/dashboard');
+        dashboardUrl = '/agent/dashboard';
+        break;
       default:
-        return '/dashboard';
+        console.warn('⚠️ Unknown role:', role, '- redirect to /');
+        dashboardUrl = '/';
     }
+    
+    console.log('🎯 Final dashboard URL:', dashboardUrl);
+    return dashboardUrl;
   };
 
   const clearError = () => {
@@ -323,7 +453,7 @@ export const useUserDisplay = () => {
     displayName: user?.name || user?.email?.split('@')[0] || 'User',
     email: user?.email || '',
     avatar: user?.avatar_url || '',
-    role: user?.role || 'USER',
+    role: user?.role || null, // Changed from 'USER' to null to avoid false defaults
   };
 };
 
@@ -372,6 +502,9 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   ],
   TRAVEL_AGENT: [
     'manage_bookings',
+    'view_analytics',
+  ],
+  USER: [
     'view_analytics',
   ],
 };

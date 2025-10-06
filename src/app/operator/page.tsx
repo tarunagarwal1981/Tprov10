@@ -145,8 +145,8 @@ function OperatorDashboard() {
                     }`}>
                       {stat.trend === 'up' ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
                       {stat.change}
-                    </div>
-                  </div>
+            </div>
+          </div>
                   <h3 className="text-2xl font-bold text-slate-900 mb-1">{stat.value}</h3>
                   <p className="text-sm text-slate-600">{stat.title}</p>
                 </CardContent>
@@ -167,12 +167,12 @@ function OperatorDashboard() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Link href="/operator/packages/create">
+              <Link href="/operator/packages/create">
                   <Button className="w-full bg-white/20 backdrop-blur-sm hover:bg-white/30 border-white/30 text-white">
                     <Plus className="w-4 h-4 mr-2" />
                     Create Package
-                  </Button>
-                </Link>
+                </Button>
+              </Link>
                 <Link href="/operator/analytics">
                   <Button className="w-full bg-white/20 backdrop-blur-sm hover:bg-white/30 border-white/30 text-white">
                     <BarChart3 className="w-4 h-4 mr-2" />
@@ -197,38 +197,38 @@ function OperatorDashboard() {
         </motion.div>
 
         {/* Recent Activity & Performance */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Recent Activity */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-          >
-            <Card className="bg-white/80 backdrop-blur-sm border-slate-200 shadow-lg">
-              <CardHeader className="border-b border-slate-200">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-slate-900">Recent Activity</CardTitle>
-                  <Link href="/operator/activity">
-                    <Button variant="ghost" size="sm" className="text-blue-600">
-                      View All
-                    </Button>
-                  </Link>
-                </div>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="divide-y divide-slate-100">
-                  {recentActivities.map((activity, index) => (
-                    <ActivityItem key={index} {...activity} />
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Recent Activity */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+        >
+          <Card className="bg-white/80 backdrop-blur-sm border-slate-200 shadow-lg">
+            <CardHeader className="border-b border-slate-200">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-slate-900">Recent Activity</CardTitle>
+                <Link href="/operator/activity">
+                  <Button variant="ghost" size="sm" className="text-blue-600">
+                    View All
+                  </Button>
+                </Link>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="divide-y divide-slate-100">
+                {recentActivities.map((activity, index) => (
+                  <ActivityItem key={index} {...activity} />
+                ))}
+          </div>
+            </CardContent>
+          </Card>
+        </motion.div>
 
           {/* Today's Overview */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
           >
             <Card className="bg-white/80 backdrop-blur-sm border-slate-200 shadow-lg h-full">
@@ -247,21 +247,21 @@ function OperatorDashboard() {
                   <div className="flex items-center gap-3">
                     <DollarSign className="w-5 h-5 text-green-600" />
                     <span className="text-sm font-medium text-slate-700">Revenue</span>
-                  </div>
+              </div>
                   <span className="text-lg font-bold text-green-600">£3,240</span>
-                </div>
+            </div>
                 <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
                   <div className="flex items-center gap-3">
                     <Users className="w-5 h-5 text-purple-600" />
                     <span className="text-sm font-medium text-slate-700">New Agents</span>
-                  </div>
+              </div>
                   <span className="text-lg font-bold text-purple-600">3</span>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        </div>
+            </div>
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
+    </div>
     </div>
   );
 }

@@ -64,7 +64,9 @@ const LoginPage: React.FC = () => {
   // Redirect if already authenticated
   useEffect(() => {
     if (isInitialized && !loading && getRedirectPath() !== '/login') {
-      router.push(getRedirectPath());
+      const redirectUrl = getRedirectPath();
+      console.log('🔄 Login page redirect - URL:', redirectUrl);
+      router.push(redirectUrl);
     }
   }, [isInitialized, loading, getRedirectPath, router]);
 
@@ -89,7 +91,9 @@ const LoginPage: React.FC = () => {
     
     if (success) {
       // Redirect will happen automatically via useEffect
-      router.push(getRedirectPath());
+      const redirectUrl = getRedirectPath();
+      console.log('🔄 Login success redirect - URL:', redirectUrl);
+      router.push(redirectUrl);
     }
   };
 
@@ -100,7 +104,9 @@ const LoginPage: React.FC = () => {
     const success = await login(account.email, account.password, false);
     
     if (success) {
-      router.push(getRedirectPath());
+      const redirectUrl = getRedirectPath();
+      console.log('🔄 Demo login success redirect - URL:', redirectUrl);
+      router.push(redirectUrl);
     }
   };
 
@@ -115,7 +121,9 @@ const LoginPage: React.FC = () => {
     }
     
     if (success) {
-      router.push(getRedirectPath());
+      const redirectUrl = getRedirectPath();
+      console.log('🔄 Social login success redirect - URL:', redirectUrl);
+      router.push(redirectUrl);
     }
   };
 
