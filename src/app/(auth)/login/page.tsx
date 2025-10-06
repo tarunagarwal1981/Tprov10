@@ -136,8 +136,8 @@ const LoginPage: React.FC = () => {
     <AuthLayout
       title="Welcome Back"
       subtitle="Sign in to your account to continue"
-      showTestimonials={true}
-      showFeatures={true}
+      showTestimonials={false}
+      showFeatures={false}
     >
       <motion.div
         initial={{ opacity: 0, y: 20 }}

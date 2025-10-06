@@ -55,6 +55,7 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         
         console.log('🔄 Initializing authentication...');
         const { data: { session } } = await supabase.auth.getSession();
+        console.log('[Auth] getSession() ->', session ? 'session found' : 'no session');
         
         if (session?.user) {
           console.log('👤 Session found, loading user profile from database...');
@@ -65,6 +66,8 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
             .select('*')
             .eq('id', session.user.id)
             .single();
+          console.log('[Auth] profile query url:', `${(supabase as any).rest?.url || 'n/a'}/users`);
+          if (profileError) console.log('[Auth] profile error:', profileError);
 
           console.log('📊 User profile from database:', userProfile);
           if (profileError) {
@@ -163,6 +166,7 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         email,
         password,
       });
+      console.log('[Auth] signInWithPassword endpoint:', (supabase as any).auth?.url || 'n/a');
       
       if (error) {
         console.error('❌ Supabase auth error:', error);

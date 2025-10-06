@@ -506,6 +506,37 @@ a {
   }
 }
 
+/* ===================================
+   DASHBOARD LAYOUT FIXES
+   =================================== */
+
+/* Ensure proper box-sizing across all browsers */
+*, *::before, *::after { box-sizing: border-box; }
+
+/* Dashboard container - no overflow issues */
+.dashboard-container { position: relative; min-height: 100vh; overflow-x: hidden; }
+
+/* Sidebar should not cause horizontal scroll */
+aside { position: fixed; top: 0; left: 0; height: 100vh; overflow-y: auto; overflow-x: hidden; }
+
+/* Main content area proper spacing */
+main { max-width: 100%; overflow-x: hidden; }
+
+/* Cards - modern and clean */
+.card { background: white; border: 1px solid #e5e7eb; border-radius: 0.75rem; box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05); transition: box-shadow 0.2s; }
+.card:hover { box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+
+/* Safari-specific fixes */
+@supports (-webkit-appearance: none) {
+  .backdrop-blur-sm { -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+}
+
+/* Firefox-specific fixes */
+@-moz-document url-prefix() {
+  aside { scrollbar-width: thin; scrollbar-color: rgba(156,163,175,0.3) transparent; }
+}
+
+
 @layer utilities {
   /* Buttons */
   .btn-premium { display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:10px 16px; border-radius: var(--rad-md); font-weight: var(--fw-medium); transition: transform var(--dur-2) var(--ease-out), box-shadow var(--dur-2) var(--ease-out), filter var(--dur-2) var(--ease-out); }

@@ -58,7 +58,11 @@ export function OperatorSidebar() {
 	const toggleCollapsed = useCallback(() => {
 		const newState = !isCollapsed;
 		setIsCollapsed(newState);
-		try { localStorage.setItem("operator-sidebar-collapsed", JSON.stringify(newState)); } catch {}
+		try {
+			localStorage.setItem("operator-sidebar-collapsed", JSON.stringify(newState));
+			// Notify other components (e.g., layout) within this tab
+			window.dispatchEvent(new CustomEvent('operator-sidebar-toggled', { detail: { collapsed: newState } }));
+		} catch {}
 	}, [isCollapsed]);
 
 	const toggleSubmenu = (id: string) => {

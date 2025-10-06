@@ -81,7 +81,8 @@ const FloatingParticle: React.FC<{ delay: number; duration: number; index: numbe
   return (
     <motion.div
       className="absolute w-2 h-2 bg-white/20 rounded-full"
-      initial={{ opacity: 0, scale: 0 }}
+      // Avoid SSR/CSR mismatches by only animating on client
+      initial={false}
       animate={{
         opacity: [0, 1, 0],
         scale: [0, 1, 0],
@@ -153,6 +154,7 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({
 }) => {
   const [currentTestimonial, setCurrentTestimonial] = useState(0);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [showParticles, setShowParticles] = useState(false);
   const [isLargeScreen, setIsLargeScreen] = useState<boolean | null>(null);
 
   // Subtle parallax for left-side features
@@ -161,6 +163,8 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({
 
   useEffect(() => {
     setIsLoaded(true);
+    // Render floating particles only on client after mount to avoid hydration issues
+    setShowParticles(true);
   }, []);
 
   // Render the form (children) only once by detecting the current breakpoint on the client
@@ -197,13 +201,13 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({
           {/* Animated Background */}
           <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 via-purple-600 to-indigo-800">
             <div className="absolute inset-0 bg-black/20" />
-            {/* Floating Particles */}
-            {Array.from({ length: 20 }).map((_, i) => (
+            {/* Floating Particles - client-only to prevent hydration mismatch */}
+            {showParticles && Array.from({ length: 20 }).map((_, i) => (
               <FloatingParticle
                 key={i}
                 index={i}
                 delay={i * 0.5}
-                duration={8 + (i % 4) * 0.5} // Use deterministic duration based on index
+                duration={8 + (i % 4) * 0.5}
               />
             ))}
           </div>

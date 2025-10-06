@@ -14,11 +14,11 @@ const supabaseAnonKey = (rawSupabaseAnonKey || '').trim();
 
 // Warn in development if using placeholder values
 if (process.env.NODE_ENV === 'development') {
+  const maskedKey = supabaseAnonKey ? `${supabaseAnonKey.slice(0, 6)}…len:${supabaseAnonKey.length}` : 'undefined';
+  console.debug('[Supabase][env] URL:', supabaseUrl || 'undefined');
+  console.debug('[Supabase][env] ANON key (masked):', maskedKey);
   if (!supabaseUrl || !supabaseAnonKey) {
     console.warn('⚠️  Missing Supabase credentials. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in your .env.local file');
-  } else {
-    // eslint-disable-next-line no-console
-    console.debug('[Supabase] Using URL:', supabaseUrl);
   }
 }
 
@@ -34,6 +34,9 @@ export const createSupabaseBrowserClient = (): SupabaseClientType => {
     // eslint-disable-next-line no-console
     console.warn('⚠️  Supabase credentials missing at init time. Using no-op fallback client.');
     return createBrowserClient<Database>('http://localhost.invalid', 'anon');
+  }
+  if (process.env.NODE_ENV === 'development') {
+    console.debug('[Supabase][init] Creating client for URL:', supabaseUrl);
   }
   return createBrowserClient<Database>(supabaseUrl, supabaseAnonKey);
 };
