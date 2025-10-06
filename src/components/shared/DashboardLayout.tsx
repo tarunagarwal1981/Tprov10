@@ -5,7 +5,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, Suspense, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth, useRBAC, useIsAuthenticated, useAuthLoading } from '@/context/SupabaseAuthContext';
@@ -281,6 +281,10 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   const { hasRole, hasPermission, userRole } = useRBAC();
   const { isAuthenticated } = useIsAuthenticated();
   const { isInitialized, isLoading } = useAuthLoading();
+
+  // Use JSON.stringify to create stable references for arrays
+  const requiredRoleKey = JSON.stringify(requiredRole);
+  const requiredPermissionsKey = JSON.stringify(requiredPermissions);
   
   // ============================================================================
   // EFFECTS
@@ -312,50 +316,43 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   
   // Authentication and authorization check
   useEffect(() => {
-    const checkAccess = async () => {
-      if (!isInitialized) {
-        setLoadingState({ isLoading: true, message: 'Initializing...' });
-        return;
-      }
-      
-      if (!isAuthenticated) {
-        setLoadingState({ isLoading: false });
-        router.push('/login');
-        return;
-      }
-      
-      // Check role-based access
-      if (requiredRole.length > 0) {
-        const hasRequiredRole = requiredRole.some(role => hasRole(role));
-        if (!hasRequiredRole) {
-          setLoadingState({ isLoading: false });
-          return;
-        }
-      }
-      
-      // Check permission-based access
-      if (requiredPermissions.length > 0) {
-        const hasRequiredPermissions = requiredPermissions.every(permission => 
-          hasPermission(permission as any)
-        );
-        if (!hasRequiredPermissions) {
-          setLoadingState({ isLoading: false });
-          return;
-        }
-      }
-      
-      setLoadingState({ isLoading: false });
-    };
+    if (!isInitialized) {
+      setLoadingState({ isLoading: true, message: 'Initializing...' });
+      return;
+    }
     
-    checkAccess();
+    if (!isAuthenticated) {
+      setLoadingState({ isLoading: false });
+      router.push('/login');
+      return;
+    }
+    
+    // Check role-based access
+    if (requiredRole.length > 0) {
+      const hasRequiredRole = requiredRole.some(role => hasRole(role));
+      if (!hasRequiredRole) {
+        setLoadingState({ isLoading: false });
+        return;
+      }
+    }
+    
+    // Check permission-based access
+    if (requiredPermissions.length > 0) {
+      const hasRequiredPermissions = requiredPermissions.every(permission => 
+        hasPermission(permission as any)
+      );
+      if (!hasRequiredPermissions) {
+        setLoadingState({ isLoading: false });
+        return;
+      }
+    }
+    
+    setLoadingState({ isLoading: false });
   }, [
     isInitialized,
     isAuthenticated,
-    requiredRole,
-    requiredPermissions,
-    hasRole,
-    hasPermission,
-    router,
+    requiredRoleKey,
+    requiredPermissionsKey,
   ]);
   
   // Route change loading
@@ -429,7 +426,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
     }
     
     return true;
-  }, [isAuthenticated, requiredRole, requiredPermissions, hasRole, hasPermission]);
+  }, [isAuthenticated, requiredRole, requiredPermissions]);
   
   // ============================================================================
   // RENDER CONDITIONS
@@ -594,16 +591,21 @@ export const CenteredLayout: React.FC<Omit<DashboardLayoutProps, 'variant'>> = (
 // PROTECTED LAYOUT WRAPPERS
 // ============================================================================
 
+// Memoized role arrays to prevent re-creation on every render
+const ADMIN_ROLES: UserRole[] = ['ADMIN', 'SUPER_ADMIN'];
+const OPERATOR_ROLES: UserRole[] = ['TOUR_OPERATOR', 'ADMIN', 'SUPER_ADMIN'];
+const AGENT_ROLES: UserRole[] = ['TRAVEL_AGENT', 'ADMIN', 'SUPER_ADMIN'];
+
 export const AdminLayout: React.FC<Omit<DashboardLayoutProps, 'requiredRole'>> = (props) => (
-  <DashboardLayout {...props} requiredRole={['ADMIN', 'SUPER_ADMIN']} />
+  <DashboardLayout {...props} requiredRole={ADMIN_ROLES} />
 );
 
 export const OperatorLayout: React.FC<Omit<DashboardLayoutProps, 'requiredRole'>> = (props) => (
-  <DashboardLayout {...props} requiredRole={['TOUR_OPERATOR', 'ADMIN', 'SUPER_ADMIN']} />
+  <DashboardLayout {...props} requiredRole={OPERATOR_ROLES} />
 );
 
 export const AgentLayout: React.FC<Omit<DashboardLayoutProps, 'requiredRole'>> = (props) => (
-  <DashboardLayout {...props} requiredRole={['TRAVEL_AGENT', 'ADMIN', 'SUPER_ADMIN']} />
+  <DashboardLayout {...props} requiredRole={AGENT_ROLES} />
 );
 
 // ============================================================================

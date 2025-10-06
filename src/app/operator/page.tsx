@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { 
   FaBox as Package, 
@@ -173,6 +173,9 @@ export default function OperatorDashboard() {
     conversionRate: 68
   });
 
+  // Memoize the required role to prevent infinite re-renders
+  const requiredRole = useMemo(() => ['TOUR_OPERATOR'] as const, []);
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -240,7 +243,7 @@ export default function OperatorDashboard() {
       <DashboardLayout
         title="Loading..."
         subtitle="Please wait while we load your dashboard"
-        requiredRole={['TOUR_OPERATOR']}
+        requiredRole={requiredRole}
       >
         <div className="animate-pulse space-y-8">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -261,7 +264,7 @@ export default function OperatorDashboard() {
     <DashboardLayout
       title={`Welcome back, ${user?.name || 'Operator'}! 👋`}
       subtitle="Here's what's happening with your business today"
-      requiredRole={['TOUR_OPERATOR']}
+      requiredRole={requiredRole}
     >
       <div className="space-y-8 ios-viewport-fix chrome-layout-fix">
 

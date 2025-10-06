@@ -5,7 +5,7 @@
 
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import type { User, UserRole, UserProfile } from '@/lib/types';
 
@@ -379,16 +379,16 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
 export const useRBAC = () => {
   const { userRole } = useAuth();
   
-  const hasRole = (role: UserRole): boolean => {
+  const hasRole = useCallback((role: UserRole): boolean => {
     return userRole === role;
-  };
+  }, [userRole]);
   
-  const hasPermission = (permission: Permission): boolean => {
+  const hasPermission = useCallback((permission: Permission): boolean => {
     if (!userRole) return false;
     return ROLE_PERMISSIONS[userRole]?.includes(permission) || false;
-  };
+  }, [userRole]);
   
-  const canAccessRoute = (route: string, accessLevel: 'public' | 'authenticated' | 'admin' | 'operator' | 'agent'): boolean => {
+  const canAccessRoute = useCallback((route: string, accessLevel: 'public' | 'authenticated' | 'admin' | 'operator' | 'agent'): boolean => {
     if (accessLevel === 'public') return true;
     if (accessLevel === 'authenticated') return !!userRole;
     if (accessLevel === 'admin') return hasRole('ADMIN') || hasRole('SUPER_ADMIN');
@@ -396,9 +396,13 @@ export const useRBAC = () => {
     if (accessLevel === 'agent') return hasRole('TRAVEL_AGENT') || hasRole('ADMIN') || hasRole('SUPER_ADMIN');
     
     return false;
-  };
+  }, [userRole, hasRole]);
+
+  const permissions = useMemo(() => userRole ? ROLE_PERMISSIONS[userRole] || [] : [], [userRole]);
   
-  const permissions = userRole ? ROLE_PERMISSIONS[userRole] || [] : [];
+  const isAdmin = useMemo(() => hasRole('ADMIN') || hasRole('SUPER_ADMIN'), [hasRole]);
+  const isOperator = useMemo(() => hasRole('TOUR_OPERATOR'), [hasRole]);
+  const isAgent = useMemo(() => hasRole('TRAVEL_AGENT'), [hasRole]);
   
   return {
     hasRole,
@@ -406,9 +410,9 @@ export const useRBAC = () => {
     canAccessRoute,
     userRole,
     permissions,
-    isAdmin: hasRole('ADMIN') || hasRole('SUPER_ADMIN'),
-    isOperator: hasRole('TOUR_OPERATOR'),
-    isAgent: hasRole('TRAVEL_AGENT'),
+    isAdmin,
+    isOperator,
+    isAgent,
   };
 };
 
