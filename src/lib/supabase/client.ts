@@ -5,13 +5,21 @@ import type { Database } from './types';
 export type SupabaseClientType = ReturnType<typeof createBrowserClient<Database>>;
 
 // Environment variables validation
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key';
+const rawSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const rawSupabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+// Trim to avoid issues with trailing spaces/newlines in .env files
+const supabaseUrl = (rawSupabaseUrl || '').trim();
+const supabaseAnonKey = (rawSupabaseAnonKey || '').trim();
 
 // Warn in development if using placeholder values
-if (process.env.NODE_ENV === 'development' && 
-    (supabaseUrl === 'https://placeholder.supabase.co' || supabaseAnonKey === 'placeholder-anon-key')) {
-  console.warn('⚠️  Using placeholder Supabase credentials. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in your .env.local file');
+if (process.env.NODE_ENV === 'development') {
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.warn('⚠️  Missing Supabase credentials. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in your .env.local file');
+  } else {
+    // eslint-disable-next-line no-console
+    console.debug('[Supabase] Using URL:', supabaseUrl);
+  }
 }
 
 /**
@@ -19,6 +27,9 @@ if (process.env.NODE_ENV === 'development' &&
  * Use this in client components, hooks, and client-side functions
  */
 export const createSupabaseBrowserClient = (): SupabaseClientType => {
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error('Supabase credentials are not configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY');
+  }
   return createBrowserClient<Database>(supabaseUrl, supabaseAnonKey);
 };
 

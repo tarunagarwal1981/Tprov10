@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useId } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/SupabaseAuthContext';
@@ -29,8 +29,8 @@ const demoAccounts: DemoAccount[] = [
   {
     id: 'operator',
     role: 'Tour Operator',
-    email: 'operator@test.com',
-    password: 'password123',
+    email: 'Operator@gmail.com',
+    password: 'Operator123',
     icon: '🚌',
     gradient: 'from-blue-500 to-blue-700',
     description: 'Manage tours & bookings'
@@ -54,6 +54,11 @@ const LoginPage: React.FC = () => {
   const [rememberMe, setRememberMe] = useState(false);
   const router = useRouter();
   const { login, loginWithGoogle, loginWithGithub, loading, error, isInitialized, getRedirectPath } = useAuth();
+  
+  // SSR-safe stable IDs for inputs
+  const autoId = useId();
+  const emailId = `login-email-${autoId}`;
+  const passwordId = `login-password-${autoId}`;
 
   // Debug logging (throttled to first mount only to avoid noisy logs / loops)
   useEffect(() => {
@@ -144,7 +149,7 @@ const LoginPage: React.FC = () => {
         <form onSubmit={onSubmit} className="space-y-4">
           {/* Email Input */}
           <div className="space-y-2">
-            <label htmlFor="login-email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label htmlFor={emailId} className="block text-sm font-medium text-gray-700 dark:text-gray-300">
               Email Address
             </label>
             <motion.div
@@ -154,7 +159,7 @@ const LoginPage: React.FC = () => {
             >
               <input
                 type="email"
-                id="login-email"
+                id={emailId}
                 name="email"
                 autoComplete="email"
                 autoFocus
@@ -184,7 +189,7 @@ const LoginPage: React.FC = () => {
 
           {/* Password Input */}
           <div className="space-y-2">
-            <label htmlFor="login-password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label htmlFor={passwordId} className="block text-sm font-medium text-gray-700 dark:text-gray-300">
               Password
             </label>
             <motion.div
@@ -194,7 +199,7 @@ const LoginPage: React.FC = () => {
             >
               <input
                 type={showPassword ? 'text' : 'password'}
-                id="login-password"
+                id={passwordId}
                 name="password"
                 autoComplete="current-password"
                 disabled={loading === 'authenticating'}
