@@ -363,7 +363,7 @@ export default function CreatePackagePage() {
                     Coming Soon
                   </h4>
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                    We're working on additional package types to give you more flexibility in creating comprehensive travel packages.
+                    We&apos;re working on additional package types to give you more flexibility in creating comprehensive travel packages.
                   </p>
                   <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
                     <li>• Multi-City Tours</li>

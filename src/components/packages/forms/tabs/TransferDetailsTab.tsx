@@ -17,6 +17,7 @@ import {
   FaCar,
   FaPlane,
   FaHotel,
+  FaEdit,
 } from "react-icons/fa";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";

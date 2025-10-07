@@ -1,12 +1,12 @@
 "use client";
 
 import React from "react";
-import ComingSoonPage from "../coming-soon/page";
+import ComingSoon from "../coming-soon/ComingSoon";
 import { FaBed } from "react-icons/fa";
 
 export default function HotelOnlyPackagePage() {
   return (
-    <ComingSoonPage
+    <ComingSoon
       packageType="Hotel Only"
       description="Create standalone hotel bookings with various meal plans. Perfect for accommodation-focused travel packages."
       features={[

@@ -302,7 +302,7 @@ const DestinationsTab: React.FC = () => {
           </Card>
         ))}
         {fields.length === 0 && (
-          <p className="text-sm text-gray-500">No cities added yet. Click "Add City" to begin.</p>
+          <p className="text-sm text-gray-500">No cities added yet. Click &quot;Add City&quot; to begin.</p>
         )}
       </div>
     </div>
@@ -311,7 +311,7 @@ const DestinationsTab: React.FC = () => {
 
 const HighlightsEditor: React.FC<{ fieldIndex: number }> = ({ fieldIndex }) => {
   const { control } = useFormContext<MultiCityPackageFormData>();
-  const { fields, append, remove } = useFieldArray({ control, name: `cities.${fieldIndex}.highlights` as const });
+  const { fields, append, remove } = useFieldArray({ control: control as any, name: `cities.${fieldIndex}.highlights` as any });
   const [value, setValue] = useState("");
   return (
     <div className="space-y-2">
@@ -335,7 +335,7 @@ const ACTIVITIES_LIBRARY = ["City Tour", "Museum Visit", "Cooking Class", "Wine 
 
 const ActivitiesIncludedEditor: React.FC<{ fieldIndex: number }> = ({ fieldIndex }) => {
   const { control, watch, setValue } = useFormContext<MultiCityPackageFormData>();
-  const { fields } = useFieldArray({ control, name: `cities.${fieldIndex}.activitiesIncluded` as const });
+  const { fields } = useFieldArray({ control: control as any, name: `cities.${fieldIndex}.activitiesIncluded` as any });
   const selected = (watch(`cities.${fieldIndex}.activitiesIncluded`) as string[]) || [];
   const toggle = (name: string) => {
     const set = new Set(selected);
@@ -361,7 +361,13 @@ const TransportTab: React.FC = () => {
 
   const cityPairs = useMemo(() => {
     const pairs: Array<{ from: CityStop; to: CityStop }> = [];
-    for (let i = 0; i < cities.length - 1; i++) pairs.push({ from: cities[i], to: cities[i + 1] });
+    if (Array.isArray(cities) && cities.length >= 2) {
+      for (let i = 0; i < cities.length - 1; i++) {
+        const from = cities[i]!;
+        const to = cities[i + 1]!;
+        pairs.push({ from, to });
+      }
+    }
     return pairs;
   }, [cities]);
 
@@ -465,10 +471,15 @@ const ItineraryTab: React.FC = () => {
 
   const moveActivity = (fromDay: number, toDay: number, period: keyof DayPlan) => {
     const d = [...days];
-    const fromList = d[fromDay][period];
-    if (fromList.length === 0) return;
-    const item = fromList.pop()!;
-    d[toDay][period].push(item);
+    if (fromDay < 0 || toDay < 0 || fromDay >= d.length || toDay >= d.length) return;
+    const fromDayObj = d[fromDay];
+    const toDayObj = d[toDay];
+    if (!fromDayObj || !toDayObj) return;
+    const fromList = fromDayObj[period] as MultiCityActivity[] | undefined;
+    if (!fromList || fromList.length === 0) return;
+    const item = fromList.pop();
+    if (!item) return;
+    (toDayObj[period] as MultiCityActivity[]).push(item);
     setValue("days", d);
   };
 
@@ -513,7 +524,9 @@ const ItineraryTab: React.FC = () => {
                       <label key={k} className="flex items-center gap-2">
                         <input type="checkbox" checked={day.meals[k]} onChange={(e) => {
                           const d = [...days];
-                          d[i].meals[k] = e.target.checked;
+                          const ref = d[i];
+                          if (!ref || !ref.meals) return;
+                          ref.meals[k] = !!e.target.checked;
                           setValue("days", d);
                         }} /> {k}
                       </label>
@@ -522,11 +535,11 @@ const ItineraryTab: React.FC = () => {
                 </div>
                 <div>
                   <div className="font-medium">Accommodation Type</div>
-                  <Input placeholder="e.g., 4-star hotel" onChange={(e) => { const d = [...days]; d[i].accommodationType = e.target.value; setValue("days", d); }} />
+                  <Input placeholder="e.g., 4-star hotel" onChange={(e) => { const d = [...days]; const ref = d[i]; if (!ref) return; ref.accommodationType = e.target.value; setValue("days", d); }} />
                 </div>
                 <div>
                   <div className="font-medium">Special Notes</div>
-                  <Input placeholder="Notes" onChange={(e) => { const d = [...days]; d[i].notes = e.target.value; setValue("days", d); }} />
+                  <Input placeholder="Notes" onChange={(e) => { const d = [...days]; const ref = d[i]; if (!ref) return; ref.notes = e.target.value; setValue("days", d); }} />
                 </div>
               </div>
               <div className="md:col-span-3 flex items-center gap-2">
@@ -550,11 +563,29 @@ const ActivityList: React.FC<{ dayIndex: number; period: keyof DayPlan }> = ({ d
   const [desc, setDesc] = useState("");
   const add = () => {
     const d = [...days];
-    d[dayIndex][period].push({ time, description: desc || "Activity" });
+    // Ensure the day exists; if not, initialize a sensible default shell
+    if (!d[dayIndex]) {
+      d[dayIndex] = { cityId: "", morning: [], afternoon: [], evening: [], meals: { breakfast: false, lunch: false, dinner: false } } as any;
+    }
+    const dayRef = d[dayIndex] as any;
+    // Ensure the target period list exists and is an array
+    if (!Array.isArray(dayRef[period])) {
+      dayRef[period] = [];
+    }
+    dayRef[period] = [...(dayRef[period] as MultiCityActivity[]), { time, description: desc || "Activity" }];
     setValue("days", d);
     setDesc("");
   };
-  const remove = (idx: number) => { const d = [...days]; d[dayIndex][period].splice(idx, 1); setValue("days", d); };
+  const remove = (idx: number) => {
+    const d = [...days];
+    const dayRef = d[dayIndex] as any;
+    const arr = dayRef?.[period] as MultiCityActivity[] | undefined;
+    if (!Array.isArray(arr)) return;
+    const next = arr.slice();
+    next.splice(idx, 1);
+    dayRef[period] = next;
+    setValue("days", d);
+  };
   return (
     <div className="space-y-2">
       <div className="flex gap-2">
@@ -587,7 +618,7 @@ const InclusionsExclusionsTab: React.FC = () => {
   return (
     <div className="space-y-6">
       <Card className="package-selector-glass package-shadow-fix">
-        <CardHeader><CardTitle>What's Included</CardTitle></CardHeader>
+        <CardHeader><CardTitle>What&apos;s Included</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
             <Select onValueChange={(v) => setIncCat(v as InclusionCategory)}>
@@ -616,7 +647,7 @@ const InclusionsExclusionsTab: React.FC = () => {
       </Card>
 
       <Card className="package-selector-glass package-shadow-fix">
-        <CardHeader><CardTitle>What's Not Included</CardTitle></CardHeader>
+        <CardHeader><CardTitle>What&apos;s Not Included</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           <div className="flex gap-2">
             <Input value={excText} onChange={(e) => setExcText(e.target.value)} placeholder="Add exclusion" />

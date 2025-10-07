@@ -1,12 +1,12 @@
 "use client";
 
 import React from "react";
-import ComingSoonPage from "../coming-soon/page";
+import ComingSoon from "../coming-soon/ComingSoon";
 import { FaShip } from "react-icons/fa";
 
 export default function CruisePackagePage() {
   return (
-    <ComingSoonPage
+    <ComingSoon
       packageType="Cruise Package"
       description="Create ocean and river cruise packages with multiple ports. Perfect for cruise-based travel experiences."
       features={[

@@ -623,13 +623,13 @@ export const PricingPoliciesTab: React.FC = () => {
                 <FormControl>
                   <Textarea
                     {...field}
-                    placeholder="Policy for when passengers don't show up for their transfer"
+                    placeholder="Policy for when passengers don&apos;t show up for their transfer"
                     rows={4}
                     className="package-text-fix"
                   />
                 </FormControl>
                 <FormDescription>
-                  Explain what happens when passengers don't show up for their scheduled transfer
+                  Explain what happens when passengers don&apos;t show up for their scheduled transfer
                 </FormDescription>
                 <FormMessage />
               </FormItem>

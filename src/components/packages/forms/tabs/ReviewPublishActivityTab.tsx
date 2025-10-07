@@ -166,7 +166,11 @@ export const ReviewPublishActivityTab: React.FC<ReviewPublishActivityTabProps> =
           hasErrors={hasSectionErrors("variants")}
         >
           <div className="space-y-3">
-            <SummaryItem label="Variants" value={`${formData.packageVariants?.length || 0} variants`} isEmpty={(formData.packageVariants?.length || 0) === 0} />
+            <SummaryItem
+              label="Variants"
+              value={`${formData.packageVariants?.variants?.length || 0} variants`}
+              isEmpty={(formData.packageVariants?.variants?.length || 0) === 0}
+            />
           </div>
         </ReviewSection>
 
@@ -177,7 +181,11 @@ export const ReviewPublishActivityTab: React.FC<ReviewPublishActivityTabProps> =
           hasErrors={hasSectionErrors("policies")}
         >
           <div className="space-y-3">
-            <SummaryItem label="Cancellation Policy" value={formData.policies?.cancellation?.type || ""} isEmpty={!formData.policies?.cancellation?.type} />
+            <SummaryItem
+              label="Cancellation Policy"
+              value={formData.policiesRestrictions?.cancellationPolicy?.type || ""}
+              isEmpty={!formData.policiesRestrictions?.cancellationPolicy?.type}
+            />
           </div>
         </ReviewSection>
 

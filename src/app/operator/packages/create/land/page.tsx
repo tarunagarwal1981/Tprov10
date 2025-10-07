@@ -1,12 +1,12 @@
 "use client";
 
 import React from "react";
-import ComingSoonPage from "../coming-soon/page";
+import ComingSoon from "../coming-soon/ComingSoon";
 import { FaMountain } from "react-icons/fa";
 
 export default function LandPackagePage() {
   return (
-    <ComingSoonPage
+    <ComingSoon
       packageType="Land Package"
       description="Create complete land-based tours with detailed itineraries. Perfect for comprehensive travel experiences without flights."
       features={[

@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-	FaZap,
+	FaBolt,
 	FaCar,
 	FaMapMarkerAlt,
 	FaHotel,
@@ -12,7 +12,7 @@ import {
 	FaShip,
 	FaBed,
 	FaPlaneDeparture,
-	FaSparkles,
+	FaMagic,
 	FaCheckCircle,
 	FaArrowRight,
 } from "react-icons/fa";
@@ -54,7 +54,7 @@ const PACKAGE_TYPES: PackageType[] = [
 		title: "Activity Package",
 		description:
 			"Single activities, attractions, and experiences with time slots and variants",
-		icon: FaZap,
+		icon: FaBolt,
 		gradient: "from-orange-400 to-pink-500",
 		features: ["Multiple variants", "Time slots", "Age restrictions"],
 	},
@@ -128,7 +128,7 @@ const PACKAGE_TYPES: PackageType[] = [
 		title: "Custom Package",
 		description:
 			"Fully customizable packages combining multiple components",
-		icon: FaSparkles,
+		icon: FaMagic,
 		gradient: "from-yellow-400 to-orange-500",
 		features: ["Mix & match", "Flexible components", "Tailored pricing"],
 		comingSoon: false,

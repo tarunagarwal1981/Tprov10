@@ -466,7 +466,7 @@ export const DriverServiceTab: React.FC = () => {
                       Real-time Tracking
                     </FormLabel>
                     <FormDescription>
-                      Passengers can track their driver's location in real-time (if available)
+                      Passengers can track their driver&apos;s location in real-time (if available)
                     </FormDescription>
                   </div>
                   <FormControl>

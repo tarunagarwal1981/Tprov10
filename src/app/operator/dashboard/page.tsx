@@ -3,28 +3,31 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import {
-  Package as PackageIcon,
-  Calendar as CalendarIcon,
-  Users as UsersIcon,
-  DollarSign as DollarSignIcon,
-  TrendingUp,
-  TrendingDown,
-  Plus,
-  BarChart3 as BarChart3Icon,
-  MessageSquare as MessageSquareIcon,
-  Download as DownloadIcon,
-  CheckCircle as CheckCircleIcon,
-  Star as StarIcon
-} from 'lucide-react';
+  FaBoxOpen as PackageIcon,
+  FaCalendarAlt as CalendarIcon,
+  FaUsers as UsersIcon,
+  FaDollarSign as DollarSignIcon,
+  FaArrowUp as TrendingUp,
+  FaArrowDown as TrendingDown,
+  FaPlus as Plus,
+  FaChartBar as BarChart3Icon,
+  FaRegCommentDots as MessageSquareIcon,
+  FaDownload as DownloadIcon,
+  FaCheckCircle as CheckCircleIcon,
+  FaStar as StarIcon,
+} from 'react-icons/fa';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import type { UserRole } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 
-const OPERATOR_ROLES = ['TOUR_OPERATOR', 'ADMIN', 'SUPER_ADMIN'];
+const OPERATOR_ROLES: UserRole[] = ['TOUR_OPERATOR', 'ADMIN', 'SUPER_ADMIN'];
 
-function StatCard({ icon: Icon, title, value, change, trend, color }: any) {
-  const colorMap: Record<string, { bg: string; text: string }> = {
+type StatColor = 'blue' | 'green' | 'purple' | 'orange' | 'yellow' | 'red';
+
+function StatCard({ icon: Icon, title, value, change, trend, color }: { icon: any; title: string; value: string; change: string; trend: 'up' | 'down'; color: StatColor }) {
+  const colorMap: Record<StatColor, { bg: string; text: string }> = {
     blue: { bg: 'bg-blue-50', text: 'text-blue-600' },
     green: { bg: 'bg-green-50', text: 'text-green-600' },
     purple: { bg: 'bg-purple-50', text: 'text-purple-600' },
@@ -32,7 +35,7 @@ function StatCard({ icon: Icon, title, value, change, trend, color }: any) {
     yellow: { bg: 'bg-yellow-50', text: 'text-yellow-600' },
     red: { bg: 'bg-red-50', text: 'text-red-600' },
   };
-  const palette = colorMap[color] || colorMap.blue;
+  const palette = colorMap[color] ?? colorMap.blue;
   const trendColor = trend === 'up' ? 'text-green-600' : 'text-red-600';
   return (
     <Card className="border-gray-200 hover:shadow-md transition-shadow">
@@ -53,8 +56,8 @@ function StatCard({ icon: Icon, title, value, change, trend, color }: any) {
   );
 }
 
-function ActivityItem({ icon: Icon, title, time, color }: any) {
-  const colorMap: Record<string, { bg: string; text: string }> = {
+function ActivityItem({ icon: Icon, title, time, color }: { icon: any; title: string; time: string; color: StatColor }) {
+  const colorMap: Record<StatColor, { bg: string; text: string }> = {
     blue: { bg: 'bg-blue-50', text: 'text-blue-600' },
     green: { bg: 'bg-green-50', text: 'text-green-600' },
     purple: { bg: 'bg-purple-50', text: 'text-purple-600' },
@@ -62,7 +65,7 @@ function ActivityItem({ icon: Icon, title, time, color }: any) {
     yellow: { bg: 'bg-yellow-50', text: 'text-yellow-600' },
     red: { bg: 'bg-red-50', text: 'text-red-600' },
   };
-  const palette = colorMap[color] || colorMap.blue;
+  const palette = colorMap[color] ?? colorMap.blue;
   return (
     <div className="flex items-start gap-3 p-2 hover:bg-gray-50 rounded-lg transition-colors">
       <div className={`p-1.5 rounded-lg ${palette.bg} mt-0.5`}>
@@ -77,14 +80,14 @@ function ActivityItem({ icon: Icon, title, time, color }: any) {
 }
 
 function OperatorDashboard() {
-  const stats = [
+  const stats: Array<{ icon: any; title: string; value: string; change: string; trend: 'up' | 'down'; color: StatColor }> = [
     { icon: PackageIcon, title: 'Total Packages', value: '24', change: '+12%', trend: 'up', color: 'blue' },
     { icon: CalendarIcon, title: 'Active Bookings', value: '156', change: '+8%', trend: 'up', color: 'green' },
     { icon: UsersIcon, title: 'Travel Agents', value: '42', change: '+5%', trend: 'up', color: 'purple' },
     { icon: DollarSignIcon, title: 'Monthly Revenue', value: '$24,580', change: '+15%', trend: 'up', color: 'orange' },
   ];
 
-  const activities = [
+  const activities: Array<{ icon: any; title: string; time: string; color: StatColor }> = [
     { icon: CheckCircleIcon, title: 'New booking confirmed', time: '2 minutes ago', color: 'green' },
     { icon: PackageIcon, title: 'Package "Bali Adventure" updated', time: '1 hour ago', color: 'blue' },
     { icon: StarIcon, title: 'New 5-star review received', time: '3 hours ago', color: 'yellow' },
@@ -98,7 +101,7 @@ function OperatorDashboard() {
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
         <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl p-4 text-white shadow-lg">
           <h1 className="text-2xl sm:text-3xl font-bold mb-2">Welcome back, Tour Operator! 👋</h1>
-          <p className="text-blue-100">Here's what's happening with your business today.</p>
+          <p className="text-blue-100">Here&apos;s what&apos;s happening with your business today.</p>
         </div>
       </motion.div>
 
@@ -166,7 +169,7 @@ function OperatorDashboard() {
         {/* Today's Overview */}
         <Card className="border-gray-200">
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg">Today's Overview</CardTitle>
+            <CardTitle className="text-lg">Today&apos;s Overview</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             <div className="flex items-center justify-between p-2 bg-blue-50 rounded-lg">

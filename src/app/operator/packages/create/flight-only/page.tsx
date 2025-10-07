@@ -1,12 +1,12 @@
 "use client";
 
 import React from "react";
-import ComingSoonPage from "../coming-soon/page";
+import ComingSoon from "../coming-soon/ComingSoon";
 import { FaPlaneDeparture } from "react-icons/fa";
 
 export default function FlightOnlyPackagePage() {
   return (
-    <ComingSoonPage
+    <ComingSoon
       packageType="Flight Only"
       description="Create flight bookings with multiple class options. Perfect for air travel-focused packages."
       features={[

@@ -5,6 +5,7 @@ import { useFormContext } from "react-hook-form";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   FaShieldAlt,
+  FaEdit,
   FaUsers,
   FaWheelchair,
   FaPlus,

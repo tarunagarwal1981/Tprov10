@@ -210,7 +210,7 @@ const DestinationsTab: React.FC = () => {
           </Card>
         ))}
         {fields.length === 0 && (
-          <p className="text-sm text-gray-500">No cities added yet. Click "Add City" to begin.</p>
+          <p className="text-sm text-gray-500">No cities added yet. Click &quot;Add City&quot; to begin.</p>
         )}
       </div>
     </div>
@@ -219,7 +219,8 @@ const DestinationsTab: React.FC = () => {
 
 const CityHighlightsEditor: React.FC<{ index: number }> = ({ index }) => {
   const { control } = useFormContext<MultiCityHotelFormData>();
-  const { fields, append, remove } = useFieldArray({ control, name: `cities.${index}.highlights` as const });
+  // Cast name to any to accommodate nested dynamic array path
+  const { fields, append, remove } = useFieldArray({ control: control as any, name: `cities.${index}.highlights` as any });
   const [value, setValue] = useState("");
   return (
     <div className="space-y-2">
@@ -384,7 +385,7 @@ const CityHotelList: React.FC<{ cityIndex: number }> = ({ cityIndex }) => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
               <div>
                 <div className="text-xs text-gray-500 mb-1">Breakfast Type</div>
-                <Select defaultValue={(f as any).breakfastType || "Buffet"} onValueChange={(v) => setValue(`hotels.${cityIndex}.hotels.${i}.breakfastType`, v)}>
+                <Select defaultValue={(f as any).breakfastType || "Buffet"} onValueChange={(v) => setValue(`hotels.${cityIndex}.hotels.${i}.breakfastType`, v as any)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {["Buffet","Continental","À la carte"].map(x => <SelectItem key={x} value={x}>{x}</SelectItem>)}
@@ -406,7 +407,7 @@ const CityHotelList: React.FC<{ cityIndex: number }> = ({ cityIndex }) => {
                     <Button key={opt} type="button" variant={selected ? "default" : "outline"} onClick={() => {
                       const set = new Set<string>(((f as any).dietary || []));
                       if (set.has(opt)) set.delete(opt); else set.add(opt);
-                      setValue(`hotels.${cityIndex}.hotels.${i}.dietary`, Array.from(set));
+                      setValue(`hotels.${cityIndex}.hotels.${i}.dietary`, Array.from(set) as any);
                     }} className="h-8 px-3 text-xs">
                       {opt}
                     </Button>
@@ -424,7 +425,7 @@ const CityHotelList: React.FC<{ cityIndex: number }> = ({ cityIndex }) => {
                     <Button key={a} type="button" variant={selected ? "default" : "outline"} onClick={() => {
                       const set = new Set<string>(((f as any).amenities || []));
                       if (set.has(a)) set.delete(a); else set.add(a);
-                      setValue(`hotels.${cityIndex}.hotels.${i}.amenities`, Array.from(set));
+                      setValue(`hotels.${cityIndex}.hotels.${i}.amenities`, Array.from(set) as any);
                     }} className="h-8 px-3 text-xs">
                       {a}
                     </Button>
@@ -450,7 +451,7 @@ const CityHotelList: React.FC<{ cityIndex: number }> = ({ cityIndex }) => {
         </Card>
       ))}
       {fields.length === 0 && (
-        <p className="text-sm text-gray-500">No hotels added yet. Click "Add Hotel" to begin.</p>
+        <p className="text-sm text-gray-500">No hotels added yet. Click &quot;Add Hotel&quot; to begin.</p>
       )}
     </div>
   );
@@ -486,7 +487,7 @@ const RoomOptions: React.FC<{ cityIndex: number; hotelIndex: number }> = ({ city
                     <Button key={a} type="button" variant={selected ? "default" : "outline"} onClick={() => {
                       const set = new Set<string>(((f as any).amenities || []));
                       if (set.has(a)) set.delete(a); else set.add(a);
-                      setValue(`hotels.${cityIndex}.hotels.${hotelIndex}.rooms.${i}.amenities`, Array.from(set));
+                      setValue(`hotels.${cityIndex}.hotels.${hotelIndex}.rooms.${i}.amenities`, Array.from(set) as any);
                     }} className="h-8 px-3 text-xs">
                       {a}
                     </Button>
@@ -523,7 +524,8 @@ const EnhancedItineraryTab: React.FC = () => {
   const daysExtra = watch("daysExtra");
   const dayKeys = Object.keys(daysExtra).map(n => Number(n)).sort((a,b) => a-b);
   const addDayMeta = () => {
-    const idx = (dayKeys.at(-1) ?? 0) + 1;
+    const last: number = dayKeys.length > 0 ? (dayKeys[dayKeys.length - 1] as number) : 0;
+    const idx = last + 1;
     const next = { ...daysExtra, [idx]: {} };
     setValue("daysExtra", next);
   };
@@ -534,12 +536,12 @@ const EnhancedItineraryTab: React.FC = () => {
         <Card key={i} className="package-selector-glass package-shadow-fix">
           <CardHeader><CardTitle>Day {i}</CardTitle></CardHeader>
           <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
-            <Input placeholder="Accommodation for the night" defaultValue={daysExtra[i]?.accommodationHotelName} onChange={(e) => setValue(`daysExtra.${i}.accommodationHotelName`, e.target.value)} />
-            <Input type="time" placeholder="Check-in" defaultValue={daysExtra[i]?.checkIn} onChange={(e) => setValue(`daysExtra.${i}.checkIn`, e.target.value)} />
-            <Input type="time" placeholder="Check-out" defaultValue={daysExtra[i]?.checkOut} onChange={(e) => setValue(`daysExtra.${i}.checkOut`, e.target.value)} />
-            <Input placeholder="Meal plan for the day" defaultValue={daysExtra[i]?.mealPlanForDay} onChange={(e) => setValue(`daysExtra.${i}.mealPlanForDay`, e.target.value)} />
+            <Input placeholder="Accommodation for the night" defaultValue={daysExtra[i]?.accommodationHotelName} onChange={(e) => setValue(`daysExtra.${i}.accommodationHotelName` as any, e.target.value)} />
+            <Input type="time" placeholder="Check-in" defaultValue={daysExtra[i]?.checkIn} onChange={(e) => setValue(`daysExtra.${i}.checkIn` as any, e.target.value)} />
+            <Input type="time" placeholder="Check-out" defaultValue={daysExtra[i]?.checkOut} onChange={(e) => setValue(`daysExtra.${i}.checkOut` as any, e.target.value)} />
+            <Input placeholder="Meal plan for the day" defaultValue={daysExtra[i]?.mealPlanForDay} onChange={(e) => setValue(`daysExtra.${i}.mealPlanForDay` as any, e.target.value)} />
             <div className="lg:col-span-4">
-              <Textarea placeholder="Hotel facilities usage time / notes" defaultValue={daysExtra[i]?.facilitiesUsage} onChange={(e) => setValue(`daysExtra.${i}.facilitiesUsage`, e.target.value)} />
+              <Textarea placeholder="Hotel facilities usage time / notes" defaultValue={daysExtra[i]?.facilitiesUsage} onChange={(e) => setValue(`daysExtra.${i}.facilitiesUsage` as any, e.target.value)} />
             </div>
           </CardContent>
         </Card>
@@ -583,10 +585,10 @@ const EnhancedPricingTab: React.FC = () => {
         <CardContent className="space-y-2">
           <Button type="button" variant="outline" onClick={() => setValue("pricingExtra.hotelCostsByCity", [...(p.hotelCostsByCity || []), { cityId: generateId(), total: 0 }])}><FaPlus className="mr-2" /> Add City Cost</Button>
           <div className="space-y-2">
-            {(p.hotelCostsByCity || []).map((row, i) => (
+              {(p.hotelCostsByCity || []).map((row, i) => (
               <div key={i} className="grid grid-cols-2 gap-2 bg-gray-50 dark:bg-gray-800 rounded p-2">
-                <Input placeholder="City Id or Name" defaultValue={row.cityId} onChange={(e) => { const n = [...(p.hotelCostsByCity || [])]; n[i].cityId = e.target.value; setValue("pricingExtra.hotelCostsByCity", n); }} />
-                <Input type="number" placeholder="Total" defaultValue={row.total} onChange={(e) => { const n = [...(p.hotelCostsByCity || [])]; n[i].total = Number(e.target.value || 0); setValue("pricingExtra.hotelCostsByCity", n); }} />
+                <Input placeholder="City Id or Name" defaultValue={row.cityId} onChange={(e) => { const n = [...(p.hotelCostsByCity || [])]; (n[i] as any).cityId = e.target.value; setValue("pricingExtra.hotelCostsByCity" as any, n as any); }} />
+                <Input type="number" placeholder="Total" defaultValue={row.total} onChange={(e) => { const n = [...(p.hotelCostsByCity || [])]; (n[i] as any).total = Number(e.target.value || 0); setValue("pricingExtra.hotelCostsByCity" as any, n as any); }} />
               </div>
             ))}
           </div>
