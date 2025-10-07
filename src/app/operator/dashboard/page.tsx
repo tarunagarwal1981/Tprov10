@@ -112,32 +112,32 @@ function OperatorDashboard() {
       </div>
 
       {/* Quick Actions */}
-      <Card className="border-gray-200">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg">Quick Actions</CardTitle>
+      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 shadow-sm">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-slate-700 text-base">Quick Actions</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-0">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <Link href="/operator/packages/create" className="w-full">
-              <Button className="w-full bg-blue-600 hover:bg-blue-700">
+              <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white shadow-sm">
                 <Plus className="w-4 h-4 mr-2" />
                 Create Package
               </Button>
             </Link>
             <Link href="/operator/analytics" className="w-full">
-              <Button variant="outline" className="w-full">
+              <Button variant="outline" className="w-full border-slate-300 hover:bg-slate-50 text-slate-700">
                 <BarChart3Icon className="w-4 h-4 mr-2" />
                 View Analytics
               </Button>
             </Link>
             <Link href="/operator/communication" className="w-full">
-              <Button variant="outline" className="w-full">
+              <Button variant="outline" className="w-full border-slate-300 hover:bg-slate-50 text-slate-700">
                 <MessageSquareIcon className="w-4 h-4 mr-2" />
                 Message Agents
               </Button>
             </Link>
             <Link href="/operator/reports" className="w-full">
-              <Button variant="outline" className="w-full">
+              <Button variant="outline" className="w-full border-slate-300 hover:bg-slate-50 text-slate-700">
                 <DownloadIcon className="w-4 h-4 mr-2" />
                 Export Data
               </Button>

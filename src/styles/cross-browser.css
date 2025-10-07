@@ -213,3 +213,166 @@
 .chrome-overflow-fix::-webkit-scrollbar {
   display: none;
 }
+
+/* ========================================
+   PACKAGE TYPE SELECTOR CROSS-BROWSER FIXES
+   ======================================== */
+
+/* Fix iOS Safari glassmorphism issues */
+.package-selector-glass {
+  background: rgba(255, 255, 255, 0.9);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  -webkit-border-radius: 1rem;
+  -moz-border-radius: 1rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.dark .package-selector-glass {
+  background: rgba(17, 24, 39, 0.9);
+  border: 1px solid rgba(75, 85, 99, 0.2);
+}
+
+/* Fix Chrome gradient rendering */
+.package-gradient-fix {
+  background: -webkit-linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+  background: -moz-linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+  background: -o-linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+  background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+}
+
+/* Fix iOS Safari transform issues */
+.package-transform-fix {
+  -webkit-transform: translateZ(0);
+  -moz-transform: translateZ(0);
+  -ms-transform: translateZ(0);
+  -o-transform: translateZ(0);
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  -moz-backface-visibility: hidden;
+  -ms-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+/* Fix Chrome shadow rendering */
+.package-shadow-fix {
+  -webkit-box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  -moz-box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.package-shadow-hover-fix {
+  -webkit-box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  -moz-box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+/* Fix iOS Safari button issues */
+.package-button-fix {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  border: none;
+  background: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Fix Chrome grid issues */
+.package-grid-fix {
+  display: -ms-grid;
+  display: -webkit-grid;
+  display: grid;
+  -ms-grid-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+/* Fix iOS Safari animation issues */
+.package-animation-fix {
+  -webkit-transform: translateZ(0);
+  -moz-transform: translateZ(0);
+  -ms-transform: translateZ(0);
+  -o-transform: translateZ(0);
+  transform: translateZ(0);
+  -webkit-perspective: 1000px;
+  -moz-perspective: 1000px;
+  -ms-perspective: 1000px;
+  perspective: 1000px;
+  -webkit-backface-visibility: hidden;
+  -moz-backface-visibility: hidden;
+  -ms-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+/* Fix Chrome text rendering */
+.package-text-fix {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  -webkit-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Fix iOS Safari border radius */
+.package-border-radius-fix {
+  -webkit-border-radius: 1rem;
+  -moz-border-radius: 1rem;
+  border-radius: 1rem;
+}
+
+/* Fix Chrome flexbox issues */
+.package-flex-fix {
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-orient: vertical;
+  -webkit-box-direction: normal;
+  -webkit-flex-direction: column;
+  -ms-flex-direction: column;
+  flex-direction: column;
+  -webkit-box-pack: justify;
+  -webkit-justify-content: space-between;
+  -ms-flex-pack: justify;
+  justify-content: space-between;
+}
+
+/* Fix iOS Safari overflow scrolling */
+.package-scroll-fix {
+  -webkit-overflow-scrolling: touch;
+  overflow-scrolling: touch;
+}
+
+/* Fix Chrome ring/outline issues */
+.package-ring-fix {
+  outline: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+.package-ring-fix:focus {
+  outline: none;
+  -webkit-box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.5);
+  -moz-box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.5);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.5);
+}
+
+/* Fix iOS Safari backdrop blur fallback */
+@supports not (backdrop-filter: blur(12px)) {
+  .package-selector-glass {
+    background: rgba(255, 255, 255, 0.95);
+  }
+  
+  .dark .package-selector-glass {
+    background: rgba(17, 24, 39, 0.95);
+  }
+}

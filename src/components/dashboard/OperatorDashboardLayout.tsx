@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import OperatorSidebar from './OperatorSidebar';
 import { Header } from './Header';
@@ -13,6 +13,7 @@ export function OperatorDashboardLayout({ children }: OperatorDashboardLayoutPro
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [leftMarginPx, setLeftMarginPx] = useState(280);
+  const mainContentRef = useRef<HTMLDivElement>(null);
 
   const computeSidebarWidth = () => (isSidebarCollapsed ? 80 : 280);
 
@@ -20,6 +21,19 @@ export function OperatorDashboardLayout({ children }: OperatorDashboardLayoutPro
     const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 1024;
     setLeftMarginPx(isDesktop ? computeSidebarWidth() : 0);
   };
+
+  // Initialize collapsed state and margin on mount from persisted preference
+  React.useEffect(() => {
+    try {
+      const saved = localStorage.getItem("operator-sidebar-collapsed");
+      if (saved) {
+        const collapsed = JSON.parse(saved);
+        setIsSidebarCollapsed(Boolean(collapsed));
+      }
+    } catch {}
+    // Set initial margin based on current sidebar state
+    syncMargin();
+  }, []);
 
   const handleMenuToggle = () => {
     if (typeof window !== 'undefined' && window.innerWidth < 1024) {
@@ -30,7 +44,14 @@ export function OperatorDashboardLayout({ children }: OperatorDashboardLayoutPro
   };
 
   React.useEffect(() => {
+    // Ensure margin is set immediately on mount
     syncMargin();
+    
+    // Also set it after a short delay to handle any async initialization
+    const timeoutId = setTimeout(() => {
+      syncMargin();
+    }, 100);
+    
     const onResize = () => syncMargin();
     window.addEventListener('resize', onResize);
     const onSidebarToggled = (e: Event) => {
@@ -42,6 +63,7 @@ export function OperatorDashboardLayout({ children }: OperatorDashboardLayoutPro
     };
     window.addEventListener('operator-sidebar-toggled', onSidebarToggled as EventListener);
     return () => {
+      clearTimeout(timeoutId);
       window.removeEventListener('resize', onResize);
       window.removeEventListener('operator-sidebar-toggled', onSidebarToggled as EventListener);
     };
@@ -53,13 +75,27 @@ export function OperatorDashboardLayout({ children }: OperatorDashboardLayoutPro
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSidebarCollapsed]);
 
+  // Ensure margin is applied directly to the element
+  useEffect(() => {
+    if (mainContentRef.current) {
+      const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 1024;
+      const margin = isDesktop ? computeSidebarWidth() : 0;
+      mainContentRef.current.style.marginLeft = `${margin}px`;
+    }
+  }, [isSidebarCollapsed, leftMarginPx]);
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Sidebar */}
       <OperatorSidebar />
 
       {/* Main Content Area - With responsive left margin */}
-      <div className="transition-all duration-300" style={{ marginLeft: leftMarginPx }}>
+      <div 
+        ref={mainContentRef}
+        className="transition-all duration-300" 
+        style={{ marginLeft: leftMarginPx }}
+        data-sidebar-collapsed={isSidebarCollapsed}
+      >
         {/* Header */}
         <Header />
 

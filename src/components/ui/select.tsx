@@ -31,12 +31,7 @@ const selectTriggerVariants = cva(
 
 export interface SelectTriggerProps
   extends React.ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger>,
-    VariantProps<typeof selectTriggerVariants> {
-  loading?: boolean
-  leftIcon?: React.ReactNode
-  clearable?: boolean
-  onClear?: () => void
-}
+    VariantProps<typeof selectTriggerVariants> {}
 
 const Select = SelectPrimitive.Root
 
@@ -47,38 +42,14 @@ const SelectValue = SelectPrimitive.Value
 const SelectTrigger = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Trigger>,
   SelectTriggerProps
->(({ className, children, variant, size, loading = false, leftIcon, clearable = false, onClear, ...props }, ref) => {
-  const hasLeftContent = leftIcon || loading
-  
+>(({ className, children, variant, size }, ref) => {
   return (
     <SelectPrimitive.Trigger
       ref={ref}
       className={cn(selectTriggerVariants({ variant, size, className }))}
-      {...props}
     >
-      {hasLeftContent && (
-        <div className="flex items-center mr-2">
-          {loading ? (
-            <FiLoader className="h-4 w-4 animate-spin text-muted-foreground" />
-          ) : (
-            leftIcon
-          )}
-        </div>
-      )}
       {children}
       <div className="flex items-center gap-1">
-        {clearable && props.value && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation()
-              onClear?.()
-            }}
-            className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <FiX className="h-3 w-3" />
-          </button>
-        )}
         <SelectPrimitive.Icon asChild>
           <FiChevronDown className="h-4 w-4 opacity-50" />
         </SelectPrimitive.Icon>
@@ -150,17 +121,11 @@ const SelectContent = React.forwardRef<
   ...props 
 }, ref) => {
   const [searchTerm, setSearchTerm] = React.useState("")
-  const [filteredChildren, setFilteredChildren] = React.useState(children)
 
-  React.useEffect(() => {
-    if (searchable && searchTerm) {
-      // Filter children based on search term
-      // This is a simplified implementation - you might want to enhance this
-      setFilteredChildren(children)
-    } else {
-      setFilteredChildren(children)
-    }
-  }, [searchTerm, children, searchable])
+  const computedChildren = React.useMemo(() => {
+    // TODO: implement real filtering logic when items support searchable text
+    return children
+  }, [children, searchable, searchTerm])
 
   return (
     <SelectPrimitive.Portal>
@@ -208,7 +173,7 @@ const SelectContent = React.forwardRef<
               {emptyState}
             </div>
           ) : (
-            filteredChildren
+            computedChildren
           )}
         </SelectPrimitive.Viewport>
         

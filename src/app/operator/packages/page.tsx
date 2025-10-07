@@ -106,27 +106,27 @@ export default function PackagesPage() {
 	};
 
 	return (
-		<div className="min-h-screen bg-gradient-to-br from-slate-50 to-white p-3 lg:ml-[280px]">
+		<div className="min-h-screen bg-gradient-to-br from-slate-50 to-white p-2 sm:p-3">
 			{/* Header */}
-			<div className="mb-6">
-				<h1 className="text-3xl font-bold text-slate-900 mb-2">Packages</h1>
-				<p className="text-slate-600">Manage your travel packages and offerings</p>
+			<div className="mb-4">
+				<h1 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-1">Packages</h1>
+				<p className="text-sm text-slate-600">Manage your travel packages and offerings</p>
 			</div>
 
 			{/* Stats Cards */}
-			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
 				<motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
 					<Card className="bg-white/80 dark:bg-zinc-900/70 backdrop-blur-sm border-slate-200/60 dark:border-zinc-800/60 shadow-lg hover:shadow-xl transition-all">
-						<CardContent className="p-4">
+						<CardContent className="p-3">
 							<div className="flex items-center justify-between">
 								<div>
-									<p className="text-sm font-medium text-slate-600 mb-2">Total Packages</p>
-									<p className="text-3xl font-bold text-slate-900">
+									<p className="text-xs font-medium text-slate-600 mb-1">Total Packages</p>
+									<p className="text-2xl font-bold text-slate-900">
 										<AnimatedNumber value={stats.total} />
 									</p>
 								</div>
-								<div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg">
-									<PackageIcon className="w-6 h-6 text-white" />
+								<div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-md">
+									<PackageIcon className="w-5 h-5 text-white" />
 								</div>
 							</div>
 						</CardContent>
@@ -135,16 +135,16 @@ export default function PackagesPage() {
 
 				<motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
 					<Card className="bg-white/80 dark:bg-zinc-900/70 backdrop-blur-sm border-slate-200/60 dark:border-zinc-800/60 shadow-lg hover:shadow-xl transition-all">
-						<CardContent className="p-4">
+						<CardContent className="p-3">
 							<div className="flex items-center justify-between">
 								<div>
-									<p className="text-sm font-medium text-slate-600 mb-2">Active Packages</p>
-									<p className="text-3xl font-bold text-slate-900">
+									<p className="text-xs font-medium text-slate-600 mb-1">Active Packages</p>
+									<p className="text-2xl font-bold text-slate-900">
 										<AnimatedNumber value={stats.active} />
 									</p>
 								</div>
-								<div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center shadow-lg">
-									<TrendingUp className="w-6 h-6 text-white" />
+								<div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center shadow-md">
+									<TrendingUp className="w-5 h-5 text-white" />
 								</div>
 							</div>
 						</CardContent>
@@ -153,16 +153,16 @@ export default function PackagesPage() {
 
 				<motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
 					<Card className="bg-white/80 dark:bg-zinc-900/70 backdrop-blur-sm border-slate-200/60 dark:border-zinc-800/60 shadow-lg hover:shadow-xl transition-all">
-						<CardContent className="p-4">
+						<CardContent className="p-3">
 							<div className="flex items-center justify-between">
 								<div>
-									<p className="text-sm font-medium text-slate-600 mb-2">Total Revenue</p>
-									<p className="text-3xl font-bold text-slate-900">
+									<p className="text-xs font-medium text-slate-600 mb-1">Total Revenue</p>
+									<p className="text-2xl font-bold text-slate-900">
 										<AnimatedNumber value={stats.revenue} prefix="£" />
 									</p>
 								</div>
-								<div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-lg">
-									<DollarSign className="w-6 h-6 text-white" />
+								<div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-md">
+									<DollarSign className="w-5 h-5 text-white" />
 								</div>
 							</div>
 						</CardContent>
@@ -171,16 +171,16 @@ export default function PackagesPage() {
 
 				<motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
 					<Card className="bg-white/80 dark:bg-zinc-900/70 backdrop-blur-sm border-slate-200/60 dark:border-zinc-800/60 shadow-lg hover:shadow-xl transition-all">
-						<CardContent className="p-4">
+						<CardContent className="p-3">
 							<div className="flex items-center justify-between">
 								<div>
-									<p className="text-sm font-medium text-slate-600 mb-2">Avg. Rating</p>
-									<p className="text-3xl font-bold text-slate-900">
+									<p className="text-xs font-medium text-slate-600 mb-1">Avg. Rating</p>
+									<p className="text-2xl font-bold text-slate-900">
 										<AnimatedNumber value={stats.avgRating} />
 									</p>
 								</div>
-								<div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center shadow-lg">
-									<Star className="w-6 h-6 text-white" />
+								<div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center shadow-md">
+									<Star className="w-5 h-5 text-white" />
 								</div>
 							</div>
 						</CardContent>
@@ -189,9 +189,9 @@ export default function PackagesPage() {
 			</div>
 
 			{/* Controls Bar */}
-			<Card className="bg-white/80 dark:bg-zinc-900/70 backdrop-blur-sm border-slate-200/60 dark:border-zinc-800/60 shadow-lg mb-4">
-				<CardContent className="p-4">
-					<div className="flex flex-col lg:flex-row gap-3 items-center justify-between">
+			<Card className="bg-white/80 dark:bg-zinc-900/70 backdrop-blur-sm border-slate-200/60 dark:border-zinc-800/60 shadow-lg mb-3">
+				<CardContent className="p-3">
+					<div className="flex flex-col lg:flex-row gap-2 items-center justify-between">
 						{/* Search */}
 						<div className="relative flex-1 w-full max-w-md">
 							<SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
@@ -205,12 +205,12 @@ export default function PackagesPage() {
 						</div>
 
 						{/* Right Controls */}
-						<div className="flex items-center gap-2 w-full lg:w-auto justify-end">
+						<div className="flex items-center gap-1.5 w-full lg:w-auto justify-end">
 							{/* Status Filter */}
 							<select
 								value={statusFilter}
 								onChange={(e) => setStatusFilter(e.target.value)}
-								className="px-4 py-2 border border-slate-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-900 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+								className="px-3 py-1.5 border border-slate-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-900 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
 							>
 								<option value="ALL">All Status</option>
 								<option value="ACTIVE">Active</option>
@@ -262,10 +262,10 @@ export default function PackagesPage() {
 
 			{/* Empty State or Package Grid - Placeholder for integration */}
 			{!loading && filtered.length === 0 ? (
-				<div className="text-center py-8">
-					<PackageIcon className="w-16 h-16 mx-auto text-slate-300 mb-4" />
-					<h3 className="text-xl font-semibold text-slate-900 mb-2">No packages yet</h3>
-					<p className="text-slate-600 mb-4">Create your first package to get started</p>
+				<div className="text-center py-6">
+					<PackageIcon className="w-12 h-12 mx-auto text-slate-300 mb-3" />
+					<h3 className="text-lg font-semibold text-slate-900 mb-1">No packages yet</h3>
+					<p className="text-sm text-slate-600 mb-3">Create your first package to get started</p>
 					<Link href="/operator/packages/create">
 						<Button className="bg-gradient-to-r from-indigo-600 to-purple-600">
 							<Plus className="w-4 h-4 mr-2" />

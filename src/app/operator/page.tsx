@@ -162,32 +162,32 @@ function OperatorDashboard() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
         >
-          <Card className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xl">
-            <CardHeader>
-              <CardTitle className="text-white">Quick Actions</CardTitle>
+          <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 shadow-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-slate-700 text-base">Quick Actions</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-0">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
               <Link href="/operator/packages/create">
-                  <Button className="w-full bg-white/20 backdrop-blur-sm hover:bg-white/30 border-white/30 text-white">
+                  <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white shadow-sm">
                     <Plus className="w-4 h-4 mr-2" />
                     Create Package
                 </Button>
               </Link>
                 <Link href="/operator/analytics">
-                  <Button className="w-full bg-white/20 backdrop-blur-sm hover:bg-white/30 border-white/30 text-white">
+                  <Button variant="outline" className="w-full border-slate-300 hover:bg-slate-50 text-slate-700">
                     <BarChart3 className="w-4 h-4 mr-2" />
                     View Analytics
                   </Button>
                 </Link>
                 <Link href="/operator/communication">
-                  <Button className="w-full bg-white/20 backdrop-blur-sm hover:bg-white/30 border-white/30 text-white">
+                  <Button variant="outline" className="w-full border-slate-300 hover:bg-slate-50 text-slate-700">
                     <MessageSquare className="w-4 h-4 mr-2" />
                     Message Agents
                   </Button>
                 </Link>
                 <Link href="/operator/reports">
-                  <Button className="w-full bg-white/20 backdrop-blur-sm hover:bg-white/30 border-white/30 text-white">
+                  <Button variant="outline" className="w-full border-slate-300 hover:bg-slate-50 text-slate-700">
                     <Download className="w-4 h-4 mr-2" />
                     Export Data
                   </Button>

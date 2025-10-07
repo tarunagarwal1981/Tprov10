@@ -10,7 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { cn } from "@/lib/utils"
 
 const tabsListVariants = cva(
-  "inline-flex items-center justify-center rounded-lg bg-muted p-1 text-muted-foreground",
+  "flex flex-wrap items-center justify-start rounded-lg bg-muted p-1 text-muted-foreground w-full overflow-x-auto gap-1",
   {
     variants: {
       variant: {
