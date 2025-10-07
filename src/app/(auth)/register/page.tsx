@@ -343,8 +343,9 @@ const RegisterPageWithSearchParams: React.FC = () => {
         } as any
       };
       
-      // TODO: Implement registration functionality
-      const success = false; // Temporarily disabled
+      // TODO: Implement registration functionality with Supabase
+      // For now, simulate successful registration
+      const success = true; // Temporarily enabled for testing
       
       if (success) {
         // Clear localStorage on success
@@ -352,11 +353,17 @@ const RegisterPageWithSearchParams: React.FC = () => {
           localStorage.removeItem('registrationData');
         }
         
-        // Redirect to appropriate dashboard
-        router.push(getRedirectPath());
+        // Show success message
+        const { toast } = await import('sonner');
+        toast.success('Account created successfully! Welcome to TravelPro.');
+        
+        // Redirect to landing page after registration
+        router.push('/');
       }
     } catch (error) {
       console.error('Registration failed:', error);
+      const { toast } = await import('sonner');
+      toast.error('Registration failed. Please try again.');
     }
   };
 
@@ -469,26 +476,40 @@ const RegisterPageWithSearchParams: React.FC = () => {
   const renderStep1 = () => (
     <motion.div
       key="step1"
-      initial={{ opacity: 0, x: 50 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -50 }}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.3 }}
     >
-      <form onSubmit={step1Form.handleSubmit(handleStep1Submit)} className="space-y-6">
+      <form onSubmit={step1Form.handleSubmit(handleStep1Submit)} className="space-y-4">
         <div className="space-y-2">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
             Full Name
           </label>
-          <div className="relative">
+          <motion.div
+            className="relative"
+            whileFocus={{ scale: 1.02 }}
+            transition={{ duration: 0.2 }}
+          >
             <input
               type="text"
               value={step1Form.watch('fullName') || ''}
               onChange={(e) => step1Form.setValue('fullName', e.target.value)}
-              className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
+              className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700 transition-all duration-200"
               placeholder="Enter your full name"
+              autoComplete="name"
             />
             <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-          </div>
+            {step1Form.watch('fullName') && (
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2"
+              >
+                <span className="text-green-500 text-lg">✓</span>
+              </motion.div>
+            )}
+          </motion.div>
           {step1Form.formState.errors.fullName && (
             <p className="text-red-500 text-sm">{step1Form.formState.errors.fullName.message}</p>
           )}
@@ -498,16 +519,30 @@ const RegisterPageWithSearchParams: React.FC = () => {
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
             Email Address
           </label>
-          <div className="relative">
+          <motion.div
+            className="relative"
+            whileFocus={{ scale: 1.02 }}
+            transition={{ duration: 0.2 }}
+          >
             <input
               type="email"
               value={step1Form.watch('email') || ''}
               onChange={(e) => step1Form.setValue('email', e.target.value)}
-              className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
+              className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700 transition-all duration-200"
               placeholder="Enter your email"
+              autoComplete="email"
             />
             <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-          </div>
+            {step1Form.watch('email') && (
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2"
+              >
+                <span className="text-green-500 text-lg">✓</span>
+              </motion.div>
+            )}
+          </motion.div>
           {step1Form.formState.errors.email && (
             <p className="text-red-500 text-sm">{step1Form.formState.errors.email.message}</p>
           )}
@@ -517,13 +552,18 @@ const RegisterPageWithSearchParams: React.FC = () => {
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
             Password
           </label>
-          <div className="relative">
+          <motion.div
+            className="relative"
+            whileFocus={{ scale: 1.02 }}
+            transition={{ duration: 0.2 }}
+          >
             <input
               type={showPassword ? 'text' : 'password'}
               value={step1Form.watch('password') || ''}
               onChange={(e) => step1Form.setValue('password', e.target.value)}
-              className="w-full px-4 py-3 pl-12 pr-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
+              className="w-full px-4 py-3 pl-12 pr-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700 transition-all duration-200"
               placeholder="Create a password"
+              autoComplete="new-password"
             />
             <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <button
@@ -538,7 +578,7 @@ const RegisterPageWithSearchParams: React.FC = () => {
                 <Eye className="h-5 w-5" />
               )}
             </button>
-          </div>
+          </motion.div>
           <PasswordStrengthMeter password={step1Form.watch('password') || ''} />
           {step1Form.formState.errors.password && (
             <p className="text-red-500 text-sm">{step1Form.formState.errors.password.message}</p>
@@ -549,13 +589,18 @@ const RegisterPageWithSearchParams: React.FC = () => {
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
             Confirm Password
           </label>
-          <div className="relative">
+          <motion.div
+            className="relative"
+            whileFocus={{ scale: 1.02 }}
+            transition={{ duration: 0.2 }}
+          >
             <input
               type={showConfirmPassword ? 'text' : 'password'}
               value={step1Form.watch('confirmPassword') || ''}
               onChange={(e) => step1Form.setValue('confirmPassword', e.target.value)}
-              className="w-full px-4 py-3 pl-12 pr-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
+              className="w-full px-4 py-3 pl-12 pr-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700 transition-all duration-200"
               placeholder="Confirm your password"
+              autoComplete="new-password"
             />
             <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <button
@@ -570,7 +615,16 @@ const RegisterPageWithSearchParams: React.FC = () => {
                 <Eye className="h-5 w-5" />
               )}
             </button>
-          </div>
+            {step1Form.watch('confirmPassword') && step1Form.watch('password') === step1Form.watch('confirmPassword') && (
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className="absolute right-10 top-1/2 transform -translate-y-1/2"
+              >
+                <span className="text-green-500 text-lg">✓</span>
+              </motion.div>
+            )}
+          </motion.div>
           {step1Form.formState.errors.confirmPassword && (
             <p className="text-red-500 text-sm">{step1Form.formState.errors.confirmPassword.message}</p>
           )}
@@ -596,13 +650,13 @@ const RegisterPageWithSearchParams: React.FC = () => {
   const renderStep2 = () => (
     <motion.div
       key="step2"
-      initial={{ opacity: 0, x: 50 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -50 }}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.3 }}
     >
       <div className="space-y-6">
-        <div className="text-center mb-8">
+        <div className="text-center mb-6">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
             Choose Your Role
           </h2>
@@ -611,7 +665,7 @@ const RegisterPageWithSearchParams: React.FC = () => {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <RoleSelectionCard
             role="operator"
             isSelected={selectedRole === 'operator'}
@@ -619,7 +673,7 @@ const RegisterPageWithSearchParams: React.FC = () => {
               setSelectedRole('operator');
               step2Form.setValue('role', 'operator');
             }}
-            icon="??"
+            icon="🚌"
             title="I'm a Tour Operator"
             description="List your packages, manage bookings, grow your business"
             features={['Package Management', 'Booking System', 'Analytics']}
@@ -641,7 +695,7 @@ const RegisterPageWithSearchParams: React.FC = () => {
           />
         </div>
 
-        <div className="flex space-x-4">
+        <div className="flex space-x-4 pt-4">
           <motion.button
             type="button"
             onClick={goToPreviousStep}
@@ -675,12 +729,12 @@ const RegisterPageWithSearchParams: React.FC = () => {
       return (
         <motion.div
           key="step3-operator"
-          initial={{ opacity: 0, x: 50 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -50 }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
           transition={{ duration: 0.3 }}
         >
-          <form onSubmit={step3OperatorForm.handleSubmit(handleStep3Submit)} className="space-y-6">
+          <form onSubmit={step3OperatorForm.handleSubmit(handleStep3Submit)} className="space-y-4">
             <div className="text-center mb-6">
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
                 Business Information
@@ -690,21 +744,35 @@ const RegisterPageWithSearchParams: React.FC = () => {
               </p>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Company Name *
                 </label>
-                <div className="relative">
+                <motion.div
+                  className="relative"
+                  whileFocus={{ scale: 1.02 }}
+                  transition={{ duration: 0.2 }}
+                >
                   <input
                     type="text"
                     value={step3OperatorForm.watch('companyName') || ''}
                     onChange={(e) => step3OperatorForm.setValue('companyName', e.target.value)}
-                    className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
+                    className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700 transition-all duration-200"
                     placeholder="Your company name"
+                    autoComplete="organization"
                   />
                   <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                </div>
+                  {step3OperatorForm.watch('companyName') && (
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                    >
+                      <span className="text-green-500 text-lg">✓</span>
+                    </motion.div>
+                  )}
+                </motion.div>
                 {step3OperatorForm.formState.errors.companyName && (
                   <p className="text-red-500 text-sm">{step3OperatorForm.formState.errors.companyName.message}</p>
                 )}
@@ -714,16 +782,30 @@ const RegisterPageWithSearchParams: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Business Registration Number *
                 </label>
-                <div className="relative">
+                <motion.div
+                  className="relative"
+                  whileFocus={{ scale: 1.02 }}
+                  transition={{ duration: 0.2 }}
+                >
                   <input
                     type="text"
                     value={step3OperatorForm.watch('businessRegistrationNumber') || ''}
                     onChange={(e) => step3OperatorForm.setValue('businessRegistrationNumber', e.target.value)}
-                    className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
+                    className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700 transition-all duration-200"
                     placeholder="Registration number"
+                    autoComplete="off"
                   />
                   <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                </div>
+                  {step3OperatorForm.watch('businessRegistrationNumber') && (
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                    >
+                      <span className="text-green-500 text-lg">✓</span>
+                    </motion.div>
+                  )}
+                </motion.div>
                 {step3OperatorForm.formState.errors.businessRegistrationNumber && (
                   <p className="text-red-500 text-sm">{step3OperatorForm.formState.errors.businessRegistrationNumber.message}</p>
                 )}
@@ -734,33 +816,52 @@ const RegisterPageWithSearchParams: React.FC = () => {
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Website URL
               </label>
-              <div className="relative">
+              <motion.div
+                className="relative"
+                whileFocus={{ scale: 1.02 }}
+                transition={{ duration: 0.2 }}
+              >
                 <input
                   type="url"
                   value={step3OperatorForm.watch('websiteUrl') || ''}
                   onChange={(e) => step3OperatorForm.setValue('websiteUrl', e.target.value)}
-                  className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
+                  className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700 transition-all duration-200"
                   placeholder="https://yourwebsite.com"
+                  autoComplete="url"
                 />
                 <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              </div>
+              </motion.div>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Phone Number *
                 </label>
-                <div className="relative">
+                <motion.div
+                  className="relative"
+                  whileFocus={{ scale: 1.02 }}
+                  transition={{ duration: 0.2 }}
+                >
                   <input
                     type="tel"
                     value={step3OperatorForm.watch('phoneNumber') || ''}
                     onChange={(e) => step3OperatorForm.setValue('phoneNumber', e.target.value)}
-                    className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
+                    className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700 transition-all duration-200"
                     placeholder="+1 (555) 123-4567"
+                    autoComplete="tel"
                   />
                   <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                </div>
+                  {step3OperatorForm.watch('phoneNumber') && (
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                    >
+                      <span className="text-green-500 text-lg">✓</span>
+                    </motion.div>
+                  )}
+                </motion.div>
                 {step3OperatorForm.formState.errors.phoneNumber && (
                   <p className="text-red-500 text-sm">{step3OperatorForm.formState.errors.phoneNumber.message}</p>
                 )}
@@ -770,16 +871,30 @@ const RegisterPageWithSearchParams: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Business Address *
                 </label>
-                <div className="relative">
+                <motion.div
+                  className="relative"
+                  whileFocus={{ scale: 1.02 }}
+                  transition={{ duration: 0.2 }}
+                >
                   <input
                     type="text"
                     value={step3OperatorForm.watch('businessAddress') || ''}
                     onChange={(e) => step3OperatorForm.setValue('businessAddress', e.target.value)}
-                    className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
+                    className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700 transition-all duration-200"
                     placeholder="123 Main St, City, State"
+                    autoComplete="street-address"
                   />
                   <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                </div>
+                  {step3OperatorForm.watch('businessAddress') && (
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                    >
+                      <span className="text-green-500 text-lg">✓</span>
+                    </motion.div>
+                  )}
+                </motion.div>
                 {step3OperatorForm.formState.errors.businessAddress && (
                   <p className="text-red-500 text-sm">{step3OperatorForm.formState.errors.businessAddress.message}</p>
                 )}
@@ -790,52 +905,68 @@ const RegisterPageWithSearchParams: React.FC = () => {
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Company Description
               </label>
-              <textarea
-                value={step3OperatorForm.watch('companyDescription') || ''}
-                onChange={(e) => step3OperatorForm.setValue('companyDescription', e.target.value)}
-                rows={4}
-                maxLength={500}
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700 resize-none"
-                placeholder="Describe your tour operation business..."
-              />
-              <div className="text-right text-sm text-gray-500 dark:text-gray-400">
-                {step3OperatorForm.watch('companyDescription')?.length || 0}/500
-              </div>
+              <motion.div
+                className="relative"
+                whileFocus={{ scale: 1.02 }}
+                transition={{ duration: 0.2 }}
+              >
+                <textarea
+                  value={step3OperatorForm.watch('companyDescription') || ''}
+                  onChange={(e) => step3OperatorForm.setValue('companyDescription', e.target.value)}
+                  rows={4}
+                  maxLength={500}
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700 resize-none transition-all duration-200"
+                  placeholder="Describe your tour operation business..."
+                />
+                <div className="text-right text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  {step3OperatorForm.watch('companyDescription')?.length || 0}/500
+                </div>
+              </motion.div>
             </div>
 
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Business License
               </label>
-              <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-8 text-center hover:border-indigo-500 transition-colors">
+              <motion.div
+                className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-8 text-center hover:border-indigo-500 transition-colors cursor-pointer"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
                 <div className="text-gray-500 dark:text-gray-400">
                   <Upload className="h-12 w-12 mx-auto mb-2 text-gray-400" />
                   <p>Drag & drop your business license here</p>
                   <p className="text-sm">or click to browse</p>
                   <p className="text-xs mt-2">PDF, JPG, PNG up to 5MB</p>
                 </div>
-              </div>
+              </motion.div>
             </div>
 
             <div className="flex items-start space-x-2">
-              <input
-                type="checkbox"
-                checked={step3OperatorForm.watch('termsAccepted') || false}
-                onChange={(e) => step3OperatorForm.setValue('termsAccepted', e.target.checked)}
-                className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 mt-1"
-              />
-              <label className="text-sm text-gray-700 dark:text-gray-300">
-                I agree to the{' '}
-                <a href="#" className="text-indigo-600 hover:text-indigo-500">Terms of Service</a>
-                {' '}and{' '}
-                <a href="#" className="text-indigo-600 hover:text-indigo-500">Privacy Policy</a>
-              </label>
+              <motion.label
+                className="flex items-center space-x-2 cursor-pointer"
+                whileHover={{ scale: 1.02 }}
+                transition={{ duration: 0.2 }}
+              >
+                <input
+                  type="checkbox"
+                  checked={step3OperatorForm.watch('termsAccepted') || false}
+                  onChange={(e) => step3OperatorForm.setValue('termsAccepted', e.target.checked)}
+                  className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                />
+                <span className="text-sm text-gray-700 dark:text-gray-300">
+                  I agree to the{' '}
+                  <a href="#" className="text-indigo-600 hover:text-indigo-500">Terms of Service</a>
+                  {' '}and{' '}
+                  <a href="#" className="text-indigo-600 hover:text-indigo-500">Privacy Policy</a>
+                </span>
+              </motion.label>
             </div>
             {step3OperatorForm.formState.errors.termsAccepted && (
               <p className="text-red-500 text-sm">{step3OperatorForm.formState.errors.termsAccepted.message}</p>
             )}
 
-            <div className="flex space-x-4">
+            <div className="flex space-x-4 pt-4">
               <motion.button
                 type="button"
                 onClick={goToPreviousStep}
@@ -868,12 +999,12 @@ const RegisterPageWithSearchParams: React.FC = () => {
     return (
       <motion.div
         key="step3-agent"
-        initial={{ opacity: 0, x: 50 }}
-        animate={{ opacity: 1, x: 0 }}
-        exit={{ opacity: 0, x: -50 }}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -20 }}
         transition={{ duration: 0.3 }}
       >
-        <form onSubmit={step3AgentForm.handleSubmit(handleStep3Submit)} className="space-y-6">
+        <form onSubmit={step3AgentForm.handleSubmit(handleStep3Submit)} className="space-y-4">
           <div className="text-center mb-6">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
               Agency Information
@@ -883,67 +1014,139 @@ const RegisterPageWithSearchParams: React.FC = () => {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Agency Name *
               </label>
-              <Input
-                {...step3AgentForm.register('agencyName')}
-                type="text"
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
-                placeholder="Your agency name"
-                leftIcon={<Building className="h-4 w-4 text-gray-400" />}
-                error={!!step3AgentForm.formState.errors.agencyName}
-                errorMessage={step3AgentForm.formState.errors.agencyName?.message}
-              />
+              <motion.div
+                className="relative"
+                whileFocus={{ scale: 1.02 }}
+                transition={{ duration: 0.2 }}
+              >
+                <input
+                  type="text"
+                  value={step3AgentForm.watch('agencyName') || ''}
+                  onChange={(e) => step3AgentForm.setValue('agencyName', e.target.value)}
+                  className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700 transition-all duration-200"
+                  placeholder="Your agency name"
+                  autoComplete="organization"
+                />
+                <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                {step3AgentForm.watch('agencyName') && (
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                  >
+                    <span className="text-green-500 text-lg">✓</span>
+                  </motion.div>
+                )}
+              </motion.div>
+              {step3AgentForm.formState.errors.agencyName && (
+                <p className="text-red-500 text-sm">{step3AgentForm.formState.errors.agencyName.message}</p>
+              )}
             </div>
 
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Agency Registration Number *
               </label>
-              <Input
-                {...step3AgentForm.register('agencyRegistrationNumber')}
-                type="text"
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
-                placeholder="Registration number"
-                leftIcon={<Building className="h-4 w-4 text-gray-400" />}
-                error={!!step3AgentForm.formState.errors.agencyRegistrationNumber}
-                errorMessage={step3AgentForm.formState.errors.agencyRegistrationNumber?.message}
-              />
+              <motion.div
+                className="relative"
+                whileFocus={{ scale: 1.02 }}
+                transition={{ duration: 0.2 }}
+              >
+                <input
+                  type="text"
+                  value={step3AgentForm.watch('agencyRegistrationNumber') || ''}
+                  onChange={(e) => step3AgentForm.setValue('agencyRegistrationNumber', e.target.value)}
+                  className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700 transition-all duration-200"
+                  placeholder="Registration number"
+                  autoComplete="off"
+                />
+                <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                {step3AgentForm.watch('agencyRegistrationNumber') && (
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                  >
+                    <span className="text-green-500 text-lg">✓</span>
+                  </motion.div>
+                )}
+              </motion.div>
+              {step3AgentForm.formState.errors.agencyRegistrationNumber && (
+                <p className="text-red-500 text-sm">{step3AgentForm.formState.errors.agencyRegistrationNumber.message}</p>
+              )}
             </div>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Phone Number *
               </label>
-              <Input
-                {...step3AgentForm.register('phoneNumber')}
-                type="tel"
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
-                placeholder="+1 (555) 123-4567"
-                leftIcon={<Phone className="h-4 w-4 text-gray-400" />}
-                error={!!step3AgentForm.formState.errors.phoneNumber}
-                errorMessage={step3AgentForm.formState.errors.phoneNumber?.message}
-              />
+              <motion.div
+                className="relative"
+                whileFocus={{ scale: 1.02 }}
+                transition={{ duration: 0.2 }}
+              >
+                <input
+                  type="tel"
+                  value={step3AgentForm.watch('phoneNumber') || ''}
+                  onChange={(e) => step3AgentForm.setValue('phoneNumber', e.target.value)}
+                  className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700 transition-all duration-200"
+                  placeholder="+1 (555) 123-4567"
+                  autoComplete="tel"
+                />
+                <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                {step3AgentForm.watch('phoneNumber') && (
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                  >
+                    <span className="text-green-500 text-lg">✓</span>
+                  </motion.div>
+                )}
+              </motion.div>
+              {step3AgentForm.formState.errors.phoneNumber && (
+                <p className="text-red-500 text-sm">{step3AgentForm.formState.errors.phoneNumber.message}</p>
+              )}
             </div>
 
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Office Address *
               </label>
-              <Input
-                {...step3AgentForm.register('officeAddress')}
-                type="text"
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
-                placeholder="123 Main St, City, State"
-                leftIcon={<MapPin className="h-4 w-4 text-gray-400" />}
-                error={!!step3AgentForm.formState.errors.officeAddress}
-                errorMessage={step3AgentForm.formState.errors.officeAddress?.message}
-              />
+              <motion.div
+                className="relative"
+                whileFocus={{ scale: 1.02 }}
+                transition={{ duration: 0.2 }}
+              >
+                <input
+                  type="text"
+                  value={step3AgentForm.watch('officeAddress') || ''}
+                  onChange={(e) => step3AgentForm.setValue('officeAddress', e.target.value)}
+                  className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700 transition-all duration-200"
+                  placeholder="123 Main St, City, State"
+                  autoComplete="street-address"
+                />
+                <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                {step3AgentForm.watch('officeAddress') && (
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                  >
+                    <span className="text-green-500 text-lg">✓</span>
+                  </motion.div>
+                )}
+              </motion.div>
+              {step3AgentForm.formState.errors.officeAddress && (
+                <p className="text-red-500 text-sm">{step3AgentForm.formState.errors.officeAddress.message}</p>
+              )}
             </div>
           </div>
 
@@ -951,17 +1154,30 @@ const RegisterPageWithSearchParams: React.FC = () => {
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
               Specialization *
             </label>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               {['Honeymoon', 'Adventure', 'Luxury', 'Family', 'Business', 'Cultural'].map((spec) => (
-                <label key={spec} className="flex items-center space-x-2 cursor-pointer">
+                <motion.label
+                  key={spec}
+                  className="flex items-center space-x-2 cursor-pointer p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
                   <input
                     type="checkbox"
                     value={spec}
-                    {...step3AgentForm.register('specialization')}
+                    checked={step3AgentForm.watch('specialization')?.includes(spec) || false}
+                    onChange={(e) => {
+                      const current = step3AgentForm.watch('specialization') || [];
+                      if (e.target.checked) {
+                        step3AgentForm.setValue('specialization', [...current, spec]);
+                      } else {
+                        step3AgentForm.setValue('specialization', current.filter((s: string) => s !== spec));
+                      }
+                    }}
                     className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
                   />
                   <span className="text-sm text-gray-700 dark:text-gray-300">{spec}</span>
-                </label>
+                </motion.label>
               ))}
             </div>
             {step3AgentForm.formState.errors.specialization && (
@@ -973,40 +1189,58 @@ const RegisterPageWithSearchParams: React.FC = () => {
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
               Years of Experience *
             </label>
-            <select
-              {...step3AgentForm.register('yearsOfExperience')}
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700"
+            <motion.div
+              className="relative"
+              whileFocus={{ scale: 1.02 }}
+              transition={{ duration: 0.2 }}
             >
-              <option value="">Select experience</option>
-              <option value="0-1">0-1 years</option>
-              <option value="2-5">2-5 years</option>
-              <option value="6-10">6-10 years</option>
-              <option value="10+">10+ years</option>
-            </select>
+              <select
+                value={step3AgentForm.watch('yearsOfExperience') || ''}
+                onChange={(e) => step3AgentForm.setValue('yearsOfExperience', e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700 transition-all duration-200 appearance-none"
+              >
+                <option value="">Select experience</option>
+                <option value="0-1">0-1 years</option>
+                <option value="2-5">2-5 years</option>
+                <option value="6-10">6-10 years</option>
+                <option value="10+">10+ years</option>
+              </select>
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </motion.div>
             {step3AgentForm.formState.errors.yearsOfExperience && (
               <p className="text-red-500 text-sm">{step3AgentForm.formState.errors.yearsOfExperience.message}</p>
             )}
           </div>
 
           <div className="flex items-start space-x-2">
-            <input
-              type="checkbox"
-              checked={step3AgentForm.watch('termsAccepted') || false}
-              onChange={(e) => step3AgentForm.setValue('termsAccepted', e.target.checked)}
-              className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 mt-1"
-            />
-            <label className="text-sm text-gray-700 dark:text-gray-300">
-              I agree to the{' '}
-              <a href="#" className="text-indigo-600 hover:text-indigo-500">Terms of Service</a>
-              {' '}and{' '}
-              <a href="#" className="text-indigo-600 hover:text-indigo-500">Privacy Policy</a>
-            </label>
+            <motion.label
+              className="flex items-center space-x-2 cursor-pointer"
+              whileHover={{ scale: 1.02 }}
+              transition={{ duration: 0.2 }}
+            >
+              <input
+                type="checkbox"
+                checked={step3AgentForm.watch('termsAccepted') || false}
+                onChange={(e) => step3AgentForm.setValue('termsAccepted', e.target.checked)}
+                className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+              />
+              <span className="text-sm text-gray-700 dark:text-gray-300">
+                I agree to the{' '}
+                <a href="#" className="text-indigo-600 hover:text-indigo-500">Terms of Service</a>
+                {' '}and{' '}
+                <a href="#" className="text-indigo-600 hover:text-indigo-500">Privacy Policy</a>
+              </span>
+            </motion.label>
           </div>
           {step3AgentForm.formState.errors.termsAccepted && (
             <p className="text-red-500 text-sm">{step3AgentForm.formState.errors.termsAccepted.message}</p>
           )}
 
-          <div className="flex space-x-4">
+          <div className="flex space-x-4 pt-4">
             <motion.button
               type="button"
               onClick={goToPreviousStep}

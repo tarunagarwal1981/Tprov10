@@ -93,10 +93,10 @@ function OperatorDashboard() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Welcome Header */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl p-6 text-white shadow-lg">
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl p-4 text-white shadow-lg">
           <h1 className="text-2xl sm:text-3xl font-bold mb-2">Welcome back, Tour Operator! 👋</h1>
           <p className="text-blue-100">Here's what's happening with your business today.</p>
         </div>

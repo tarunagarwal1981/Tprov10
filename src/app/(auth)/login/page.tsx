@@ -343,7 +343,8 @@ const LoginPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Demo Account Quick Access */}
+        {/* Demo Account Quick Access - Commented out for production */}
+        {/* 
         <div className="space-y-4">
           <div className="text-center">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
@@ -386,6 +387,7 @@ const LoginPage: React.FC = () => {
             ))}
           </div>
         </div>
+        */}
 
         {/* Bottom Links */}
         <div className="text-center space-y-4">

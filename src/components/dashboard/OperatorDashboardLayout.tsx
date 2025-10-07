@@ -64,7 +64,7 @@ export function OperatorDashboardLayout({ children }: OperatorDashboardLayoutPro
         <Header />
 
         {/* Page Content */}
-        <main className="p-4 sm:p-6 lg:p-8">
+        <main className="p-2 sm:p-3 lg:p-4">
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
             {children}
           </motion.div>
