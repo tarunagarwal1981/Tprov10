@@ -53,7 +53,7 @@ const PACKAGE_TYPES = [
     gradient: "from-purple-500 to-pink-500",
     features: ["Multiple cities", "Flexible itinerary", "Transport included"],
     route: "/operator/packages/create/multi-city",
-    available: false,
+    available: true,
   },
   {
     key: "multi_city_hotel",
@@ -63,7 +63,7 @@ const PACKAGE_TYPES = [
     gradient: "from-indigo-500 to-blue-500",
     features: ["Hotel categories", "Room types", "Meal plans"],
     route: "/operator/packages/create/multi-city-hotel",
-    available: false,
+    available: true,
   },
   {
     key: "fixed_departure_flight",

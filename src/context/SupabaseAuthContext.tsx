@@ -28,7 +28,7 @@ export interface AuthContextState {
   loading: AuthLoadingState;
   isInitialized: boolean;
   error: AuthError | null;
-  login: (email: string, password: string, rememberMe?: boolean) => Promise<boolean>;
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<string | false>;
   loginWithGoogle: () => Promise<boolean>;
   loginWithGithub: () => Promise<boolean>;
   logout: () => Promise<void>;
@@ -155,7 +155,7 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
     initAuth();
   }, [supabase.auth]); // Include supabase.auth dependency
 
-  const login = async (email: string, password: string, rememberMe?: boolean): Promise<boolean> => {
+  const login = async (email: string, password: string, rememberMe?: boolean): Promise<string | false> => {
     try {
       setLoading('authenticating');
       setError(null);
@@ -228,7 +228,23 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
           
           setUser(fullUser);
           setProfile(fullUser.profile);
-          return true;
+          // Determine redirect URL immediately based on role
+          let redirectUrl = '/';
+          switch (fullUser.role) {
+            case 'SUPER_ADMIN':
+            case 'ADMIN':
+              redirectUrl = '/admin/dashboard';
+              break;
+            case 'TOUR_OPERATOR':
+              redirectUrl = '/operator/dashboard';
+              break;
+            case 'TRAVEL_AGENT':
+              redirectUrl = '/agent/dashboard';
+              break;
+            default:
+              redirectUrl = '/';
+          }
+          return redirectUrl;
         } else {
           // Fallback if no profile found in database
           console.warn('⚠️ No user profile found in database, using default');
@@ -256,7 +272,8 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
           };
           setUser(userData);
           setProfile(userData.profile);
-          return true;
+          // Default users go to home
+          return '/';
         }
       }
       

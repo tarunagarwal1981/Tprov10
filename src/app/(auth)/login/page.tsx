@@ -92,11 +92,8 @@ const LoginPage: React.FC = () => {
       return;
     }
     
-    const success = await login(emailValue, passwordValue, rememberMe);
-    
-    if (success) {
-      // Redirect will happen automatically via useEffect
-      const redirectUrl = getRedirectPath();
+    const redirectUrl = await login(emailValue, passwordValue, rememberMe);
+    if (redirectUrl) {
       console.log('🔄 Login success redirect - URL:', redirectUrl);
       router.push(redirectUrl);
     }
@@ -106,10 +103,8 @@ const LoginPage: React.FC = () => {
     setEmailValue(account.email);
     setPasswordValue(account.password);
     
-    const success = await login(account.email, account.password, false);
-    
-    if (success) {
-      const redirectUrl = getRedirectPath();
+    const redirectUrl = await login(account.email, account.password, false);
+    if (redirectUrl) {
       console.log('🔄 Demo login success redirect - URL:', redirectUrl);
       router.push(redirectUrl);
     }
