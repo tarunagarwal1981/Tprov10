@@ -36,9 +36,9 @@ function StatCard({ icon: Icon, title, value, change, trend, color }: any) {
   const trendColor = trend === 'up' ? 'text-green-600' : 'text-red-600';
   return (
     <Card className="border-gray-200 hover:shadow-md transition-shadow">
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className={`p-3 rounded-lg ${palette.bg}`}>
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className={`p-2 rounded-lg ${palette.bg}`}>
             <Icon className={`w-5 h-5 ${palette.text}`} />
           </div>
           <div className={`flex items-center gap-1 text-sm font-medium ${trendColor}`}>
@@ -64,8 +64,8 @@ function ActivityItem({ icon: Icon, title, time, color }: any) {
   };
   const palette = colorMap[color] || colorMap.blue;
   return (
-    <div className="flex items-start gap-3 p-3 hover:bg-gray-50 rounded-lg transition-colors">
-      <div className={`p-2 rounded-lg ${palette.bg} mt-0.5`}>
+    <div className="flex items-start gap-3 p-2 hover:bg-gray-50 rounded-lg transition-colors">
+      <div className={`p-1.5 rounded-lg ${palette.bg} mt-0.5`}>
         <Icon className={`w-4 h-4 ${palette.text}`} />
       </div>
       <div className="flex-1 min-w-0">
@@ -103,7 +103,7 @@ function OperatorDashboard() {
       </motion.div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {stats.map((stat, index) => (
           <motion.div key={stat.title} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.1 }}>
             <StatCard {...stat} />
@@ -147,7 +147,7 @@ function OperatorDashboard() {
       </Card>
 
       {/* Two Column Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Recent Activity */}
         <Card className="border-gray-200">
           <CardHeader className="flex flex-row items-center justify-between pb-3">
@@ -156,7 +156,7 @@ function OperatorDashboard() {
               <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">View All</Button>
             </Link>
           </CardHeader>
-          <CardContent className="space-y-1">
+          <CardContent className="space-y-0">
             {activities.map((activity, index) => (
               <ActivityItem key={index} {...activity} />
             ))}
@@ -168,22 +168,22 @@ function OperatorDashboard() {
           <CardHeader className="pb-3">
             <CardTitle className="text-lg">Today's Overview</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+          <CardContent className="space-y-2">
+            <div className="flex items-center justify-between p-2 bg-blue-50 rounded-lg">
               <div className="flex items-center gap-3">
                 <CalendarIcon className="w-5 h-5 text-blue-600" />
                 <span className="text-sm font-medium text-gray-700">Bookings</span>
               </div>
               <span className="text-lg font-bold text-blue-600">12</span>
             </div>
-            <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+            <div className="flex items-center justify-between p-2 bg-green-50 rounded-lg">
               <div className="flex items-center gap-3">
                 <DollarSignIcon className="w-5 h-5 text-green-600" />
                 <span className="text-sm font-medium text-gray-700">Revenue</span>
               </div>
               <span className="text-lg font-bold text-green-600">$3,240</span>
             </div>
-            <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
+            <div className="flex items-center justify-between p-2 bg-purple-50 rounded-lg">
               <div className="flex items-center gap-3">
                 <UsersIcon className="w-5 h-5 text-purple-600" />
                 <span className="text-sm font-medium text-gray-700">New Agents</span>

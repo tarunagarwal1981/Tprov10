@@ -106,18 +106,18 @@ export default function PackagesPage() {
 	};
 
 	return (
-		<div className="min-h-screen bg-gradient-to-br from-slate-50 to-white p-6 lg:ml-[280px]">
+		<div className="min-h-screen bg-gradient-to-br from-slate-50 to-white p-3 lg:ml-[280px]">
 			{/* Header */}
-			<div className="mb-8">
+			<div className="mb-6">
 				<h1 className="text-3xl font-bold text-slate-900 mb-2">Packages</h1>
 				<p className="text-slate-600">Manage your travel packages and offerings</p>
 			</div>
 
 			{/* Stats Cards */}
-			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
 				<motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
 					<Card className="bg-white/80 dark:bg-zinc-900/70 backdrop-blur-sm border-slate-200/60 dark:border-zinc-800/60 shadow-lg hover:shadow-xl transition-all">
-						<CardContent className="p-6">
+						<CardContent className="p-4">
 							<div className="flex items-center justify-between">
 								<div>
 									<p className="text-sm font-medium text-slate-600 mb-2">Total Packages</p>
@@ -135,7 +135,7 @@ export default function PackagesPage() {
 
 				<motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
 					<Card className="bg-white/80 dark:bg-zinc-900/70 backdrop-blur-sm border-slate-200/60 dark:border-zinc-800/60 shadow-lg hover:shadow-xl transition-all">
-						<CardContent className="p-6">
+						<CardContent className="p-4">
 							<div className="flex items-center justify-between">
 								<div>
 									<p className="text-sm font-medium text-slate-600 mb-2">Active Packages</p>
@@ -153,7 +153,7 @@ export default function PackagesPage() {
 
 				<motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
 					<Card className="bg-white/80 dark:bg-zinc-900/70 backdrop-blur-sm border-slate-200/60 dark:border-zinc-800/60 shadow-lg hover:shadow-xl transition-all">
-						<CardContent className="p-6">
+						<CardContent className="p-4">
 							<div className="flex items-center justify-between">
 								<div>
 									<p className="text-sm font-medium text-slate-600 mb-2">Total Revenue</p>
@@ -171,7 +171,7 @@ export default function PackagesPage() {
 
 				<motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
 					<Card className="bg-white/80 dark:bg-zinc-900/70 backdrop-blur-sm border-slate-200/60 dark:border-zinc-800/60 shadow-lg hover:shadow-xl transition-all">
-						<CardContent className="p-6">
+						<CardContent className="p-4">
 							<div className="flex items-center justify-between">
 								<div>
 									<p className="text-sm font-medium text-slate-600 mb-2">Avg. Rating</p>
@@ -189,9 +189,9 @@ export default function PackagesPage() {
 			</div>
 
 			{/* Controls Bar */}
-			<Card className="bg-white/80 dark:bg-zinc-900/70 backdrop-blur-sm border-slate-200/60 dark:border-zinc-800/60 shadow-lg mb-6">
-				<CardContent className="p-6">
-					<div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
+			<Card className="bg-white/80 dark:bg-zinc-900/70 backdrop-blur-sm border-slate-200/60 dark:border-zinc-800/60 shadow-lg mb-4">
+				<CardContent className="p-4">
+					<div className="flex flex-col lg:flex-row gap-3 items-center justify-between">
 						{/* Search */}
 						<div className="relative flex-1 w-full max-w-md">
 							<SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
@@ -205,7 +205,7 @@ export default function PackagesPage() {
 						</div>
 
 						{/* Right Controls */}
-						<div className="flex items-center gap-3 w-full lg:w-auto justify-end">
+						<div className="flex items-center gap-2 w-full lg:w-auto justify-end">
 							{/* Status Filter */}
 							<select
 								value={statusFilter}
@@ -262,10 +262,10 @@ export default function PackagesPage() {
 
 			{/* Empty State or Package Grid - Placeholder for integration */}
 			{!loading && filtered.length === 0 ? (
-				<div className="text-center py-12">
+				<div className="text-center py-8">
 					<PackageIcon className="w-16 h-16 mx-auto text-slate-300 mb-4" />
 					<h3 className="text-xl font-semibold text-slate-900 mb-2">No packages yet</h3>
-					<p className="text-slate-600 mb-6">Create your first package to get started</p>
+					<p className="text-slate-600 mb-4">Create your first package to get started</p>
 					<Link href="/operator/packages/create">
 						<Button className="bg-gradient-to-r from-indigo-600 to-purple-600">
 							<Plus className="w-4 h-4 mr-2" />

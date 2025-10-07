@@ -30,8 +30,8 @@ const OPERATOR_ROLES: UserRole[] = ['TOUR_OPERATOR', 'ADMIN', 'SUPER_ADMIN'];
 
 // Activity Item Component
 const ActivityItem = ({ icon: Icon, title, time, color }: any) => (
-  <div className="flex items-start gap-3 p-4 hover:bg-slate-50 transition-colors">
-    <div className={`p-2 rounded-lg bg-${color}-100`}>
+  <div className="flex items-start gap-3 p-2 hover:bg-slate-50 transition-colors">
+    <div className={`p-1.5 rounded-lg bg-${color}-100`}>
       <Icon className={`w-4 h-4 text-${color}-600`} />
     </div>
     <div className="flex-1 min-w-0">
@@ -114,20 +114,20 @@ function OperatorDashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      <div className="p-6 space-y-6">
+      <div className="p-3 space-y-4">
         {/* Welcome Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
-          className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-8 text-white shadow-xl"
+          className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-4 text-white shadow-xl"
         >
           <h1 className="text-3xl font-bold mb-2">Welcome back, Tour Operator! 👋</h1>
           <p className="text-blue-100 text-lg">Here&apos;s what&apos;s happening with your business today.</p>
         </motion.div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {stats.map((stat, index) => (
             <motion.div
               key={stat.title}
@@ -136,9 +136,9 @@ function OperatorDashboard() {
               transition={{ delay: index * 0.1 }}
             >
               <Card className="bg-white/80 backdrop-blur-sm border-slate-200 shadow-lg hover:shadow-xl transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className={`p-3 rounded-xl bg-${stat.color}-100`}>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className={`p-2 rounded-xl bg-${stat.color}-100`}>
                       <stat.icon className={`w-6 h-6 text-${stat.color}-600`} />
                     </div>
                     <div className={`flex items-center gap-1 text-sm font-medium ${
@@ -167,7 +167,7 @@ function OperatorDashboard() {
               <CardTitle className="text-white">Quick Actions</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
               <Link href="/operator/packages/create">
                   <Button className="w-full bg-white/20 backdrop-blur-sm hover:bg-white/30 border-white/30 text-white">
                     <Plus className="w-4 h-4 mr-2" />
@@ -198,7 +198,7 @@ function OperatorDashboard() {
         </motion.div>
 
         {/* Recent Activity & Performance */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Recent Activity */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -236,22 +236,22 @@ function OperatorDashboard() {
               <CardHeader>
                 <CardTitle className="text-slate-900">Today&apos;s Overview</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+              <CardContent className="space-y-2">
+                <div className="flex items-center justify-between p-2 bg-blue-50 rounded-lg">
                   <div className="flex items-center gap-3">
                     <Calendar className="w-5 h-5 text-blue-600" />
                     <span className="text-sm font-medium text-slate-700">Bookings</span>
                   </div>
                   <span className="text-lg font-bold text-blue-600">12</span>
                 </div>
-                <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                <div className="flex items-center justify-between p-2 bg-green-50 rounded-lg">
                   <div className="flex items-center gap-3">
                     <DollarSign className="w-5 h-5 text-green-600" />
                     <span className="text-sm font-medium text-slate-700">Revenue</span>
               </div>
                   <span className="text-lg font-bold text-green-600">£3,240</span>
             </div>
-                <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
+                <div className="flex items-center justify-between p-2 bg-purple-50 rounded-lg">
                   <div className="flex items-center gap-3">
                     <Users className="w-5 h-5 text-purple-600" />
                     <span className="text-sm font-medium text-slate-700">New Agents</span>
