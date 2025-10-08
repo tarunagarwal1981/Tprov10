@@ -35,6 +35,13 @@ export async function uploadFile({
   const supabase = createSupabaseBrowserClient();
   
   return withErrorHandling(async () => {
+    // Check if user is authenticated before attempting upload
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    
+    if (sessionError || !session) {
+      throw new Error('Authentication required for file upload. Please log in again.');
+    }
+
     // Generate unique filename if not provided
     const timestamp = Date.now();
     const randomId = Math.random().toString(36).substring(2, 15);
@@ -53,6 +60,10 @@ export async function uploadFile({
       });
 
     if (uploadError) {
+      // Handle specific authentication errors
+      if (uploadError.message?.includes('Invalid Refresh Token') || uploadError.message?.includes('JWT')) {
+        throw new Error('Your session has expired. Please refresh the page and log in again.');
+      }
       throw uploadError;
     }
 

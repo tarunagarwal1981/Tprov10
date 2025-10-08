@@ -637,6 +637,13 @@ export async function uploadActivityPackageImage(
   const supabase = createSupabaseBrowserClient();
   
   return withErrorHandling(async () => {
+    // Check authentication before proceeding
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    
+    if (sessionError || !session) {
+      throw new Error('Authentication required for image upload. Please log in again.');
+    }
+
     // Generate unique filename
     const fileExt = file.name.split('.').pop();
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
@@ -651,6 +658,10 @@ export async function uploadActivityPackageImage(
       });
 
     if (uploadError) {
+      // Handle specific authentication errors
+      if (uploadError.message?.includes('Invalid Refresh Token') || uploadError.message?.includes('JWT')) {
+        throw new Error('Your session has expired. Please refresh the page and log in again.');
+      }
       throw uploadError;
     }
 

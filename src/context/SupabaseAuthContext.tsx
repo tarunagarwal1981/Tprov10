@@ -55,14 +55,31 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const supabase = createSupabaseBrowserClient();
 
-  // Simple initialization
+  // Simple initialization with proper error handling
   useEffect(() => {
     const initAuth = async () => {
       try {
         setLoading('initializing');
         
         console.log('🔄 Initializing authentication...');
-        const { data: { session } } = await supabase.auth.getSession();
+        
+        // First, try to refresh the session if there's a stored refresh token
+        const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
+        
+        if (refreshError) {
+          console.log('[Auth] Refresh failed:', refreshError.message);
+          // Clear any invalid session data
+          await supabase.auth.signOut();
+        }
+        
+        // Get the current session (either refreshed or existing)
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error('[Auth] Session error:', sessionError);
+          throw sessionError;
+        }
+        
         console.log('[Auth] getSession() ->', session ? 'session found' : 'no session');
         
         if (session?.user) {
@@ -152,15 +169,84 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         console.error('❌ Auth init error:', err);
         setError({
           type: 'init_error',
-          message: 'Failed to initialize authentication',
+          message: 'Failed to initialize authentication. Please log in again.',
           timestamp: new Date()
         });
+        // Clear any invalid session data
+        await supabase.auth.signOut();
+        setUser(null);
+        setProfile(null);
         setIsInitialized(true);
         setLoading('idle');
       }
     };
 
     initAuth();
+
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('[Auth] Auth state changed:', event, session ? 'session exists' : 'no session');
+      
+      if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
+        if (event === 'SIGNED_OUT') {
+          setUser(null);
+          setProfile(null);
+          setError({
+            type: 'session_expired',
+            message: 'Your session has expired. Please log in again.',
+            timestamp: new Date()
+          });
+        } else if (event === 'TOKEN_REFRESHED' && session?.user) {
+          // Token was refreshed successfully, reload user profile
+          try {
+            const { data: userProfile, error: profileError } = await supabase
+              .from('users')
+              .select('*')
+              .eq('id', session.user.id)
+              .single();
+
+            if (userProfile && !profileError) {
+              const profileData = typeof userProfile.profile === 'string' 
+                ? JSON.parse(userProfile.profile) 
+                : userProfile.profile || {};
+              
+              const userData: User = {
+                id: session.user.id,
+                email: session.user.email || '',
+                name: userProfile.name || session.user.email?.split('@')[0] || 'User',
+                role: userProfile.role as UserRole,
+                profile: {
+                  timezone: profileData.timezone || 'UTC',
+                  language: profileData.language || 'en',
+                  currency: profileData.currency || 'USD',
+                  notification_preferences: {
+                    email: profileData.notification_preferences?.email ?? true,
+                    sms: profileData.notification_preferences?.sms ?? false,
+                    push: profileData.notification_preferences?.push ?? true,
+                    marketing: profileData.notification_preferences?.marketing ?? false,
+                  },
+                },
+                preferences: profileData.preferences || {},
+                avatar_url: profileData.avatar_url || session.user.user_metadata?.avatar_url,
+                phone: userProfile.phone || session.user.user_metadata?.phone,
+                created_at: new Date(userProfile.created_at || session.user.created_at),
+                updated_at: new Date(userProfile.updated_at || session.user.updated_at || session.user.created_at),
+              };
+              
+              setUser(userData);
+              setProfile(userData.profile);
+              console.log('[Auth] User profile refreshed after token refresh');
+            }
+          } catch (err) {
+            console.error('[Auth] Error refreshing user profile after token refresh:', err);
+          }
+        }
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [supabase]);
 
   const login = async (email: string, password: string, rememberMe?: boolean): Promise<string | false> => {

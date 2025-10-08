@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { SupabaseAuthProvider } from '@/context/SupabaseAuthContext';
 import { Toaster } from 'sonner';
+import { AuthErrorHandler } from '@/components/shared/AuthErrorHandler';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -35,6 +36,7 @@ export default function RootLayout({
       <body className={inter.className} suppressHydrationWarning={true}>
         <SupabaseAuthProvider>
           {children}
+          <AuthErrorHandler />
           <Toaster position="top-right" />
         </SupabaseAuthProvider>
       </body>
