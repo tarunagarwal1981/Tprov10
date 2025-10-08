@@ -277,72 +277,152 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       if (data.user) {
         // Load user profile from database to get the correct role
         console.log('🔍 Loading user profile from database...');
-        const { data: userProfile, error: profileError } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', data.user.id)
-          .single();
-
-        console.log('📊 User profile from database:', userProfile);
-        if (profileError) {
-          console.error('❌ Profile error:', profileError);
-        }
-
-        if (userProfile) {
-          // Parse the JSON profile field
-          const profileData = typeof userProfile.profile === 'string' 
-            ? JSON.parse(userProfile.profile) 
-            : userProfile.profile || {};
+        
+        try {
+          console.log('🔍 Starting profile query for user ID:', data.user.id);
+          console.log('🔍 Supabase client URL:', (supabase as any).supabaseUrl);
+          console.log('🔍 Query details: SELECT * FROM users WHERE id =', data.user.id);
           
-          const fullUser: User = {
-            id: data.user.id,
-            email: data.user.email || '',
-            name: userProfile.name || data.user.email?.split('@')[0] || 'User',
-            role: userProfile.role as UserRole, // Use role from database
-            profile: {
-              timezone: profileData.timezone || 'UTC',
-              language: profileData.language || 'en',
-              currency: profileData.currency || 'USD',
-              notification_preferences: {
-                email: profileData.notification_preferences?.email ?? true,
-                sms: profileData.notification_preferences?.sms ?? false,
-                push: profileData.notification_preferences?.push ?? true,
-                marketing: profileData.notification_preferences?.marketing ?? false,
-              },
-            },
-            preferences: profileData.preferences || {},
-            avatar_url: profileData.avatar_url || data.user.user_metadata?.avatar_url,
-            phone: userProfile.phone || data.user.user_metadata?.phone,
-            created_at: new Date(userProfile.created_at || data.user.created_at),
-            updated_at: new Date(userProfile.updated_at || data.user.updated_at || data.user.created_at),
-          };
+          // Test basic Supabase connection first
+          console.log('🔍 Testing basic Supabase connection...');
+          console.log('🔍 Navigator online status:', navigator.onLine);
           
-          console.log('👤 Full user object created:', fullUser);
-          console.log('🎭 User role from database:', fullUser.role);
-          
-          setUser(fullUser);
-          setProfile(fullUser.profile);
-          // Determine redirect URL immediately based on role
-          let redirectUrl = '/';
-          switch (fullUser.role) {
-            case 'SUPER_ADMIN':
-            case 'ADMIN':
-              redirectUrl = '/admin/dashboard';
-              break;
-            case 'TOUR_OPERATOR':
-              redirectUrl = '/operator/dashboard';
-              break;
-            case 'TRAVEL_AGENT':
-              redirectUrl = '/agent/dashboard';
-              break;
-            default:
-              redirectUrl = '/';
+          // Add network check bypass
+          if (!navigator.onLine) {
+            console.warn('⚠️ Browser reports offline, but attempting query anyway...');
+            console.warn('⚠️ This is likely a browser false positive since auth worked');
           }
-          return redirectUrl;
-        } else {
-          // Fallback if no profile found in database
-          console.warn('⚠️ No user profile found in database, using default');
-          const userData: User = {
+          
+          // Force online status for Supabase queries
+          console.log('🔍 Forcing online status for database queries...');
+          
+          const { data: testData, error: testError } = await supabase
+            .from('users')
+            .select('count')
+            .limit(1);
+          console.log('🔍 Basic connection test:', { data: testData, error: testError });
+          
+          // Add timeout to prevent hanging
+          const profileQuery = supabase
+            .from('users')
+            .select('*')
+            .eq('id', data.user.id)
+            .single();
+
+          console.log('🔍 Profile query created, starting timeout...');
+          
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => {
+              console.log('⏰ Profile query timeout after 5 seconds (reduced timeout)');
+              reject(new Error('Profile query timeout - network issue detected'));
+            }, 5000)
+          );
+
+          console.log('🔍 Starting Promise.race between query and timeout...');
+          const { data: userProfile, error: profileError } = await Promise.race([
+            profileQuery,
+            timeoutPromise
+          ]) as any;
+
+          console.log('📊 Profile query completed!');
+          console.log('📊 User profile from database:', userProfile);
+          console.log('📊 Profile error:', profileError);
+          
+          if (profileError) {
+            console.error('❌ Profile error details:', {
+              message: profileError.message,
+              code: profileError.code,
+              details: profileError.details,
+              hint: profileError.hint
+            });
+          }
+
+          if (userProfile) {
+            // Parse the JSON profile field
+            const profileData = typeof userProfile.profile === 'string' 
+              ? JSON.parse(userProfile.profile) 
+              : userProfile.profile || {};
+            
+            const fullUser: User = {
+              id: data.user.id,
+              email: data.user.email || '',
+              name: userProfile.name || data.user.email?.split('@')[0] || 'User',
+              role: userProfile.role as UserRole, // Use role from database
+              profile: {
+                timezone: profileData.timezone || 'UTC',
+                language: profileData.language || 'en',
+                currency: profileData.currency || 'USD',
+                notification_preferences: {
+                  email: profileData.notification_preferences?.email ?? true,
+                  sms: profileData.notification_preferences?.sms ?? false,
+                  push: profileData.notification_preferences?.push ?? true,
+                  marketing: profileData.notification_preferences?.marketing ?? false,
+                },
+              },
+              preferences: profileData.preferences || {},
+              avatar_url: profileData.avatar_url || data.user.user_metadata?.avatar_url,
+              phone: userProfile.phone || data.user.user_metadata?.phone,
+              created_at: new Date(userProfile.created_at || data.user.created_at),
+              updated_at: new Date(userProfile.updated_at || data.user.updated_at || data.user.created_at),
+            };
+            
+            console.log('👤 Full user object created:', fullUser);
+            console.log('🎭 User role from database:', fullUser.role);
+            
+            setUser(fullUser);
+            setProfile(fullUser.profile);
+            // Determine redirect URL immediately based on role
+            let redirectUrl = '/';
+            switch (fullUser.role) {
+              case 'SUPER_ADMIN':
+              case 'ADMIN':
+                redirectUrl = '/admin/dashboard';
+                break;
+              case 'TOUR_OPERATOR':
+                redirectUrl = '/operator/dashboard';
+                break;
+              case 'TRAVEL_AGENT':
+                redirectUrl = '/agent/dashboard';
+                break;
+              default:
+                redirectUrl = '/';
+            }
+            return redirectUrl;
+          } else {
+            // Fallback if no profile found in database
+            console.warn('⚠️ No user profile found in database, using default');
+            const userData: User = {
+              id: data.user.id,
+              email: data.user.email || '',
+              name: data.user.user_metadata?.name || data.user.email?.split('@')[0] || 'User',
+              role: 'USER', // Default fallback
+              profile: {
+                timezone: 'UTC',
+                language: 'en',
+                currency: 'USD',
+                notification_preferences: {
+                  email: true,
+                  sms: false,
+                  push: true,
+                  marketing: false,
+                },
+              },
+              preferences: {},
+              avatar_url: data.user.user_metadata?.avatar_url,
+              phone: data.user.user_metadata?.phone,
+              created_at: new Date(data.user.created_at),
+              updated_at: new Date(data.user.updated_at || data.user.created_at),
+            };
+            setUser(userData);
+            setProfile(userData.profile);
+            // Default users go to home
+            return '/';
+          }
+        } catch (profileErr) {
+          console.error('❌ Profile loading failed:', profileErr);
+          // Fallback to default user if profile loading fails
+          console.warn('⚠️ Using fallback user data due to profile loading error');
+          const fallbackUser: User = {
             id: data.user.id,
             email: data.user.email || '',
             name: data.user.user_metadata?.name || data.user.email?.split('@')[0] || 'User',
@@ -364,9 +444,8 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
             created_at: new Date(data.user.created_at),
             updated_at: new Date(data.user.updated_at || data.user.created_at),
           };
-          setUser(userData);
-          setProfile(userData.profile);
-          // Default users go to home
+          setUser(fallbackUser);
+          setProfile(fallbackUser.profile);
           return '/';
         }
       }

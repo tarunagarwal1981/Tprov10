@@ -5,6 +5,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/SupabaseAuthContext';
 import AuthLayout from '@/components/shared/AuthLayout';
+import { LoginDebugger } from '@/components/shared/LoginDebugger';
+import { DatabaseChecker } from '@/components/shared/DatabaseChecker';
+import { NetworkDebugger } from '@/components/shared/NetworkDebugger';
+import { NetworkBypass } from '@/components/shared/NetworkBypass';
 
 interface DemoAccount {
   id: string;
@@ -92,10 +96,20 @@ const LoginPage: React.FC = () => {
       return;
     }
     
-    const redirectUrl = await login(emailValue, passwordValue, rememberMe);
-    if (redirectUrl) {
-      console.log('🔄 Login success redirect - URL:', redirectUrl);
-      router.push(redirectUrl);
+    try {
+      console.log('🔐 Attempting login for:', emailValue);
+      const redirectUrl = await login(emailValue, passwordValue, rememberMe);
+      
+      if (redirectUrl) {
+        console.log('🔄 Login success redirect - URL:', redirectUrl);
+        router.push(redirectUrl);
+      } else {
+        console.log('❌ Login failed - no redirect URL returned');
+        setLoginError('Login failed. Please check your credentials and try again.');
+      }
+    } catch (err) {
+      console.error('❌ Login error:', err);
+      setLoginError('An unexpected error occurred. Please try again.');
     }
   };
 
@@ -423,6 +437,11 @@ const LoginPage: React.FC = () => {
           </div>
         </div>
       </motion.div>
+      
+      <LoginDebugger />
+      <DatabaseChecker />
+      <NetworkDebugger />
+      <NetworkBypass />
     </AuthLayout>
   );
 };

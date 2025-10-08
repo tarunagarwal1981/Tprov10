@@ -5,7 +5,12 @@ import { SupabaseAuthProvider } from '@/context/SupabaseAuthContext';
 import { Toaster } from 'sonner';
 import { AuthErrorHandler } from '@/components/shared/AuthErrorHandler';
 
-const inter = Inter({ subsets: ['latin'] });
+const inter = Inter({ 
+  subsets: ['latin'],
+  display: 'swap',
+  preload: true,
+  fallback: ['system-ui', 'arial']
+});
 
 export const metadata: Metadata = {
   title: 'TravelPro - Travel Business Platform',
