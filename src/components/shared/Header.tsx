@@ -531,7 +531,7 @@ export function Header({
     };
   }, []);
 
-  const breadcrumbs = getBreadcrumbs(pathname);
+  const breadcrumbs = getBreadcrumbs(pathname || "");
   const unreadNotifications = notificationsState.filter(n => !n.isRead).length;
   
   const handleSearchToggle = () => {

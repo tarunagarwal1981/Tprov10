@@ -371,7 +371,7 @@ const TransportTab: React.FC = () => {
     return pairs;
   }, [cities]);
 
-  const ensureConnections = () => {
+  const ensureConnections = React.useCallback(() => {
     // ensure one connection per adjacent pair if include is ON
     if (!include) return;
     const existing = fields.slice();
@@ -380,9 +380,9 @@ const TransportTab: React.FC = () => {
       return match || { fromCityId: p.from.id, toCityId: p.to.id, transportType: "FLIGHT", transportClass: "ECONOMY" };
     }) as any;
     setValue("connections", next);
-  };
+  }, [include, fields, cityPairs, setValue]);
 
-  useMemo(() => { ensureConnections(); /* eslint-disable-next-line */ }, [include, cityPairs.map(p => p.from.id + p.to.id).join("|")]);
+  React.useEffect(() => { ensureConnections(); }, [ensureConnections]);
 
   const iconForType = (t: TransportType) => t === "FLIGHT" ? <FaPlane /> : t === "TRAIN" ? <FaTrain /> : t === "BUS" ? <FaBus /> : <FaCar />;
 

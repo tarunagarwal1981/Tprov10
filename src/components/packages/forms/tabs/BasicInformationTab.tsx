@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useCallback } from "react";
+import Image from "next/image";
 import { useFormContext } from "react-hook-form";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -32,6 +33,7 @@ import {
   Tag,
   ImageInfo,
 } from "@/lib/types/activity-package";
+import { ImageUpload } from "@/components/packages/ImageUpload";
 
 // Language options with flags
 const LANGUAGE_OPTIONS: { value: Language; label: string; flag: string }[] = [
@@ -69,126 +71,28 @@ const DIFFICULTY_OPTIONS: { value: DifficultyLevel; label: string; description: 
   { value: 'DIFFICULT', label: 'Difficult', description: 'High fitness level required' },
 ];
 
-// Image upload component
-const ImageUpload: React.FC<{
-  onUpload: (files: File[]) => void;
-  onRemove: (imageId: string) => void;
-  images: ImageInfo[];
-  isFeatured?: boolean;
-}> = ({ onUpload, onRemove, images, isFeatured = false }) => {
-  const [isDragging, setIsDragging] = useState(false);
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  }, []);
-
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-  }, []);
-
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const files = Array.from(e.dataTransfer.files);
-    onUpload(files);
-  }, [onUpload]);
-
-  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    onUpload(files);
-  }, [onUpload]);
-
-  return (
-    <div className="space-y-4">
-      {/* Upload Area */}
-      <div
-        className={cn(
-          "border-2 border-dashed rounded-lg p-6 text-center transition-all duration-200",
-          "package-border-radius-fix package-animation-fix",
-          isDragging
-            ? "border-blue-400 bg-blue-50 dark:bg-blue-900/20"
-            : "border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500"
-        )}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-      >
-        <FaUpload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-          {isFeatured ? 'Upload featured image' : 'Upload images'}
-        </p>
-        <p className="text-xs text-gray-500 dark:text-gray-500 mb-4">
-          Drag & drop or click to select (JPG, PNG, WebP - Max 5MB)
-        </p>
-        <input
-          type="file"
-          multiple={!isFeatured}
-          accept="image/*"
-          onChange={handleFileSelect}
-          className="hidden"
-          id={`image-upload-${isFeatured ? 'featured' : 'gallery'}`}
-        />
-        <label
-          htmlFor={`image-upload-${isFeatured ? 'featured' : 'gallery'}`}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 cursor-pointer package-button-fix"
-        >
-          <FaPlus className="h-4 w-4" />
-          Choose Files
-        </label>
-      </div>
-
-      {/* Image Gallery */}
-      {images.length > 0 && (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {images.map((image, index) => (
-            <motion.div
-              key={image.id}
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              className="relative group"
-            >
-              <div className="aspect-square rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
-                <img
-                  src={image.url}
-                  alt={image.fileName}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              
-              {/* Overlay Actions */}
-              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg flex items-center justify-center gap-2">
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => {/* Handle crop */}}
-                  className="package-button-fix"
-                >
-                  <FaCrop className="h-3 w-3" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  onClick={() => onRemove(image.id)}
-                  className="package-button-fix"
-                >
-                  <FaTrash className="h-3 w-3" />
-                </Button>
-              </div>
-
-              {/* Featured Badge */}
-              {isFeatured && index === 0 && (
-                <Badge className="absolute top-2 left-2 bg-blue-600">
-                  Featured
-                </Badge>
-              )}
-            </motion.div>
-          ))}
-        </div>
-      )}
-    </div>
+// Helper function to process uploaded files
+const processUploadedFiles = (files: File[]): Promise<ImageInfo[]> => {
+  return Promise.all(
+    files.map(async (file) => {
+      return new Promise<ImageInfo>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const imageInfo: ImageInfo = {
+            id: `temp-${Date.now()}-${Math.random().toString(36).substring(2)}`,
+            url: e.target?.result as string,
+            fileName: file.name,
+            fileSize: file.size,
+            mimeType: file.type,
+            isCover: false,
+            order: 0,
+            uploadedAt: new Date(),
+          };
+          resolve(imageInfo);
+        };
+        reader.readAsDataURL(file);
+      });
+    })
   );
 };
 
@@ -209,16 +113,40 @@ export const BasicInformationTab: React.FC = () => {
     setLocationSearch(location.name);
   }, [setValue]);
 
-  const handleImageUpload = useCallback((files: File[], isFeatured = false) => {
-    // Handle image upload logic here
-    console.log('Uploading images:', files, isFeatured);
-  }, []);
+  const handleImageUpload = useCallback(async (files: File[], isFeatured = false) => {
+    try {
+      const processedImages = await processUploadedFiles(files);
+      
+      if (isFeatured) {
+        // Handle featured image
+        if (processedImages.length > 0) {
+          const featuredImage = { ...processedImages[0], isCover: true };
+          setValue('basicInformation.featuredImage', featuredImage);
+        }
+      } else {
+        // Handle gallery images
+        const currentGallery = watchedData.imageGallery || [];
+        const newGallery = [...currentGallery, ...processedImages];
+        setValue('basicInformation.imageGallery', newGallery);
+      }
+    } catch (error) {
+      console.error('Error processing images:', error);
+    }
+  }, [watchedData.imageGallery, setValue]);
 
   const handleImageRemove = useCallback((imageId: string) => {
     const currentImages = watchedData.imageGallery || [];
     const newImages = currentImages.filter(img => img.id !== imageId);
     setValue('basicInformation.imageGallery', newImages);
   }, [watchedData.imageGallery, setValue]);
+
+  const handleFeaturedImageRemove = useCallback(() => {
+    setValue('basicInformation.featuredImage', null);
+  }, [setValue]);
+
+  const handleImagesChange = useCallback((images: ImageInfo[]) => {
+    setValue('basicInformation.imageGallery', images);
+  }, [setValue]);
 
   return (
     <div className="space-y-6 package-scroll-fix">
@@ -546,10 +474,18 @@ export const BasicInformationTab: React.FC = () => {
             <div>
               <h4 className="font-medium mb-3">Featured Image</h4>
               <ImageUpload
-                onUpload={(files) => handleImageUpload(files, true)}
-                onRemove={handleImageRemove}
                 images={watchedData.featuredImage ? [watchedData.featuredImage] : []}
-                isFeatured
+                onImagesChange={(images) => {
+                  if (images.length > 0) {
+                    setValue('basicInformation.featuredImage', { ...images[0], isCover: true });
+                  } else {
+                    setValue('basicInformation.featuredImage', null);
+                  }
+                }}
+                maxImages={1}
+                allowMultiple={false}
+                showMetadata={true}
+                className="package-animation-fix"
               />
             </div>
 
@@ -557,9 +493,12 @@ export const BasicInformationTab: React.FC = () => {
             <div>
               <h4 className="font-medium mb-3">Image Gallery</h4>
               <ImageUpload
-                onUpload={(files) => handleImageUpload(files, false)}
-                onRemove={handleImageRemove}
                 images={watchedData.imageGallery || []}
+                onImagesChange={handleImagesChange}
+                maxImages={10}
+                allowMultiple={true}
+                showMetadata={true}
+                className="package-animation-fix"
               />
             </div>
           </div>

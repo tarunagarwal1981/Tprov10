@@ -353,6 +353,11 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
     isAuthenticated,
     requiredRoleKey,
     requiredPermissionsKey,
+    hasRole,
+    hasPermission,
+    requiredRole,
+    requiredPermissions,
+    router,
   ]);
   
   // Route change loading
@@ -426,7 +431,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
     }
     
     return true;
-  }, [isAuthenticated, requiredRole, requiredPermissions]);
+  }, [isAuthenticated, requiredRole, requiredPermissions, hasRole, hasPermission]);
   
   // ============================================================================
   // RENDER CONDITIONS

@@ -29,6 +29,14 @@ export interface AuthContextState {
   isInitialized: boolean;
   error: AuthError | null;
   login: (email: string, password: string, rememberMe?: boolean) => Promise<string | false>;
+  register: (userData: {
+    email: string;
+    password: string;
+    name: string;
+    phone?: string;
+    role: UserRole;
+    profile: any;
+  }) => Promise<string | false>;
   loginWithGoogle: () => Promise<boolean>;
   loginWithGithub: () => Promise<boolean>;
   logout: () => Promise<void>;
@@ -153,7 +161,7 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
     };
 
     initAuth();
-  }, [supabase.auth]); // Include supabase.auth dependency
+  }, [supabase]);
 
   const login = async (email: string, password: string, rememberMe?: boolean): Promise<string | false> => {
     try {
@@ -283,6 +291,181 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       setError({
         type: 'login_error',
         message: 'Login failed',
+        timestamp: new Date()
+      });
+      return false;
+    } finally {
+      setLoading('idle');
+    }
+  };
+
+  const register = async (userData: {
+    email: string;
+    password: string;
+    name: string;
+    phone?: string;
+    role: UserRole;
+    profile: any;
+  }): Promise<string | false> => {
+    try {
+      setLoading('authenticating');
+      setError(null);
+      
+      console.log('📝 Starting registration process for:', userData.email);
+      
+      // Step 1: Create user account with Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: userData.email,
+        password: userData.password,
+        options: {
+          data: {
+            name: userData.name,
+            phone: userData.phone,
+            role: userData.role,
+          }
+        }
+      });
+      
+      if (authError) {
+        console.error('❌ Supabase auth error:', authError);
+        setError({
+          type: 'registration_error',
+          message: authError.message,
+          timestamp: new Date()
+        });
+        return false;
+      }
+      
+      if (!authData.user) {
+        console.error('❌ No user returned from signup');
+        setError({
+          type: 'registration_error',
+          message: 'Registration failed - no user created',
+          timestamp: new Date()
+        });
+        return false;
+      }
+      
+      console.log('✅ User account created, ID:', authData.user.id);
+      
+      // Small delay to allow database triggers to complete
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Step 2: Check if user profile already exists (might be created by database trigger)
+      const { data: existingUser } = await supabase
+        .from('users')
+        .select('id, email, name, phone, role, profile')
+        .eq('id', authData.user.id)
+        .single();
+      
+      let profileData;
+      let profileError;
+      
+      if (existingUser) {
+        console.log('⚠️ User profile already exists, updating with registration data...');
+        // Update existing user profile with registration data
+        const { data, error } = await supabase
+          .from('users')
+          .update({
+            email: userData.email,
+            name: userData.name,
+            phone: userData.phone,
+            role: userData.role,
+            profile: userData.profile,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', authData.user.id)
+          .select()
+          .single();
+        
+        profileData = data;
+        profileError = error;
+      } else {
+        console.log('📝 Creating new user profile...');
+        // Create new user profile
+        const { data, error } = await supabase
+          .from('users')
+          .insert({
+            id: authData.user.id,
+            email: userData.email,
+            name: userData.name,
+            phone: userData.phone,
+            role: userData.role,
+            profile: userData.profile,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .select()
+          .single();
+        
+        profileData = data;
+        profileError = error;
+      }
+      
+      if (profileError) {
+        console.error('❌ Profile creation error:', profileError);
+        setError({
+          type: 'registration_error',
+          message: 'Account created but profile setup failed. Please contact support.',
+          timestamp: new Date()
+        });
+        return false;
+      }
+      
+      console.log('✅ User profile created/updated successfully');
+      
+      // Step 4: Set up the user in the context
+      const fullUser: User = {
+        id: authData.user.id,
+        email: userData.email,
+        name: userData.name,
+        role: userData.role,
+        profile: {
+          timezone: userData.profile.timezone || 'UTC',
+          language: userData.profile.language || 'en',
+          currency: userData.profile.currency || 'USD',
+          notification_preferences: {
+            email: userData.profile.notification_preferences?.email ?? true,
+            sms: userData.profile.notification_preferences?.sms ?? false,
+            push: userData.profile.notification_preferences?.push ?? true,
+            marketing: userData.profile.notification_preferences?.marketing ?? false,
+          },
+        },
+        preferences: userData.profile.preferences || {},
+        avatar_url: userData.profile.avatar_url,
+        phone: userData.phone,
+        created_at: new Date(),
+        updated_at: new Date(),
+      };
+      
+      setUser(fullUser);
+      setProfile(fullUser.profile);
+      
+      // Determine redirect URL based on role
+      let redirectUrl = '/';
+      switch (userData.role) {
+        case 'SUPER_ADMIN':
+        case 'ADMIN':
+          redirectUrl = '/admin/dashboard';
+          break;
+        case 'TOUR_OPERATOR':
+          redirectUrl = '/operator/dashboard';
+          break;
+        case 'TRAVEL_AGENT':
+          redirectUrl = '/agent/dashboard';
+          break;
+        default:
+          redirectUrl = '/';
+      }
+      
+      console.log('🎉 Registration completed successfully, redirecting to:', redirectUrl);
+      return redirectUrl;
+      
+    } catch (err) {
+      console.error('❌ Registration error:', err);
+      setError({
+        type: 'registration_error',
+        message: 'Registration failed. Please try again.',
         timestamp: new Date()
       });
       return false;
@@ -427,6 +610,7 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
     isInitialized,
     error,
     login,
+    register,
     loginWithGoogle,
     loginWithGithub,
     logout,

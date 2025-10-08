@@ -246,16 +246,16 @@ const AccommodationTab: React.FC = () => {
   const cities = watch("cities");
   const { fields, append, remove } = useFieldArray({ control, name: "hotels" });
 
-  const ensureCityRows = () => {
+  const ensureCityRows = React.useCallback(() => {
     const list = fields as any[];
     const next = cities.map((c) => {
       const existing = list.find((h) => h.cityId === c.id);
       return existing || { id: generateId(), cityId: c.id, category: "STANDARD", hotels: [] };
     });
     setValue("hotels", next as any);
-  };
+  }, [fields, cities, setValue]);
 
-  useMemo(() => { ensureCityRows(); /* eslint-disable-next-line */ }, [cities.map(c => c.id).join("|")]);
+  React.useEffect(() => { ensureCityRows(); }, [ensureCityRows]);
 
   const CATEGORIES: Array<{ value: CityWithHotel["category"]; label: string; priceLevel: string }> = [
     { value: "BUDGET", label: "Budget", priceLevel: "$" },

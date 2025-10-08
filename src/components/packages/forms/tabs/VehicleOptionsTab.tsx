@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useCallback } from "react";
+import Image from "next/image";
 import { useFormContext } from "react-hook-form";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -312,12 +313,8 @@ const VehicleCard: React.FC<{
           <h4 className="text-sm font-medium mb-2">Images</h4>
           <div className="flex gap-2">
             {vehicle.images.slice(0, 3).map((image, index) => (
-              <div key={index} className="w-12 h-12 rounded-md overflow-hidden bg-gray-100">
-                <img
-                  src={image.url}
-                  alt={image.fileName}
-                  className="w-full h-full object-cover"
-                />
+              <div key={index} className="w-12 h-12 rounded-md overflow-hidden bg-gray-100 relative">
+                <Image src={image.url} alt={image.fileName} fill sizes="48px" style={{ objectFit: "cover" }} />
               </div>
             ))}
             {vehicle.images.length > 3 && (

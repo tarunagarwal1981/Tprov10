@@ -104,7 +104,10 @@ export function OperatorSidebar() {
 		{ id: "settings", label: "Settings", href: "/operator/settings", icon: Settings },
 	];
 
-	const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
+const isActive = (href: string) => {
+  const path = pathname || "";
+  return path === href || path.startsWith(href + "/");
+};
 
 	const effectiveCollapsed = isCollapsed && !hoverExpanded;
 
@@ -199,7 +202,7 @@ export function OperatorSidebar() {
 											<div
 												className={cn(
 													"px-3 py-2 rounded-lg text-sm transition-colors",
-													pathname === sub.href
+                                                  (pathname || "") === sub.href
 														? "bg-indigo-50 text-indigo-700 font-medium dark:bg-indigo-900/20"
 														: "text-zinc-600 hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-zinc-800/60"
 												)}

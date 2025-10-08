@@ -84,7 +84,7 @@ const useAutoSave = (
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [serialized, onSave, interval]);
+  }, [serialized, onSave, interval, data]);
 
   return state;
 };

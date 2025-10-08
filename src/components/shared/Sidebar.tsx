@@ -689,7 +689,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
                       <Submenu
                         items={item.submenu!}
                         isCollapsed={isCollapsed && !hoverExpanded}
-                        activePath={pathname}
+                        activePath={pathname || ""}
                         onNavigate={handleNavigate}
                       />
                     )}

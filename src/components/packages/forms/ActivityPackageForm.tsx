@@ -30,6 +30,8 @@ import {
   AutoSaveState,
   DEFAULT_FORM_DATA,
 } from "@/lib/types/activity-package";
+import { useActivityPackage } from "@/hooks/useActivityPackage";
+import { databaseToFormData } from "@/lib/supabase/activity-packages";
 
 // Import tab components
 import { BasicInformationTab } from "./tabs/BasicInformationTab";
@@ -85,7 +87,7 @@ const useAutoSave = (
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [serialized, onSave, interval]);
+  }, [serialized, onSave, interval, data]);
 
   return state;
 };
@@ -191,13 +193,33 @@ export const ActivityPackageForm: React.FC<ActivityPackageFormProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
 
+  // Use the activity package hook
+  const {
+    package: dbPackage,
+    createPackage,
+    updatePackage,
+    loading: packageLoading,
+    saving: packageSaving,
+    error: packageError,
+    clearError,
+  } = useActivityPackage({ packageId, autoLoad: mode === 'edit' });
+
+  // Initialize form with data from database or initial data
   const form = useForm<ActivityPackageFormData>({
     defaultValues: { ...DEFAULT_FORM_DATA, ...initialData },
     mode: 'onChange',
   });
 
-  const { watch, handleSubmit, formState: { isDirty } } = form;
+  const { watch, handleSubmit, formState: { isDirty }, reset } = form;
   const formData = watch();
+
+  // Update form when database package loads
+  React.useEffect(() => {
+    if (dbPackage && mode === 'edit') {
+      const formData = databaseToFormData(dbPackage);
+      reset(formData);
+    }
+  }, [dbPackage, mode, reset]);
 
   const validation = useFormValidation(formData);
   const autoSaveState = useAutoSave(formData, async (data) => {
@@ -268,8 +290,18 @@ export const ActivityPackageForm: React.FC<ActivityPackageFormProps> = ({
 
   const handleSave = async (data: ActivityPackageFormData) => {
     setIsSubmitting(true);
+    clearError();
+    
     try {
-      if (onSave) {
+      let success = false;
+      
+      if (mode === 'create') {
+        success = await createPackage(data);
+      } else if (mode === 'edit' && packageId) {
+        success = await updatePackage(data);
+      }
+      
+      if (success && onSave) {
         await onSave(data);
       }
     } catch (error) {
@@ -286,8 +318,19 @@ export const ActivityPackageForm: React.FC<ActivityPackageFormProps> = ({
     }
 
     setIsSubmitting(true);
+    clearError();
+    
     try {
-      if (onPublish) {
+      // First save the package
+      let success = false;
+      
+      if (mode === 'create') {
+        success = await createPackage(data);
+      } else if (mode === 'edit' && packageId) {
+        success = await updatePackage(data);
+      }
+      
+      if (success && onPublish) {
         await onPublish(data);
       }
     } catch (error) {
@@ -314,6 +357,18 @@ export const ActivityPackageForm: React.FC<ActivityPackageFormProps> = ({
     'review': <ReviewPublishActivityTab validation={validation} onPreview={handlePreview} />,
   };
 
+  // Show loading state
+  if (packageLoading && mode === 'edit') {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <FaSpinner className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
+          <p className="text-gray-600 dark:text-gray-400">Loading package...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <FormProvider {...form}>
       <div className={cn("w-full package-text-fix package-scroll-fix", className)}>
@@ -337,6 +392,7 @@ export const ActivityPackageForm: React.FC<ActivityPackageFormProps> = ({
               <AnimatePresence>
                 {autoSaveState.isSaving && (
                   <motion.div
+                    key="saving"
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.8 }}
@@ -349,6 +405,7 @@ export const ActivityPackageForm: React.FC<ActivityPackageFormProps> = ({
                 
                 {autoSaveState.lastSaved && !autoSaveState.isSaving && (
                   <motion.div
+                    key="saved"
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.8 }}
@@ -361,6 +418,7 @@ export const ActivityPackageForm: React.FC<ActivityPackageFormProps> = ({
                 
                 {autoSaveState.error && (
                   <motion.div
+                    key="auto-save-error"
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.8 }}
@@ -368,6 +426,19 @@ export const ActivityPackageForm: React.FC<ActivityPackageFormProps> = ({
                   >
                     <FaExclamationTriangle className="h-4 w-4" />
                     {autoSaveState.error}
+                  </motion.div>
+                )}
+                
+                {packageError && (
+                  <motion.div
+                    key="package-error"
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    className="flex items-center gap-2 text-sm text-red-600"
+                  >
+                    <FaExclamationTriangle className="h-4 w-4" />
+                    {packageError}
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -435,18 +506,18 @@ export const ActivityPackageForm: React.FC<ActivityPackageFormProps> = ({
               <Button
                 type="submit"
                 variant="outline"
-                disabled={isSubmitting}
+                disabled={isSubmitting || packageSaving}
                 className="package-button-fix package-animation-fix"
               >
                 <FaSave className="h-4 w-4 mr-2" />
-                {isSubmitting ? 'Saving...' : 'Save Draft'}
+                {isSubmitting || packageSaving ? 'Saving...' : 'Save Draft'}
               </Button>
             </div>
 
             <Button
               type="button"
               onClick={handleSubmit(handlePublish)}
-              disabled={!validation.isValid || isSubmitting}
+              disabled={!validation.isValid || isSubmitting || packageSaving}
               className={cn(
                 "package-button-fix package-animation-fix",
                 "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700",
@@ -454,7 +525,7 @@ export const ActivityPackageForm: React.FC<ActivityPackageFormProps> = ({
               )}
             >
               <FaRocket className="h-4 w-4 mr-2" />
-              {isSubmitting ? 'Publishing...' : 'Publish Package'}
+              {isSubmitting || packageSaving ? 'Publishing...' : 'Publish Package'}
             </Button>
           </div>
         </form>

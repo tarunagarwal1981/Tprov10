@@ -125,7 +125,7 @@ const SelectContent = React.forwardRef<
   const computedChildren = React.useMemo(() => {
     // TODO: implement real filtering logic when items support searchable text
     return children
-  }, [children, searchable, searchTerm])
+  }, [children])
 
   return (
     <SelectPrimitive.Portal>

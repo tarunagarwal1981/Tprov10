@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import OperatorSidebar from './OperatorSidebar';
 import { Header } from './Header';
@@ -15,12 +15,12 @@ export function OperatorDashboardLayout({ children }: OperatorDashboardLayoutPro
   const [leftMarginPx, setLeftMarginPx] = useState(280);
   const mainContentRef = useRef<HTMLDivElement>(null);
 
-  const computeSidebarWidth = () => (isSidebarCollapsed ? 80 : 280);
+  const computeSidebarWidth = useCallback(() => (isSidebarCollapsed ? 80 : 280), [isSidebarCollapsed]);
 
-  const syncMargin = () => {
+  const syncMargin = useCallback(() => {
     const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 1024;
     setLeftMarginPx(isDesktop ? computeSidebarWidth() : 0);
-  };
+  }, [computeSidebarWidth]);
 
   // Initialize collapsed state and margin on mount from persisted preference
   React.useEffect(() => {
@@ -33,7 +33,7 @@ export function OperatorDashboardLayout({ children }: OperatorDashboardLayoutPro
     } catch {}
     // Set initial margin based on current sidebar state
     syncMargin();
-  }, []);
+  }, [syncMargin]);
 
   const handleMenuToggle = () => {
     if (typeof window !== 'undefined' && window.innerWidth < 1024) {
@@ -46,7 +46,7 @@ export function OperatorDashboardLayout({ children }: OperatorDashboardLayoutPro
   React.useEffect(() => {
     // Ensure margin is set immediately on mount
     syncMargin();
-    
+
     // Also set it after a short delay to handle any async initialization
     const timeoutId = setTimeout(() => {
       syncMargin();
@@ -68,12 +68,11 @@ export function OperatorDashboardLayout({ children }: OperatorDashboardLayoutPro
       window.removeEventListener('operator-sidebar-toggled', onSidebarToggled as EventListener);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [syncMargin]);
 
   React.useEffect(() => {
     syncMargin();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSidebarCollapsed]);
+  }, [isSidebarCollapsed, syncMargin]);
 
   // Ensure margin is applied directly to the element
   useEffect(() => {
@@ -82,7 +81,7 @@ export function OperatorDashboardLayout({ children }: OperatorDashboardLayoutPro
       const margin = isDesktop ? computeSidebarWidth() : 0;
       mainContentRef.current.style.marginLeft = `${margin}px`;
     }
-  }, [isSidebarCollapsed, leftMarginPx]);
+  }, [isSidebarCollapsed, leftMarginPx, computeSidebarWidth]);
 
   return (
     <div className="min-h-screen bg-gray-50">
