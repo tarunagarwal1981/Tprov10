@@ -4,20 +4,69 @@
 -- Enable necessary extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- Create enum types
-CREATE TYPE package_status AS ENUM ('draft', 'published', 'archived', 'suspended');
-CREATE TYPE difficulty_level AS ENUM ('EASY', 'MODERATE', 'CHALLENGING', 'DIFFICULT');
-CREATE TYPE language_code AS ENUM ('EN', 'ES', 'FR', 'DE', 'IT', 'PT', 'RU', 'ZH', 'JA', 'KO');
-CREATE TYPE activity_tag AS ENUM ('ADVENTURE', 'FAMILY_FRIENDLY', 'ROMANTIC', 'CULTURAL', 'NATURE', 'SPORTS', 'FOOD', 'NIGHTLIFE', 'EDUCATIONAL', 'RELAXATION');
-CREATE TYPE day_of_week AS ENUM ('MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN');
-CREATE TYPE currency_code AS ENUM ('USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CHF', 'CNY');
-CREATE TYPE price_type AS ENUM ('PERSON', 'GROUP');
-CREATE TYPE faq_category AS ENUM ('GENERAL', 'BOOKING', 'CANCELLATION', 'WEATHER', 'SAFETY', 'ACCESSIBILITY');
-CREATE TYPE cancellation_policy_type AS ENUM ('FLEXIBLE', 'MODERATE', 'STRICT', 'CUSTOM');
-CREATE TYPE accessibility_facility AS ENUM ('RESTROOMS', 'PARKING', 'ELEVATOR', 'RAMP', 'SIGN_LANGUAGE', 'BRAILLE', 'AUDIO_GUIDE');
+-- Create enum types (only if they don't exist)
+DO $$ BEGIN
+    CREATE TYPE package_status AS ENUM ('draft', 'published', 'archived', 'suspended');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
--- Create activity_packages table
-CREATE TABLE activity_packages (
+DO $$ BEGIN
+    CREATE TYPE difficulty_level AS ENUM ('EASY', 'MODERATE', 'CHALLENGING', 'DIFFICULT');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE language_code AS ENUM ('EN', 'ES', 'FR', 'DE', 'IT', 'PT', 'RU', 'ZH', 'JA', 'KO');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE activity_tag AS ENUM ('ADVENTURE', 'FAMILY_FRIENDLY', 'ROMANTIC', 'CULTURAL', 'NATURE', 'SPORTS', 'FOOD', 'NIGHTLIFE', 'EDUCATIONAL', 'RELAXATION');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE day_of_week AS ENUM ('MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE currency_code AS ENUM ('USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CHF', 'CNY');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE price_type AS ENUM ('PERSON', 'GROUP');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE faq_category AS ENUM ('GENERAL', 'BOOKING', 'CANCELLATION', 'WEATHER', 'SAFETY', 'ACCESSIBILITY');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE cancellation_policy_type AS ENUM ('FLEXIBLE', 'MODERATE', 'STRICT', 'CUSTOM');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE accessibility_facility AS ENUM ('RESTROOMS', 'PARKING', 'ELEVATOR', 'RAMP', 'SIGN_LANGUAGE', 'BRAILLE', 'AUDIO_GUIDE');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+-- Create activity_packages table (only if it doesn't exist)
+CREATE TABLE IF NOT EXISTS activity_packages (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     operator_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     
@@ -107,8 +156,8 @@ CREATE TABLE activity_packages (
     published_at TIMESTAMP WITH TIME ZONE
 );
 
--- Create activity_package_images table for gallery support
-CREATE TABLE activity_package_images (
+-- Create activity_package_images table for gallery support (only if it doesn't exist)
+CREATE TABLE IF NOT EXISTS activity_package_images (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     package_id UUID NOT NULL REFERENCES activity_packages(id) ON DELETE CASCADE,
     
@@ -136,8 +185,8 @@ CREATE TABLE activity_package_images (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Create activity_package_time_slots table
-CREATE TABLE activity_package_time_slots (
+-- Create activity_package_time_slots table (only if it doesn't exist)
+CREATE TABLE IF NOT EXISTS activity_package_time_slots (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     package_id UUID NOT NULL REFERENCES activity_packages(id) ON DELETE CASCADE,
     
@@ -156,8 +205,8 @@ CREATE TABLE activity_package_time_slots (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Create activity_package_variants table
-CREATE TABLE activity_package_variants (
+-- Create activity_package_variants table (only if it doesn't exist)
+CREATE TABLE IF NOT EXISTS activity_package_variants (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     package_id UUID NOT NULL REFERENCES activity_packages(id) ON DELETE CASCADE,
     
@@ -175,8 +224,8 @@ CREATE TABLE activity_package_variants (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Create activity_package_faqs table
-CREATE TABLE activity_package_faqs (
+-- Create activity_package_faqs table (only if it doesn't exist)
+CREATE TABLE IF NOT EXISTS activity_package_faqs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     package_id UUID NOT NULL REFERENCES activity_packages(id) ON DELETE CASCADE,
     
@@ -191,28 +240,28 @@ CREATE TABLE activity_package_faqs (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Create indexes for better performance
-CREATE INDEX idx_activity_packages_operator_id ON activity_packages(operator_id);
-CREATE INDEX idx_activity_packages_status ON activity_packages(status);
-CREATE INDEX idx_activity_packages_destination ON activity_packages(destination_city, destination_country);
-CREATE INDEX idx_activity_packages_difficulty ON activity_packages(difficulty_level);
-CREATE INDEX idx_activity_packages_price ON activity_packages(base_price);
-CREATE INDEX idx_activity_packages_created_at ON activity_packages(created_at DESC);
-CREATE INDEX idx_activity_packages_published_at ON activity_packages(published_at DESC);
+-- Create indexes for better performance (only if they don't exist)
+CREATE INDEX IF NOT EXISTS idx_activity_packages_operator_id ON activity_packages(operator_id);
+CREATE INDEX IF NOT EXISTS idx_activity_packages_status ON activity_packages(status);
+CREATE INDEX IF NOT EXISTS idx_activity_packages_destination ON activity_packages(destination_city, destination_country);
+CREATE INDEX IF NOT EXISTS idx_activity_packages_difficulty ON activity_packages(difficulty_level);
+CREATE INDEX IF NOT EXISTS idx_activity_packages_price ON activity_packages(base_price);
+CREATE INDEX IF NOT EXISTS idx_activity_packages_created_at ON activity_packages(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_activity_packages_published_at ON activity_packages(published_at DESC);
 
-CREATE INDEX idx_activity_package_images_package_id ON activity_package_images(package_id);
-CREATE INDEX idx_activity_package_images_cover ON activity_package_images(package_id, is_cover) WHERE is_cover = TRUE;
-CREATE INDEX idx_activity_package_images_featured ON activity_package_images(package_id, is_featured) WHERE is_featured = TRUE;
-CREATE INDEX idx_activity_package_images_order ON activity_package_images(package_id, display_order);
+CREATE INDEX IF NOT EXISTS idx_activity_package_images_package_id ON activity_package_images(package_id);
+CREATE INDEX IF NOT EXISTS idx_activity_package_images_cover ON activity_package_images(package_id, is_cover) WHERE is_cover = TRUE;
+CREATE INDEX IF NOT EXISTS idx_activity_package_images_featured ON activity_package_images(package_id, is_featured) WHERE is_featured = TRUE;
+CREATE INDEX IF NOT EXISTS idx_activity_package_images_order ON activity_package_images(package_id, display_order);
 
-CREATE INDEX idx_activity_package_time_slots_package_id ON activity_package_time_slots(package_id);
-CREATE INDEX idx_activity_package_time_slots_active ON activity_package_time_slots(package_id, is_active) WHERE is_active = TRUE;
+CREATE INDEX IF NOT EXISTS idx_activity_package_time_slots_package_id ON activity_package_time_slots(package_id);
+CREATE INDEX IF NOT EXISTS idx_activity_package_time_slots_active ON activity_package_time_slots(package_id, is_active) WHERE is_active = TRUE;
 
-CREATE INDEX idx_activity_package_variants_package_id ON activity_package_variants(package_id);
-CREATE INDEX idx_activity_package_variants_active ON activity_package_variants(package_id, is_active) WHERE is_active = TRUE;
+CREATE INDEX IF NOT EXISTS idx_activity_package_variants_package_id ON activity_package_variants(package_id);
+CREATE INDEX IF NOT EXISTS idx_activity_package_variants_active ON activity_package_variants(package_id, is_active) WHERE is_active = TRUE;
 
-CREATE INDEX idx_activity_package_faqs_package_id ON activity_package_faqs(package_id);
-CREATE INDEX idx_activity_package_faqs_category ON activity_package_faqs(package_id, category);
+CREATE INDEX IF NOT EXISTS idx_activity_package_faqs_package_id ON activity_package_faqs(package_id);
+CREATE INDEX IF NOT EXISTS idx_activity_package_faqs_category ON activity_package_faqs(package_id, category);
 
 -- Create updated_at trigger function
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -223,19 +272,24 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
--- Create triggers for updated_at
+-- Create triggers for updated_at (drop and recreate to avoid conflicts)
+DROP TRIGGER IF EXISTS update_activity_packages_updated_at ON activity_packages;
 CREATE TRIGGER update_activity_packages_updated_at BEFORE UPDATE ON activity_packages
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_activity_package_images_updated_at ON activity_package_images;
 CREATE TRIGGER update_activity_package_images_updated_at BEFORE UPDATE ON activity_package_images
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_activity_package_time_slots_updated_at ON activity_package_time_slots;
 CREATE TRIGGER update_activity_package_time_slots_updated_at BEFORE UPDATE ON activity_package_time_slots
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_activity_package_variants_updated_at ON activity_package_variants;
 CREATE TRIGGER update_activity_package_variants_updated_at BEFORE UPDATE ON activity_package_variants
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_activity_package_faqs_updated_at ON activity_package_faqs;
 CREATE TRIGGER update_activity_package_faqs_updated_at BEFORE UPDATE ON activity_package_faqs
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
@@ -253,7 +307,8 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
--- Create trigger for single cover image
+-- Create trigger for single cover image (drop and recreate to avoid conflicts)
+DROP TRIGGER IF EXISTS ensure_single_cover_image_trigger ON activity_package_images;
 CREATE TRIGGER ensure_single_cover_image_trigger 
     BEFORE INSERT OR UPDATE ON activity_package_images
     FOR EACH ROW EXECUTE FUNCTION ensure_single_cover_image();
@@ -275,7 +330,8 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
--- Create trigger for slug generation
+-- Create trigger for slug generation (drop and recreate to avoid conflicts)
+DROP TRIGGER IF EXISTS generate_package_slug_trigger ON activity_packages;
 CREATE TRIGGER generate_package_slug_trigger 
     BEFORE INSERT OR UPDATE ON activity_packages
     FOR EACH ROW EXECUTE FUNCTION generate_package_slug();
@@ -287,24 +343,30 @@ ALTER TABLE activity_package_time_slots ENABLE ROW LEVEL SECURITY;
 ALTER TABLE activity_package_variants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE activity_package_faqs ENABLE ROW LEVEL SECURITY;
 
--- Create RLS policies
+-- Create RLS policies (drop and recreate to avoid conflicts)
 -- Activity packages: Users can only see their own packages, or published packages
+DROP POLICY IF EXISTS "Users can view their own activity packages" ON activity_packages;
 CREATE POLICY "Users can view their own activity packages" ON activity_packages
     FOR SELECT USING (auth.uid() = operator_id);
 
+DROP POLICY IF EXISTS "Users can view published activity packages" ON activity_packages;
 CREATE POLICY "Users can view published activity packages" ON activity_packages
     FOR SELECT USING (status = 'published');
 
+DROP POLICY IF EXISTS "Users can insert their own activity packages" ON activity_packages;
 CREATE POLICY "Users can insert their own activity packages" ON activity_packages
     FOR INSERT WITH CHECK (auth.uid() = operator_id);
 
+DROP POLICY IF EXISTS "Users can update their own activity packages" ON activity_packages;
 CREATE POLICY "Users can update their own activity packages" ON activity_packages
     FOR UPDATE USING (auth.uid() = operator_id);
 
+DROP POLICY IF EXISTS "Users can delete their own activity packages" ON activity_packages;
 CREATE POLICY "Users can delete their own activity packages" ON activity_packages
     FOR DELETE USING (auth.uid() = operator_id);
 
 -- Activity package images: Users can only manage images for their own packages
+DROP POLICY IF EXISTS "Users can view images for their packages or published packages" ON activity_package_images;
 CREATE POLICY "Users can view images for their packages or published packages" ON activity_package_images
     FOR SELECT USING (
         EXISTS (
@@ -314,6 +376,7 @@ CREATE POLICY "Users can view images for their packages or published packages" O
         )
     );
 
+DROP POLICY IF EXISTS "Users can insert images for their packages" ON activity_package_images;
 CREATE POLICY "Users can insert images for their packages" ON activity_package_images
     FOR INSERT WITH CHECK (
         EXISTS (
@@ -322,6 +385,7 @@ CREATE POLICY "Users can insert images for their packages" ON activity_package_i
         )
     );
 
+DROP POLICY IF EXISTS "Users can update images for their packages" ON activity_package_images;
 CREATE POLICY "Users can update images for their packages" ON activity_package_images
     FOR UPDATE USING (
         EXISTS (
@@ -330,6 +394,7 @@ CREATE POLICY "Users can update images for their packages" ON activity_package_i
         )
     );
 
+DROP POLICY IF EXISTS "Users can delete images for their packages" ON activity_package_images;
 CREATE POLICY "Users can delete images for their packages" ON activity_package_images
     FOR DELETE USING (
         EXISTS (
@@ -339,6 +404,7 @@ CREATE POLICY "Users can delete images for their packages" ON activity_package_i
     );
 
 -- Similar policies for other related tables
+DROP POLICY IF EXISTS "Users can manage time slots for their packages" ON activity_package_time_slots;
 CREATE POLICY "Users can manage time slots for their packages" ON activity_package_time_slots
     FOR ALL USING (
         EXISTS (
@@ -347,6 +413,7 @@ CREATE POLICY "Users can manage time slots for their packages" ON activity_packa
         )
     );
 
+DROP POLICY IF EXISTS "Users can view time slots for published packages" ON activity_package_time_slots;
 CREATE POLICY "Users can view time slots for published packages" ON activity_package_time_slots
     FOR SELECT USING (
         EXISTS (
@@ -355,6 +422,7 @@ CREATE POLICY "Users can view time slots for published packages" ON activity_pac
         )
     );
 
+DROP POLICY IF EXISTS "Users can manage variants for their packages" ON activity_package_variants;
 CREATE POLICY "Users can manage variants for their packages" ON activity_package_variants
     FOR ALL USING (
         EXISTS (
@@ -363,6 +431,7 @@ CREATE POLICY "Users can manage variants for their packages" ON activity_package
         )
     );
 
+DROP POLICY IF EXISTS "Users can view variants for published packages" ON activity_package_variants;
 CREATE POLICY "Users can view variants for published packages" ON activity_package_variants
     FOR SELECT USING (
         EXISTS (
@@ -371,6 +440,7 @@ CREATE POLICY "Users can view variants for published packages" ON activity_packa
         )
     );
 
+DROP POLICY IF EXISTS "Users can manage FAQs for their packages" ON activity_package_faqs;
 CREATE POLICY "Users can manage FAQs for their packages" ON activity_package_faqs
     FOR ALL USING (
         EXISTS (
@@ -379,6 +449,7 @@ CREATE POLICY "Users can manage FAQs for their packages" ON activity_package_faq
         )
     );
 
+DROP POLICY IF EXISTS "Users can view FAQs for published packages" ON activity_package_faqs;
 CREATE POLICY "Users can view FAQs for published packages" ON activity_package_faqs
     FOR SELECT USING (
         EXISTS (
@@ -397,24 +468,28 @@ VALUES (
     ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 ) ON CONFLICT (id) DO NOTHING;
 
--- Create storage policies for activity package images
+-- Create storage policies for activity package images (drop and recreate to avoid conflicts)
+DROP POLICY IF EXISTS "Users can upload images for their packages" ON storage.objects;
 CREATE POLICY "Users can upload images for their packages" ON storage.objects
     FOR INSERT WITH CHECK (
         bucket_id = 'activity-package-images' AND
         auth.uid()::text = (storage.foldername(name))[1]
     );
 
+DROP POLICY IF EXISTS "Users can update images for their packages" ON storage.objects;
 CREATE POLICY "Users can update images for their packages" ON storage.objects
     FOR UPDATE USING (
         bucket_id = 'activity-package-images' AND
         auth.uid()::text = (storage.foldername(name))[1]
     );
 
+DROP POLICY IF EXISTS "Users can delete images for their packages" ON storage.objects;
 CREATE POLICY "Users can delete images for their packages" ON storage.objects
     FOR DELETE USING (
         bucket_id = 'activity-package-images' AND
         auth.uid()::text = (storage.foldername(name))[1]
     );
 
+DROP POLICY IF EXISTS "Anyone can view published package images" ON storage.objects;
 CREATE POLICY "Anyone can view published package images" ON storage.objects
     FOR SELECT USING (bucket_id = 'activity-package-images');

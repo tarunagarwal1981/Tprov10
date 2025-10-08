@@ -12,6 +12,7 @@ The 400 Bad Request errors you're seeing are because the database tables don't e
 3. Copy and paste the entire contents of `supabase-setup.sql`
 4. Click **Run** to execute the script
 5. This will create all the necessary tables, indexes, and policies
+6. **Note**: The script now handles existing objects gracefully - it won't fail if types or tables already exist
 
 ### 2. **Verify Setup**
 After running the SQL script, you should see:
