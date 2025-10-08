@@ -16,6 +16,7 @@ import {
   FaUpload,
   FaCrop,
   FaInfoCircle,
+  FaDollarSign,
 } from "react-icons/fa";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -119,8 +120,19 @@ export const BasicInformationTab: React.FC = () => {
       
       if (isFeatured) {
         // Handle featured image
-        if (processedImages.length > 0) {
-          const featuredImage = { ...processedImages[0], isCover: true };
+        if (processedImages.length > 0 && processedImages[0]) {
+          const firstImage = processedImages[0];
+          const featuredImage: ImageInfo = { 
+            ...firstImage, 
+            isCover: true,
+            id: firstImage.id,
+            url: firstImage.url,
+            fileName: firstImage.fileName,
+            fileSize: firstImage.fileSize,
+            mimeType: firstImage.mimeType,
+            order: firstImage.order,
+            uploadedAt: firstImage.uploadedAt
+          };
           setValue('basicInformation.featuredImage', featuredImage);
         }
       } else {
@@ -257,12 +269,23 @@ export const BasicInformationTab: React.FC = () => {
                   <FormControl>
                     <div className="space-y-2">
                       <Input
-                        value={locationSearch}
-                        onChange={(e) => setLocationSearch(e.target.value)}
-                        placeholder="Search for location..."
+                        value={field.value?.name || ''}
+                        onChange={(e) => {
+                          const newValue = e.target.value;
+                          setLocationSearch(newValue);
+                          // Update the form field with the typed value
+                          field.onChange({
+                            name: newValue,
+                            address: field.value?.address || '',
+                            coordinates: field.value?.coordinates || { latitude: 0, longitude: 0 },
+                            city: field.value?.city || '',
+                            country: field.value?.country || '',
+                          });
+                        }}
+                        placeholder="Enter destination name..."
                         className="package-text-fix"
                       />
-                      {field.value.name && (
+                      {field.value?.name && field.value?.address && (
                         <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md">
                           <p className="font-medium">{field.value.name}</p>
                           <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -460,6 +483,119 @@ export const BasicInformationTab: React.FC = () => {
         </CardContent>
       </Card>
 
+
+      {/* Pricing */}
+      <Card className="package-selector-glass package-shadow-fix">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FaDollarSign className="h-5 w-5 text-green-600" />
+            Pricing
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={control}
+              name="pricing.basePrice"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Base Price *</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="0.00"
+                      className="package-text-fix"
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    The base price for this activity package
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={control}
+              name="pricing.currency"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Currency *</FormLabel>
+                  <FormControl>
+                    <select
+                      value={field.value}
+                      onChange={(e) => field.onChange(e.target.value)}
+                      className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring package-text-fix"
+                    >
+                      <option value="USD">USD - US Dollar</option>
+                      <option value="EUR">EUR - Euro</option>
+                      <option value="GBP">GBP - British Pound</option>
+                      <option value="JPY">JPY - Japanese Yen</option>
+                      <option value="CAD">CAD - Canadian Dollar</option>
+                      <option value="AUD">AUD - Australian Dollar</option>
+                      <option value="CHF">CHF - Swiss Franc</option>
+                      <option value="CNY">CNY - Chinese Yuan</option>
+                    </select>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={control}
+              name="pricing.priceType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Price Type *</FormLabel>
+                  <FormControl>
+                    <select
+                      value={field.value}
+                      onChange={(e) => field.onChange(e.target.value)}
+                      className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring package-text-fix"
+                    >
+                      <option value="PERSON">Per Person</option>
+                      <option value="GROUP">Per Group</option>
+                    </select>
+                  </FormControl>
+                  <FormDescription>
+                    How the price is calculated
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={control}
+              name="pricing.infantPrice"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Infant Price (Optional)</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="0.00"
+                      className="package-text-fix"
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Special price for infants (0-2 years)
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Images */}
       <Card className="package-selector-glass package-shadow-fix">
         <CardHeader>
@@ -476,8 +612,20 @@ export const BasicInformationTab: React.FC = () => {
               <ImageUpload
                 images={watchedData.featuredImage ? [watchedData.featuredImage] : []}
                 onImagesChange={(images) => {
-                  if (images.length > 0) {
-                    setValue('basicInformation.featuredImage', { ...images[0], isCover: true });
+                  if (images.length > 0 && images[0]) {
+                    const firstImage = images[0];
+                    const featuredImage: ImageInfo = {
+                      ...firstImage,
+                      isCover: true,
+                      id: firstImage.id,
+                      url: firstImage.url,
+                      fileName: firstImage.fileName,
+                      fileSize: firstImage.fileSize,
+                      mimeType: firstImage.mimeType,
+                      order: firstImage.order,
+                      uploadedAt: firstImage.uploadedAt
+                    };
+                    setValue('basicInformation.featuredImage', featuredImage);
                   } else {
                     setValue('basicInformation.featuredImage', null);
                   }

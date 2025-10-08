@@ -48,6 +48,12 @@ EXCEPTION
 END $$;
 
 DO $$ BEGIN
+    CREATE TYPE child_price_type AS ENUM ('PERCENTAGE', 'FIXED');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
     CREATE TYPE faq_category AS ENUM ('GENERAL', 'BOOKING', 'CANCELLATION', 'WEATHER', 'SAFETY', 'ACCESSIBILITY');
 EXCEPTION
     WHEN duplicate_object THEN null;
@@ -135,7 +141,7 @@ CREATE TABLE IF NOT EXISTS activity_packages (
     base_price DECIMAL(10,2) NOT NULL DEFAULT 0,
     currency currency_code NOT NULL DEFAULT 'USD',
     price_type price_type NOT NULL DEFAULT 'PERSON',
-    child_price_type price_type,
+    child_price_type child_price_type,
     child_price_value DECIMAL(10,2),
     infant_price DECIMAL(10,2),
     group_discounts JSONB NOT NULL DEFAULT '[]',

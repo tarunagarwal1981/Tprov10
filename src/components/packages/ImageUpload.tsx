@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useRef } from 'react';
+import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FaUpload,
@@ -100,7 +101,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
       const reader = new FileReader();
       
       reader.onload = (e) => {
-        const img = new Image();
+        const img = new window.Image();
         img.onload = () => {
           const imageInfo: ImageInfo = {
             id: `temp-${Date.now()}-${Math.random().toString(36).substring(2)}`,
@@ -147,6 +148,8 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
 
     for (let i = 0; i < fileArray.length; i++) {
       const file = fileArray[i];
+      if (!file) continue;
+      
       const fileId = `upload-${Date.now()}-${i}`;
 
       // Validate file
@@ -279,7 +282,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
     const newImages = images.filter(img => img.id !== imageId);
     // If removing cover image, make the first remaining image the cover
     const removedImage = images.find(img => img.id === imageId);
-    if (removedImage?.isCover && newImages.length > 0) {
+    if (removedImage?.isCover && newImages.length > 0 && newImages[0]) {
       newImages[0].isCover = true;
     }
     onImagesChange(newImages);
@@ -296,7 +299,9 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
   const handleReorderImages = useCallback((fromIndex: number, toIndex: number) => {
     const newImages = [...images];
     const [movedImage] = newImages.splice(fromIndex, 1);
-    newImages.splice(toIndex, 0, movedImage);
+    if (movedImage) {
+      newImages.splice(toIndex, 0, movedImage);
+    }
     
     // Update order property
     const reorderedImages = newImages.map((img, index) => ({
@@ -533,10 +538,12 @@ const ImageCard: React.FC<ImageCardProps> = ({
   return (
     <Card className="group relative overflow-hidden">
       <div className="aspect-square relative">
-        <img
+        <Image
           src={image.url}
           alt={image.fileName}
-          className="w-full h-full object-cover"
+          fill
+          sizes="(max-width: 768px) 50vw, 25vw"
+          className="object-cover cursor-pointer"
           onClick={onPreview}
         />
         
@@ -674,9 +681,11 @@ const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
         className="relative max-w-4xl max-h-[90vh] p-4"
         onClick={(e) => e.stopPropagation()}
       >
-        <img
+        <Image
           src={imageUrl}
           alt="Preview"
+          width={800}
+          height={600}
           className="max-w-full max-h-full object-contain rounded-lg"
         />
         <Button

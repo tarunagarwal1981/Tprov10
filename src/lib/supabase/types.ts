@@ -19,7 +19,7 @@ export type Database = {
           email: string
           name: string
           phone?: string
-          role: 'SUPER_ADMIN' | 'ADMIN' | 'TOUR_OPERATOR' | 'TRAVEL_AGENT'
+          role: 'SUPER_ADMIN' | 'ADMIN' | 'TOUR_OPERATOR' | 'TRAVEL_AGENT' | 'USER'
           profile: Json
           created_at: string
           updated_at: string
@@ -29,7 +29,7 @@ export type Database = {
           email: string
           name?: string
           phone?: string
-          role?: 'SUPER_ADMIN' | 'ADMIN' | 'TOUR_OPERATOR' | 'TRAVEL_AGENT'
+          role?: 'SUPER_ADMIN' | 'ADMIN' | 'TOUR_OPERATOR' | 'TRAVEL_AGENT' | 'USER'
           profile?: Json
           created_at?: string
           updated_at?: string
@@ -39,7 +39,7 @@ export type Database = {
           email?: string
           name?: string
           phone?: string
-          role?: 'SUPER_ADMIN' | 'ADMIN' | 'TOUR_OPERATOR' | 'TRAVEL_AGENT'
+          role?: 'SUPER_ADMIN' | 'ADMIN' | 'TOUR_OPERATOR' | 'TRAVEL_AGENT' | 'USER'
           profile?: Json
           created_at?: string
           updated_at?: string
@@ -403,7 +403,7 @@ export type Database = {
           base_price: number
           currency: 'USD' | 'EUR' | 'GBP' | 'JPY' | 'CAD' | 'AUD' | 'CHF' | 'CNY'
           price_type: 'PERSON' | 'GROUP'
-          child_price_type: 'PERSON' | 'GROUP' | null
+          child_price_type: 'PERCENTAGE' | 'FIXED' | null
           child_price_value: number | null
           infant_price: number | null
           group_discounts: Json
@@ -464,7 +464,7 @@ export type Database = {
           base_price?: number
           currency?: 'USD' | 'EUR' | 'GBP' | 'JPY' | 'CAD' | 'AUD' | 'CHF' | 'CNY'
           price_type?: 'PERSON' | 'GROUP'
-          child_price_type?: 'PERSON' | 'GROUP' | null
+          child_price_type?: 'PERCENTAGE' | 'FIXED' | null
           child_price_value?: number | null
           infant_price?: number | null
           group_discounts?: Json
@@ -525,7 +525,7 @@ export type Database = {
           base_price?: number
           currency?: 'USD' | 'EUR' | 'GBP' | 'JPY' | 'CAD' | 'AUD' | 'CHF' | 'CNY'
           price_type?: 'PERSON' | 'GROUP'
-          child_price_type?: 'PERSON' | 'GROUP' | null
+          child_price_type?: 'PERCENTAGE' | 'FIXED' | null
           child_price_value?: number | null
           infant_price?: number | null
           group_discounts?: Json

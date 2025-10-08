@@ -3,7 +3,7 @@
 import React from 'react';
 import { ActivityPackageForm } from '@/components/packages/forms/ActivityPackageForm';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { FaTestTube } from 'react-icons/fa';
+import { FaFlask } from 'react-icons/fa';
 
 export default function ActivityPackageTestPage() {
   const handleSave = async (data: any) => {
@@ -23,7 +23,7 @@ export default function ActivityPackageTestPage() {
       <Card className="mb-6">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <FaTestTube className="h-5 w-5 text-blue-600" />
+            <FaFlask className="h-5 w-5 text-blue-600" />
             Activity Package Integration Test
           </CardTitle>
         </CardHeader>

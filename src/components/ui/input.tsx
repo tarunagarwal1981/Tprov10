@@ -133,6 +133,8 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
             )}
             ref={ref}
             maxLength={maxLength}
+            value={value}
+            onChange={onChange}
             {...props}
           />
 
@@ -174,21 +176,21 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
 
         {/* Character count */}
         {showCharacterCount && maxLength && (
-          <div className="absolute -bottom-5 right-0 text-xs text-muted-foreground">
+          <div className="mt-1 text-right text-xs text-muted-foreground">
             {characterCount}/{maxLength}
           </div>
         )}
 
         {/* Error message */}
         {error && errorMessage && (
-          <div className="absolute -bottom-5 left-0 text-xs text-destructive animate-in slide-in-from-top-1 duration-200">
+          <div className="mt-1 text-xs text-destructive">
             {errorMessage}
           </div>
         )}
 
         {/* Success message */}
         {success && successMessage && (
-          <div className="absolute -bottom-5 left-0 text-xs text-green-500 animate-in slide-in-from-top-1 duration-200">
+          <div className="mt-1 text-xs text-green-500">
             {successMessage}
           </div>
         )}

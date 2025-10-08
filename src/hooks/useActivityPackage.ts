@@ -114,7 +114,7 @@ export const useActivityPackage = (
 
     try {
       const dbData = formDataToDatabase(data, user.id);
-      const { data: newPackage, error: createError } = await createActivityPackage(dbData);
+      const { data: newPackage, error: createError } = await createActivityPackage(dbData, user.id);
 
       if (createError) {
         handleError(createError);

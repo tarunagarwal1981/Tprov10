@@ -4,6 +4,7 @@
  */
 
 import { createSupabaseBrowserClient, withErrorHandling, SupabaseError } from './client';
+import { uploadImageFiles, base64ToFile, deleteFile } from './file-upload';
 import type {
   ActivityPackage,
   ActivityPackageInsert,
@@ -86,11 +87,53 @@ export interface ActivityPackageListResponse {
  * Create a new activity package
  */
 export async function createActivityPackage(
-  data: CreateActivityPackageData
+  data: CreateActivityPackageData,
+  userId: string
 ): Promise<{ data: ActivityPackageWithRelations | null; error: SupabaseError | null }> {
   const supabase = createSupabaseBrowserClient();
   
   return withErrorHandling(async () => {
+    // First, upload any base64 images to storage
+    const finalImages: ActivityPackageImageInsert[] = [];
+    
+    if (data.images && data.images.length > 0) {
+      // Separate base64 images from already uploaded images
+      const base64Images = data.images.filter(img => img.storage_path?.startsWith('data:'));
+      const alreadyUploadedImages = data.images.filter(img => !img.storage_path?.startsWith('data:'));
+      
+      if (base64Images.length > 0) {
+        // Convert base64 to files and upload
+        const files = base64Images.map(img => {
+          const fileName = img.file_name || `image_${Date.now()}.jpg`;
+          return base64ToFile(img.storage_path!, fileName);
+        });
+        
+        const uploadResults = await uploadImageFiles(files, userId, 'activity-packages');
+        
+        // Create image records with proper storage paths
+        const newImageRecords = uploadResults.map((result, index) => {
+          const base64Image = base64Images[index];
+          return {
+            package_id: '', // Will be set later
+            file_name: base64Image?.file_name || '',
+            file_size: base64Image?.file_size || 0,
+            mime_type: base64Image?.mime_type || 'image/jpeg',
+            storage_path: result.data?.path || '',
+            public_url: result.data?.publicUrl || '',
+            alt_text: base64Image?.alt_text || '',
+            is_cover: base64Image?.is_cover || false,
+            is_featured: base64Image?.is_featured || false,
+            display_order: base64Image?.display_order || 0,
+          };
+        });
+        
+        finalImages.push(...newImageRecords);
+      }
+      
+      // Add already uploaded images
+      finalImages.push(...alreadyUploadedImages);
+    }
+
     // Start a transaction-like operation
     const { data: packageData, error: packageError } = await supabase
       .from('activity_packages')
@@ -112,8 +155,8 @@ export async function createActivityPackage(
     };
 
     // Insert related data if provided
-    if (data.images && data.images.length > 0) {
-      const imagesWithPackageId = data.images.map(img => ({
+    if (finalImages.length > 0) {
+      const imagesWithPackageId = finalImages.map(img => ({
         ...img,
         package_id: packageId,
       }));
@@ -423,18 +466,19 @@ export async function deleteActivityPackage(
 ): Promise<{ data: boolean; error: SupabaseError | null }> {
   const supabase = createSupabaseBrowserClient();
   
-  return withErrorHandling(async () => {
+  const result = await withErrorHandling(async () => {
     const { error } = await supabase
       .from('activity_packages')
       .delete()
       .eq('id', id);
 
-    if (error) {
-      throw error;
-    }
-
-    return { data: true, error: null };
+    return { data: true, error };
   });
+
+  return {
+    data: result.data ?? false,
+    error: result.error
+  };
 }
 
 /**
@@ -656,7 +700,7 @@ export async function deleteActivityPackageImage(
 ): Promise<{ data: boolean; error: SupabaseError | null }> {
   const supabase = createSupabaseBrowserClient();
   
-  return withErrorHandling(async () => {
+  const result = await withErrorHandling(async () => {
     // Get image record first
     const { data: image, error: fetchError } = await supabase
       .from('activity_package_images')
@@ -665,11 +709,11 @@ export async function deleteActivityPackageImage(
       .single();
 
     if (fetchError) {
-      throw fetchError;
+      return { data: null, error: fetchError };
     }
 
     if (!image) {
-      throw new Error('Image not found');
+      return { data: null, error: new Error('Image not found') };
     }
 
     // Delete from storage
@@ -678,7 +722,7 @@ export async function deleteActivityPackageImage(
       .remove([image.storage_path]);
 
     if (storageError) {
-      throw storageError;
+      return { data: null, error: storageError };
     }
 
     // Delete from database
@@ -688,11 +732,16 @@ export async function deleteActivityPackageImage(
       .eq('id', imageId);
 
     if (dbError) {
-      throw dbError;
+      return { data: null, error: dbError };
     }
 
     return { data: true, error: null };
   });
+
+  return {
+    data: result.data ?? false,
+    error: result.error
+  };
 }
 
 /**
@@ -769,7 +818,7 @@ export function formDataToDatabase(
     cancellation_refund_percentage: formData.policiesRestrictions?.cancellationPolicy?.refundPercentage || 80,
     cancellation_deadline_hours: formData.policiesRestrictions?.cancellationPolicy?.cancellationDeadline || 24,
     weather_policy: formData.policiesRestrictions?.weatherPolicy || null,
-    health_safety_requirements: formData.policiesRestrictions?.healthSafety?.requirements || [],
+    health_safety_requirements: (formData.policiesRestrictions?.healthSafety?.requirements || []) as any,
     health_safety_additional_info: formData.policiesRestrictions?.healthSafety?.additionalInfo || null,
     base_price: formData.pricing?.basePrice || 0,
     currency: formData.pricing?.currency || 'USD',
@@ -777,8 +826,8 @@ export function formDataToDatabase(
     child_price_type: formData.pricing?.childPrice?.type || null,
     child_price_value: formData.pricing?.childPrice?.value || null,
     infant_price: formData.pricing?.infantPrice || null,
-    group_discounts: formData.pricing?.groupDiscounts || [],
-    seasonal_pricing: formData.pricing?.seasonalPricing || [],
+    group_discounts: (formData.pricing?.groupDiscounts || []) as any,
+    seasonal_pricing: (formData.pricing?.seasonalPricing || []) as any,
     dynamic_pricing_enabled: formData.pricing?.dynamicPricing?.enabled || false,
     dynamic_pricing_base_multiplier: formData.pricing?.dynamicPricing?.baseMultiplier || 1.0,
     dynamic_pricing_demand_multiplier: formData.pricing?.dynamicPricing?.demandMultiplier || 1.0,
@@ -794,8 +843,8 @@ export function formDataToDatabase(
     file_name: img.fileName || '',
     file_size: img.fileSize || 0,
     mime_type: img.mimeType || 'image/jpeg',
-    storage_path: img.url || '',
-    public_url: img.url || '',
+    storage_path: img.url || '', // Keep the full URL (base64 or file path)
+    public_url: img.url?.startsWith('data:') ? '' : img.url || '', // Only set public_url for non-base64
     alt_text: img.fileName || '',
     is_cover: img.isCover || false,
     is_featured: img.isCover || false,
@@ -859,7 +908,7 @@ export function databaseToFormData(
         coordinates: { latitude: 0, longitude: 0 }, // Would need to parse POINT
         city: dbData.destination_city,
         country: dbData.destination_country,
-        postalCode: dbData.destination_postal_code,
+        postalCode: dbData.destination_postal_code || undefined,
       },
       duration: {
         hours: dbData.duration_hours,
@@ -868,8 +917,26 @@ export function databaseToFormData(
       difficultyLevel: dbData.difficulty_level,
       languagesSupported: dbData.languages_supported,
       tags: dbData.tags,
-      featuredImage: dbData.images.find(img => img.is_cover) || null,
-      imageGallery: dbData.images,
+      featuredImage: dbData.images.find(img => img.is_cover) ? {
+        id: dbData.images.find(img => img.is_cover)!.id,
+        url: dbData.images.find(img => img.is_cover)!.public_url,
+        fileName: dbData.images.find(img => img.is_cover)!.file_name,
+        fileSize: dbData.images.find(img => img.is_cover)!.file_size,
+        mimeType: dbData.images.find(img => img.is_cover)!.mime_type,
+        isCover: true,
+        order: dbData.images.find(img => img.is_cover)!.display_order,
+        uploadedAt: new Date(dbData.images.find(img => img.is_cover)!.uploaded_at),
+      } : null,
+      imageGallery: dbData.images.map(img => ({
+        id: img.id,
+        url: img.public_url,
+        fileName: img.file_name,
+        fileSize: img.file_size,
+        mimeType: img.mime_type,
+        isCover: img.is_cover,
+        order: img.display_order,
+        uploadedAt: new Date(img.uploaded_at),
+      })),
     },
     // ... other sections would be mapped similarly
     activityDetails: {
@@ -894,7 +961,7 @@ export function databaseToFormData(
       whatToBring: dbData.what_to_bring,
       whatsIncluded: dbData.whats_included,
       whatsNotIncluded: dbData.whats_not_included,
-      importantInformation: dbData.important_information || '',
+        importantInformation: dbData.important_information || '',
     },
     packageVariants: {
       variants: dbData.variants.map(variant => ({
@@ -912,7 +979,7 @@ export function databaseToFormData(
     policiesRestrictions: {
       ageRestrictions: {
         minimumAge: dbData.minimum_age,
-        maximumAge: dbData.maximum_age,
+        maximumAge: dbData.maximum_age || undefined,
         childPolicy: dbData.child_policy || '',
         infantPolicy: dbData.infant_policy || '',
         ageVerificationRequired: dbData.age_verification_required,
@@ -924,7 +991,7 @@ export function databaseToFormData(
       },
       cancellationPolicy: {
         type: dbData.cancellation_policy_type,
-        customPolicy: dbData.cancellation_policy_custom,
+        customPolicy: dbData.cancellation_policy_custom || '',
         refundPercentage: dbData.cancellation_refund_percentage,
         cancellationDeadline: dbData.cancellation_deadline_hours,
       },
@@ -951,7 +1018,7 @@ export function databaseToFormData(
         type: dbData.child_price_type,
         value: dbData.child_price_value,
       } : undefined,
-      infantPrice: dbData.infant_price,
+      infantPrice: dbData.infant_price || undefined,
       groupDiscounts: dbData.group_discounts as any,
       seasonalPricing: dbData.seasonal_pricing as any,
       dynamicPricing: {
