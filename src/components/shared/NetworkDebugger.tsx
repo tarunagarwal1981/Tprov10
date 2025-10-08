@@ -9,7 +9,6 @@ export const NetworkDebugger: React.FC = () => {
   useEffect(() => {
     const checkNetwork = async () => {
       try {
-        console.log('🌐 Starting network diagnostics...');
         const supabase = createSupabaseBrowserClient();
         
         // Check network connectivity
@@ -22,59 +21,18 @@ export const NetworkDebugger: React.FC = () => {
           } : null
         };
         
-        console.log('🌐 Network info:', networkInfo);
-        
-        // Test actual connectivity with a simple fetch
-        console.log('🌐 Testing actual network connectivity...');
-        try {
-          const connectivityTest = await fetch('https://httpbin.org/get', {
-            method: 'GET',
-            mode: 'no-cors',
-            cache: 'no-cache'
-          });
-          console.log('🌐 Connectivity test result:', connectivityTest.status);
-        } catch (connectivityError) {
-          console.log('🌐 Connectivity test failed:', connectivityError);
-        }
-        
-        // Test direct HTTP request to Supabase
-        const supabaseUrl = (supabase as any).supabaseUrl;
-        console.log('🌐 Testing direct HTTP request to:', supabaseUrl);
-        
-        try {
-          const response = await fetch(`${supabaseUrl}/rest/v1/`, {
-            method: 'HEAD',
-            headers: {
-              'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
-              'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''}`
-            }
-          });
-          
-          console.log('🌐 Direct HTTP response:', {
-            status: response.status,
-            statusText: response.statusText,
-            headers: Object.fromEntries(response.headers.entries())
-          });
-        } catch (httpError) {
-          console.error('🌐 Direct HTTP request failed:', httpError);
-        }
-        
         // Test Supabase REST API directly
-        console.log('🌐 Testing Supabase REST API...');
         const { data: restData, error: restError } = await supabase
           .from('users')
           .select('count')
           .limit(1);
-          
-        console.log('🌐 REST API test result:', { data: restData, error: restError });
         
         setNetworkStatus({
           networkInfo,
-          supabaseUrl,
+          supabaseUrl: (supabase as any).supabaseUrl,
           timestamp: new Date().toISOString(),
         });
       } catch (err) {
-        console.error('🌐 Network check error:', err);
         setNetworkStatus({
           error: err instanceof Error ? err.message : 'Unknown error',
           timestamp: new Date().toISOString(),

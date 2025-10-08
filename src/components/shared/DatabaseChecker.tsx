@@ -10,11 +10,7 @@ export const DatabaseChecker: React.FC = () => {
   useEffect(() => {
     const checkDatabase = async () => {
       try {
-        console.log('🗄️ Starting database check...');
         const supabase = createSupabaseBrowserClient();
-        
-        console.log('🗄️ Supabase client URL:', (supabase as any).supabaseUrl);
-        console.log('🗄️ Checking users table access...');
         
         // Check if users table exists and is accessible
         const { data: users, error: usersError } = await supabase
@@ -22,28 +18,25 @@ export const DatabaseChecker: React.FC = () => {
           .select('count')
           .limit(1);
 
-        console.log('🗄️ Users table query result:', { data: users, error: usersError });
-
         // Check if we can query the table structure
-        console.log('🗄️ Running sample query...');
         const { data: sampleUser, error: sampleError } = await supabase
           .from('users')
           .select('id, email, role, name')
           .limit(1);
 
-        console.log('🗄️ Sample query result:', { data: sampleUser, error: sampleError });
-
         // Try to get the current user's profile specifically
         const { data: { session } } = await supabase.auth.getSession();
+        let currentUserProfile = null;
+        let currentUserError = null;
+        
         if (session?.user) {
-          console.log('🗄️ Current user session found, testing specific user query...');
-          const { data: currentUserProfile, error: currentUserError } = await supabase
+          const result = await supabase
             .from('users')
             .select('*')
             .eq('id', session.user.id)
             .single();
-          
-          console.log('🗄️ Current user profile query:', { data: currentUserProfile, error: currentUserError });
+          currentUserProfile = result.data;
+          currentUserError = result.error;
         }
 
         setDbStatus({
@@ -60,7 +53,6 @@ export const DatabaseChecker: React.FC = () => {
           timestamp: new Date().toISOString(),
         });
       } catch (err) {
-        console.error('🗄️ Database check error:', err);
         setDbStatus({
           error: err instanceof Error ? err.message : 'Unknown error',
           timestamp: new Date().toISOString(),

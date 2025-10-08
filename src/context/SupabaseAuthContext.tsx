@@ -279,28 +279,11 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         console.log('🔍 Loading user profile from database...');
         
         try {
-          console.log('🔍 Starting profile query for user ID:', data.user.id);
-          console.log('🔍 Supabase client URL:', (supabase as any).supabaseUrl);
-          console.log('🔍 Query details: SELECT * FROM users WHERE id =', data.user.id);
-          
           // Test basic Supabase connection first
-          console.log('🔍 Testing basic Supabase connection...');
-          console.log('🔍 Navigator online status:', navigator.onLine);
-          
-          // Add network check bypass
-          if (!navigator.onLine) {
-            console.warn('⚠️ Browser reports offline, but attempting query anyway...');
-            console.warn('⚠️ This is likely a browser false positive since auth worked');
-          }
-          
-          // Force online status for Supabase queries
-          console.log('🔍 Forcing online status for database queries...');
-          
           const { data: testData, error: testError } = await supabase
             .from('users')
             .select('count')
             .limit(1);
-          console.log('🔍 Basic connection test:', { data: testData, error: testError });
           
           // Add timeout to prevent hanging
           const profileQuery = supabase
@@ -309,32 +292,19 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
             .eq('id', data.user.id)
             .single();
 
-          console.log('🔍 Profile query created, starting timeout...');
-          
           const timeoutPromise = new Promise((_, reject) => 
             setTimeout(() => {
-              console.log('⏰ Profile query timeout after 5 seconds (reduced timeout)');
-              reject(new Error('Profile query timeout - network issue detected'));
+              reject(new Error('Profile query timeout'));
             }, 5000)
           );
 
-          console.log('🔍 Starting Promise.race between query and timeout...');
           const { data: userProfile, error: profileError } = await Promise.race([
             profileQuery,
             timeoutPromise
           ]) as any;
-
-          console.log('📊 Profile query completed!');
-          console.log('📊 User profile from database:', userProfile);
-          console.log('📊 Profile error:', profileError);
           
           if (profileError) {
-            console.error('❌ Profile error details:', {
-              message: profileError.message,
-              code: profileError.code,
-              details: profileError.details,
-              hint: profileError.hint
-            });
+            console.error('❌ Profile error:', profileError.message);
           }
 
           if (userProfile) {

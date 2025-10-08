@@ -5,10 +5,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/SupabaseAuthContext';
 import AuthLayout from '@/components/shared/AuthLayout';
-import { LoginDebugger } from '@/components/shared/LoginDebugger';
-import { DatabaseChecker } from '@/components/shared/DatabaseChecker';
-import { NetworkDebugger } from '@/components/shared/NetworkDebugger';
-import { NetworkBypass } from '@/components/shared/NetworkBypass';
 
 interface DemoAccount {
   id: string;
@@ -438,10 +434,6 @@ const LoginPage: React.FC = () => {
         </div>
       </motion.div>
       
-      <LoginDebugger />
-      <DatabaseChecker />
-      <NetworkDebugger />
-      <NetworkBypass />
     </AuthLayout>
   );
 };
