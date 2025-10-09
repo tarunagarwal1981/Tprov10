@@ -134,11 +134,31 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
           } else {
             // Fallback if no profile found in database
             console.warn('⚠️ No user profile found in database during init, using default');
+            
+            // Try to get role from user metadata or email
+            const metadataRole = session.user.user_metadata?.role as UserRole | undefined;
+            const email = session.user.email || '';
+            let fallbackRole: UserRole = 'USER';
+            
+            if (metadataRole && ['SUPER_ADMIN', 'ADMIN', 'TOUR_OPERATOR', 'TRAVEL_AGENT', 'USER'].includes(metadataRole)) {
+              fallbackRole = metadataRole;
+              console.log('🔍 Using role from user metadata:', fallbackRole);
+            } else if (email.toLowerCase().includes('operator')) {
+              fallbackRole = 'TOUR_OPERATOR';
+              console.log('🔍 Detected operator email, assigning TOUR_OPERATOR role');
+            } else if (email.toLowerCase().includes('admin')) {
+              fallbackRole = 'ADMIN';
+              console.log('🔍 Detected admin email, assigning ADMIN role');
+            } else if (email.toLowerCase().includes('agent')) {
+              fallbackRole = 'TRAVEL_AGENT';
+              console.log('🔍 Detected agent email, assigning TRAVEL_AGENT role');
+            }
+            
             const userData: User = {
               id: session.user.id,
               email: session.user.email || '',
               name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
-              role: 'USER', // Default fallback
+              role: fallbackRole,
               profile: {
                 timezone: 'UTC',
                 language: 'en',
@@ -156,6 +176,8 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
               created_at: new Date(session.user.created_at),
               updated_at: new Date(session.user.updated_at || session.user.created_at),
             };
+            
+            console.log('👤 Init fallback user created with role:', userData.role);
             setUser(userData);
             setProfile(userData.profile);
           }
@@ -187,16 +209,11 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('[Auth] Auth state changed:', event, session ? 'session exists' : 'no session');
       
-      if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
-        if (event === 'SIGNED_OUT') {
-          setUser(null);
-          setProfile(null);
-          setError({
-            type: 'session_expired',
-            message: 'Your session has expired. Please log in again.',
-            timestamp: new Date()
-          });
-        } else if (event === 'TOKEN_REFRESHED' && session?.user) {
+      if (event === 'SIGNED_OUT') {
+        // Only clear user state, don't show error during normal logout
+        setUser(null);
+        setProfile(null);
+      } else if (event === 'TOKEN_REFRESHED' && session?.user) {
           // Token was refreshed successfully, reload user profile
           try {
             const { data: userProfile, error: profileError } = await supabase
@@ -240,7 +257,6 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
           } catch (err) {
             console.error('[Auth] Error refreshing user profile after token refresh:', err);
           }
-        }
       }
     });
 
@@ -279,32 +295,22 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         console.log('🔍 Loading user profile from database...');
         
         try {
-          // Test basic Supabase connection first
-          const { data: testData, error: testError } = await supabase
-            .from('users')
-            .select('count')
-            .limit(1);
+          console.log('📡 Loading user profile from database...');
+          console.log('📡 User ID:', data.user.id);
+          console.log('📡 Supabase URL:', (supabase as any).supabaseUrl);
           
-          // Add timeout to prevent hanging
-          const profileQuery = supabase
+          // Query the user profile from database
+          const { data: userProfile, error: profileError } = await supabase
             .from('users')
             .select('*')
             .eq('id', data.user.id)
             .single();
-
-          const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => {
-              reject(new Error('Profile query timeout'));
-            }, 5000)
-          );
-
-          const { data: userProfile, error: profileError } = await Promise.race([
-            profileQuery,
-            timeoutPromise
-          ]) as any;
+          
+          console.log('📡 Query result:', { userProfile, profileError });
           
           if (profileError) {
-            console.error('❌ Profile error:', profileError.message);
+            console.error('❌ Profile error:', profileError);
+            throw profileError;
           }
 
           if (userProfile) {
@@ -357,66 +363,21 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
               default:
                 redirectUrl = '/';
             }
+            console.log('✅ Login successful, redirecting to:', redirectUrl);
             return redirectUrl;
           } else {
-            // Fallback if no profile found in database
-            console.warn('⚠️ No user profile found in database, using default');
-            const userData: User = {
-              id: data.user.id,
-              email: data.user.email || '',
-              name: data.user.user_metadata?.name || data.user.email?.split('@')[0] || 'User',
-              role: 'USER', // Default fallback
-              profile: {
-                timezone: 'UTC',
-                language: 'en',
-                currency: 'USD',
-                notification_preferences: {
-                  email: true,
-                  sms: false,
-                  push: true,
-                  marketing: false,
-                },
-              },
-              preferences: {},
-              avatar_url: data.user.user_metadata?.avatar_url,
-              phone: data.user.user_metadata?.phone,
-              created_at: new Date(data.user.created_at),
-              updated_at: new Date(data.user.updated_at || data.user.created_at),
-            };
-            setUser(userData);
-            setProfile(userData.profile);
-            // Default users go to home
-            return '/';
+            // Profile not found - this should not happen if user exists
+            console.error('❌ No user profile found in database for user:', data.user.id);
+            throw new Error('User profile not found in database. Please contact support.');
           }
         } catch (profileErr) {
           console.error('❌ Profile loading failed:', profileErr);
-          // Fallback to default user if profile loading fails
-          console.warn('⚠️ Using fallback user data due to profile loading error');
-          const fallbackUser: User = {
-            id: data.user.id,
-            email: data.user.email || '',
-            name: data.user.user_metadata?.name || data.user.email?.split('@')[0] || 'User',
-            role: 'USER', // Default fallback
-            profile: {
-              timezone: 'UTC',
-              language: 'en',
-              currency: 'USD',
-              notification_preferences: {
-                email: true,
-                sms: false,
-                push: true,
-                marketing: false,
-              },
-            },
-            preferences: {},
-            avatar_url: data.user.user_metadata?.avatar_url,
-            phone: data.user.user_metadata?.phone,
-            created_at: new Date(data.user.created_at),
-            updated_at: new Date(data.user.updated_at || data.user.created_at),
-          };
-          setUser(fallbackUser);
-          setProfile(fallbackUser.profile);
-          return '/';
+          setError({
+            type: 'login_error',
+            message: 'Failed to load user profile from database. Please try again or contact support.',
+            timestamp: new Date()
+          });
+          return false;
         }
       }
       

@@ -171,23 +171,28 @@ const LoginPage: React.FC = () => {
                 onChange={(e) => {
                   setEmailValue(e.target.value);
                 }}
-                className={`w-full px-4 py-3 pl-12 pr-12 border rounded-xl focus:outline-none focus:ring-2 transition-all duration-200 ${
+                style={{ paddingLeft: '3.5rem', paddingRight: '3rem' }}
+                className={`w-full py-3 border rounded-xl focus:outline-none focus:ring-2 transition-all duration-200 ${
                   loading === 'authenticating'
                     ? 'bg-gray-100 dark:bg-gray-800 cursor-not-allowed'
-                    : 'border-gray-300 dark:border-gray-600 focus:ring-indigo-500/20 bg-white dark:bg-gray-700'
+                    : 'border-gray-300 dark:border-gray-600 focus:ring-[#FF6B35]/20 bg-white dark:bg-gray-700'
                 }`}
                 placeholder="Enter your email"
               />
-              <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
-              </svg>
+              <div className="absolute left-3 top-0 bottom-0 flex items-center pointer-events-none">
+                <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
+                </svg>
+              </div>
               {emailValue && (
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center justify-center"
+                  className="absolute right-3 top-0 bottom-0 flex items-center justify-center"
                 >
-                  <span className="text-green-500 text-lg">✓</span>
+                  <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                  </svg>
                 </motion.div>
               )}
             </motion.div>
@@ -213,20 +218,23 @@ const LoginPage: React.FC = () => {
                 onChange={(e) => {
                   setPasswordValue(e.target.value);
                 }}
-                className={`w-full px-4 py-3 pl-12 pr-12 border rounded-xl focus:outline-none focus:ring-2 transition-all duration-200 ${
+                style={{ paddingLeft: '3.5rem', paddingRight: '4rem' }}
+                className={`w-full py-3 border rounded-xl focus:outline-none focus:ring-2 transition-all duration-200 ${
                   loading === 'authenticating'
                     ? 'bg-gray-100 dark:bg-gray-800 cursor-not-allowed'
-                    : 'border-gray-300 dark:border-gray-600 focus:ring-indigo-500/20 bg-white dark:bg-gray-700'
+                    : 'border-gray-300 dark:border-gray-600 focus:ring-[#FF6B35]/20 bg-white dark:bg-gray-700'
                 }`}
                 placeholder="Enter your password"
               />
-              <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-              </svg>
+              <div className="absolute left-3 top-0 bottom-0 flex items-center pointer-events-none">
+                <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              </div>
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+                className="absolute right-3 top-0 bottom-0 flex items-center justify-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors z-10"
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
               >
                 {showPassword ? (
@@ -244,9 +252,11 @@ const LoginPage: React.FC = () => {
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  className="absolute right-10 top-1/2 transform -translate-y-1/2 flex items-center justify-center"
+                  className="absolute right-11 top-0 bottom-0 flex items-center justify-center"
                 >
-                  <span className="text-green-500 text-lg">✓</span>
+                  <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                  </svg>
                 </motion.div>
               )}
             </motion.div>
@@ -263,13 +273,13 @@ const LoginPage: React.FC = () => {
                 type="checkbox"
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
-                className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                className="w-4 h-4 text-[#FF6B35] border-gray-300 rounded focus:ring-[#FF6B35]"
               />
               <span className="text-sm text-gray-700 dark:text-gray-300">Remember me</span>
             </motion.label>
             <motion.a
               href="#"
-              className="text-sm text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors"
+              className="text-sm text-[#FF6B35] hover:text-[#FF8C61] dark:text-[#FF8C61] dark:hover:text-[#FF6B35] transition-colors"
               whileHover={{ scale: 1.05 }}
               transition={{ duration: 0.2 }}
             >
@@ -300,7 +310,7 @@ const LoginPage: React.FC = () => {
             disabled={!emailValue || !passwordValue || loading === 'authenticating'}
             className={`w-full py-3 px-4 rounded-xl font-medium transition-all duration-200 ${
               emailValue && passwordValue && loading !== 'authenticating'
-                ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg hover:shadow-xl'
+                ? 'bg-[#FF6B35] hover:bg-[#E05A2A] text-white shadow-lg hover:shadow-xl'
                 : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
             }`}
             whileHover={emailValue && passwordValue && loading !== 'authenticating' ? { scale: 1.02, y: -1 } : {}}
@@ -406,7 +416,7 @@ const LoginPage: React.FC = () => {
             Don&apos;t have an account?{' '}
             <motion.a
               href="/register"
-              className="text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 font-medium"
+              className="text-[#FF6B35] hover:text-[#E05A2A] dark:text-[#FF8C61] dark:hover:text-[#FF6B35] font-medium"
               whileHover={{ scale: 1.05 }}
               transition={{ duration: 0.2 }}
             >

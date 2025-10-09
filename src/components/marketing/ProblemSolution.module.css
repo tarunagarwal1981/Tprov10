@@ -1,0 +1,292 @@
+/* Problem-Solution Section Styles */
+
+.section {
+  background: white;
+  padding: 6rem 2rem;
+}
+
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4rem;
+  position: relative;
+}
+
+/* Divider between columns */
+.grid::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: #E5E7EB;
+  transform: translateX(-50%);
+}
+
+/* Column Styles */
+.column {
+  display: flex;
+  flex-direction: column;
+}
+
+.columnTitle {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 3rem;
+  line-height: 1.2;
+}
+
+.problemsTitle {
+  color: #DC2626;
+}
+
+.solutionsTitle {
+  color: #10B981;
+}
+
+/* Items List */
+.itemsList {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+/* Card Styles */
+.card {
+  display: flex;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  background: transparent;
+}
+
+.card:hover {
+  background: rgba(0, 0, 0, 0.02);
+  transform: translateX(4px);
+}
+
+.problemCard:hover {
+  background: rgba(220, 38, 38, 0.05);
+}
+
+.solutionCard:hover {
+  background: rgba(16, 185, 129, 0.05);
+}
+
+/* Icon Container */
+.iconContainer {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.3s ease;
+}
+
+.card:hover .iconContainer {
+  transform: scale(1.1);
+}
+
+.iconContainerRed {
+  background: rgba(220, 38, 38, 0.1);
+  color: #DC2626;
+}
+
+.iconContainerOrange {
+  background: rgba(251, 146, 60, 0.1);
+  color: #F97316;
+}
+
+.iconContainerGreen {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10B981;
+}
+
+.iconContainerBlue {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3B82F6;
+}
+
+.icon {
+  font-size: 1.5rem;
+}
+
+/* Content Styles */
+.content {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.cardTitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: #1F2937;
+  line-height: 1.4;
+}
+
+.cardDescription {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #6B7280;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .section {
+    padding: 5rem 1.5rem;
+  }
+  
+  .grid {
+    gap: 3rem;
+  }
+  
+  .columnTitle {
+    font-size: 1.75rem;
+    margin-bottom: 2.5rem;
+  }
+  
+  .cardTitle {
+    font-size: 1.125rem;
+  }
+  
+  .cardDescription {
+    font-size: 0.9375rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .section {
+    padding: 4rem 1rem;
+  }
+  
+  .grid {
+    grid-template-columns: 1fr;
+    gap: 4rem;
+  }
+  
+  /* Hide divider on mobile */
+  .grid::before {
+    display: none;
+  }
+  
+  .columnTitle {
+    font-size: 1.5rem;
+    margin-bottom: 2rem;
+  }
+  
+  .card {
+    padding: 1rem;
+  }
+  
+  .iconContainer {
+    width: 44px;
+    height: 44px;
+  }
+  
+  .icon {
+    font-size: 1.25rem;
+  }
+  
+  .cardTitle {
+    font-size: 1rem;
+  }
+  
+  .cardDescription {
+    font-size: 0.875rem;
+  }
+  
+  .itemsList {
+    gap: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .section {
+    padding: 3rem 1rem;
+  }
+  
+  .columnTitle {
+    font-size: 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .card:hover {
+    transform: none;
+  }
+  
+  .iconContainer {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .icon {
+    font-size: 1.125rem;
+  }
+  
+  .cardTitle {
+    font-size: 0.9375rem;
+  }
+  
+  .cardDescription {
+    font-size: 0.8125rem;
+  }
+}
+
+/* Focus states for accessibility */
+.card:focus-visible {
+  outline: 2px solid #FF6B35;
+  outline-offset: 2px;
+  border-radius: 12px;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .iconContainer {
+    transition: none;
+  }
+  
+  .card:hover {
+    transform: none;
+  }
+  
+  .card:hover .iconContainer {
+    transform: none;
+  }
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+  .grid::before {
+    background: #000000;
+  }
+  
+  .card {
+    border: 1px solid #E5E7EB;
+  }
+  
+  .cardTitle {
+    color: #000000;
+  }
+  
+  .cardDescription {
+    color: #333333;
+  }
+}

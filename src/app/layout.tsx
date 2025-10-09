@@ -13,12 +13,12 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'TravelPro - Travel Business Platform',
-  description: 'Empower your travel business with AI-driven lead generation and seamless package management',
+  title: 'TravelSelBuy - AI-Powered Travel Booking Platform',
+  description: 'AI-Powered Travel Booking Platform for Small Travel Agents. Generate leads, manage customers, and book packages—all in one intelligent platform.',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'TravelPro',
+    title: 'TravelSelBuy',
   },
 };
 
@@ -28,7 +28,7 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: 'cover',
-  themeColor: '#3b82f6',
+  themeColor: '#FF6B35',
 };
 
 export default function RootLayout({

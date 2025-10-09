@@ -199,7 +199,7 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({
           transition={{ duration: 0.8 }}
         >
           {/* Animated Background */}
-          <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 via-purple-600 to-indigo-800">
+          <div className="absolute inset-0 bg-gradient-to-br from-[#FF6B35] via-[#FF4B8C] to-[#004E89]">
             <div className="absolute inset-0 bg-black/20" />
             {/* Floating Particles - client-only to prevent hydration mismatch */}
             {showParticles && Array.from({ length: 20 }).map((_, i) => (
@@ -224,7 +224,7 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({
                 <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
                   <span className="text-2xl">✈️</span>
                 </div>
-                <h1 className="text-2xl font-bold text-white">TravelPro</h1>
+                <h1 className="text-2xl font-bold text-white">TravelSelBuy</h1>
               </div>
               <h2 className="text-4xl font-bold text-white mb-4">
                 Empower Your Travel Business
@@ -349,10 +349,10 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({
           transition={{ delay: 0.2 }}
         >
           <div className="flex items-center space-x-3 mb-6">
-            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-[#FF6B35] rounded-lg flex items-center justify-center">
               <span className="text-white text-lg">✈️</span>
             </div>
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white">TravelPro</h1>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white">TravelSelBuy</h1>
           </div>
           
           {showFeatures && (

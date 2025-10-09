@@ -642,3 +642,89 @@ main { max-width: 100%; overflow-x: hidden; }
   .table-card td { display: grid; grid-template-columns: 40% 1fr; gap: 0.5rem; padding: 0.5rem 0.75rem; border: 0; }
   .table-card td::before { content: attr(data-label); font-weight: 600; color: hsl(var(--foreground)); }
 }
+
+/* ========================================
+   TRAVELSELBUY THEME SYSTEM
+   ======================================== */
+
+/* Marketing Theme - Public Pages */
+[data-theme="marketing"] {
+  --marketing-orange: #FF6B35;
+  --marketing-blue: #004E89;
+  --marketing-orange-light: #FF8C61;
+  --marketing-blue-light: #0066B3;
+  --marketing-orange-dark: #E05A2A;
+  --marketing-blue-dark: #003D6B;
+  
+  --marketing-gradient-primary: linear-gradient(135deg, #FF6B35 0%, #FF4B8C 100%);
+  --marketing-gradient-secondary: linear-gradient(135deg, #004E89 0%, #0080C8 100%);
+  
+  --marketing-bg: #FFFFFF;
+  --marketing-bg-alt: #F8F9FA;
+  --marketing-text: #1F2937;
+  --marketing-text-light: #6B7280;
+}
+
+/* Operator Theme - Tour Operator Dashboard */
+[data-theme="operator"] {
+  --operator-primary: #FF6B35;
+  --operator-primary-light: #FF8C61;
+  --operator-primary-dark: #E05A2A;
+  --operator-secondary: #004E89;
+  --operator-accent: #FFB800;
+  
+  --operator-gradient-main: linear-gradient(135deg, #FF6B35 0%, #FFB800 100%);
+  --operator-gradient-card: linear-gradient(135deg, #FFF5F0 0%, #FFFFFF 100%);
+  --operator-gradient-hover: linear-gradient(135deg, #E05A2A 0%, #E5A600 100%);
+  
+  --operator-sidebar-bg: #1F2937;
+  --operator-sidebar-text: #F9FAFB;
+  --operator-sidebar-active: var(--operator-gradient-main);
+  
+  --operator-success: #10B981;
+  --operator-warning: #F59E0B;
+  --operator-error: #EF4444;
+  --operator-info: #3B82F6;
+}
+
+/* Agent Theme - Travel Agent Dashboard (Future) */
+[data-theme="agent"] {
+  --agent-primary: #004E89;
+  --agent-primary-light: #0066B3;
+  --agent-primary-dark: #003D6B;
+  --agent-secondary: #00B4D8;
+  --agent-accent: #0077B6;
+  
+  --agent-gradient-main: linear-gradient(135deg, #004E89 0%, #00B4D8 100%);
+  --agent-gradient-card: linear-gradient(135deg, #F0F9FF 0%, #FFFFFF 100%);
+  
+  --agent-sidebar-bg: #1E293B;
+  --agent-sidebar-text: #F8FAFC;
+  --agent-sidebar-active: var(--agent-gradient-main);
+}
+
+/* ========================================
+   CROSS-BROWSER ENHANCEMENTS
+   ======================================== */
+
+/* Better font rendering across platforms */
+body {
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Better scrolling on touch devices */
+* {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Remove focus outline for mouse users but keep for keyboard */
+*:focus:not(:focus-visible) {
+  outline: none;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--marketing-blue, #004E89);
+  outline-offset: 2px;
+}

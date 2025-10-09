@@ -135,7 +135,7 @@ const StepIndicator: React.FC<{ currentStep: number; totalSteps: number }> = ({ 
                 step.number < currentStep
                   ? 'bg-green-500 text-white'
                   : step.number === currentStep
-                  ? 'bg-indigo-600 text-white'
+                  ? 'bg-[#FF6B35] text-white'
                   : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
               }`}
               initial={{ scale: 0.8 }}
@@ -159,7 +159,7 @@ const StepIndicator: React.FC<{ currentStep: number; totalSteps: number }> = ({ 
       </div>
       <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1">
         <motion.div
-          className="bg-indigo-600 h-1 rounded-full"
+          className="bg-[#FF6B35] h-1 rounded-full"
           initial={{ width: 0 }}
           animate={{ width: `${(currentStep / totalSteps) * 100}%` }}
           transition={{ duration: 0.5 }}
@@ -182,7 +182,7 @@ const RoleSelectionCard: React.FC<{
   <motion.div
     className={`p-6 rounded-xl border-2 cursor-pointer transition-all duration-200 ${
       isSelected
-        ? `border-indigo-500 bg-gradient-to-br ${gradient} text-white`
+        ? `border-[#FF6B35] bg-gradient-to-br ${gradient} text-white`
         : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 bg-white dark:bg-gray-800'
     }`}
     onClick={onSelect}
@@ -500,7 +500,7 @@ const RegisterPageWithSearchParams: React.FC = () => {
               type="text"
               value={step1Form.watch('fullName') || ''}
               onChange={(e) => step1Form.setValue('fullName', e.target.value)}
-              className="w-full px-4 py-3 pl-12 pr-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700 transition-all duration-200"
+              className="w-full px-4 py-3 pl-12 pr-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/20 bg-white dark:bg-gray-700 transition-all duration-200"
               placeholder="Enter your full name"
               autoComplete="name"
             />
@@ -533,7 +533,7 @@ const RegisterPageWithSearchParams: React.FC = () => {
               type="email"
               value={step1Form.watch('email') || ''}
               onChange={(e) => step1Form.setValue('email', e.target.value)}
-              className="w-full px-4 py-3 pl-12 pr-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700 transition-all duration-200"
+              className="w-full px-4 py-3 pl-12 pr-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/20 bg-white dark:bg-gray-700 transition-all duration-200"
               placeholder="Enter your email"
               autoComplete="email"
             />
@@ -566,7 +566,7 @@ const RegisterPageWithSearchParams: React.FC = () => {
               type={showPassword ? 'text' : 'password'}
               value={step1Form.watch('password') || ''}
               onChange={(e) => step1Form.setValue('password', e.target.value)}
-              className="w-full px-4 py-3 pl-12 pr-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700 transition-all duration-200"
+              className="w-full px-4 py-3 pl-12 pr-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/20 bg-white dark:bg-gray-700 transition-all duration-200"
               placeholder="Create a password"
               autoComplete="new-password"
             />
@@ -612,7 +612,7 @@ const RegisterPageWithSearchParams: React.FC = () => {
               type={showConfirmPassword ? 'text' : 'password'}
               value={step1Form.watch('confirmPassword') || ''}
               onChange={(e) => step1Form.setValue('confirmPassword', e.target.value)}
-              className="w-full px-4 py-3 pl-12 pr-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700 transition-all duration-200"
+              className="w-full px-4 py-3 pl-12 pr-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/20 bg-white dark:bg-gray-700 transition-all duration-200"
               placeholder="Confirm your password"
               autoComplete="new-password"
             />
@@ -649,7 +649,7 @@ const RegisterPageWithSearchParams: React.FC = () => {
           disabled={!isStep1Valid()}
           className={`w-full py-3 px-4 rounded-xl font-medium transition-all duration-200 ${
             isStep1Valid()
-              ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg hover:shadow-xl'
+              ? 'bg-[#FF6B35] hover:bg-[#E05A2A] text-white shadow-lg hover:shadow-xl'
               : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
           }`}
           whileHover={isStep1Valid() ? { scale: 1.02, y: -1 } : {}}
@@ -725,7 +725,7 @@ const RegisterPageWithSearchParams: React.FC = () => {
             disabled={!selectedRole}
             className={`flex-1 py-3 px-4 rounded-xl font-medium transition-all duration-200 ${
               selectedRole
-                ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg hover:shadow-xl'
+                ? 'bg-[#FF6B35] hover:bg-[#E05A2A] text-white shadow-lg hover:shadow-xl'
                 : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
             }`}
             whileHover={selectedRole ? { scale: 1.02, y: -1 } : {}}
@@ -770,10 +770,10 @@ const RegisterPageWithSearchParams: React.FC = () => {
                 >
                   <input
                     type="text"
-                    value={step3OperatorForm.watch('companyName') || ''}
-                    onChange={(e) => step3OperatorForm.setValue('companyName', e.target.value)}
-                    className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700 transition-all duration-200"
-                    placeholder="Your company name"
+                  value={step3OperatorForm.watch('companyName') || ''}
+                  onChange={(e) => step3OperatorForm.setValue('companyName', e.target.value)}
+                  className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/20 bg-white dark:bg-gray-700 transition-all duration-200"
+                  placeholder="Your company name"
                     autoComplete="organization"
                   />
                   <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -803,10 +803,10 @@ const RegisterPageWithSearchParams: React.FC = () => {
                 >
                   <input
                     type="text"
-                    value={step3OperatorForm.watch('businessRegistrationNumber') || ''}
-                    onChange={(e) => step3OperatorForm.setValue('businessRegistrationNumber', e.target.value)}
-                    className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700 transition-all duration-200"
-                    placeholder="Registration number"
+                  value={step3OperatorForm.watch('businessRegistrationNumber') || ''}
+                  onChange={(e) => step3OperatorForm.setValue('businessRegistrationNumber', e.target.value)}
+                  className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/20 bg-white dark:bg-gray-700 transition-all duration-200"
+                  placeholder="Registration number"
                     autoComplete="off"
                   />
                   <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -839,7 +839,7 @@ const RegisterPageWithSearchParams: React.FC = () => {
                   type="url"
                   value={step3OperatorForm.watch('websiteUrl') || ''}
                   onChange={(e) => step3OperatorForm.setValue('websiteUrl', e.target.value)}
-                  className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700 transition-all duration-200"
+                  className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/20 bg-white dark:bg-gray-700 transition-all duration-200"
                   placeholder="https://yourwebsite.com"
                   autoComplete="url"
                 />
@@ -859,10 +859,10 @@ const RegisterPageWithSearchParams: React.FC = () => {
                 >
                   <input
                     type="tel"
-                    value={step3OperatorForm.watch('phoneNumber') || ''}
-                    onChange={(e) => step3OperatorForm.setValue('phoneNumber', e.target.value)}
-                    className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700 transition-all duration-200"
-                    placeholder="+1 (555) 123-4567"
+                  value={step3OperatorForm.watch('phoneNumber') || ''}
+                  onChange={(e) => step3OperatorForm.setValue('phoneNumber', e.target.value)}
+                  className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/20 bg-white dark:bg-gray-700 transition-all duration-200"
+                  placeholder="+1 (555) 123-4567"
                     autoComplete="tel"
                   />
                   <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -892,10 +892,10 @@ const RegisterPageWithSearchParams: React.FC = () => {
                 >
                   <input
                     type="text"
-                    value={step3OperatorForm.watch('businessAddress') || ''}
-                    onChange={(e) => step3OperatorForm.setValue('businessAddress', e.target.value)}
-                    className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700 transition-all duration-200"
-                    placeholder="123 Main St, City, State"
+                  value={step3OperatorForm.watch('businessAddress') || ''}
+                  onChange={(e) => step3OperatorForm.setValue('businessAddress', e.target.value)}
+                  className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/20 bg-white dark:bg-gray-700 transition-all duration-200"
+                  placeholder="123 Main St, City, State"
                     autoComplete="street-address"
                   />
                   <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -929,7 +929,7 @@ const RegisterPageWithSearchParams: React.FC = () => {
                   onChange={(e) => step3OperatorForm.setValue('companyDescription', e.target.value)}
                   rows={4}
                   maxLength={500}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700 resize-none transition-all duration-200"
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/20 bg-white dark:bg-gray-700 resize-none transition-all duration-200"
                   placeholder="Describe your tour operation business..."
                 />
                 <div className="text-right text-sm text-gray-500 dark:text-gray-400 mt-1">
@@ -943,7 +943,7 @@ const RegisterPageWithSearchParams: React.FC = () => {
                 Business License
               </label>
               <motion.div
-                className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-8 text-center hover:border-indigo-500 transition-colors cursor-pointer"
+                className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-8 text-center hover:border-[#FF6B35] transition-colors cursor-pointer"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
@@ -966,13 +966,13 @@ const RegisterPageWithSearchParams: React.FC = () => {
                   type="checkbox"
                   checked={step3OperatorForm.watch('termsAccepted') || false}
                   onChange={(e) => step3OperatorForm.setValue('termsAccepted', e.target.checked)}
-                  className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                  className="w-4 h-4 text-[#FF6B35] border-gray-300 rounded focus:ring-[#FF6B35]"
                 />
                 <span className="text-sm text-gray-700 dark:text-gray-300">
                   I agree to the{' '}
-                  <a href="#" className="text-indigo-600 hover:text-indigo-500">Terms of Service</a>
+                  <a href="#" className="text-[#FF6B35] hover:text-[#E05A2A]">Terms of Service</a>
                   {' '}and{' '}
-                  <a href="#" className="text-indigo-600 hover:text-indigo-500">Privacy Policy</a>
+                  <a href="#" className="text-[#FF6B35] hover:text-[#E05A2A]">Privacy Policy</a>
                 </span>
               </motion.label>
             </div>
@@ -995,7 +995,7 @@ const RegisterPageWithSearchParams: React.FC = () => {
                 disabled={!isStep3OperatorValid() || loading === 'authenticating'}
                 className={`flex-1 py-3 px-4 rounded-xl font-medium transition-all duration-200 ${
                   isStep3OperatorValid() && loading !== 'authenticating'
-                    ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg hover:shadow-xl'
+                    ? 'bg-[#FF6B35] hover:bg-[#E05A2A] text-white shadow-lg hover:shadow-xl'
                     : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
                 }`}
                 whileHover={isStep3OperatorValid() && loading !== 'authenticating' ? { scale: 1.02, y: -1 } : {}}
@@ -1042,7 +1042,7 @@ const RegisterPageWithSearchParams: React.FC = () => {
                   type="text"
                   value={step3AgentForm.watch('agencyName') || ''}
                   onChange={(e) => step3AgentForm.setValue('agencyName', e.target.value)}
-                  className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700 transition-all duration-200"
+                  className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/20 bg-white dark:bg-gray-700 transition-all duration-200"
                   placeholder="Your agency name"
                   autoComplete="organization"
                 />
@@ -1075,7 +1075,7 @@ const RegisterPageWithSearchParams: React.FC = () => {
                   type="text"
                   value={step3AgentForm.watch('agencyRegistrationNumber') || ''}
                   onChange={(e) => step3AgentForm.setValue('agencyRegistrationNumber', e.target.value)}
-                  className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700 transition-all duration-200"
+                  className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/20 bg-white dark:bg-gray-700 transition-all duration-200"
                   placeholder="Registration number"
                   autoComplete="off"
                 />
@@ -1110,7 +1110,7 @@ const RegisterPageWithSearchParams: React.FC = () => {
                   type="tel"
                   value={step3AgentForm.watch('phoneNumber') || ''}
                   onChange={(e) => step3AgentForm.setValue('phoneNumber', e.target.value)}
-                  className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700 transition-all duration-200"
+                  className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/20 bg-white dark:bg-gray-700 transition-all duration-200"
                   placeholder="+1 (555) 123-4567"
                   autoComplete="tel"
                 />
@@ -1143,7 +1143,7 @@ const RegisterPageWithSearchParams: React.FC = () => {
                   type="text"
                   value={step3AgentForm.watch('officeAddress') || ''}
                   onChange={(e) => step3AgentForm.setValue('officeAddress', e.target.value)}
-                  className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700 transition-all duration-200"
+                  className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/20 bg-white dark:bg-gray-700 transition-all duration-200"
                   placeholder="123 Main St, City, State"
                   autoComplete="street-address"
                 />
@@ -1188,7 +1188,7 @@ const RegisterPageWithSearchParams: React.FC = () => {
                         step3AgentForm.setValue('specialization', current.filter((s: string) => s !== spec));
                       }
                     }}
-                    className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                    className="w-4 h-4 text-[#FF6B35] border-gray-300 rounded focus:ring-[#FF6B35]"
                   />
                   <span className="text-sm text-gray-700 dark:text-gray-300">{spec}</span>
                 </motion.label>
@@ -1211,7 +1211,7 @@ const RegisterPageWithSearchParams: React.FC = () => {
               <select
                 value={step3AgentForm.watch('yearsOfExperience') || ''}
                 onChange={(e) => step3AgentForm.setValue('yearsOfExperience', e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white dark:bg-gray-700 transition-all duration-200 appearance-none"
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/20 bg-white dark:bg-gray-700 transition-all duration-200 appearance-none"
               >
                 <option value="">Select experience</option>
                 <option value="0-1">0-1 years</option>
@@ -1240,13 +1240,13 @@ const RegisterPageWithSearchParams: React.FC = () => {
                 type="checkbox"
                 checked={step3AgentForm.watch('termsAccepted') || false}
                 onChange={(e) => step3AgentForm.setValue('termsAccepted', e.target.checked)}
-                className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                className="w-4 h-4 text-[#FF6B35] border-gray-300 rounded focus:ring-[#FF6B35]"
               />
               <span className="text-sm text-gray-700 dark:text-gray-300">
                 I agree to the{' '}
-                <a href="#" className="text-indigo-600 hover:text-indigo-500">Terms of Service</a>
+                <a href="#" className="text-[#FF6B35] hover:text-[#E05A2A]">Terms of Service</a>
                 {' '}and{' '}
-                <a href="#" className="text-indigo-600 hover:text-indigo-500">Privacy Policy</a>
+                <a href="#" className="text-[#FF6B35] hover:text-[#E05A2A]">Privacy Policy</a>
               </span>
             </motion.label>
           </div>
@@ -1269,7 +1269,7 @@ const RegisterPageWithSearchParams: React.FC = () => {
               disabled={!isStep3AgentValid() || loading === 'authenticating'}
               className={`flex-1 py-3 px-4 rounded-xl font-medium transition-all duration-200 ${
                 isStep3AgentValid() && loading !== 'authenticating'
-                  ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg hover:shadow-xl'
+                  ? 'bg-[#FF6B35] hover:bg-[#E05A2A] text-white shadow-lg hover:shadow-xl'
                   : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
               }`}
               whileHover={isStep3AgentValid() && loading !== 'authenticating' ? { scale: 1.02, y: -1 } : {}}
@@ -1338,7 +1338,7 @@ const RegisterPageWithSearchParams: React.FC = () => {
             Already have an account?{' '}
             <motion.a
               href="/login"
-              className="text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 font-medium"
+              className="text-[#FF6B35] hover:text-[#E05A2A] dark:text-[#FF8C61] dark:hover:text-[#FF6B35] font-medium"
               whileHover={{ scale: 1.05 }}
               transition={{ duration: 0.2 }}
             >
