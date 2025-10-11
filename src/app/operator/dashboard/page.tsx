@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   FaBoxOpen as PackageIcon,
@@ -21,6 +21,7 @@ import type { UserRole } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { createClient } from '@/lib/supabase/client';
 
 const OPERATOR_ROLES: UserRole[] = ['TOUR_OPERATOR', 'ADMIN', 'SUPER_ADMIN'];
 
@@ -80,12 +81,14 @@ function ActivityItem({ icon: Icon, title, time, color }: { icon: any; title: st
 }
 
 function OperatorDashboard() {
-  const stats: Array<{ icon: any; title: string; value: string; change: string; trend: 'up' | 'down'; color: StatColor }> = [
-    { icon: PackageIcon, title: 'Total Packages', value: '24', change: '+12%', trend: 'up', color: 'blue' },
-    { icon: CalendarIcon, title: 'Active Bookings', value: '156', change: '+8%', trend: 'up', color: 'green' },
-    { icon: UsersIcon, title: 'Travel Agents', value: '42', change: '+5%', trend: 'up', color: 'purple' },
-    { icon: DollarSignIcon, title: 'Monthly Revenue', value: '$24,580', change: '+15%', trend: 'up', color: 'orange' },
-  ];
+  const [stats, setStats] = useState<Array<{ icon: any; title: string; value: string; change: string; trend: 'up' | 'down'; color: StatColor }>>([
+    { icon: PackageIcon, title: 'Total Packages', value: '0', change: '+0%', trend: 'up', color: 'blue' },
+    { icon: CalendarIcon, title: 'Active Bookings', value: '0', change: '+0%', trend: 'up', color: 'green' },
+    { icon: UsersIcon, title: 'Travel Agents', value: '0', change: '+0%', trend: 'up', color: 'purple' },
+    { icon: DollarSignIcon, title: 'Monthly Revenue', value: '$0', change: '+0%', trend: 'up', color: 'orange' },
+  ]);
+
+  const [loading, setLoading] = useState(true);
 
   const activities: Array<{ icon: any; title: string; time: string; color: StatColor }> = [
     { icon: CheckCircleIcon, title: 'New booking confirmed', time: '2 minutes ago', color: 'green' },
@@ -94,6 +97,46 @@ function OperatorDashboard() {
     { icon: DollarSignIcon, title: 'Payment of $2,499 processed', time: '5 hours ago', color: 'green' },
     { icon: UsersIcon, title: 'New agent partnership request', time: '1 day ago', color: 'purple' },
   ];
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (!user) {
+          setLoading(false);
+          return;
+        }
+
+        // Fetch packages count
+        const { data: packagesData, error: packagesError } = await supabase
+          .from('activity_packages')
+          .select('id, status, base_price', { count: 'exact' })
+          .eq('operator_id', user.id);
+
+        if (!packagesError && packagesData) {
+          const totalPackages = packagesData.length;
+          const activePackages = packagesData.filter(p => p.status === 'published').length;
+          const totalRevenue = packagesData.reduce((sum, p) => sum + (p.base_price || 0), 0);
+
+          setStats([
+            { icon: PackageIcon, title: 'Total Packages', value: totalPackages.toString(), change: '+12%', trend: 'up', color: 'blue' },
+            { icon: CalendarIcon, title: 'Active Packages', value: activePackages.toString(), change: '+8%', trend: 'up', color: 'green' },
+            { icon: UsersIcon, title: 'Travel Agents', value: '0', change: '+5%', trend: 'up', color: 'purple' },
+            { icon: DollarSignIcon, title: 'Total Value', value: `$${totalRevenue.toFixed(0)}`, change: '+15%', trend: 'up', color: 'orange' },
+          ]);
+        }
+
+        setLoading(false);
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
 
   return (
     <div className="space-y-4">

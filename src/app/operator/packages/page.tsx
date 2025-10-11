@@ -36,7 +36,7 @@ interface Package {
 	id: string;
 	title: string;
 	type: string;
-	status: 'DRAFT' | 'ACTIVE' | 'INACTIVE';
+	status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED' | 'SUSPENDED' | 'ACTIVE' | 'INACTIVE';
 	price: number;
 	rating: number;
 	reviews: number;
