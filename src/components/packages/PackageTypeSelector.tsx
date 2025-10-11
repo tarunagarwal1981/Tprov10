@@ -331,7 +331,7 @@ export const PackageTypeSelector: React.FC<PackageTypeSelectorProps> = ({ value,
 							size="lg"
 							className={cn(
 								"gap-3 px-8 py-4 text-lg font-semibold",
-								"bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700",
+								"bg-gradient-to-r from-[#FF6B35] to-[#FF4B8C] hover:from-[#E05A2A] hover:to-[#E04080]",
 								"shadow-lg hover:shadow-xl transform hover:scale-105",
 								"package-animation-fix package-button-fix package-gradient-fix"
 							)}

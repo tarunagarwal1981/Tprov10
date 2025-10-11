@@ -113,17 +113,17 @@ function OperatorDashboard() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-orange-50/30 to-pink-50/30">
       <div className="p-3 space-y-4">
         {/* Welcome Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
-          className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-4 text-white shadow-xl"
+          className="bg-gradient-to-r from-[#FF6B35] to-[#FF4B8C] rounded-2xl p-4 text-white shadow-xl"
         >
           <h1 className="text-3xl font-bold mb-2">Welcome back, Tour Operator! 👋</h1>
-          <p className="text-blue-100 text-lg">Here&apos;s what&apos;s happening with your business today.</p>
+          <p className="text-orange-100 text-lg">Here&apos;s what&apos;s happening with your business today.</p>
         </motion.div>
 
         {/* Stats Grid */}
@@ -162,14 +162,14 @@ function OperatorDashboard() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
         >
-          <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 shadow-sm">
+          <Card className="bg-gradient-to-r from-orange-50 to-pink-50 border-orange-200 shadow-sm">
             <CardHeader className="pb-2">
               <CardTitle className="text-slate-700 text-base">Quick Actions</CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
               <Link href="/operator/packages/create">
-                  <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white shadow-sm">
+                  <Button className="w-full bg-gradient-to-r from-[#FF6B35] to-[#FF4B8C] hover:from-[#E05A2A] hover:to-[#E04080] text-white shadow-sm">
                     <Plus className="w-4 h-4 mr-2" />
                     Create Package
                 </Button>
@@ -210,7 +210,7 @@ function OperatorDashboard() {
               <div className="flex items-center justify-between">
                 <CardTitle className="text-slate-900">Recent Activity</CardTitle>
                 <Link href="/operator/activity">
-                  <Button variant="ghost" size="sm" className="text-blue-600">
+                  <Button variant="ghost" size="sm" className="text-[#FF6B35] hover:text-[#E05A2A]">
                     View All
                   </Button>
                 </Link>
@@ -237,12 +237,12 @@ function OperatorDashboard() {
                 <CardTitle className="text-slate-900">Today&apos;s Overview</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                <div className="flex items-center justify-between p-2 bg-blue-50 rounded-lg">
+                <div className="flex items-center justify-between p-2 bg-orange-50 rounded-lg">
                   <div className="flex items-center gap-3">
-                    <Calendar className="w-5 h-5 text-blue-600" />
+                    <Calendar className="w-5 h-5 text-[#FF6B35]" />
                     <span className="text-sm font-medium text-slate-700">Bookings</span>
                   </div>
-                  <span className="text-lg font-bold text-blue-600">12</span>
+                  <span className="text-lg font-bold text-[#FF6B35]">12</span>
                 </div>
                 <div className="flex items-center justify-between p-2 bg-green-50 rounded-lg">
                   <div className="flex items-center gap-3">
@@ -251,12 +251,12 @@ function OperatorDashboard() {
               </div>
                   <span className="text-lg font-bold text-green-600">£3,240</span>
             </div>
-                <div className="flex items-center justify-between p-2 bg-purple-50 rounded-lg">
+                <div className="flex items-center justify-between p-2 bg-pink-50 rounded-lg">
                   <div className="flex items-center gap-3">
-                    <Users className="w-5 h-5 text-purple-600" />
+                    <Users className="w-5 h-5 text-[#FF4B8C]" />
                     <span className="text-sm font-medium text-slate-700">New Agents</span>
               </div>
-                  <span className="text-lg font-bold text-purple-600">3</span>
+                  <span className="text-lg font-bold text-[#FF4B8C]">3</span>
             </div>
             </CardContent>
           </Card>

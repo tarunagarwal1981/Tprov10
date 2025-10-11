@@ -262,7 +262,7 @@ export default function CreatePackagePage() {
                         <Button 
                           className={cn(
                             "w-full gap-2",
-                            "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700",
+                            "bg-gradient-to-r from-[#FF6B35] to-[#FF4B8C] hover:from-[#E05A2A] hover:to-[#E04080]",
                             "shadow-lg hover:shadow-xl transform hover:scale-105",
                             "package-animation-fix package-button-fix"
                           )}
@@ -340,7 +340,7 @@ export default function CreatePackagePage() {
           <Card className="package-selector-glass package-shadow-fix">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <FaInfoCircle className="h-5 w-5 text-blue-600" />
+                <FaInfoCircle className="h-5 w-5 text-[#FF6B35]" />
                 Package Creation Guide
               </CardTitle>
             </CardHeader>

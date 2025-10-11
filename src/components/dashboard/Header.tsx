@@ -49,7 +49,7 @@ export function Header() {
               placeholder="Search packages, bookings, agents..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 bg-slate-50/50 border-slate-200 focus:bg-white transition-colors"
+              className="pl-10 bg-slate-50/50 border-slate-200 focus:bg-white focus:border-[#FF6B35] transition-colors"
             />
           </div>
         </div>
@@ -83,7 +83,7 @@ export function Header() {
                   <DropdownMenuItem key={notification.id} className="flex items-start gap-3 p-3">
                     <div className={cn(
                       "w-2 h-2 rounded-full mt-2 flex-shrink-0",
-                      notification.unread ? "bg-blue-500" : "bg-slate-300"
+                      notification.unread ? "bg-[#FF6B35]" : "bg-slate-300"
                     )} />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-slate-900 truncate">
@@ -97,7 +97,7 @@ export function Header() {
                 ))}
               </div>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-center text-sm text-blue-600">
+              <DropdownMenuItem className="text-center text-sm text-[#FF6B35] hover:text-[#E05A2A]">
                 View all notifications
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -114,7 +114,7 @@ export function Header() {
               <Button variant="ghost" className="flex items-center gap-2 px-3">
                 <Avatar className="w-8 h-8">
                   <AvatarImage src={(user as any)?.avatar_url} />
-                  <AvatarFallback className="bg-gradient-to-br from-indigo-600 to-purple-600 text-white text-sm">
+                  <AvatarFallback className="bg-gradient-to-br from-[#FF6B35] to-[#FF4B8C] text-white text-sm">
                     {(user as any)?.name?.charAt(0) || 'U'}
                   </AvatarFallback>
                 </Avatar>

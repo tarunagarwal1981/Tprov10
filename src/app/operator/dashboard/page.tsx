@@ -99,9 +99,9 @@ function OperatorDashboard() {
     <div className="space-y-4">
       {/* Welcome Header */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl p-4 text-white shadow-lg">
+        <div className="bg-gradient-to-r from-[#FF6B35] to-[#FF4B8C] rounded-xl p-4 text-white shadow-lg">
           <h1 className="text-2xl sm:text-3xl font-bold mb-2">Welcome back, Tour Operator! 👋</h1>
-          <p className="text-blue-100">Here&apos;s what&apos;s happening with your business today.</p>
+          <p className="text-orange-100">Here&apos;s what&apos;s happening with your business today.</p>
         </div>
       </motion.div>
 
@@ -115,14 +115,14 @@ function OperatorDashboard() {
       </div>
 
       {/* Quick Actions */}
-      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 shadow-sm">
+      <Card className="bg-gradient-to-r from-orange-50 to-pink-50 border-orange-200 shadow-sm">
         <CardHeader className="pb-2">
           <CardTitle className="text-slate-700 text-base">Quick Actions</CardTitle>
         </CardHeader>
         <CardContent className="pt-0">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <Link href="/operator/packages/create" className="w-full">
-              <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white shadow-sm">
+              <Button className="w-full bg-gradient-to-r from-[#FF6B35] to-[#FF4B8C] hover:from-[#E05A2A] hover:to-[#E04080] text-white shadow-sm">
                 <Plus className="w-4 h-4 mr-2" />
                 Create Package
               </Button>
@@ -156,7 +156,7 @@ function OperatorDashboard() {
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <CardTitle className="text-lg">Recent Activity</CardTitle>
             <Link href="/operator/activity">
-              <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">View All</Button>
+              <Button variant="ghost" size="sm" className="text-[#FF6B35] hover:text-[#E05A2A]">View All</Button>
             </Link>
           </CardHeader>
           <CardContent className="space-y-0">
@@ -172,12 +172,12 @@ function OperatorDashboard() {
             <CardTitle className="text-lg">Today&apos;s Overview</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            <div className="flex items-center justify-between p-2 bg-blue-50 rounded-lg">
+            <div className="flex items-center justify-between p-2 bg-orange-50 rounded-lg">
               <div className="flex items-center gap-3">
-                <CalendarIcon className="w-5 h-5 text-blue-600" />
+                <CalendarIcon className="w-5 h-5 text-[#FF6B35]" />
                 <span className="text-sm font-medium text-gray-700">Bookings</span>
               </div>
-              <span className="text-lg font-bold text-blue-600">12</span>
+              <span className="text-lg font-bold text-[#FF6B35]">12</span>
             </div>
             <div className="flex items-center justify-between p-2 bg-green-50 rounded-lg">
               <div className="flex items-center gap-3">
@@ -186,12 +186,12 @@ function OperatorDashboard() {
               </div>
               <span className="text-lg font-bold text-green-600">$3,240</span>
             </div>
-            <div className="flex items-center justify-between p-2 bg-purple-50 rounded-lg">
+            <div className="flex items-center justify-between p-2 bg-pink-50 rounded-lg">
               <div className="flex items-center gap-3">
-                <UsersIcon className="w-5 h-5 text-purple-600" />
+                <UsersIcon className="w-5 h-5 text-[#FF4B8C]" />
                 <span className="text-sm font-medium text-gray-700">New Agents</span>
               </div>
-              <span className="text-lg font-bold text-purple-600">3</span>
+              <span className="text-lg font-bold text-[#FF4B8C]">3</span>
             </div>
           </CardContent>
         </Card>

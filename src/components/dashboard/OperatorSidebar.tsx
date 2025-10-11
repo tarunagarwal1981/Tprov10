@@ -125,11 +125,11 @@ const isActive = (href: string) => {
 			<div className="h-20 flex items-center justify-between px-6 border-b border-zinc-200/50 dark:border-zinc-800/50">
 				{!effectiveCollapsed && (
 					<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-3">
-						<div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center shadow-lg">
+						<div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#FF6B35] to-[#FF4B8C] flex items-center justify-center shadow-lg">
 							<PackageIcon className="w-6 h-6 text-white" />
 						</div>
-						<span className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-							TravelPro
+						<span className="text-xl font-bold bg-gradient-to-r from-[#FF6B35] to-[#FF4B8C] bg-clip-text text-transparent">
+							TravelSelBuy
 						</span>
 					</motion.div>
 				)}
@@ -159,18 +159,18 @@ const isActive = (href: string) => {
 								className={cn(
 									"flex items-center gap-3 px-3 py-3 rounded-xl transition-all group cursor-pointer",
 									isActive(item.href)
-										? "bg-gradient-to-r from-indigo-50 to-purple-50 text-indigo-700 border border-indigo-100 shadow-sm dark:from-indigo-900/10 dark:to-purple-900/10"
+										? "bg-gradient-to-r from-orange-50 to-pink-50 text-[#FF6B35] border border-orange-100 shadow-sm dark:from-orange-900/10 dark:to-pink-900/10"
 										: "text-zinc-600 hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-zinc-800/60"
 								)}
 								role="link"
 								aria-current={isActive(item.href) ? "page" : undefined}
 							>
-								<item.icon className={cn("w-5 h-5 flex-shrink-0", isActive(item.href) ? "text-indigo-600" : "text-zinc-500 group-hover:text-zinc-700 dark:group-hover:text-zinc-100")} />
+								<item.icon className={cn("w-5 h-5 flex-shrink-0", isActive(item.href) ? "text-[#FF6B35]" : "text-zinc-500 group-hover:text-zinc-700 dark:group-hover:text-zinc-100")} />
 								{!effectiveCollapsed && (
 									<>
 										<span className="flex-1 font-medium text-sm">{item.label}</span>
 										{item.badge && (
-											<Badge className="h-6 min-w-[24px] px-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-0 text-xs">
+											<Badge className="h-6 min-w-[24px] px-2 bg-gradient-to-r from-[#FF6B35] to-[#FF4B8C] text-white border-0 text-xs">
 												{item.badge}
 											</Badge>
 										)}
@@ -203,7 +203,7 @@ const isActive = (href: string) => {
 												className={cn(
 													"px-3 py-2 rounded-lg text-sm transition-colors",
                                                   (pathname || "") === sub.href
-														? "bg-indigo-50 text-indigo-700 font-medium dark:bg-indigo-900/20"
+														? "bg-orange-50 text-[#FF6B35] font-medium dark:bg-orange-900/20"
 														: "text-zinc-600 hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-zinc-800/60"
 												)}
 											>
@@ -223,7 +223,7 @@ const isActive = (href: string) => {
 				<div className={cn("flex items-center gap-3", effectiveCollapsed ? "justify-center" : "") }>
 					<Avatar className="w-10 h-10">
 						<AvatarImage src={(user as any)?.avatar_url} />
-						<AvatarFallback className="bg-gradient-to-br from-indigo-600 to-purple-600 text-white font-semibold">
+						<AvatarFallback className="bg-gradient-to-br from-[#FF6B35] to-[#FF4B8C] text-white font-semibold">
 							{((user as any)?.name?.charAt(0) || "T")}
 						</AvatarFallback>
 					</Avatar>

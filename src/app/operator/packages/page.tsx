@@ -29,6 +29,8 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { createClient } from '@/lib/supabase/client';
+import { toast } from 'sonner';
 
 interface Package {
 	id: string;
@@ -78,30 +80,136 @@ export default function PackagesPage() {
 	});
 
 	useEffect(() => {
-		// Supabase integration placeholder
-		// Example:
-		// const supabase = createClient();
-		// const { data, error } = await supabase.from('packages').select('*');
-		// if (!error) setPackages(data as Package[]);
-		setLoading(false);
+		const fetchPackages = async () => {
+			try {
+				setLoading(true);
+				const supabase = createClient();
+				
+				// Get current user
+				const { data: { user } } = await supabase.auth.getUser();
+				
+				if (!user) {
+					toast.error('Please log in to view packages');
+					setLoading(false);
+					return;
+				}
+
+				// Fetch activity packages for the current operator
+				const { data, error } = await supabase
+					.from('activity_packages')
+					.select(`
+						id,
+						title,
+						short_description,
+						status,
+						base_price,
+						currency,
+						destination_city,
+						destination_country,
+						created_at,
+						published_at,
+						activity_package_images (
+							id,
+							public_url,
+							is_cover
+						)
+					`)
+					.eq('operator_id', user.id)
+					.order('created_at', { ascending: false });
+
+				if (error) {
+					console.error('Error fetching packages:', error);
+					toast.error('Failed to load packages');
+					setLoading(false);
+					return;
+				}
+
+				// Transform data to match Package interface
+				const transformedPackages: Package[] = (data || []).map((pkg: any) => {
+					// Find cover image
+					const coverImage = pkg.activity_package_images?.find((img: any) => img.is_cover);
+					const imageUrl = coverImage?.public_url || pkg.activity_package_images?.[0]?.public_url || '';
+
+					return {
+						id: pkg.id,
+						title: pkg.title,
+						type: 'Activity Package',
+						status: pkg.status?.toUpperCase() as 'DRAFT' | 'ACTIVE' | 'INACTIVE',
+						price: pkg.base_price || 0,
+						rating: 0, // TODO: Calculate from reviews
+						reviews: 0, // TODO: Count from reviews
+						bookings: 0, // TODO: Count from bookings
+						views: 0, // TODO: Track views
+						image: imageUrl,
+						createdAt: new Date(pkg.created_at),
+					};
+				});
+
+				setPackages(transformedPackages);
+
+				// Update stats
+				const activeCount = transformedPackages.filter(p => p.status === 'PUBLISHED' || p.status === 'ACTIVE').length;
+				const totalRevenue = transformedPackages.reduce((sum, p) => sum + (p.bookings * p.price), 0);
+				
+				setStats({
+					total: transformedPackages.length,
+					active: activeCount,
+					revenue: totalRevenue,
+					avgRating: 4.8, // TODO: Calculate from reviews
+				});
+
+			} catch (error) {
+				console.error('Error loading packages:', error);
+				toast.error('Failed to load packages');
+			} finally {
+				setLoading(false);
+			}
+		};
+
+		fetchPackages();
 	}, []);
 
 	const filtered = useMemo(() => {
 		return packages
-			.filter(p => (statusFilter === 'ALL' ? true : p.status === statusFilter))
+			.filter(p => {
+				if (statusFilter === 'ALL') return true;
+				const pkgStatus = p.status?.toUpperCase();
+				if (statusFilter === 'ACTIVE') return pkgStatus === 'PUBLISHED' || pkgStatus === 'ACTIVE';
+				return pkgStatus === statusFilter;
+			})
 			.filter(p => !searchQuery || p.title.toLowerCase().includes(searchQuery.toLowerCase()));
 	}, [packages, statusFilter, searchQuery]);
 
 	const getStatusColor = (status: string) => {
-		switch (status) {
+		const upperStatus = status?.toUpperCase();
+		switch (upperStatus) {
 			case 'ACTIVE':
+			case 'PUBLISHED':
 				return 'bg-green-100 text-green-700 border-green-200';
 			case 'DRAFT':
 				return 'bg-yellow-100 text-yellow-700 border-yellow-200';
 			case 'INACTIVE':
+			case 'ARCHIVED':
+			case 'SUSPENDED':
 				return 'bg-gray-100 text-gray-700 border-gray-200';
 			default:
 				return 'bg-gray-100 text-gray-700 border-gray-200';
+		}
+	};
+
+	const getStatusLabel = (status: string) => {
+		const upperStatus = status?.toUpperCase();
+		switch (upperStatus) {
+			case 'PUBLISHED':
+				return 'Active';
+			case 'DRAFT':
+				return 'Draft';
+			case 'ARCHIVED':
+				return 'Archived';
+			case 'SUSPENDED':
+				return 'Suspended';
+			default:
+				return status;
 		}
 	};
 
@@ -125,7 +233,7 @@ export default function PackagesPage() {
 										<AnimatedNumber value={stats.total} />
 									</p>
 								</div>
-								<div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-md">
+								<div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#FF6B35] to-[#FF4B8C] flex items-center justify-center shadow-md">
 									<PackageIcon className="w-5 h-5 text-white" />
 								</div>
 							</div>
@@ -161,7 +269,7 @@ export default function PackagesPage() {
 										<AnimatedNumber value={stats.revenue} prefix="£" />
 									</p>
 								</div>
-								<div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-md">
+								<div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center shadow-md">
 									<DollarSign className="w-5 h-5 text-white" />
 								</div>
 							</div>
@@ -179,7 +287,7 @@ export default function PackagesPage() {
 										<AnimatedNumber value={stats.avgRating} />
 									</p>
 								</div>
-								<div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center shadow-md">
+								<div className="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shadow-md">
 									<Star className="w-5 h-5 text-white" />
 								</div>
 							</div>
@@ -200,7 +308,7 @@ export default function PackagesPage() {
 								placeholder="Search packages..."
 								value={searchQuery}
 								onChange={(e) => setSearchQuery(e.target.value)}
-								className="pl-10 bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 focus:border-indigo-400"
+								className="pl-10 bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 focus:border-[#FF6B35]"
 							/>
 						</div>
 
@@ -224,7 +332,7 @@ export default function PackagesPage() {
 									variant="ghost"
 									size="sm"
 									onClick={() => setViewMode('grid')}
-									className={viewMode === 'grid' ? 'bg-indigo-50 text-indigo-600' : ''}
+									className={viewMode === 'grid' ? 'bg-orange-50 text-[#FF6B35]' : ''}
 								>
 									<Grid3x3 className="w-4 h-4" />
 								</Button>
@@ -232,7 +340,7 @@ export default function PackagesPage() {
 									variant="ghost"
 									size="sm"
 									onClick={() => setViewMode('list')}
-									className={viewMode === 'list' ? 'bg-indigo-50 text-indigo-600' : ''}
+									className={viewMode === 'list' ? 'bg-orange-50 text-[#FF6B35]' : ''}
 								>
 									<List className="w-4 h-4" />
 								</Button>
@@ -250,7 +358,7 @@ export default function PackagesPage() {
 
 							{/* Create Package Button */}
 							<Link href="/operator/packages/create">
-								<Button className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg">
+								<Button className="bg-gradient-to-r from-[#FF6B35] to-[#FF4B8C] hover:from-[#E05A2A] hover:to-[#E04080] text-white shadow-lg">
 									<Plus className="w-4 h-4 mr-2" />
 									Create Package
 								</Button>
@@ -260,20 +368,127 @@ export default function PackagesPage() {
 				</CardContent>
 			</Card>
 
-			{/* Empty State or Package Grid - Placeholder for integration */}
-			{!loading && filtered.length === 0 ? (
-				<div className="text-center py-6">
-					<PackageIcon className="w-12 h-12 mx-auto text-slate-300 mb-3" />
-					<h3 className="text-lg font-semibold text-slate-900 mb-1">No packages yet</h3>
-					<p className="text-sm text-slate-600 mb-3">Create your first package to get started</p>
+			{/* Loading State */}
+			{loading && (
+				<div className="text-center py-12">
+					<div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-slate-200 border-t-[#FF6B35] mb-4"></div>
+					<p className="text-slate-600">Loading packages...</p>
+				</div>
+			)}
+
+			{/* Empty State */}
+			{!loading && packages.length === 0 && (
+				<div className="text-center py-12">
+					<PackageIcon className="w-16 h-16 mx-auto text-slate-300 mb-4" />
+					<h3 className="text-xl font-semibold text-slate-900 mb-2">No packages yet</h3>
+					<p className="text-sm text-slate-600 mb-6">Create your first package to get started</p>
 					<Link href="/operator/packages/create">
-						<Button className="bg-gradient-to-r from-indigo-600 to-purple-600">
+						<Button className="bg-gradient-to-r from-[#FF6B35] to-[#FF4B8C] hover:from-[#E05A2A] hover:to-[#E04080]">
 							<Plus className="w-4 h-4 mr-2" />
 							Create Your First Package
 						</Button>
 					</Link>
 				</div>
-			) : null}
+			)}
+
+			{/* No Results State */}
+			{!loading && packages.length > 0 && filtered.length === 0 && (
+				<div className="text-center py-12">
+					<SearchIcon className="w-16 h-16 mx-auto text-slate-300 mb-4" />
+					<h3 className="text-xl font-semibold text-slate-900 mb-2">No packages found</h3>
+					<p className="text-sm text-slate-600 mb-6">Try adjusting your search or filters</p>
+					<Button variant="outline" onClick={() => { setSearchQuery(''); setStatusFilter('ALL'); }}>
+						Clear Filters
+					</Button>
+				</div>
+			)}
+
+			{/* Packages Grid */}
+			{!loading && filtered.length > 0 && (
+				<div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-4'}>
+					{filtered.map((pkg) => (
+						<motion.div
+							key={pkg.id}
+							initial={{ opacity: 0, y: 20 }}
+							animate={{ opacity: 1, y: 0 }}
+							transition={{ duration: 0.3 }}
+						>
+							<Card className="bg-white/80 dark:bg-zinc-900/70 backdrop-blur-sm border-slate-200/60 shadow-lg hover:shadow-xl transition-all overflow-hidden">
+								{/* Package Image */}
+								{pkg.image && (
+									<div className="relative h-48 w-full bg-slate-200">
+										<img 
+											src={pkg.image} 
+											alt={pkg.title}
+											className="w-full h-full object-cover"
+											onError={(e) => {
+												e.currentTarget.src = '/images/placeholder-package.jpg';
+											}}
+										/>
+										<div className="absolute top-2 right-2">
+											<Badge className={getStatusColor(pkg.status)}>
+												{getStatusLabel(pkg.status)}
+											</Badge>
+										</div>
+									</div>
+								)}
+								
+								<CardContent className="p-4">
+									<h3 className="text-lg font-bold text-slate-900 mb-2 line-clamp-2">{pkg.title}</h3>
+									<p className="text-sm text-slate-600 mb-3">{pkg.type}</p>
+									
+									<div className="flex items-center justify-between mb-4">
+										<div className="flex items-center gap-1">
+											<Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+											<span className="text-sm font-medium">{pkg.rating.toFixed(1)}</span>
+											<span className="text-xs text-slate-500">({pkg.reviews})</span>
+										</div>
+										<div className="text-lg font-bold text-[#FF6B35]">
+											${pkg.price.toFixed(2)}
+										</div>
+									</div>
+
+									<div className="flex items-center justify-between pt-3 border-t border-slate-200">
+										<div className="flex items-center gap-4 text-xs text-slate-600">
+											<span className="flex items-center gap-1">
+												<Eye className="w-3 h-3" />
+												{pkg.views}
+											</span>
+											<span>{pkg.bookings} bookings</span>
+										</div>
+
+										<DropdownMenu>
+											<DropdownMenuTrigger asChild>
+												<Button variant="ghost" size="sm">
+													<MoreVertical className="w-4 h-4" />
+												</Button>
+											</DropdownMenuTrigger>
+											<DropdownMenuContent align="end">
+												<DropdownMenuItem>
+													<Eye className="w-4 h-4 mr-2" />
+													View
+												</DropdownMenuItem>
+												<DropdownMenuItem>
+													<Edit className="w-4 h-4 mr-2" />
+													Edit
+												</DropdownMenuItem>
+												<DropdownMenuItem>
+													<Copy className="w-4 h-4 mr-2" />
+													Duplicate
+												</DropdownMenuItem>
+												<DropdownMenuItem className="text-red-600">
+													<Trash className="w-4 h-4 mr-2" />
+													Delete
+												</DropdownMenuItem>
+											</DropdownMenuContent>
+										</DropdownMenu>
+									</div>
+								</CardContent>
+							</Card>
+						</motion.div>
+					))}
+				</div>
+			)}
 		</div>
 	);
 }
