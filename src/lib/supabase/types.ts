@@ -757,6 +757,1084 @@ export type Database = {
           }
         ]
       }
+      multi_city_packages: {
+        Row: {
+          id: string
+          operator_id: string
+          title: string
+          short_description: string
+          full_description: string | null
+          destination_region: string | null
+          include_intercity_transport: boolean
+          pricing_mode: 'FIXED' | 'PER_PERSON' | 'GROUP_TIERED'
+          fixed_price: number | null
+          per_person_price: number | null
+          group_min: number | null
+          group_max: number | null
+          currency: string
+          validity_start: string | null
+          validity_end: string | null
+          seasonal_notes: string | null
+          deposit_percent: number
+          balance_due_days: number
+          payment_methods: string[] | null
+          visa_requirements: string | null
+          insurance_requirement: 'REQUIRED' | 'OPTIONAL' | 'NA'
+          health_requirements: string | null
+          terms_and_conditions: string | null
+          total_nights: number
+          total_days: number
+          total_cities: number
+          base_price: number | null
+          status: 'draft' | 'published' | 'archived' | 'suspended'
+          published_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          operator_id: string
+          title: string
+          short_description: string
+          full_description?: string | null
+          destination_region?: string | null
+          include_intercity_transport?: boolean
+          pricing_mode?: 'FIXED' | 'PER_PERSON' | 'GROUP_TIERED'
+          fixed_price?: number | null
+          per_person_price?: number | null
+          group_min?: number | null
+          group_max?: number | null
+          currency?: string
+          validity_start?: string | null
+          validity_end?: string | null
+          seasonal_notes?: string | null
+          deposit_percent?: number
+          balance_due_days?: number
+          payment_methods?: string[] | null
+          visa_requirements?: string | null
+          insurance_requirement?: 'REQUIRED' | 'OPTIONAL' | 'NA'
+          health_requirements?: string | null
+          terms_and_conditions?: string | null
+          total_nights?: number
+          total_days?: number
+          total_cities?: number
+          base_price?: number | null
+          status?: 'draft' | 'published' | 'archived' | 'suspended'
+          published_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          operator_id?: string
+          title?: string
+          short_description?: string
+          full_description?: string | null
+          destination_region?: string | null
+          include_intercity_transport?: boolean
+          pricing_mode?: 'FIXED' | 'PER_PERSON' | 'GROUP_TIERED'
+          fixed_price?: number | null
+          per_person_price?: number | null
+          group_min?: number | null
+          group_max?: number | null
+          currency?: string
+          validity_start?: string | null
+          validity_end?: string | null
+          seasonal_notes?: string | null
+          deposit_percent?: number
+          balance_due_days?: number
+          payment_methods?: string[] | null
+          visa_requirements?: string | null
+          insurance_requirement?: 'REQUIRED' | 'OPTIONAL' | 'NA'
+          health_requirements?: string | null
+          terms_and_conditions?: string | null
+          total_nights?: number
+          total_days?: number
+          total_cities?: number
+          base_price?: number | null
+          status?: 'draft' | 'published' | 'archived' | 'suspended'
+          published_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "multi_city_packages_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      multi_city_package_images: {
+        Row: {
+          id: string
+          package_id: string
+          file_name: string
+          storage_path: string
+          public_url: string
+          file_size: number | null
+          mime_type: string | null
+          is_cover: boolean
+          is_featured: boolean
+          display_order: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          package_id: string
+          file_name: string
+          storage_path: string
+          public_url: string
+          file_size?: number | null
+          mime_type?: string | null
+          is_cover?: boolean
+          is_featured?: boolean
+          display_order?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          package_id?: string
+          file_name?: string
+          storage_path?: string
+          public_url?: string
+          file_size?: number | null
+          mime_type?: string | null
+          is_cover?: boolean
+          is_featured?: boolean
+          display_order?: number
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "multi_city_package_images_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "multi_city_packages"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      multi_city_package_cities: {
+        Row: {
+          id: string
+          package_id: string
+          name: string
+          country: string | null
+          nights: number
+          highlights: string[] | null
+          activities_included: string[] | null
+          city_order: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          package_id: string
+          name: string
+          country?: string | null
+          nights: number
+          highlights?: string[] | null
+          activities_included?: string[] | null
+          city_order: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          package_id?: string
+          name?: string
+          country?: string | null
+          nights?: number
+          highlights?: string[] | null
+          activities_included?: string[] | null
+          city_order?: number
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "multi_city_package_cities_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "multi_city_packages"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      multi_city_package_connections: {
+        Row: {
+          id: string
+          package_id: string
+          from_city_id: string
+          to_city_id: string
+          transport_type: 'FLIGHT' | 'TRAIN' | 'BUS' | 'CAR'
+          transport_class: 'ECONOMY' | 'BUSINESS' | 'FIRST' | 'STANDARD' | null
+          duration_hours: number | null
+          carrier_name: string | null
+          departure_time: string | null
+          arrival_time: string | null
+          price_included: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          package_id: string
+          from_city_id: string
+          to_city_id: string
+          transport_type: 'FLIGHT' | 'TRAIN' | 'BUS' | 'CAR'
+          transport_class?: 'ECONOMY' | 'BUSINESS' | 'FIRST' | 'STANDARD' | null
+          duration_hours?: number | null
+          carrier_name?: string | null
+          departure_time?: string | null
+          arrival_time?: string | null
+          price_included?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          package_id?: string
+          from_city_id?: string
+          to_city_id?: string
+          transport_type?: 'FLIGHT' | 'TRAIN' | 'BUS' | 'CAR'
+          transport_class?: 'ECONOMY' | 'BUSINESS' | 'FIRST' | 'STANDARD' | null
+          duration_hours?: number | null
+          carrier_name?: string | null
+          departure_time?: string | null
+          arrival_time?: string | null
+          price_included?: boolean
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "multi_city_package_connections_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "multi_city_packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "multi_city_package_connections_from_city_id_fkey"
+            columns: ["from_city_id"]
+            isOneToOne: false
+            referencedRelation: "multi_city_package_cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "multi_city_package_connections_to_city_id_fkey"
+            columns: ["to_city_id"]
+            isOneToOne: false
+            referencedRelation: "multi_city_package_cities"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      multi_city_package_inclusions: {
+        Row: {
+          id: string
+          package_id: string
+          category: 'Transport' | 'Activities' | 'Meals' | 'Guide Services' | 'Entry Fees' | 'Insurance'
+          text: string
+          display_order: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          package_id: string
+          category: 'Transport' | 'Activities' | 'Meals' | 'Guide Services' | 'Entry Fees' | 'Insurance'
+          text: string
+          display_order?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          package_id?: string
+          category?: 'Transport' | 'Activities' | 'Meals' | 'Guide Services' | 'Entry Fees' | 'Insurance'
+          text?: string
+          display_order?: number
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "multi_city_package_inclusions_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "multi_city_packages"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      multi_city_package_exclusions: {
+        Row: {
+          id: string
+          package_id: string
+          text: string
+          display_order: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          package_id: string
+          text: string
+          display_order?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          package_id?: string
+          text?: string
+          display_order?: number
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "multi_city_package_exclusions_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "multi_city_packages"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      multi_city_package_cancellation_tiers: {
+        Row: {
+          id: string
+          package_id: string
+          days_before: number
+          refund_percent: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          package_id: string
+          days_before: number
+          refund_percent: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          package_id?: string
+          days_before?: number
+          refund_percent?: number
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "multi_city_package_cancellation_tiers_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "multi_city_packages"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      multi_city_package_departures: {
+        Row: {
+          id: string
+          package_id: string
+          departure_date: string
+          available_seats: number | null
+          price: number | null
+          cutoff_date: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          package_id: string
+          departure_date: string
+          available_seats?: number | null
+          price?: number | null
+          cutoff_date?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          package_id?: string
+          departure_date?: string
+          available_seats?: number | null
+          price?: number | null
+          cutoff_date?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "multi_city_package_departures_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "multi_city_packages"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      multi_city_package_day_plans: {
+        Row: {
+          id: string
+          package_id: string
+          city_id: string
+          day_number: number
+          title: string
+          description: string | null
+          overnight_city: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          package_id: string
+          city_id: string
+          day_number: number
+          title: string
+          description?: string | null
+          overnight_city?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          package_id?: string
+          city_id?: string
+          day_number?: number
+          title?: string
+          description?: string | null
+          overnight_city?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "multi_city_package_day_plans_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "multi_city_packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "multi_city_package_day_plans_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "multi_city_package_cities"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      multi_city_package_day_activities: {
+        Row: {
+          id: string
+          day_plan_id: string
+          time_slot: string | null
+          title: string
+          description: string | null
+          duration_minutes: number | null
+          activity_order: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          day_plan_id: string
+          time_slot?: string | null
+          title: string
+          description?: string | null
+          duration_minutes?: number | null
+          activity_order?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          day_plan_id?: string
+          time_slot?: string | null
+          title?: string
+          description?: string | null
+          duration_minutes?: number | null
+          activity_order?: number
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "multi_city_package_day_activities_day_plan_id_fkey"
+            columns: ["day_plan_id"]
+            isOneToOne: false
+            referencedRelation: "multi_city_package_day_plans"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      multi_city_package_addons: {
+        Row: {
+          id: string
+          package_id: string
+          name: string
+          description: string | null
+          price: number
+          is_active: boolean
+          display_order: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          package_id: string
+          name: string
+          description?: string | null
+          price?: number
+          is_active?: boolean
+          display_order?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          package_id?: string
+          name?: string
+          description?: string | null
+          price?: number
+          is_active?: boolean
+          display_order?: number
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "multi_city_package_addons_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "multi_city_packages"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      transfer_packages: {
+        Row: {
+          id: string
+          operator_id: string
+          title: string
+          short_description: string
+          full_description: string | null
+          destination_name: string
+          destination_address: string | null
+          destination_city: string | null
+          destination_country: string | null
+          destination_coordinates: Json | null
+          transfer_type: 'ONE_WAY' | 'ROUND_TRIP' | 'MULTI_STOP'
+          total_distance: number | null
+          distance_unit: 'KM' | 'MILES'
+          estimated_duration_hours: number | null
+          estimated_duration_minutes: number | null
+          route_points: Json | null
+          meet_and_greet: boolean
+          name_board: boolean
+          driver_uniform: boolean
+          flight_tracking: boolean
+          luggage_assistance: boolean
+          door_to_door_service: boolean
+          contact_driver_in_advance: boolean
+          contact_lead_time: number
+          real_time_tracking: boolean
+          languages_supported: string[]
+          tags: string[]
+          base_price: number
+          currency: string
+          cancellation_policy_type: 'FLEXIBLE' | 'MODERATE' | 'STRICT' | 'CUSTOM'
+          cancellation_refund_percentage: number
+          cancellation_deadline_hours: number
+          no_show_policy: string | null
+          terms_and_conditions: string | null
+          available_days: string[]
+          advance_booking_hours: number
+          maximum_advance_booking_days: number
+          instant_confirmation: boolean
+          special_instructions: string | null
+          status: 'draft' | 'published' | 'archived' | 'suspended'
+          featured: boolean
+          created_at: string
+          updated_at: string
+          published_at: string | null
+        }
+        Insert: {
+          id?: string
+          operator_id: string
+          title: string
+          short_description: string
+          full_description?: string | null
+          destination_name: string
+          destination_address?: string | null
+          destination_city?: string | null
+          destination_country?: string | null
+          destination_coordinates?: Json | null
+          transfer_type: 'ONE_WAY' | 'ROUND_TRIP' | 'MULTI_STOP'
+          total_distance?: number | null
+          distance_unit?: 'KM' | 'MILES'
+          estimated_duration_hours?: number | null
+          estimated_duration_minutes?: number | null
+          route_points?: Json | null
+          meet_and_greet?: boolean
+          name_board?: boolean
+          driver_uniform?: boolean
+          flight_tracking?: boolean
+          luggage_assistance?: boolean
+          door_to_door_service?: boolean
+          contact_driver_in_advance?: boolean
+          contact_lead_time?: number
+          real_time_tracking?: boolean
+          languages_supported?: string[]
+          tags?: string[]
+          base_price: number
+          currency?: string
+          cancellation_policy_type?: 'FLEXIBLE' | 'MODERATE' | 'STRICT' | 'CUSTOM'
+          cancellation_refund_percentage?: number
+          cancellation_deadline_hours?: number
+          no_show_policy?: string | null
+          terms_and_conditions?: string | null
+          available_days?: string[]
+          advance_booking_hours?: number
+          maximum_advance_booking_days?: number
+          instant_confirmation?: boolean
+          special_instructions?: string | null
+          status?: 'draft' | 'published' | 'archived' | 'suspended'
+          featured?: boolean
+          created_at?: string
+          updated_at?: string
+          published_at?: string | null
+        }
+        Update: {
+          id?: string
+          operator_id?: string
+          title?: string
+          short_description?: string
+          full_description?: string | null
+          destination_name?: string
+          destination_address?: string | null
+          destination_city?: string | null
+          destination_country?: string | null
+          destination_coordinates?: Json | null
+          transfer_type?: 'ONE_WAY' | 'ROUND_TRIP' | 'MULTI_STOP'
+          total_distance?: number | null
+          distance_unit?: 'KM' | 'MILES'
+          estimated_duration_hours?: number | null
+          estimated_duration_minutes?: number | null
+          route_points?: Json | null
+          meet_and_greet?: boolean
+          name_board?: boolean
+          driver_uniform?: boolean
+          flight_tracking?: boolean
+          luggage_assistance?: boolean
+          door_to_door_service?: boolean
+          contact_driver_in_advance?: boolean
+          contact_lead_time?: number
+          real_time_tracking?: boolean
+          languages_supported?: string[]
+          tags?: string[]
+          base_price?: number
+          currency?: string
+          cancellation_policy_type?: 'FLEXIBLE' | 'MODERATE' | 'STRICT' | 'CUSTOM'
+          cancellation_refund_percentage?: number
+          cancellation_deadline_hours?: number
+          no_show_policy?: string | null
+          terms_and_conditions?: string | null
+          available_days?: string[]
+          advance_booking_hours?: number
+          maximum_advance_booking_days?: number
+          instant_confirmation?: boolean
+          special_instructions?: string | null
+          status?: 'draft' | 'published' | 'archived' | 'suspended'
+          featured?: boolean
+          created_at?: string
+          updated_at?: string
+          published_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transfer_packages_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      transfer_package_images: {
+        Row: {
+          id: string
+          package_id: string
+          file_name: string
+          file_size: number | null
+          mime_type: string | null
+          storage_path: string
+          public_url: string | null
+          alt_text: string | null
+          is_cover: boolean
+          is_featured: boolean
+          display_order: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          package_id: string
+          file_name: string
+          file_size?: number | null
+          mime_type?: string | null
+          storage_path: string
+          public_url?: string | null
+          alt_text?: string | null
+          is_cover?: boolean
+          is_featured?: boolean
+          display_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          package_id?: string
+          file_name?: string
+          file_size?: number | null
+          mime_type?: string | null
+          storage_path?: string
+          public_url?: string | null
+          alt_text?: string | null
+          is_cover?: boolean
+          is_featured?: boolean
+          display_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transfer_package_images_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "transfer_packages"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      transfer_package_vehicles: {
+        Row: {
+          id: string
+          package_id: string
+          vehicle_type: 'SEDAN' | 'SUV' | 'VAN' | 'BUS' | 'LUXURY' | 'MINIBUS'
+          name: string
+          description: string | null
+          passenger_capacity: number
+          luggage_capacity: number
+          features: string[]
+          base_price: number
+          is_active: boolean
+          display_order: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          package_id: string
+          vehicle_type: 'SEDAN' | 'SUV' | 'VAN' | 'BUS' | 'LUXURY' | 'MINIBUS'
+          name: string
+          description?: string | null
+          passenger_capacity: number
+          luggage_capacity: number
+          features?: string[]
+          base_price: number
+          is_active?: boolean
+          display_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          package_id?: string
+          vehicle_type?: 'SEDAN' | 'SUV' | 'VAN' | 'BUS' | 'LUXURY' | 'MINIBUS'
+          name?: string
+          description?: string | null
+          passenger_capacity?: number
+          luggage_capacity?: number
+          features?: string[]
+          base_price?: number
+          is_active?: boolean
+          display_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transfer_package_vehicles_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "transfer_packages"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      transfer_vehicle_images: {
+        Row: {
+          id: string
+          vehicle_id: string
+          file_name: string
+          file_size: number | null
+          mime_type: string | null
+          storage_path: string
+          public_url: string | null
+          alt_text: string | null
+          display_order: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          vehicle_id: string
+          file_name: string
+          file_size?: number | null
+          mime_type?: string | null
+          storage_path: string
+          public_url?: string | null
+          alt_text?: string | null
+          display_order?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          vehicle_id?: string
+          file_name?: string
+          file_size?: number | null
+          mime_type?: string | null
+          storage_path?: string
+          public_url?: string | null
+          alt_text?: string | null
+          display_order?: number
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transfer_vehicle_images_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "transfer_package_vehicles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      transfer_package_stops: {
+        Row: {
+          id: string
+          package_id: string
+          location_name: string
+          location_address: string | null
+          location_coordinates: Json | null
+          duration_hours: number
+          duration_minutes: number
+          description: string | null
+          stop_order: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          package_id: string
+          location_name: string
+          location_address?: string | null
+          location_coordinates?: Json | null
+          duration_hours?: number
+          duration_minutes?: number
+          description?: string | null
+          stop_order: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          package_id?: string
+          location_name?: string
+          location_address?: string | null
+          location_coordinates?: Json | null
+          duration_hours?: number
+          duration_minutes?: number
+          description?: string | null
+          stop_order?: number
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transfer_package_stops_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "transfer_packages"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      transfer_additional_services: {
+        Row: {
+          id: string
+          package_id: string
+          name: string
+          description: string | null
+          price: number
+          is_included: boolean
+          is_active: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          package_id: string
+          name: string
+          description?: string | null
+          price: number
+          is_included?: boolean
+          is_active?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          package_id?: string
+          name?: string
+          description?: string | null
+          price?: number
+          is_included?: boolean
+          is_active?: boolean
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transfer_additional_services_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "transfer_packages"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      transfer_pricing_rules: {
+        Row: {
+          id: string
+          vehicle_id: string
+          rule_type: 'DISTANCE_BASED' | 'TIME_BASED' | 'ADDITIONAL_CHARGE'
+          min_distance: number | null
+          max_distance: number | null
+          price_per_km: number | null
+          time_start: string | null
+          time_end: string | null
+          surcharge_percentage: number | null
+          charge_name: string | null
+          charge_description: string | null
+          charge_type: string | null
+          charge_amount: number | null
+          is_active: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          vehicle_id: string
+          rule_type: 'DISTANCE_BASED' | 'TIME_BASED' | 'ADDITIONAL_CHARGE'
+          min_distance?: number | null
+          max_distance?: number | null
+          price_per_km?: number | null
+          time_start?: string | null
+          time_end?: string | null
+          surcharge_percentage?: number | null
+          charge_name?: string | null
+          charge_description?: string | null
+          charge_type?: string | null
+          charge_amount?: number | null
+          is_active?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          vehicle_id?: string
+          rule_type?: 'DISTANCE_BASED' | 'TIME_BASED' | 'ADDITIONAL_CHARGE'
+          min_distance?: number | null
+          max_distance?: number | null
+          price_per_km?: number | null
+          time_start?: string | null
+          time_end?: string | null
+          surcharge_percentage?: number | null
+          charge_name?: string | null
+          charge_description?: string | null
+          charge_type?: string | null
+          charge_amount?: number | null
+          is_active?: boolean
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transfer_pricing_rules_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "transfer_package_vehicles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      transfer_time_slots: {
+        Row: {
+          id: string
+          package_id: string
+          start_time: string
+          end_time: string
+          available_days: string[]
+          is_active: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          package_id: string
+          start_time: string
+          end_time: string
+          available_days: string[]
+          is_active?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          package_id?: string
+          start_time?: string
+          end_time?: string
+          available_days?: string[]
+          is_active?: boolean
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transfer_time_slots_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "transfer_packages"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      transfer_booking_restrictions: {
+        Row: {
+          id: string
+          package_id: string
+          restriction_type: 'DATE_RANGE' | 'SPECIFIC_DATES' | 'HOLIDAYS'
+          start_date: string | null
+          end_date: string | null
+          specific_dates: Json | null
+          description: string | null
+          is_active: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          package_id: string
+          restriction_type: 'DATE_RANGE' | 'SPECIFIC_DATES' | 'HOLIDAYS'
+          start_date?: string | null
+          end_date?: string | null
+          specific_dates?: Json | null
+          description?: string | null
+          is_active?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          package_id?: string
+          restriction_type?: 'DATE_RANGE' | 'SPECIFIC_DATES' | 'HOLIDAYS'
+          start_date?: string | null
+          end_date?: string | null
+          specific_dates?: Json | null
+          description?: string | null
+          is_active?: boolean
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transfer_booking_restrictions_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "transfer_packages"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -770,6 +1848,16 @@ export type Database = {
       price_range: 'budget' | 'mid-range' | 'luxury'
       flight_class: 'economy' | 'business' | 'first'
       activity_category: 'adventure' | 'cultural' | 'relaxation' | 'food' | 'nature'
+      package_status: 'draft' | 'published' | 'archived' | 'suspended'
+      pricing_mode: 'FIXED' | 'PER_PERSON' | 'GROUP_TIERED'
+      transport_type: 'FLIGHT' | 'TRAIN' | 'BUS' | 'CAR'
+      transport_class: 'ECONOMY' | 'BUSINESS' | 'FIRST' | 'STANDARD'
+      inclusion_category: 'Transport' | 'Activities' | 'Meals' | 'Guide Services' | 'Entry Fees' | 'Insurance'
+      insurance_requirement: 'REQUIRED' | 'OPTIONAL' | 'NA'
+      transfer_type: 'ONE_WAY' | 'ROUND_TRIP' | 'MULTI_STOP'
+      vehicle_type: 'SEDAN' | 'SUV' | 'VAN' | 'BUS' | 'LUXURY' | 'MINIBUS'
+      transfer_policy_type: 'FLEXIBLE' | 'MODERATE' | 'STRICT' | 'CUSTOM'
+      distance_unit: 'KM' | 'MILES'
     }
     CompositeTypes: {
       [_ in never]: never
@@ -794,6 +1882,26 @@ export type ActivityPackageImage = Tables<'activity_package_images'>
 export type ActivityPackageTimeSlot = Tables<'activity_package_time_slots'>
 export type ActivityPackageVariant = Tables<'activity_package_variants'>
 export type ActivityPackageFAQ = Tables<'activity_package_faqs'>
+export type MultiCityPackage = Tables<'multi_city_packages'>
+export type MultiCityPackageImage = Tables<'multi_city_package_images'>
+export type MultiCityPackageCity = Tables<'multi_city_package_cities'>
+export type MultiCityPackageConnection = Tables<'multi_city_package_connections'>
+export type MultiCityPackageInclusion = Tables<'multi_city_package_inclusions'>
+export type MultiCityPackageExclusion = Tables<'multi_city_package_exclusions'>
+export type MultiCityPackageCancellationTier = Tables<'multi_city_package_cancellation_tiers'>
+export type MultiCityPackageDeparture = Tables<'multi_city_package_departures'>
+export type MultiCityPackageDayPlan = Tables<'multi_city_package_day_plans'>
+export type MultiCityPackageDayActivity = Tables<'multi_city_package_day_activities'>
+export type MultiCityPackageAddon = Tables<'multi_city_package_addons'>
+export type TransferPackage = Tables<'transfer_packages'>
+export type TransferPackageImage = Tables<'transfer_package_images'>
+export type TransferPackageVehicle = Tables<'transfer_package_vehicles'>
+export type TransferVehicleImage = Tables<'transfer_vehicle_images'>
+export type TransferPackageStop = Tables<'transfer_package_stops'>
+export type TransferAdditionalService = Tables<'transfer_additional_services'>
+export type TransferPricingRule = Tables<'transfer_pricing_rules'>
+export type TransferTimeSlot = Tables<'transfer_time_slots'>
+export type TransferBookingRestriction = Tables<'transfer_booking_restrictions'>
 
 // Insert types
 export type UserInsert = Database['public']['Tables']['users']['Insert']
@@ -808,6 +1916,26 @@ export type ActivityPackageImageInsert = Database['public']['Tables']['activity_
 export type ActivityPackageTimeSlotInsert = Database['public']['Tables']['activity_package_time_slots']['Insert']
 export type ActivityPackageVariantInsert = Database['public']['Tables']['activity_package_variants']['Insert']
 export type ActivityPackageFAQInsert = Database['public']['Tables']['activity_package_faqs']['Insert']
+export type MultiCityPackageInsert = Database['public']['Tables']['multi_city_packages']['Insert']
+export type MultiCityPackageImageInsert = Database['public']['Tables']['multi_city_package_images']['Insert']
+export type MultiCityPackageCityInsert = Database['public']['Tables']['multi_city_package_cities']['Insert']
+export type MultiCityPackageConnectionInsert = Database['public']['Tables']['multi_city_package_connections']['Insert']
+export type MultiCityPackageInclusionInsert = Database['public']['Tables']['multi_city_package_inclusions']['Insert']
+export type MultiCityPackageExclusionInsert = Database['public']['Tables']['multi_city_package_exclusions']['Insert']
+export type MultiCityPackageCancellationTierInsert = Database['public']['Tables']['multi_city_package_cancellation_tiers']['Insert']
+export type MultiCityPackageDepartureInsert = Database['public']['Tables']['multi_city_package_departures']['Insert']
+export type MultiCityPackageDayPlanInsert = Database['public']['Tables']['multi_city_package_day_plans']['Insert']
+export type MultiCityPackageDayActivityInsert = Database['public']['Tables']['multi_city_package_day_activities']['Insert']
+export type MultiCityPackageAddonInsert = Database['public']['Tables']['multi_city_package_addons']['Insert']
+export type TransferPackageInsert = Database['public']['Tables']['transfer_packages']['Insert']
+export type TransferPackageImageInsert = Database['public']['Tables']['transfer_package_images']['Insert']
+export type TransferPackageVehicleInsert = Database['public']['Tables']['transfer_package_vehicles']['Insert']
+export type TransferVehicleImageInsert = Database['public']['Tables']['transfer_vehicle_images']['Insert']
+export type TransferPackageStopInsert = Database['public']['Tables']['transfer_package_stops']['Insert']
+export type TransferAdditionalServiceInsert = Database['public']['Tables']['transfer_additional_services']['Insert']
+export type TransferPricingRuleInsert = Database['public']['Tables']['transfer_pricing_rules']['Insert']
+export type TransferTimeSlotInsert = Database['public']['Tables']['transfer_time_slots']['Insert']
+export type TransferBookingRestrictionInsert = Database['public']['Tables']['transfer_booking_restrictions']['Insert']
 
 // Update types
 export type UserUpdate = Database['public']['Tables']['users']['Update']
@@ -822,4 +1950,24 @@ export type ActivityPackageImageUpdate = Database['public']['Tables']['activity_
 export type ActivityPackageTimeSlotUpdate = Database['public']['Tables']['activity_package_time_slots']['Update']
 export type ActivityPackageVariantUpdate = Database['public']['Tables']['activity_package_variants']['Update']
 export type ActivityPackageFAQUpdate = Database['public']['Tables']['activity_package_faqs']['Update']
+export type MultiCityPackageUpdate = Database['public']['Tables']['multi_city_packages']['Update']
+export type MultiCityPackageImageUpdate = Database['public']['Tables']['multi_city_package_images']['Update']
+export type MultiCityPackageCityUpdate = Database['public']['Tables']['multi_city_package_cities']['Update']
+export type MultiCityPackageConnectionUpdate = Database['public']['Tables']['multi_city_package_connections']['Update']
+export type MultiCityPackageInclusionUpdate = Database['public']['Tables']['multi_city_package_inclusions']['Update']
+export type MultiCityPackageExclusionUpdate = Database['public']['Tables']['multi_city_package_exclusions']['Update']
+export type MultiCityPackageCancellationTierUpdate = Database['public']['Tables']['multi_city_package_cancellation_tiers']['Update']
+export type MultiCityPackageDepartureUpdate = Database['public']['Tables']['multi_city_package_departures']['Update']
+export type MultiCityPackageDayPlanUpdate = Database['public']['Tables']['multi_city_package_day_plans']['Update']
+export type MultiCityPackageDayActivityUpdate = Database['public']['Tables']['multi_city_package_day_activities']['Update']
+export type MultiCityPackageAddonUpdate = Database['public']['Tables']['multi_city_package_addons']['Update']
+export type TransferPackageUpdate = Database['public']['Tables']['transfer_packages']['Update']
+export type TransferPackageImageUpdate = Database['public']['Tables']['transfer_package_images']['Update']
+export type TransferPackageVehicleUpdate = Database['public']['Tables']['transfer_package_vehicles']['Update']
+export type TransferVehicleImageUpdate = Database['public']['Tables']['transfer_vehicle_images']['Update']
+export type TransferPackageStopUpdate = Database['public']['Tables']['transfer_package_stops']['Update']
+export type TransferAdditionalServiceUpdate = Database['public']['Tables']['transfer_additional_services']['Update']
+export type TransferPricingRuleUpdate = Database['public']['Tables']['transfer_pricing_rules']['Update']
+export type TransferTimeSlotUpdate = Database['public']['Tables']['transfer_time_slots']['Update']
+export type TransferBookingRestrictionUpdate = Database['public']['Tables']['transfer_booking_restrictions']['Update']
 

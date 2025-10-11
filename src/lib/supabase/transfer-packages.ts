@@ -16,18 +16,18 @@ export interface TransferPackage {
   operator_id: string;
   title: string;
   short_description: string;
-  full_description?: string;
+  full_description: string | null;
   destination_name: string;
-  destination_address?: string;
-  destination_city?: string;
-  destination_country?: string;
-  destination_coordinates?: any;
+  destination_address: string | null;
+  destination_city: string | null;
+  destination_country: string | null;
+  destination_coordinates: any;
   transfer_type: 'ONE_WAY' | 'ROUND_TRIP' | 'MULTI_STOP';
-  total_distance?: number;
-  distance_unit?: 'KM' | 'MILES';
-  estimated_duration_hours?: number;
-  estimated_duration_minutes?: number;
-  route_points?: any;
+  total_distance: number | null;
+  distance_unit: 'KM' | 'MILES';
+  estimated_duration_hours: number | null;
+  estimated_duration_minutes: number | null;
+  route_points: any;
   meet_and_greet: boolean;
   name_board: boolean;
   driver_uniform: boolean;
@@ -41,36 +41,37 @@ export interface TransferPackage {
   tags: string[];
   base_price: number;
   currency: string;
-  cancellation_policy_type: string;
+  cancellation_policy_type: 'FLEXIBLE' | 'MODERATE' | 'STRICT' | 'CUSTOM';
   cancellation_refund_percentage: number;
   cancellation_deadline_hours: number;
-  no_show_policy?: string;
-  terms_and_conditions?: string;
+  no_show_policy: string | null;
+  terms_and_conditions: string | null;
   available_days: string[];
   advance_booking_hours: number;
   maximum_advance_booking_days: number;
   instant_confirmation: boolean;
-  special_instructions?: string;
+  special_instructions: string | null;
   status: 'draft' | 'published' | 'archived' | 'suspended';
   featured: boolean;
   created_at: string;
   updated_at: string;
-  published_at?: string;
+  published_at: string | null;
 }
 
 export interface TransferPackageImage {
   id: string;
   package_id: string;
   file_name: string;
-  file_size?: number;
-  mime_type?: string;
+  file_size: number | null;
+  mime_type: string | null;
   storage_path: string;
-  public_url?: string;
-  alt_text?: string;
+  public_url: string | null;
+  alt_text: string | null;
   is_cover: boolean;
   is_featured: boolean;
   display_order: number;
   created_at: string;
+  updated_at: string;
 }
 
 export interface TransferPackageVehicle {
@@ -78,7 +79,7 @@ export interface TransferPackageVehicle {
   package_id: string;
   vehicle_type: 'SEDAN' | 'SUV' | 'VAN' | 'BUS' | 'LUXURY' | 'MINIBUS';
   name: string;
-  description?: string;
+  description: string | null;
   passenger_capacity: number;
   luggage_capacity: number;
   features: string[];
@@ -86,17 +87,18 @@ export interface TransferPackageVehicle {
   is_active: boolean;
   display_order: number;
   created_at: string;
+  updated_at: string;
 }
 
 export interface TransferPackageStop {
   id: string;
   package_id: string;
   location_name: string;
-  location_address?: string;
-  location_coordinates?: any;
+  location_address: string | null;
+  location_coordinates: any;
   duration_hours: number;
   duration_minutes: number;
-  description?: string;
+  description: string | null;
   stop_order: number;
   created_at: string;
 }
@@ -105,7 +107,7 @@ export interface TransferAdditionalService {
   id: string;
   package_id: string;
   name: string;
-  description?: string;
+  description: string | null;
   price: number;
   is_included: boolean;
   is_active: boolean;
@@ -299,7 +301,7 @@ export async function createTransferPackage(
     // Insert main package
     const { data: packageData, error: packageError } = await supabase
       .from('transfer_packages')
-      .insert(data.package)
+      .insert(data.package as any)
       .select()
       .single();
 
@@ -321,7 +323,7 @@ export async function createTransferPackage(
       const imagesWithPackageId = finalImages.map(img => ({
         ...img,
         package_id: packageId,
-      }));
+      })) as any[];
 
       const { data: imagesData, error: imagesError } = await supabase
         .from('transfer_package_images')
@@ -337,7 +339,7 @@ export async function createTransferPackage(
       const vehiclesWithPackageId = data.vehicles.map(vehicle => ({
         ...vehicle,
         package_id: packageId,
-      }));
+      })) as any[];
 
       const { data: vehiclesData, error: vehiclesError } = await supabase
         .from('transfer_package_vehicles')
@@ -353,7 +355,7 @@ export async function createTransferPackage(
       const stopsWithPackageId = data.stops.map(stop => ({
         ...stop,
         package_id: packageId,
-      }));
+      })) as any[];
 
       const { data: stopsData, error: stopsError } = await supabase
         .from('transfer_package_stops')
@@ -369,7 +371,7 @@ export async function createTransferPackage(
       const servicesWithPackageId = data.additional_services.map(service => ({
         ...service,
         package_id: packageId,
-      }));
+      })) as any[];
 
       const { data: servicesData, error: servicesError } = await supabase
         .from('transfer_additional_services')
@@ -477,7 +479,7 @@ export async function updateTransferPackage(
 
 export async function listTransferPackages(
   filters: { operator_id?: string; status?: string } = {}
-): Promise<{ data: TransferPackageWithRelations[]; error: SupabaseError | null }> {
+): Promise<{ data: TransferPackageWithRelations[] | null; error: SupabaseError | null }> {
   const supabase = createSupabaseBrowserClient();
   
   return withErrorHandling(async () => {
@@ -491,7 +493,7 @@ export async function listTransferPackages(
     }
 
     if (filters.status) {
-      query = query.eq('status', filters.status);
+      query = query.eq('status', filters.status as any);
     }
 
     const { data: packages, error } = await query;
@@ -501,7 +503,7 @@ export async function listTransferPackages(
     // For list view, we'll get basic package info without all relations
     // You can extend this to include relations if needed
 
-    return { data: packages as TransferPackageWithRelations[], error: null };
+    return { data: (packages || []) as TransferPackageWithRelations[], error: null };
   });
 }
 
@@ -511,7 +513,7 @@ export async function listTransferPackages(
 
 export async function deleteTransferPackage(
   id: string
-): Promise<{ data: boolean; error: SupabaseError | null }> {
+): Promise<{ data: boolean | null; error: SupabaseError | null }> {
   const supabase = createSupabaseBrowserClient();
   
   return withErrorHandling(async () => {

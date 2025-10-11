@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { formDataToDatabase } from "@/lib/supabase/transfer-packages";
+import { TransferPackageInsert } from "@/lib/supabase/types";
 
 export default function CreateTransferPackagePage() {
   const router = useRouter();
@@ -26,13 +27,16 @@ export default function CreateTransferPackagePage() {
       // Transform form data to database format
       const dbData = formDataToDatabase(data, user.id);
       
-      // Set status to draft
-      dbData.package.status = 'draft';
+      // Set status to draft and prepare insert data
+      const packageInsertData: TransferPackageInsert = {
+        ...dbData.package,
+        status: 'draft',
+      } as TransferPackageInsert;
       
       // Insert main package
       const { data: packageResult, error: packageError } = await supabase
         .from('transfer_packages')
-        .insert(dbData.package)
+        .insert(packageInsertData)
         .select()
         .single();
       
@@ -64,14 +68,17 @@ export default function CreateTransferPackagePage() {
       // Transform form data to database format
       const dbData = formDataToDatabase(data, user.id);
       
-      // Set status to published
-      dbData.package.status = 'published';
-      dbData.package.published_at = new Date().toISOString();
+      // Set status to published and prepare insert data
+      const packageInsertData: TransferPackageInsert = {
+        ...dbData.package,
+        status: 'published',
+        published_at: new Date().toISOString(),
+      } as TransferPackageInsert;
       
       // Insert main package
       const { data: packageResult, error: packageError } = await supabase
         .from('transfer_packages')
-        .insert(dbData.package)
+        .insert(packageInsertData)
         .select()
         .single();
       
@@ -87,7 +94,7 @@ export default function CreateTransferPackagePage() {
         const vehiclesWithPackageId = dbData.vehicles.map(v => ({
           ...v,
           package_id: packageId,
-        }));
+        })) as any[];
         
         const { error: vehiclesError } = await supabase
           .from('transfer_package_vehicles')
@@ -103,7 +110,7 @@ export default function CreateTransferPackagePage() {
         const stopsWithPackageId = dbData.stops.map(s => ({
           ...s,
           package_id: packageId,
-        }));
+        })) as any[];
         
         const { error: stopsError } = await supabase
           .from('transfer_package_stops')
@@ -119,7 +126,7 @@ export default function CreateTransferPackagePage() {
         const servicesWithPackageId = dbData.additional_services.map(s => ({
           ...s,
           package_id: packageId,
-        }));
+        })) as any[];
         
         const { error: servicesError } = await supabase
           .from('transfer_additional_services')

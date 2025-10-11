@@ -44,7 +44,7 @@ export default function MultiCityPackagePage() {
         insurance_requirement: data.policies.insuranceRequirement || 'OPTIONAL',
         health_requirements: data.policies.healthRequirements || null,
         terms_and_conditions: data.policies.terms || null,
-        status: 'draft',
+        status: 'draft' as const,
       };
       
       const { data: packageResult, error: packageError } = await supabase
@@ -105,7 +105,7 @@ export default function MultiCityPackagePage() {
         insurance_requirement: data.policies.insuranceRequirement || 'OPTIONAL',
         health_requirements: data.policies.healthRequirements || null,
         terms_and_conditions: data.policies.terms || null,
-        status: 'published',
+        status: 'published' as const,
         published_at: new Date().toISOString(),
       };
       
