@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { FaPlus, FaTrash, FaArrowUp, FaArrowDown, FaPlane, FaTrain, FaBus, FaCar, FaClock, FaCheckCircle, FaEye, FaInfoCircle, FaMapMarkerAlt, FaDollarSign, FaShieldAlt, FaSpinner } from "react-icons/fa";
+import { FaPlus, FaTrash, FaArrowUp, FaArrowDown, FaPlane, FaTrain, FaBus, FaCar, FaClock, FaCheckCircle, FaEye, FaInfoCircle, FaMapMarkerAlt, FaDollarSign, FaShieldAlt, FaSpinner, FaCopy } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 
 // Minimal UI shadcn-compatible components from project
@@ -232,36 +232,103 @@ const DestinationsTab: React.FC = () => {
 
   // Keep days in sync when cities change (simple heuristic)
   const cities = watch("cities");
-  useMemo(() => {
+  const days = watch("days");
+  
+  React.useEffect(() => {
+    // Only auto-generate if days are empty
+    if (days && days.length > 0) return;
+    
     const totalNights = cities.reduce((sum, c) => sum + (c.nights || 0), 0);
-    // only scaffold if empty - users can edit after
-    setValue(
-      "days",
-      totalNights > 0
-        ? Array.from({ length: totalNights }).map(() => ({ cityId: cities[0]?.id || "", morning: [], afternoon: [], evening: [], meals: { breakfast: false, lunch: false, dinner: false } }))
-        : []
-    );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cities.length, cities.map(c => c.nights).join("-")]);
+    if (totalNights > 0 && cities.length > 0) {
+      setValue(
+        "days",
+        Array.from({ length: totalNights }).map(() => ({ 
+          cityId: cities[0]?.id || "", 
+          morning: [], 
+          afternoon: [], 
+          evening: [], 
+          meals: { breakfast: false, lunch: false, dinner: false } 
+        }))
+      );
+    }
+  }, [cities.length]);
+
+  const includeTransport = watch("includeIntercityTransport");
 
   return (
     <div className="space-y-4">
+      {/* Intercity Transport Toggle */}
+      <Card className="package-selector-glass package-shadow-fix">
+        <CardContent className="flex items-center justify-between p-4">
+          <div className="space-y-1">
+            <div className="font-medium">Include Inter-city Transport</div>
+            <div className="text-sm text-gray-500">Add transport details between each city</div>
+          </div>
+          <Switch 
+            checked={includeTransport} 
+            onCheckedChange={(val) => setValue("includeIntercityTransport", Boolean(val))} 
+          />
+        </CardContent>
+      </Card>
+
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Destinations</h3>
+        <h3 className="text-lg font-semibold">City Stops</h3>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button className="package-button-fix"><FaPlus className="mr-2" /> Add City</Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
             <DialogHeader>
-              <DialogTitle>Add City</DialogTitle>
-              <DialogDescription>Search or type the city and set nights.</DialogDescription>
+              <DialogTitle>Add City Stop</DialogTitle>
+              <DialogDescription>Enter city name and number of nights to stay</DialogDescription>
             </DialogHeader>
-            <div className="space-y-3">
-              <Input placeholder="City name" value={newCity.name} onChange={(e) => setNewCity(s => ({ ...s, name: e.target.value }))} />
-              <Input placeholder="Country (optional)" value={newCity.country} onChange={(e) => setNewCity(s => ({ ...s, country: e.target.value }))} />
-              <Input type="number" min={1} value={newCity.nights} onChange={(e) => setNewCity(s => ({ ...s, nights: Number(e.target.value || 1) }))} />
-              <div className="flex justify-end"><Button onClick={addCity}>Add</Button></div>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-1 block">City Name *</label>
+                <Input 
+                  placeholder="e.g. Paris, Rome, Tokyo" 
+                  value={newCity.name} 
+                  onChange={(e) => setNewCity(s => ({ ...s, name: e.target.value }))}
+                  className="package-text-fix"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 block">Country (Optional)</label>
+                <Input 
+                  placeholder="e.g. France, Italy, Japan" 
+                  value={newCity.country} 
+                  onChange={(e) => setNewCity(s => ({ ...s, country: e.target.value }))}
+                  className="package-text-fix"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 block">Number of Nights *</label>
+                <Input 
+                  type="number" 
+                  min={1} 
+                  value={newCity.nights} 
+                  onChange={(e) => setNewCity(s => ({ ...s, nights: Number(e.target.value || 1) }))}
+                  className="package-text-fix"
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setOpen(false);
+                    setNewCity({ name: "", country: "", nights: 2 });
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={addCity}
+                  disabled={!newCity.name.trim()}
+                  className="package-button-fix"
+                >
+                  Add City
+                </Button>
+              </div>
             </div>
           </DialogContent>
         </Dialog>
@@ -357,7 +424,8 @@ const TransportTab: React.FC = () => {
   const { register, control, watch, setValue } = useFormContext<MultiCityPackageFormData>();
   const include = watch("includeIntercityTransport");
   const cities = watch("cities");
-  const { fields, append, remove } = useFieldArray({ control, name: "connections" });
+  const connections = watch("connections");
+  const { fields, append, remove, replace } = useFieldArray({ control, name: "connections" });
 
   const cityPairs = useMemo(() => {
     const pairs: Array<{ from: CityStop; to: CityStop }> = [];
@@ -371,93 +439,185 @@ const TransportTab: React.FC = () => {
     return pairs;
   }, [cities]);
 
-  const ensureConnections = React.useCallback(() => {
-    // ensure one connection per adjacent pair if include is ON
-    if (!include) return;
-    const existing = fields.slice();
-    const next: Connection[] = cityPairs.map(p => {
-      const match = existing.find(c => c.fromCityId === p.from.id && c.toCityId === p.to.id) as any;
-      return match || { fromCityId: p.from.id, toCityId: p.to.id, transportType: "FLIGHT", transportClass: "ECONOMY" };
-    }) as any;
-    setValue("connections", next);
-  }, [include, fields, cityPairs, setValue]);
-
-  React.useEffect(() => { ensureConnections(); }, [ensureConnections]);
+  // Ensure connections only when city pairs change
+  React.useEffect(() => {
+    if (!include || cityPairs.length === 0) return;
+    
+    // Only update if the number of connections doesn't match city pairs
+    if (connections.length !== cityPairs.length) {
+      const newConnections: Connection[] = cityPairs.map((p, idx) => {
+        const existing = connections[idx];
+        if (existing && existing.fromCityId === p.from.id && existing.toCityId === p.to.id) {
+          return existing;
+        }
+        return {
+          fromCityId: p.from.id,
+          toCityId: p.to.id,
+          transportType: "FLIGHT" as TransportType,
+          transportClass: "ECONOMY" as TransportClass,
+        };
+      });
+      replace(newConnections as any);
+    }
+  }, [include, cityPairs.length, cities.length]);
 
   const iconForType = (t: TransportType) => t === "FLIGHT" ? <FaPlane /> : t === "TRAIN" ? <FaTrain /> : t === "BUS" ? <FaBus /> : <FaCar />;
 
   return (
     <div className="space-y-4">
-      <Card className="package-selector-glass package-shadow-fix">
-        <CardContent className="flex items-center justify-between p-4">
-          <div className="space-y-1">
-            <div className="font-medium">Include Inter-city Transport</div>
-            <div className="text-sm text-gray-500">Add transport details between each city.</div>
-          </div>
-          <Switch checked={include} onCheckedChange={(val) => setValue("includeIntercityTransport", Boolean(val))} />
-        </CardContent>
-      </Card>
+      {/* Not Enabled Message */}
+      {!include && (
+        <Card className="package-selector-glass package-shadow-fix">
+          <CardContent className="p-8 text-center">
+            <div className="flex flex-col items-center gap-4">
+              <FaPlane className="h-16 w-16 text-gray-400" />
+              <div>
+                <h3 className="text-lg font-semibold mb-2">Inter-city Transport Not Included</h3>
+                <p className="text-sm text-gray-500 mb-4">
+                  This package does not include transport between cities. Enable it in the <strong>Destinations</strong> tab to add transport details.
+                </p>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setValue("includeIntercityTransport", true);
+                  }}
+                  className="package-button-fix"
+                >
+                  <FaPlane className="mr-2" />
+                  Enable Inter-city Transport
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-      {include && (
-        <div className="space-y-3">
+      {/* Need More Cities Message */}
+      {include && cities.length < 2 && (
+        <Card className="package-selector-glass package-shadow-fix">
+          <CardContent className="p-8 text-center">
+            <div className="flex flex-col items-center gap-4">
+              <FaMapMarkerAlt className="h-16 w-16 text-gray-400" />
+              <div>
+                <h3 className="text-lg font-semibold mb-2">Add More Cities</h3>
+                <p className="text-sm text-gray-500 mb-2">
+                  You need at least <strong>2 cities</strong> to configure transport connections.
+                </p>
+                <p className="text-xs text-gray-400">
+                  Currently: {cities.length} {cities.length === 1 ? 'city' : 'cities'}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Transport Connections */}
+      {include && cities.length >= 2 && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold">Transport Connections</h3>
+            <Badge variant="outline">{cityPairs.length} connection(s)</Badge>
+          </div>
+
           {cityPairs.length === 0 && (
-            <p className="text-sm text-gray-500">Add at least two cities to configure connections.</p>
+            <p className="text-sm text-gray-500 text-center py-4">Generating connections...</p>
           )}
-          {cityPairs.map((pair, i) => (
-            <Card key={pair.from.id + pair.to.id} className="package-selector-glass package-shadow-fix">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Badge variant="outline">{pair.from.name}</Badge>
-                  <span className="text-xs text-gray-500">→</span>
-                  <Badge variant="outline">{pair.to.name}</Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-                <div>
-                  <label className="text-sm font-medium">Transport Type</label>
-                  <Select onValueChange={(v) => setValue(`connections.${i}.transportType`, v as TransportType)}>
-                    <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="FLIGHT">Flight</SelectItem>
-                      <SelectItem value="TRAIN">Train</SelectItem>
-                      <SelectItem value="BUS">Bus</SelectItem>
-                      <SelectItem value="CAR">Car</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Class</label>
-                  <Select onValueChange={(v) => setValue(`connections.${i}.transportClass`, v as TransportClass)}>
-                    <SelectTrigger><SelectValue placeholder="Select class" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ECONOMY">Economy</SelectItem>
-                      <SelectItem value="BUSINESS">Business</SelectItem>
-                      <SelectItem value="FIRST">First</SelectItem>
-                      <SelectItem value="STANDARD">Standard</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Provider/Airline</label>
-                  <Input placeholder="Optional" onChange={(e) => setValue(`connections.${i}.provider`, e.target.value)} />
-                </div>
-                <div className="grid grid-cols-2 gap-2">
+
+          {cityPairs.map((pair, i) => {
+            const connection = fields[i];
+            return (
+              <Card key={pair.from.id + pair.to.id} className="package-selector-glass package-shadow-fix">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Badge variant="secondary">{i + 1}</Badge>
+                    <Badge variant="outline">{pair.from.name}</Badge>
+                    <span className="text-xs text-gray-500">→</span>
+                    <Badge variant="outline">{pair.to.name}</Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div>
-                    <label className="text-sm font-medium">Hours</label>
-                    <Input type="number" min={0} onChange={(e) => setValue(`connections.${i}.durationHours`, Number(e.target.value || 0))} />
+                    <label className="text-sm font-medium mb-1 block">Transport Type *</label>
+                    <Select 
+                      defaultValue={connection?.transportType || "FLIGHT"}
+                      onValueChange={(v) => setValue(`connections.${i}.transportType`, v as TransportType)}
+                    >
+                      <SelectTrigger className="package-text-fix">
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="FLIGHT">✈️ Flight</SelectItem>
+                        <SelectItem value="TRAIN">🚂 Train</SelectItem>
+                        <SelectItem value="BUS">🚌 Bus</SelectItem>
+                        <SelectItem value="CAR">🚗 Car</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div>
-                    <label className="text-sm font-medium">Minutes</label>
-                    <Input type="number" min={0} max={59} onChange={(e) => setValue(`connections.${i}.durationMinutes`, Number(e.target.value || 0))} />
+                    <label className="text-sm font-medium mb-1 block">Class *</label>
+                    <Select 
+                      defaultValue={connection?.transportClass || "ECONOMY"}
+                      onValueChange={(v) => setValue(`connections.${i}.transportClass`, v as TransportClass)}
+                    >
+                      <SelectTrigger className="package-text-fix">
+                        <SelectValue placeholder="Select class" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ECONOMY">Economy</SelectItem>
+                        <SelectItem value="BUSINESS">Business</SelectItem>
+                        <SelectItem value="FIRST">First Class</SelectItem>
+                        <SelectItem value="STANDARD">Standard</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                </div>
-                <div className="md:col-span-2 lg:col-span-4">
-                  <label className="text-sm font-medium">Layover Info</label>
-                  <Input placeholder="Optional notes about layovers" onChange={(e) => setValue(`connections.${i}.layoverNotes`, e.target.value)} />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">Provider / Airline</label>
+                    <Input 
+                      placeholder="e.g. Emirates, Amtrak" 
+                      defaultValue={connection?.provider || ""}
+                      onChange={(e) => setValue(`connections.${i}.provider`, e.target.value)}
+                      className="package-text-fix"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">Hours</label>
+                      <Input 
+                        type="number" 
+                        min={0} 
+                        placeholder="0"
+                        defaultValue={connection?.durationHours || 0}
+                        onChange={(e) => setValue(`connections.${i}.durationHours`, Number(e.target.value || 0))}
+                        className="package-text-fix"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">Mins</label>
+                      <Input 
+                        type="number" 
+                        min={0} 
+                        max={59} 
+                        placeholder="0"
+                        defaultValue={connection?.durationMinutes || 0}
+                        onChange={(e) => setValue(`connections.${i}.durationMinutes`, Number(e.target.value || 0))}
+                        className="package-text-fix"
+                      />
+                    </div>
+                  </div>
+                  <div className="md:col-span-2 lg:col-span-4">
+                    <label className="text-sm font-medium mb-1 block">Layover / Notes</label>
+                    <Input 
+                      placeholder="Optional: e.g. 2 hour layover in Dubai"
+                      defaultValue={connection?.layoverNotes || ""}
+                      onChange={(e) => setValue(`connections.${i}.layoverNotes`, e.target.value)}
+                      className="package-text-fix"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>
@@ -483,23 +643,64 @@ const ItineraryTab: React.FC = () => {
     setValue("days", d);
   };
 
+  const addNewDay = () => {
+    const newDay: DayPlan = {
+      cityId: cities[0]?.id || "",
+      morning: [],
+      afternoon: [],
+      evening: [],
+      meals: { breakfast: false, lunch: false, dinner: false },
+    };
+    setValue("days", [...days, newDay]);
+  };
+
+  const removeDay = (index: number) => {
+    const d = [...days];
+    d.splice(index, 1);
+    setValue("days", d);
+  };
+
   return (
     <div className="space-y-4">
+      {/* Header with Timeline and Add Button */}
       <Card className="package-selector-glass package-shadow-fix">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><FaClock /> Itinerary Timeline</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <FaClock /> Day-by-Day Itinerary
+            </CardTitle>
+            <Button
+              type="button"
+              onClick={addNewDay}
+              disabled={cities.length === 0}
+              className="package-button-fix"
+            >
+              <FaPlus className="mr-2" />
+              Add Day
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="w-full overflow-x-auto">
-            <div className="flex items-center gap-4 min-w-max p-2">
-              {days.map((_, i) => (
-                <div key={i} className="flex flex-col items-center">
-                  <div className="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center">{i + 1}</div>
-                  <div className="w-24 h-1 bg-indigo-200" />
-                </div>
-              ))}
+          {days.length > 0 ? (
+            <div className="w-full overflow-x-auto">
+              <div className="flex items-center gap-4 min-w-max p-2">
+                {days.map((_, i) => (
+                  <div key={i} className="flex flex-col items-center">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-r from-[#FF6B35] to-[#FF4B8C] text-white flex items-center justify-center font-semibold">
+                      {i + 1}
+                    </div>
+                    {i < days.length - 1 && <div className="w-24 h-1 bg-orange-200" />}
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              <FaClock className="h-12 w-12 mx-auto mb-3 text-gray-400" />
+              <p className="font-medium mb-1">No Days Added Yet</p>
+              <p className="text-sm">Click &quot;Add Day&quot; to start building your itinerary</p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -507,7 +708,42 @@ const ItineraryTab: React.FC = () => {
         {days.map((day, i) => (
           <Card key={i} className="package-selector-glass package-shadow-fix">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">Day {i + 1} {cities.find(c => c.id === day.cityId)?.name && (<span className="text-sm text-gray-500">• {cities.find(c => c.id === day.cityId)?.name}</span>)}</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Badge variant="secondary">Day {i + 1}</Badge>
+                  {cities.find(c => c.id === day.cityId)?.name && (
+                    <span className="text-sm text-gray-500">• {cities.find(c => c.id === day.cityId)?.name}</span>
+                  )}
+                </CardTitle>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const d = [...days];
+                      d.splice(i + 1, 0, {
+                        cityId: day.cityId,
+                        morning: [],
+                        afternoon: [],
+                        evening: [],
+                        meals: { breakfast: false, lunch: false, dinner: false },
+                      });
+                      setValue("days", d);
+                    }}
+                  >
+                    <FaCopy className="mr-1" /> Clone
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => removeDay(i)}
+                  >
+                    <FaTrash />
+                  </Button>
+                </div>
+              </div>
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {["morning", "afternoon", "evening"].map((period) => (
@@ -542,14 +778,9 @@ const ItineraryTab: React.FC = () => {
                   <Input placeholder="Notes" onChange={(e) => { const d = [...days]; const ref = d[i]; if (!ref) return; ref.notes = e.target.value; setValue("days", d); }} />
                 </div>
               </div>
-              <div className="md:col-span-3 flex items-center gap-2">
-                <Button type="button" variant="outline" onClick={() => moveActivity(i, Math.min(days.length - 1, i + 1), "afternoon")}>Move last afternoon → next day</Button>
-                <Button type="button" variant="outline" onClick={() => { const d = [...days]; d.splice(i + 1, 0, { cityId: day.cityId, morning: [], afternoon: [], evening: [], meals: { breakfast: false, lunch: false, dinner: false } }); setValue("days", d); }}>Clone Day</Button>
-              </div>
             </CardContent>
           </Card>
         ))}
-        {days.length === 0 && <p className="text-sm text-gray-500">Add cities and nights to auto-generate days.</p>}
       </div>
     </div>
   );

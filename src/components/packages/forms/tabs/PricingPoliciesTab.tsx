@@ -243,6 +243,7 @@ export const PricingPoliciesTab: React.FC = () => {
   });
 
   const watchedData = watch('pricingPolicies');
+  const vehicleOptions = watch('vehicleOptions');
 
   const handleAddCharge = useCallback(() => {
     if (newCharge.name?.trim()) {
@@ -298,13 +299,16 @@ export const PricingPoliciesTab: React.FC = () => {
               Base pricing is configured in the Vehicle Options tab. Each vehicle has its own base price.
             </p>
             
-            {watchedData.basePricing && watchedData.basePricing.length > 0 ? (
+            {vehicleOptions?.vehicles && vehicleOptions.vehicles.length > 0 ? (
               <div className="space-y-2">
-                {watchedData.basePricing.map((pricing) => (
-                  <div key={pricing.vehicleId} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                    <span className="font-medium">Vehicle {pricing.vehicleId}</span>
+                {vehicleOptions.vehicles.map((vehicle) => (
+                  <div key={vehicle.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <div>
+                      <span className="font-medium">{vehicle.name}</span>
+                      <span className="text-xs text-gray-500 ml-2">({vehicle.vehicleType})</span>
+                    </div>
                     <span className="text-green-600 font-semibold">
-                      ${pricing.basePrice.toFixed(2)}
+                      ${vehicle.basePrice?.toFixed(2) || '0.00'}
                     </span>
                   </div>
                 ))}
@@ -312,8 +316,8 @@ export const PricingPoliciesTab: React.FC = () => {
             ) : (
               <div className="text-center py-8 text-gray-500">
                 <FaCalculator className="h-8 w-8 mx-auto mb-2" />
-                <p>No base pricing configured yet</p>
-                <p className="text-sm">Configure vehicles in the Vehicle Options tab</p>
+                <p>No vehicles configured yet</p>
+                <p className="text-sm">Add vehicles in the Vehicle Options tab first</p>
               </div>
             )}
           </div>

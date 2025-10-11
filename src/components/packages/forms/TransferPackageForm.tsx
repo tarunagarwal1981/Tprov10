@@ -143,12 +143,13 @@ const useFormValidation = (data: TransferPackageFormData): FormValidation => {
       });
     }
 
-    // Pricing validation
-    if (data.pricingPolicies.basePricing.length === 0) {
+    // Validate that vehicles have base prices
+    const vehiclesWithoutPrice = data.vehicleOptions.vehicles.filter(v => !v.basePrice || v.basePrice <= 0);
+    if (vehiclesWithoutPrice.length > 0) {
       errors.push({
-        tab: 'pricing-policies',
-        field: 'basePricing',
-        message: 'Base pricing is required',
+        tab: 'vehicle-options',
+        field: 'basePrice',
+        message: `${vehiclesWithoutPrice.length} vehicle(s) missing base price`,
         severity: 'error',
       });
     }
@@ -390,13 +391,13 @@ export const TransferPackageForm: React.FC<TransferPackageFormProps> = ({
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             {/* Tab Navigation */}
             <div className="mb-6">
-              <TabsList className="w-full gap-2">
+              <TabsList className="w-full gap-2 flex-wrap h-auto justify-start">
                 {tabs.map((tab) => (
                   <TabsTrigger
                     key={tab.id}
                     value={tab.id}
                     className={cn(
-                      "flex items-center gap-2 package-button-fix package-animation-fix",
+                      "flex items-center gap-2 package-button-fix package-animation-fix flex-shrink-0",
                       tab.hasErrors && "text-red-600 border-red-200",
                       tab.isComplete && !tab.hasErrors && "text-green-600 border-green-200"
                     )}

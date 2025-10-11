@@ -94,75 +94,171 @@ export default function PackagesPage() {
 					return;
 				}
 
-				// Fetch activity packages for the current operator
-				const { data, error } = await supabase
-					.from('activity_packages')
-					.select(`
+		// Fetch ALL package types: activity, transfer, and multi-city
+		const [activityResult, transferResult, multiCityResult] = await Promise.all([
+			// Activity packages
+			supabase
+				.from('activity_packages')
+				.select(`
+					id,
+					title,
+					short_description,
+					status,
+					base_price,
+					currency,
+					destination_city,
+					destination_country,
+					created_at,
+					published_at,
+					activity_package_images (
 						id,
-						title,
-						short_description,
-						status,
-						base_price,
-						currency,
-						destination_city,
-						destination_country,
-						created_at,
-						published_at,
-						activity_package_images (
-							id,
-							public_url,
-							is_cover
-						)
-					`)
-					.eq('operator_id', user.id)
-					.order('created_at', { ascending: false });
+						public_url,
+						is_cover
+					)
+				`)
+				.eq('operator_id', user.id)
+				.order('created_at', { ascending: false }),
+			// Transfer packages
+			supabase
+				.from('transfer_packages' as any)
+				.select(`
+					id,
+					title,
+					short_description,
+					status,
+					base_price,
+					currency,
+					destination_city,
+					destination_country,
+					created_at,
+					published_at,
+					transfer_package_images (
+						id,
+						public_url,
+						is_cover
+					)
+				`)
+				.eq('operator_id', user.id)
+				.order('created_at', { ascending: false }),
+			// Multi-city packages
+			supabase
+				.from('multi_city_packages' as any)
+				.select(`
+					id,
+					title,
+					short_description,
+					status,
+					base_price,
+					currency,
+					destination_region,
+					total_cities,
+					total_nights,
+					created_at,
+					published_at,
+					multi_city_package_images (
+						id,
+						public_url,
+						is_cover
+					)
+				`)
+				.eq('operator_id', user.id)
+				.order('created_at', { ascending: false })
+		]);
 
-				if (error) {
-					console.error('Error fetching packages:', error);
-					toast.error('Failed to load packages');
-					setLoading(false);
-					return;
-				}
+		if (activityResult.error) {
+			console.error('Error fetching activity packages:', activityResult.error);
+		}
+		
+		if (transferResult.error) {
+			console.error('Error fetching transfer packages:', transferResult.error);
+		}
+		
+		if (multiCityResult.error) {
+			console.error('Error fetching multi-city packages:', multiCityResult.error);
+		}
 
-				// Transform data to match Package interface
-				const transformedPackages: Package[] = (data || []).map((pkg: any) => {
-					// Find cover image
-					const coverImage = pkg.activity_package_images?.find((img: any) => img.is_cover);
-					const imageUrl = coverImage?.public_url || pkg.activity_package_images?.[0]?.public_url || '';
+		// Transform activity packages
+		const activityPackages: Package[] = (activityResult.data || []).map((pkg: any) => {
+			const coverImage = pkg.activity_package_images?.find((img: any) => img.is_cover);
+			const imageUrl = coverImage?.public_url || pkg.activity_package_images?.[0]?.public_url || '';
 
-					return {
-						id: pkg.id,
-						title: pkg.title,
-						type: 'Activity Package',
-						status: pkg.status?.toUpperCase() as 'DRAFT' | 'ACTIVE' | 'INACTIVE',
-						price: pkg.base_price || 0,
-						rating: 0, // TODO: Calculate from reviews
-						reviews: 0, // TODO: Count from reviews
-						bookings: 0, // TODO: Count from bookings
-						views: 0, // TODO: Track views
-						image: imageUrl,
-						createdAt: new Date(pkg.created_at),
-					};
-				});
+			return {
+				id: pkg.id,
+				title: pkg.title,
+				type: 'Activity',
+				status: pkg.status?.toUpperCase() as 'DRAFT' | 'ACTIVE' | 'INACTIVE',
+				price: pkg.base_price || 0,
+				rating: 0,
+				reviews: 0,
+				bookings: 0,
+				views: 0,
+				image: imageUrl,
+				createdAt: new Date(pkg.created_at),
+			};
+		});
 
-				setPackages(transformedPackages);
+		// Transform transfer packages
+		const transferPackages: Package[] = (transferResult.data || []).map((pkg: any) => {
+			const coverImage = pkg.transfer_package_images?.find((img: any) => img.is_cover);
+			const imageUrl = coverImage?.public_url || pkg.transfer_package_images?.[0]?.public_url || '';
 
-				// Update stats
-				const activeCount = transformedPackages.filter(p => p.status === 'PUBLISHED' || p.status === 'ACTIVE').length;
-				const totalRevenue = transformedPackages.reduce((sum, p) => sum + (p.bookings * p.price), 0);
-				
-				setStats({
-					total: transformedPackages.length,
-					active: activeCount,
-					revenue: totalRevenue,
-					avgRating: 4.8, // TODO: Calculate from reviews
-				});
+			return {
+				id: pkg.id,
+				title: pkg.title,
+				type: 'Transfer',
+				status: pkg.status?.toUpperCase() as 'DRAFT' | 'ACTIVE' | 'INACTIVE',
+				price: pkg.base_price || 0,
+				rating: 0,
+				reviews: 0,
+				bookings: 0,
+				views: 0,
+				image: imageUrl,
+				createdAt: new Date(pkg.created_at),
+			};
+		});
+
+		// Transform multi-city packages
+		const multiCityPackages: Package[] = (multiCityResult.data || []).map((pkg: any) => {
+			const coverImage = pkg.multi_city_package_images?.find((img: any) => img.is_cover);
+			const imageUrl = coverImage?.public_url || pkg.multi_city_package_images?.[0]?.public_url || '';
+
+			return {
+				id: pkg.id,
+				title: pkg.title,
+				type: 'Multi-City',
+				status: pkg.status?.toUpperCase() as 'DRAFT' | 'ACTIVE' | 'INACTIVE',
+				price: pkg.base_price || 0,
+				rating: 0,
+				reviews: 0,
+				bookings: 0,
+				views: 0,
+				image: imageUrl,
+				createdAt: new Date(pkg.created_at),
+			};
+		});
+
+		// Combine all package types and sort by creation date
+		const allPackages = [...activityPackages, ...transferPackages, ...multiCityPackages]
+			.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+			setPackages(allPackages);
+
+			// Update stats
+			const activeCount = allPackages.filter(p => p.status === 'PUBLISHED' || p.status === 'ACTIVE').length;
+			const totalRevenue = allPackages.reduce((sum, p) => sum + (p.bookings * p.price), 0);
+			
+			setStats({
+				total: allPackages.length,
+				active: activeCount,
+				revenue: totalRevenue,
+				avgRating: 4.8, // TODO: Calculate from reviews
+			});
 
 			} catch (error) {
 				console.error('Error loading packages:', error);
 				toast.error('Failed to load packages');
 			} finally {
-				setLoading(false);
+		setLoading(false);
 			}
 		};
 

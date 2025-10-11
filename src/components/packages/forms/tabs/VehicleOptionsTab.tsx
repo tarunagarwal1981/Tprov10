@@ -512,6 +512,15 @@ export const VehicleOptionsTab: React.FC = () => {
   const { control, watch, setValue } = useFormContext<TransferPackageFormData>();
   const [editingVehicle, setEditingVehicle] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [newVehicleData, setNewVehicleData] = useState<Partial<VehicleConfiguration>>({
+    vehicleType: 'SEDAN',
+    name: '',
+    description: '',
+    passengerCapacity: 4,
+    luggageCapacity: 2,
+    basePrice: 0,
+    features: [],
+  });
 
   const watchedData = watch('vehicleOptions');
 
@@ -657,7 +666,12 @@ export const VehicleOptionsTab: React.FC = () => {
               <div className="space-y-4">
                 <div>
                   <label className="text-sm font-medium">Vehicle Type</label>
-                  <Select defaultValue="SEDAN">
+                  <Select 
+                    value={newVehicleData.vehicleType}
+                    onValueChange={(value: VehicleType) => 
+                      setNewVehicleData({ ...newVehicleData, vehicleType: value })
+                    }
+                  >
                     <SelectTrigger className="package-text-fix">
                       <SelectValue />
                     </SelectTrigger>
@@ -677,6 +691,8 @@ export const VehicleOptionsTab: React.FC = () => {
                 <div>
                   <label className="text-sm font-medium">Vehicle Name</label>
                   <Input
+                    value={newVehicleData.name}
+                    onChange={(e) => setNewVehicleData({ ...newVehicleData, name: e.target.value })}
                     placeholder="e.g., Toyota Camry - Comfortable Sedan"
                     className="package-text-fix"
                   />
@@ -685,6 +701,8 @@ export const VehicleOptionsTab: React.FC = () => {
                 <div>
                   <label className="text-sm font-medium">Description</label>
                   <Textarea
+                    value={newVehicleData.description}
+                    onChange={(e) => setNewVehicleData({ ...newVehicleData, description: e.target.value })}
                     placeholder="Describe the vehicle and its features"
                     rows={3}
                     className="package-text-fix"
@@ -698,7 +716,8 @@ export const VehicleOptionsTab: React.FC = () => {
                       type="number"
                       min="1"
                       max="50"
-                      defaultValue="4"
+                      value={newVehicleData.passengerCapacity}
+                      onChange={(e) => setNewVehicleData({ ...newVehicleData, passengerCapacity: parseInt(e.target.value) || 4 })}
                       className="package-text-fix"
                     />
                   </div>
@@ -708,18 +727,21 @@ export const VehicleOptionsTab: React.FC = () => {
                       type="number"
                       min="0"
                       max="20"
-                      defaultValue="2"
+                      value={newVehicleData.luggageCapacity}
+                      onChange={(e) => setNewVehicleData({ ...newVehicleData, luggageCapacity: parseInt(e.target.value) || 2 })}
                       className="package-text-fix"
                     />
                   </div>
                 </div>
                 
                 <div>
-                  <label className="text-sm font-medium">Base Price</label>
+                  <label className="text-sm font-medium">Base Price ($)</label>
                   <Input
                     type="number"
                     min="0"
                     step="0.01"
+                    value={newVehicleData.basePrice}
+                    onChange={(e) => setNewVehicleData({ ...newVehicleData, basePrice: parseFloat(e.target.value) || 0 })}
                     placeholder="0.00"
                     className="package-text-fix"
                   />
@@ -728,7 +750,18 @@ export const VehicleOptionsTab: React.FC = () => {
               
               <div className="flex gap-2 mt-6">
                 <Button
-                  onClick={() => setShowAddModal(false)}
+                  onClick={() => {
+                    setShowAddModal(false);
+                    setNewVehicleData({
+                      vehicleType: 'SEDAN',
+                      name: '',
+                      description: '',
+                      passengerCapacity: 4,
+                      luggageCapacity: 2,
+                      basePrice: 0,
+                      features: [],
+                    });
+                  }}
                   variant="outline"
                   className="package-button-fix"
                 >
@@ -736,10 +769,20 @@ export const VehicleOptionsTab: React.FC = () => {
                 </Button>
                 <Button
                   onClick={() => {
-                    handleAddVehicle({});
+                    handleAddVehicle(newVehicleData);
                     setShowAddModal(false);
+                    setNewVehicleData({
+                      vehicleType: 'SEDAN',
+                      name: '',
+                      description: '',
+                      passengerCapacity: 4,
+                      luggageCapacity: 2,
+                      basePrice: 0,
+                      features: [],
+                    });
                   }}
                   className="package-button-fix"
+                  disabled={!newVehicleData.name?.trim()}
                 >
                   Add Vehicle
                 </Button>
