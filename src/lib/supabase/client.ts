@@ -28,6 +28,14 @@ if (process.env.NODE_ENV === 'development') {
  */
 export const createSupabaseBrowserClient = (): SupabaseClientType => {
   if (!supabaseUrl || !supabaseAnonKey) {
+    // In production, throw an error instead of silently failing
+    if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+      console.error('❌ CRITICAL: Supabase environment variables are missing in production!');
+      console.error('Required: NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY');
+      console.error('Please set these in your deployment platform (Netlify/Vercel) environment variables.');
+      throw new Error('Supabase configuration missing. Check deployment environment variables.');
+    }
+    
     // During build/prerender some environments may not expose NEXT_PUBLIC_* vars.
     // Fall back to a non-routable host to avoid accidental network calls.
     // Consumers should provide real env at runtime.
