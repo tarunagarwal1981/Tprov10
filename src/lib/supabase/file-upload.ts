@@ -181,5 +181,5 @@ export async function uploadImageFiles(
     throw new Error('Some files exceed the 10MB size limit');
   }
 
-  return uploadMultipleFiles(sizeValidFiles, 'activity-package-images', folder, userId);
+  return uploadMultipleFiles(sizeValidFiles, 'activity-packages', folder, userId);
 }
