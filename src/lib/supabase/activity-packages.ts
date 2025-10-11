@@ -108,7 +108,7 @@ export async function createActivityPackage(
           return base64ToFile(img.storage_path!, fileName);
         });
         
-        const uploadResults = await uploadImageFiles(files, userId, 'activity-packages');
+        const uploadResults = await uploadImageFiles(files, userId, 'activity-packages-images');
         
         // Create image records with proper storage paths
         const newImageRecords = uploadResults.map((result, index) => {
