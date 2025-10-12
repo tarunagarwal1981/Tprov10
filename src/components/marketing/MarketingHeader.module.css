@@ -29,11 +29,24 @@
 }
 
 .logoWrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
   transition: filter 0.3s ease;
 }
 
 .logoWrapper:hover {
   filter: drop-shadow(0 0 8px rgba(255, 107, 53, 0.3));
+}
+
+.logoText {
+  font-size: 1.25rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #FF6B35, #F7931E);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.02em;
 }
 
 .nav {
@@ -312,6 +325,12 @@
   border-bottom: 1px solid rgba(0, 0, 0, 0.1);
 }
 
+.mobileLogoWrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
 .mobileMenuClose {
   background: none;
   border: none;
@@ -491,6 +510,10 @@
 @media (max-width: 768px) {
   .header {
     padding: 0.75rem 1rem;
+  }
+  
+  .logoText {
+    font-size: 1rem;
   }
   
   .mobileMenu {

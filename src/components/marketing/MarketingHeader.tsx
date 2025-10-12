@@ -126,6 +126,10 @@ export default function MarketingHeader() {
               className={styles.logoWrapper}
             >
               <Logo variant="dark" size="md" />
+              <span className={styles.logoText}>
+                <span className={styles.logoTextTravel}>Travel</span>
+                <span className={styles.logoTextSelbuy}>Selbuy</span>
+              </span>
             </motion.div>
           </Link>
 
@@ -258,7 +262,13 @@ export default function MarketingHeader() {
             className={styles.mobileMenu}
           >
             <div className={styles.mobileMenuHeader}>
-              <Logo variant="dark" size="sm" />
+              <div className={styles.mobileLogoWrapper}>
+                <Logo variant="dark" size="sm" />
+                <span className={styles.logoText}>
+                  <span className={styles.logoTextTravel}>Travel</span>
+                  <span className={styles.logoTextSelbuy}>Selbuy</span>
+                </span>
+              </div>
               <button
                 type="button"
                 className={styles.mobileMenuClose}
