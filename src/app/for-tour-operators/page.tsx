@@ -43,7 +43,7 @@ export default function ForTourOperatorsPage() {
     {
       icon: BarChart3,
       title: 'Analytics Dashboard',
-      description: 'Track views, inquiries, bookings, and revenue. Understand what is working and optimize your offerings.',
+      description: 'Track views, inquiries, bookings, and revenue. Understand what's working and optimize your offerings.',
       stats: 'Real-time insights',
     },
   ];
@@ -239,7 +239,7 @@ export default function ForTourOperatorsPage() {
                   key={index}
                   className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-8 shadow-lg"
                 >
-                  <div className="text-4xl text-blue-600 mb-4">&ldquo;</div>
+                  <div className="text-4xl text-blue-600 mb-4">"</div>
                   <p className="text-lg text-gray-700 mb-6 italic">{testimonial.quote}</p>
                   <div className="border-t border-blue-200 pt-4">
                     <div className="font-bold text-gray-900">{testimonial.author}</div>

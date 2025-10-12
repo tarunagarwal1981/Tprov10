@@ -202,7 +202,7 @@ export default function WhoWeHelp() {
         >
           <h2 className={styles.title}>Built for Every Travel Professional</h2>
           <p className={styles.subtitle}>
-            Whether you&apos;re an agent, operator, or freelancer, we have the tools you need to succeed
+            Whether you're an agent, operator, or freelancer, we have the tools you need to succeed
           </p>
         </motion.div>
 

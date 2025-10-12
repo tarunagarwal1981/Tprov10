@@ -129,7 +129,7 @@ const TestimonialCard: React.FC<TestimonialCardProps> = ({ testimonial, isActive
 
       {/* Quote Text */}
       <blockquote className={styles.quoteText}>
-        &ldquo;{testimonial.quote}&rdquo;
+        "{testimonial.quote}"
       </blockquote>
 
       {/* Author Info */}

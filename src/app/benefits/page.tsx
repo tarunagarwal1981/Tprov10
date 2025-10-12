@@ -5,7 +5,7 @@ import MarketingFooter from '@/components/marketing/MarketingFooter';
 import SkipToContent from '@/components/shared/SkipToContent';
 import Breadcrumb from '@/components/shared/Breadcrumb';
 import BackToTop from '@/components/shared/BackToTop';
-import { Sparkles, Users, TrendingUp, Clock, DollarSign, Shield, CheckCircle, XCircle } from 'lucide-react';
+import { Zap, Users, TrendingUp, Clock, DollarSign, Shield, CheckCircle, XCircle } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'Benefits - TravelSelbuy | Why Travel Businesses Choose Us',
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
 export default function BenefitsPage() {
   const benefits = [
     {
-      icon: Sparkles,
+      icon: Zap,
       title: 'Save 15+ Hours Per Week',
       description: 'Automate repetitive tasks like quotations, follow-ups, and booking confirmations. Focus on what matters—growing your business.',
       color: 'from-orange-500 to-yellow-500',
@@ -128,7 +128,7 @@ export default function BenefitsPage() {
               Why Travel Businesses <span className="bg-gradient-to-r from-orange-500 to-yellow-500 bg-clip-text text-transparent">Love TravelSelbuy</span>
             </h1>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Join thousands of travel professionals who&apos;ve transformed their operations, increased efficiency, and accelerated growth.
+              Join thousands of travel professionals who've transformed their operations, increased efficiency, and accelerated growth.
             </p>
           </div>
         </section>

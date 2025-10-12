@@ -217,7 +217,7 @@ export default function ForTravelAgentsPage() {
                   key={index}
                   className="bg-gradient-to-br from-orange-50 to-yellow-50 rounded-2xl p-8 shadow-lg"
                 >
-                  <div className="text-4xl text-orange-500 mb-4">&ldquo;</div>
+                  <div className="text-4xl text-orange-500 mb-4">"</div>
                   <p className="text-lg text-gray-700 mb-6 italic">{testimonial.quote}</p>
                   <div className="border-t border-orange-200 pt-4">
                     <div className="font-bold text-gray-900">{testimonial.author}</div>
@@ -234,7 +234,7 @@ export default function ForTravelAgentsPage() {
           <div className="max-w-4xl mx-auto text-center text-white">
             <h2 className="text-4xl md:text-5xl font-bold mb-6">Ready to Transform Your Business?</h2>
             <p className="text-xl mb-8 opacity-90">
-              Join 10,000+ travel agents who&apos;ve already made the switch
+              Join 10,000+ travel agents who've already made the switch
             </p>
             <a
               href="/auth/register?role=travel_agent"

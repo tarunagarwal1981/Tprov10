@@ -350,3 +350,161 @@ export default function ProblemSolution() {
   );
 }
 
+
+    case 'red':
+
+      return `${baseClass} ${styles.iconContainerRed || ''}`;
+
+    case 'orange':
+
+      return `${baseClass} ${styles.iconContainerOrange || ''}`;
+
+    case 'green':
+
+      return `${baseClass} ${styles.iconContainerGreen || ''}`;
+
+    case 'blue':
+
+      return `${baseClass} ${styles.iconContainerBlue || ''}`;
+
+    default:
+
+      return baseClass;
+
+  }
+
+};
+
+
+
+export default function ProblemSolution() {
+
+  return (
+
+    <section className={styles.section}>
+
+      <div className={styles.container}>
+
+        <div className={styles.grid}>
+
+          {/* Problems Column */}
+
+          <div className={styles.column}>
+
+            <h2 className={`${styles.columnTitle} ${styles.problemsTitle}`}>
+
+              Challenges Travel Agents Face
+
+            </h2>
+
+            <div className={styles.itemsList}>
+
+              {problems.map((problem, index) => {
+
+                const IconComponent = problem.icon;
+
+                return (
+
+                  <div
+
+                    key={index}
+
+                    className={`${styles.card} ${styles.problemCard}`}
+
+                  >
+
+                    <div className={getIconContainerClass(problem.iconColor)}>
+
+                      <IconComponent className={styles.icon} aria-hidden="true" />
+
+                    </div>
+
+                    <div className={styles.content}>
+
+                      <h3 className={styles.cardTitle}>{problem.title}</h3>
+
+                      <p className={styles.cardDescription}>
+
+                        {problem.description}
+
+                      </p>
+
+                    </div>
+
+                  </div>
+
+                );
+
+              })}
+
+            </div>
+
+          </div>
+
+
+
+          {/* Solutions Column */}
+
+          <div className={styles.column}>
+
+            <h2 className={`${styles.columnTitle} ${styles.solutionsTitle}`}>
+
+              How TravelSelBuy Solves This
+
+            </h2>
+
+            <div className={styles.itemsList}>
+
+              {solutions.map((solution, index) => {
+
+                const IconComponent = solution.icon;
+
+                return (
+
+                  <div
+
+                    key={index}
+
+                    className={`${styles.card} ${styles.solutionCard}`}
+
+                  >
+
+                    <div className={getIconContainerClass(solution.iconColor)}>
+
+                      <IconComponent className={styles.icon} aria-hidden="true" />
+
+                    </div>
+
+                    <div className={styles.content}>
+
+                      <h3 className={styles.cardTitle}>{solution.title}</h3>
+
+                      <p className={styles.cardDescription}>
+
+                        {solution.description}
+
+                      </p>
+
+                    </div>
+
+                  </div>
+
+                );
+
+              })}
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+  );
+
+}
+
+
