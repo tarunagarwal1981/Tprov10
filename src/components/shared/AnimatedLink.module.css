@@ -1,0 +1,86 @@
+/* Animated Link Styles */
+
+.link {
+  position: relative;
+  text-decoration: none;
+  color: inherit;
+  transition: color 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* Underline Variant */
+.underline {
+  color: #004E89;
+}
+
+.underline .linkText {
+  position: relative;
+}
+
+.underline .linkText::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: currentColor;
+  transition: width 0.3s ease;
+}
+
+.underline:hover {
+  color: #FF6B35;
+}
+
+.underline:hover .linkText::after {
+  width: 100%;
+}
+
+.underline:visited {
+  color: #6B46C1;
+}
+
+/* Simple Variant */
+.simple {
+  color: inherit;
+  transition: color 0.2s ease;
+}
+
+.simple:hover {
+  color: #FF6B35;
+}
+
+/* Arrow Variant */
+.arrow {
+  color: #004E89;
+  font-weight: 600;
+}
+
+.arrow:hover {
+  color: #FF6B35;
+}
+
+.arrow .arrow {
+  font-size: 1.125rem;
+  font-weight: normal;
+}
+
+/* Focus State */
+.link:focus-visible {
+  outline: 2px solid #FF6B35;
+  outline-offset: 4px;
+  border-radius: 2px;
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .link,
+  .linkText::after {
+    transition: none;
+  }
+}
+
+
+
