@@ -8,6 +8,7 @@ export interface LogoProps {
   variant?: 'light' | 'dark';
   size?: 'sm' | 'md' | 'lg' | 'xl';
   showTagline?: boolean;
+  showText?: boolean;
   className?: string;
 }
 
@@ -15,6 +16,7 @@ const Logo: React.FC<LogoProps> = ({
   variant = 'light',
   size = 'md',
   showTagline = false,
+  showText = true,
   className = '',
 }) => {
   // Size configurations
@@ -172,16 +174,18 @@ const Logo: React.FC<LogoProps> = ({
       <div style={iconBoxStyles} className="logo-icon-box">
         ✈️
       </div>
-      <div style={textContainerStyles}>
-        <span style={brandNameStyles} className="brand-name">
-          {BRAND.name}
-        </span>
-        {showTagline && (
-          <span style={taglineStyles} className="tagline">
-            {BRAND.tagline}
+      {showText && (
+        <div style={textContainerStyles}>
+          <span style={brandNameStyles} className="brand-name">
+            {BRAND.name}
           </span>
-        )}
-      </div>
+          {showTagline && (
+            <span style={taglineStyles} className="tagline">
+              {BRAND.tagline}
+            </span>
+          )}
+        </div>
+      )}
     </Link>
   );
 };

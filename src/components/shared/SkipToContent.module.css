@@ -1,0 +1,33 @@
+/* Skip to Content Link Styles */
+
+.skipLink {
+  position: fixed;
+  top: -100px;
+  left: 0;
+  z-index: 10000;
+  padding: 1rem 2rem;
+  background: #FF6B35;
+  color: white;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 1rem;
+  border-radius: 0 0 0.5rem 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transition: top 0.3s ease;
+}
+
+.skipLink:focus {
+  top: 0;
+  outline: 3px solid #004E89;
+  outline-offset: 2px;
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .skipLink {
+    transition: none;
+  }
+}
+
+
+

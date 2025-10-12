@@ -1,130 +1,178 @@
 import React from 'react';
+import { Metadata } from 'next';
 import MarketingHeader from '@/components/marketing/MarketingHeader';
 import MarketingFooter from '@/components/marketing/MarketingFooter';
-import { BRAND } from '@/lib/branding';
+import SkipToContent from '@/components/shared/SkipToContent';
+import Breadcrumb from '@/components/shared/Breadcrumb';
+import BackToTop from '@/components/shared/BackToTop';
+import { FiTarget as Target, FiEye as Eye, FiHeart as Heart, FiUsers as Users, FiZap as Zap, FiShield as Shield, FiAward as Award, FiTrendingUp as TrendingUp } from 'react-icons/fi';
+
+export const metadata: Metadata = {
+  title: 'About Us - TravelSelbuy | Digitizing Global Travel Trade',
+  description: 'Learn about TravelSelbuy\'s mission to connect travel professionals worldwide through innovative B2B travel technology.',
+  keywords: 'about TravelSelbuy, travel B2B platform, travel technology, mission, vision',
+};
 
 /**
  * About Page
  * 
- * Company information and mission
+ * Company information including:
+ * - Mission & Vision
+ * - Core Values
+ * - Company Journey
+ * - Team (Coming Soon)
  */
 export default function AboutPage() {
   const values = [
     {
+      icon: Users,
+      title: 'Community First',
+      description: 'Building a global network of travel professionals who succeed together.',
+    },
+    {
+      icon: Zap,
       title: 'Innovation',
-      description: 'We leverage cutting-edge AI technology to solve real problems in the travel industry.'
+      description: 'Leveraging AI and technology to simplify complex travel operations.',
     },
     {
-      title: 'Empowerment',
-      description: 'We believe in empowering small travel businesses to compete with industry giants.'
+      icon: Shield,
+      title: 'Trust & Security',
+      description: 'Verified partners and secure transactions for peace of mind.',
     },
     {
-      title: 'Transparency',
-      description: 'Clear pricing, honest communication, and no hidden fees—ever.'
+      icon: Award,
+      title: 'Excellence',
+      description: 'Commitment to delivering exceptional service and results.',
     },
-    {
-      title: 'Support',
-      description: 'Your success is our success. We\'re here to help you grow every step of the way.'
-    },
+  ];
+
+  const milestones = [
+    { year: '2023', title: 'Founded', description: 'TravelSelbuy was born from a vision to connect travel professionals' },
+    { year: '2024', title: 'Launch', description: 'Platform launched with 100+ tour operators and 1,000+ agents' },
+    { year: '2024', title: 'Growth', description: 'Expanded to 500+ operators and 10,000+ agents globally' },
+    { year: '2025', title: 'Future', description: 'Continuing to innovate and scale worldwide' },
   ];
 
   return (
     <div data-theme="marketing" className="min-h-screen flex flex-col">
+      <SkipToContent />
       <MarketingHeader />
-      <main className="flex-grow">
+      <Breadcrumb items={[{ label: 'About Us' }]} />
+      
+      <main id="main-content" tabIndex={-1} className="flex-grow" role="main">
         {/* Hero Section */}
-        <section className="bg-gradient-to-br from-blue-50 to-orange-50 py-20">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-              About {BRAND.name}
+        <section className="relative bg-gradient-to-br from-orange-50 via-white to-blue-50 py-20 px-4">
+          <div className="max-w-4xl mx-auto text-center">
+            <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
+              Digitizing the Future of <span className="bg-gradient-to-r from-orange-500 to-yellow-500 bg-clip-text text-transparent">Global Travel Trade</span>
             </h1>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              {BRAND.tagline}
+              TravelSelbuy is revolutionizing how travel professionals connect, collaborate, and grow their businesses worldwide.
             </p>
           </div>
         </section>
 
-        {/* Mission Section */}
-        <section className="py-20 bg-white">
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h2 className="text-3xl font-bold text-center text-gray-900 mb-8">
-              Our Mission
-            </h2>
-            <p className="text-lg text-gray-700 leading-relaxed mb-6 text-center">
-              {BRAND.description}
-            </p>
-            <p className="text-lg text-gray-700 leading-relaxed text-center">
-              We believe that every travel agent and tour operator deserves access to powerful tools 
-              that were once only available to large enterprises. Our platform democratizes access to 
-              AI-powered lead generation, intelligent CRM systems, and global marketplace connections—all 
-              at an affordable price point.
-            </p>
+        {/* Mission & Vision */}
+        <section className="py-20 px-4">
+          <div className="max-w-6xl mx-auto">
+            <div className="grid md:grid-cols-2 gap-8">
+              {/* Mission Card */}
+              <div className="bg-white rounded-2xl p-8 shadow-lg border-t-4 border-orange-500 hover:shadow-xl transition-shadow">
+                <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-yellow-500 rounded-full flex items-center justify-center mb-6">
+                  <Target className="w-8 h-8 text-white" />
+                </div>
+                <h2 className="text-3xl font-bold text-gray-900 mb-4">Our Mission</h2>
+                <p className="text-gray-600 text-lg leading-relaxed">
+                  To empower travel professionals worldwide by providing an all-in-one B2B platform that simplifies operations, expands reach, and drives sustainable growth through innovation and collaboration.
+                </p>
+              </div>
+
+              {/* Vision Card */}
+              <div className="bg-white rounded-2xl p-8 shadow-lg border-t-4 border-blue-600 hover:shadow-xl transition-shadow">
+                <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-full flex items-center justify-center mb-6">
+                  <Eye className="w-8 h-8 text-white" />
+                </div>
+                <h2 className="text-3xl font-bold text-gray-900 mb-4">Our Vision</h2>
+                <p className="text-gray-600 text-lg leading-relaxed">
+                  To become the world&apos;s most trusted B2B travel ecosystem where every travel professional—regardless of size or location—can access opportunities, scale efficiently, and thrive in the digital era.
+                </p>
+              </div>
+            </div>
           </div>
         </section>
 
-        {/* Values Section */}
-        <section className="py-20 bg-gray-50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">
-              Our Values
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-              {values.map((value, index) => (
-                <div key={index} className="bg-white p-6 rounded-lg shadow-sm text-center">
-                  <h3 className="text-xl font-bold text-gray-900 mb-3">{value.title}</h3>
-                  <p className="text-gray-600">{value.description}</p>
+        {/* Core Values */}
+        <section className="py-20 px-4 bg-gray-50">
+          <div className="max-w-6xl mx-auto">
+            <div className="text-center mb-16">
+              <h2 className="text-4xl font-bold text-gray-900 mb-4">Our Core Values</h2>
+              <p className="text-xl text-gray-600">The principles that guide everything we do</p>
+            </div>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+              {values.map((value, index) => {
+                const IconComponent = value.icon;
+                return (
+                  <div
+                    key={index}
+                    className="bg-white rounded-xl p-6 shadow-md hover:shadow-xl transition-all hover:-translate-y-2"
+                  >
+                    <div className="w-14 h-14 bg-gradient-to-br from-orange-500 to-yellow-500 rounded-lg flex items-center justify-center mb-4">
+                      <IconComponent className="w-7 h-7 text-white" />
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">{value.title}</h3>
+                    <p className="text-gray-600">{value.description}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* Journey Timeline */}
+        <section className="py-20 px-4">
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center mb-16">
+              <h2 className="text-4xl font-bold text-gray-900 mb-4">Our Journey</h2>
+              <p className="text-xl text-gray-600">Building the future of travel, one milestone at a time</p>
+            </div>
+
+            <div className="relative">
+              {/* Timeline line */}
+              <div className="absolute left-1/2 transform -translate-x-1/2 h-full w-1 bg-gradient-to-b from-orange-500 to-blue-600" />
+
+              {/* Milestones */}
+              {milestones.map((milestone, index) => (
+                <div key={index} className={`relative flex items-center mb-12 ${index % 2 === 0 ? 'flex-row' : 'flex-row-reverse'}`}>
+                  <div className={`w-1/2 ${index % 2 === 0 ? 'pr-12 text-right' : 'pl-12 text-left'}`}>
+                    <div className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow">
+                      <div className="text-3xl font-bold text-orange-500 mb-2">{milestone.year}</div>
+                      <h3 className="text-xl font-bold text-gray-900 mb-2">{milestone.title}</h3>
+                      <p className="text-gray-600">{milestone.description}</p>
+                    </div>
+                  </div>
+                  <div className="absolute left-1/2 transform -translate-x-1/2 w-8 h-8 bg-gradient-to-br from-orange-500 to-yellow-500 rounded-full border-4 border-white shadow-lg" />
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* Stats Section */}
-        <section className="py-20 bg-white">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">
-              Our Impact
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-8 text-center">
-              <div>
-                <div className="text-4xl font-bold text-orange-600 mb-2">500+</div>
-                <div className="text-gray-600">Tour Operators</div>
-              </div>
-              <div>
-                <div className="text-4xl font-bold text-orange-600 mb-2">10,000+</div>
-                <div className="text-gray-600">Travel Agents</div>
-              </div>
-              <div>
-                <div className="text-4xl font-bold text-orange-600 mb-2">$2M+</div>
-                <div className="text-gray-600">Monthly Bookings</div>
-              </div>
-              <div>
-                <div className="text-4xl font-bold text-orange-600 mb-2">50+</div>
-                <div className="text-gray-600">Countries</div>
-              </div>
+        {/* Team Section (Placeholder) */}
+        <section className="py-20 px-4 bg-gradient-to-br from-orange-50 to-blue-50">
+          <div className="max-w-6xl mx-auto text-center">
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">Meet Our Team</h2>
+            <p className="text-xl text-gray-600 mb-8">Coming Soon</p>
+            <div className="bg-white/50 backdrop-blur-sm rounded-2xl p-16 border-2 border-dashed border-gray-300">
+              <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-500 text-lg">We&apos;re building an amazing team. Check back soon to meet the people behind TravelSelbuy!</p>
             </div>
           </div>
         </section>
-
-        {/* CTA Section */}
-        <section className="bg-orange-600 py-16">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              Join Us on This Journey
-            </h2>
-            <p className="text-xl text-orange-100 mb-8 max-w-2xl mx-auto">
-              Be part of the revolution in travel technology. Start growing your business today.
-            </p>
-            <button className="bg-white text-orange-600 hover:bg-gray-100 px-8 py-3 rounded-lg text-lg font-semibold transition-colors">
-              Get Started Free
-            </button>
-          </div>
-        </section>
       </main>
+
       <MarketingFooter />
+      <BackToTop />
     </div>
   );
 }
-
-
-

@@ -3,16 +3,20 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { FaTwitter, FaLinkedin, FaFacebook, FaInstagram } from 'react-icons/fa';
+import { FiCheckCircle, FiMail, FiArrowUp, FiExternalLink } from 'react-icons/fi';
+import { motion, AnimatePresence } from 'framer-motion';
 import { BRAND } from '@/lib/branding';
 import styles from './MarketingFooter.module.css';
 
 /**
  * Marketing Footer Component
  * 
- * Comprehensive footer for public marketing pages with:
- * - Newsletter signup form
+ * Enhanced footer for public marketing pages with:
+ * - Interactive newsletter signup with validation
+ * - Animated social media icons
+ * - Hover effects on links
+ * - Back to top button
  * - Four-column layout (Company, Products, Resources, Legal)
- * - Social media icons
  * - Payment icons
  * - Responsive design
  */
@@ -61,20 +65,61 @@ export default function MarketingFooter() {
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [emailError, setEmailError] = useState('');
+  const [showBackToTop, setShowBackToTop] = useState(false);
+
+  // Show/hide back to top button based on scroll
+  React.useEffect(() => {
+    const handleScroll = () => {
+      setShowBackToTop(window.scrollY > 300);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Scroll to top function
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth',
+    });
+  };
+
+  // Email validation
+  const validateEmail = (email: string) => {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+  };
 
   const handleNewsletterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || isSubmitting) return;
+    
+    if (!email) {
+      setEmailError('Email is required');
+      return;
+    }
 
+    if (!validateEmail(email)) {
+      setEmailError('Please enter a valid email address');
+      return;
+    }
+
+    if (isSubmitting) return;
+
+    setEmailError('');
     setIsSubmitting(true);
     
     // Simulate API call
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 1500));
       setIsSubmitted(true);
       setEmail('');
+      // Reset after 5 seconds
+      setTimeout(() => setIsSubmitted(false), 5000);
     } catch (error) {
       console.error('Newsletter subscription failed:', error);
+      setEmailError('Something went wrong. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -84,128 +129,240 @@ export default function MarketingFooter() {
     <footer className={styles.footer}>
       <div className={styles.footerContainer}>
         {/* Newsletter Section */}
-        <div className={styles.newsletterSection}>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+          className={styles.newsletterSection}
+        >
           <h2 className={styles.newsletterTitle}>Stay Updated</h2>
           <p className={styles.newsletterDescription}>
             Get the latest updates on travel technology and industry insights
           </p>
           
-          {!isSubmitted ? (
-            <form onSubmit={handleNewsletterSubmit} className={styles.newsletterForm}>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Enter your email address"
-                className={styles.newsletterInput}
-                required
-                disabled={isSubmitting}
-              />
-              <button
-                type="submit"
-                className={styles.newsletterButton}
-                disabled={isSubmitting}
+          <AnimatePresence mode="wait">
+            {!isSubmitted ? (
+              <motion.form
+                key="form"
+                initial={{ opacity: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                onSubmit={handleNewsletterSubmit}
+                className={styles.newsletterForm}
               >
-                {isSubmitting ? 'Subscribing...' : 'Subscribe'}
-              </button>
-            </form>
-          ) : (
-            <div className={styles.newsletterForm}>
-              <p style={{ color: '#10B981', fontWeight: '600' }}>
-                ✅ Thank you for subscribing! Check your email for confirmation.
-              </p>
-            </div>
-          )}
-        </div>
+                <div className={styles.inputWrapper}>
+                  <FiMail className={styles.inputIcon} />
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      setEmailError('');
+                    }}
+                    placeholder="Enter your email address"
+                    className={`${styles.newsletterInput} ${emailError ? styles.inputError : ''}`}
+                    disabled={isSubmitting}
+                  />
+                </div>
+                <motion.button
+                  type="submit"
+                  className={styles.newsletterButton}
+                  disabled={isSubmitting}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <motion.div
+                        className={styles.spinner}
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                      />
+                      Subscribing...
+                    </>
+                  ) : (
+                    'Subscribe'
+                  )}
+                </motion.button>
+                {emailError && (
+                  <motion.p
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={styles.errorMessage}
+                  >
+                    {emailError}
+                  </motion.p>
+                )}
+              </motion.form>
+            ) : (
+              <motion.div
+                key="success"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ type: 'spring', stiffness: 200, damping: 20 }}
+                className={styles.successMessage}
+              >
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
+                >
+                  <FiCheckCircle className={styles.successIcon} />
+                </motion.div>
+                <div>
+                  <p className={styles.successTitle}>Thank you for subscribing!</p>
+                  <p className={styles.successSubtitle}>Check your email for confirmation.</p>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
 
         {/* Columns Section */}
         <div className={styles.columnsSection}>
           {/* Company Column */}
-          <div className={styles.column}>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className={styles.column}
+          >
             <h3 className={styles.columnTitle}>Company</h3>
             <div className={styles.columnLinks}>
-              {companyLinks.map((link) => (
-                <Link
+              {companyLinks.map((link, index) => (
+                <motion.div
                   key={link.href}
-                  href={link.href}
-                  className={styles.columnLink}
+                  initial={{ opacity: 0, x: -10 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.3, delay: 0.1 + index * 0.05 }}
                 >
-                  {link.label}
-                </Link>
+                  <Link href={link.href} className={styles.columnLink}>
+                    <span className={styles.linkText}>{link.label}</span>
+                  </Link>
+                </motion.div>
               ))}
             </div>
-          </div>
+          </motion.div>
 
           {/* Products Column */}
-          <div className={styles.column}>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className={styles.column}
+          >
             <h3 className={styles.columnTitle}>Products</h3>
             <div className={styles.columnLinks}>
-              {productLinks.map((link) => (
-                <Link
+              {productLinks.map((link, index) => (
+                <motion.div
                   key={link.href}
-                  href={link.href}
-                  className={styles.columnLink}
+                  initial={{ opacity: 0, x: -10 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.3, delay: 0.2 + index * 0.05 }}
                 >
-                  {link.label}
-                </Link>
+                  <Link href={link.href} className={styles.columnLink}>
+                    <span className={styles.linkText}>{link.label}</span>
+                  </Link>
+                </motion.div>
               ))}
             </div>
-          </div>
+          </motion.div>
 
           {/* Resources Column */}
-          <div className={styles.column}>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+            className={styles.column}
+          >
             <h3 className={styles.columnTitle}>Resources</h3>
             <div className={styles.columnLinks}>
-              {resourceLinks.map((link) => (
-                <Link
+              {resourceLinks.map((link, index) => (
+                <motion.div
                   key={link.href}
-                  href={link.href}
-                  className={styles.columnLink}
+                  initial={{ opacity: 0, x: -10 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.3, delay: 0.3 + index * 0.05 }}
                 >
-                  {link.label}
-                </Link>
+                  <Link href={link.href} className={styles.columnLink}>
+                    <span className={styles.linkText}>{link.label}</span>
+                  </Link>
+                </motion.div>
               ))}
             </div>
-          </div>
+          </motion.div>
 
           {/* Legal Column */}
-          <div className={styles.column}>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.4 }}
+            className={styles.column}
+          >
             <h3 className={styles.columnTitle}>Legal</h3>
             <div className={styles.columnLinks}>
-              {legalLinks.map((link) => (
-                <Link
+              {legalLinks.map((link, index) => (
+                <motion.div
                   key={link.href}
-                  href={link.href}
-                  className={styles.columnLink}
+                  initial={{ opacity: 0, x: -10 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.3, delay: 0.4 + index * 0.05 }}
                 >
-                  {link.label}
-                </Link>
+                  <Link href={link.href} className={styles.columnLink}>
+                    <span className={styles.linkText}>{link.label}</span>
+                    <FiExternalLink className={styles.externalIcon} />
+                  </Link>
+                </motion.div>
               ))}
             </div>
-          </div>
+          </motion.div>
         </div>
 
         {/* Social Media Section */}
-        <div className={styles.socialSection}>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: 0.5 }}
+          className={styles.socialSection}
+        >
           <h3 className={styles.socialTitle}>Follow Us</h3>
           <div className={styles.socialIcons}>
-            {socialLinks.map((social) => {
+            {socialLinks.map((social, index) => {
               const IconComponent = social.icon;
               return (
-                <a
+                <motion.a
                   key={social.label}
                   href={social.href}
                   target="_blank"
                   rel="noopener noreferrer"
                   className={styles.socialIcon}
                   aria-label={`Follow us on ${social.label}`}
+                  initial={{ opacity: 0, scale: 0 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.3, delay: 0.5 + index * 0.1, type: 'spring', stiffness: 200 }}
+                  whileHover={{ 
+                    y: -8, 
+                    scale: 1.1,
+                    transition: { type: 'spring', stiffness: 300, damping: 10 }
+                  }}
+                  whileTap={{ scale: 0.95 }}
                 >
                   <IconComponent />
-                </a>
+                </motion.a>
               );
             })}
           </div>
-        </div>
+        </motion.div>
 
         {/* Bottom Bar */}
         <div className={styles.bottomBar}>
@@ -220,6 +377,25 @@ export default function MarketingFooter() {
           </div>
         </div>
       </div>
+
+      {/* Back to Top Button */}
+      <AnimatePresence>
+        {showBackToTop && (
+          <motion.button
+            initial={{ opacity: 0, scale: 0.8, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.8, y: 20 }}
+            transition={{ duration: 0.2 }}
+            onClick={scrollToTop}
+            className={styles.backToTop}
+            aria-label="Back to top"
+            whileHover={{ scale: 1.1, y: -2 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <FiArrowUp />
+          </motion.button>
+        )}
+      </AnimatePresence>
     </footer>
   );
 }

@@ -38,21 +38,37 @@
 
 .newsletterForm {
   display: flex;
-  gap: 1rem;
+  flex-direction: column;
+  gap: 0.75rem;
   max-width: 500px;
   margin: 0 auto;
+  align-items: stretch;
+}
+
+.inputWrapper {
+  position: relative;
+  display: flex;
   align-items: center;
+}
+
+.inputIcon {
+  position: absolute;
+  left: 1rem;
+  color: #9CA3AF;
+  font-size: 1.125rem;
+  pointer-events: none;
 }
 
 .newsletterInput {
   flex: 1;
-  padding: 0.75rem 1rem;
+  padding: 0.75rem 1rem 0.75rem 2.75rem;
   border: 2px solid rgba(255, 255, 255, 0.2);
   border-radius: 0.5rem;
   background: rgba(255, 255, 255, 0.1);
   color: white;
   font-size: 1rem;
   transition: all 0.2s ease;
+  width: 100%;
 }
 
 .newsletterInput::placeholder {
@@ -64,6 +80,18 @@
   border-color: #FF6B35;
   background: rgba(255, 255, 255, 0.15);
   box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+}
+
+.newsletterInput.inputError {
+  border-color: #EF4444;
+}
+
+.errorMessage {
+  color: #FCA5A5;
+  font-size: 0.875rem;
+  margin-top: -0.5rem;
+  text-align: left;
+  width: 100%;
 }
 
 .newsletterButton {
@@ -78,17 +106,59 @@
   transition: all 0.2s ease;
   white-space: nowrap;
   box-shadow: 0 2px 8px rgba(0, 78, 137, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
 }
 
 .newsletterButton:hover {
-  transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(0, 78, 137, 0.4);
   filter: brightness(1.05);
 }
 
-.newsletterButton:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 8px rgba(0, 78, 137, 0.3);
+.newsletterButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+}
+
+.successMessage {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: rgba(16, 185, 129, 0.1);
+  border: 2px solid #10B981;
+  border-radius: 0.75rem;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.successIcon {
+  font-size: 2rem;
+  color: #10B981;
+  flex-shrink: 0;
+}
+
+.successTitle {
+  font-weight: 600;
+  font-size: 1.125rem;
+  color: #10B981;
+  margin-bottom: 0.25rem;
+}
+
+.successSubtitle {
+  font-size: 0.875rem;
+  color: #D1D5DB;
 }
 
 /* Columns Layout */
@@ -125,11 +195,45 @@
   font-size: 0.875rem;
   transition: all 0.2s ease;
   padding: 0.25rem 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  position: relative;
 }
 
 .columnLink:hover {
   color: #FF6B35;
   transform: translateX(4px);
+}
+
+.linkText {
+  position: relative;
+}
+
+.linkText::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: #FF6B35;
+  transition: width 0.3s ease;
+}
+
+.columnLink:hover .linkText::after {
+  width: 100%;
+}
+
+.externalIcon {
+  font-size: 0.75rem;
+  opacity: 0.6;
+  transition: all 0.2s ease;
+}
+
+.columnLink:hover .externalIcon {
+  opacity: 1;
+  transform: translate(2px, -2px);
 }
 
 /* Social Media Section */
@@ -172,6 +276,31 @@
   color: white;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+}
+
+/* Back to Top Button */
+.backToTop {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, #FF6B35 0%, #FF4B8C 100%);
+  border: none;
+  border-radius: 50%;
+  color: white;
+  font-size: 1.25rem;
+  cursor: pointer;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.backToTop:hover {
+  box-shadow: 0 6px 20px rgba(255, 107, 53, 0.5);
 }
 
 /* Bottom Bar */
@@ -311,6 +440,14 @@
     height: 20px;
     font-size: 0.7rem;
   }
+  
+  .backToTop {
+    bottom: 1rem;
+    right: 1rem;
+    width: 44px;
+    height: 44px;
+    font-size: 1.125rem;
+  }
 }
 
 /* Focus states for accessibility */
@@ -318,7 +455,8 @@
 .newsletterButton:focus,
 .columnLink:focus,
 .socialIcon:focus,
-.paymentIcon:focus {
+.paymentIcon:focus,
+.backToTop:focus {
   outline: 2px solid #FF6B35;
   outline-offset: 2px;
 }
@@ -329,7 +467,9 @@
   .newsletterButton,
   .columnLink,
   .socialIcon,
-  .paymentIcon {
+  .paymentIcon,
+  .backToTop,
+  .linkText::after {
     transition: none;
   }
   
@@ -339,7 +479,12 @@
   
   .newsletterButton:hover,
   .socialIcon:hover,
-  .paymentIcon:hover {
+  .paymentIcon:hover,
+  .backToTop:hover {
     transform: none;
+  }
+  
+  .spinner {
+    animation: none;
   }
 }
