@@ -6,7 +6,8 @@ import MarketingFooter from '@/components/marketing/MarketingFooter';
 import SkipToContent from '@/components/shared/SkipToContent';
 import Breadcrumb from '@/components/shared/Breadcrumb';
 import BackToTop from '@/components/shared/BackToTop';
-import { FiGlobe, FiUsers, FiTrendingUp, FiMessageSquare, FiBarChart2, FiPackage, FiCheckCircle, FiArrowRight, FiPlay } from 'react-icons/fi';
+import { FiGlobe, FiUsers, FiTrendingUp, FiMessageSquare, FiBarChart2, FiPackage, FiCheckCircle, FiArrowRight, FiPlay, FiDollarSign, FiZap, FiLock, FiSmartphone, FiHeadphones, FiUserCheck } from 'react-icons/fi';
+import { MdAutoMode, MdLanguage, MdSecurity, MdSupportAgent } from 'react-icons/md';
 import { motion } from 'framer-motion';
 
 /**
@@ -49,18 +50,54 @@ export default function ForTourOperatorsPage() {
   ];
 
   const benefits = [
-    'Connect with 10,000+ travel agents globally',
-    'Zero listing fees—only pay when you earn',
-    'Automated inquiry management and responses',
-    'Real-time availability and pricing updates',
-    'Direct communication with potential buyers',
-    'Detailed analytics and performance tracking',
-    'Professional package presentation',
-    'Multi-currency and multi-language support',
-    'Secure payment processing',
-    'Mobile app for on-the-go management',
-    'Dedicated account manager',
-    '24/7 technical support',
+    {
+      text: 'Connect with 10,000+ travel agents globally',
+      icon: FiUsers,
+    },
+    {
+      text: 'Zero listing fees—only pay when you earn',
+      icon: FiDollarSign,
+    },
+    {
+      text: 'Automated inquiry management and responses',
+      icon: MdAutoMode,
+    },
+    {
+      text: 'Real-time availability and pricing updates',
+      icon: FiZap,
+    },
+    {
+      text: 'Direct communication with potential buyers',
+      icon: FiMessageSquare,
+    },
+    {
+      text: 'Detailed analytics and performance tracking',
+      icon: FiBarChart2,
+    },
+    {
+      text: 'Professional package presentation',
+      icon: FiPackage,
+    },
+    {
+      text: 'Multi-currency and multi-language support',
+      icon: MdLanguage,
+    },
+    {
+      text: 'Secure payment processing',
+      icon: FiLock,
+    },
+    {
+      text: 'Mobile app for on-the-go management',
+      icon: FiSmartphone,
+    },
+    {
+      text: 'Dedicated account manager',
+      icon: MdSupportAgent,
+    },
+    {
+      text: '24/7 technical support',
+      icon: FiHeadphones,
+    },
   ];
 
   const successMetrics = [
@@ -114,7 +151,7 @@ export default function ForTourOperatorsPage() {
             <div className="inline-block bg-orange-100 text-orange-600 px-4 py-2 rounded-full text-sm font-semibold mb-6">
               FOR TOUR OPERATORS
             </div>
-            <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
+            <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6" style={{ fontFamily: 'var(--font-space-grotesk), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
               Connect with Thousands of Global Agents — <span className="bg-gradient-to-r from-orange-500 to-yellow-500 bg-clip-text text-transparent">Instantly</span>
             </h1>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8">
@@ -209,19 +246,22 @@ export default function ForTourOperatorsPage() {
             </div>
 
             <div className="grid md:grid-cols-2 gap-6">
-              {benefits.map((benefit, index) => (
-                <motion.div
-                  key={index}
-                  className="flex items-start gap-3 bg-white p-4 rounded-xl hover:shadow-md transition-shadow"
-                  initial={{ opacity: 0, x: -20 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: index * 0.03 }}
-                >
-                  <FiCheckCircle className="w-6 h-6 text-green-500 flex-shrink-0 mt-0.5" />
-                  <span className="text-gray-700">{benefit}</span>
-                </motion.div>
-              ))}
+              {benefits.map((benefit, index) => {
+                const IconComponent = benefit.icon;
+                return (
+                  <motion.div
+                    key={index}
+                    className="flex items-start gap-3 bg-white p-4 rounded-xl hover:shadow-md transition-shadow"
+                    initial={{ opacity: 0, x: -20 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: index * 0.03 }}
+                  >
+                    <IconComponent className="w-6 h-6 text-orange-500 flex-shrink-0 mt-0.5" />
+                    <span className="text-gray-700">{benefit.text}</span>
+                  </motion.div>
+                );
+              })}
             </div>
           </div>
         </section>

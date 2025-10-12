@@ -6,7 +6,9 @@ import MarketingFooter from '@/components/marketing/MarketingFooter';
 import SkipToContent from '@/components/shared/SkipToContent';
 import Breadcrumb from '@/components/shared/Breadcrumb';
 import BackToTop from '@/components/shared/BackToTop';
-import { FiSearch, FiMessageSquare, FiFileText, FiBarChart2, FiCheckCircle, FiArrowRight } from 'react-icons/fi';
+import { FiSearch, FiMessageSquare, FiFileText, FiBarChart2, FiCheckCircle, FiArrowRight, FiGlobe, FiClock, FiTrendingUp, FiZap, FiSmartphone, FiHeadphones, FiShield } from 'react-icons/fi';
+import { MdHandshake, MdOutlineRoute, MdSupportAgent } from 'react-icons/md';
+import { BsStars, BsMortarboard } from 'react-icons/bs';
 import { motion } from 'framer-motion';
 
 /**
@@ -65,18 +67,54 @@ export default function ForTravelAgentsPage() {
   ];
 
   const benefits = [
-    'Access 500+ verified tour operators worldwide',
-    'No middlemen—negotiate directly with suppliers',
-    'Save 15+ hours per week on administrative tasks',
-    'Increase your margins with better commissions',
-    'Get real-time availability and instant confirmations',
-    'Professional itinerary builder with templates',
-    'Multi-channel communication (WhatsApp, Email, SMS)',
-    'AI-powered lead generation and scoring',
-    'Mobile app for on-the-go management',
-    '24/7 customer support',
-    'Free training and onboarding',
-    'No long-term contracts or hidden fees',
+    {
+      text: 'Access 500+ verified tour operators worldwide',
+      icon: FiGlobe,
+    },
+    {
+      text: 'No middlemen—negotiate directly with suppliers',
+      icon: MdHandshake,
+    },
+    {
+      text: 'Save 15+ hours per week on administrative tasks',
+      icon: FiClock,
+    },
+    {
+      text: 'Increase your margins with better commissions',
+      icon: FiTrendingUp,
+    },
+    {
+      text: 'Get real-time availability and instant confirmations',
+      icon: FiZap,
+    },
+    {
+      text: 'Professional itinerary builder with templates',
+      icon: MdOutlineRoute,
+    },
+    {
+      text: 'Multi-channel communication (WhatsApp, Email, SMS)',
+      icon: FiMessageSquare,
+    },
+    {
+      text: 'AI-powered lead generation and scoring',
+      icon: BsStars,
+    },
+    {
+      text: 'Mobile app for on-the-go management',
+      icon: FiSmartphone,
+    },
+    {
+      text: '24/7 customer support',
+      icon: FiHeadphones,
+    },
+    {
+      text: 'Free training and onboarding',
+      icon: BsMortarboard,
+    },
+    {
+      text: 'No long-term contracts or hidden fees',
+      icon: FiShield,
+    },
   ];
 
   const testimonials = [
@@ -105,7 +143,7 @@ export default function ForTravelAgentsPage() {
             <div className="inline-block bg-orange-100 text-orange-600 px-4 py-2 rounded-full text-sm font-semibold mb-6">
               FOR TRAVEL AGENTS
             </div>
-            <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
+            <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6" style={{ fontFamily: 'var(--font-space-grotesk), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
               More Access. Less Effort. <span className="bg-gradient-to-r from-orange-500 to-yellow-500 bg-clip-text text-transparent">More Growth.</span>
             </h1>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8">
@@ -186,19 +224,22 @@ export default function ForTravelAgentsPage() {
             </div>
 
             <div className="grid md:grid-cols-2 gap-6">
-              {benefits.map((benefit, index) => (
-                <motion.div
-                  key={index}
-                  className="flex items-start gap-3 bg-white p-4 rounded-xl hover:shadow-md transition-shadow"
-                  initial={{ opacity: 0, x: -20 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: index * 0.05 }}
-                >
-                  <FiCheckCircle className="w-6 h-6 text-green-500 flex-shrink-0 mt-0.5" />
-                  <span className="text-gray-700">{benefit}</span>
-                </motion.div>
-              ))}
+              {benefits.map((benefit, index) => {
+                const IconComponent = benefit.icon;
+                return (
+                  <motion.div
+                    key={index}
+                    className="flex items-start gap-3 bg-white p-4 rounded-xl hover:shadow-md transition-shadow"
+                    initial={{ opacity: 0, x: -20 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: index * 0.05 }}
+                  >
+                    <IconComponent className="w-6 h-6 text-orange-500 flex-shrink-0 mt-0.5" />
+                    <span className="text-gray-700">{benefit.text}</span>
+                  </motion.div>
+                );
+              })}
             </div>
           </div>
         </section>

@@ -290,7 +290,8 @@ export default function Hero() {
   const y = useTransform(scrollY, [0, 300], [0, 100]);
 
   // Split headline into words for animation
-  const headline = "Transforming How Travel Business Connects - Globally";
+  const headline = "Transforming How Travel Business Connects";
+  const highlightText = "Globally";
   const words = headline.split(" ");
 
   const containerVariants = {
@@ -338,6 +339,13 @@ export default function Hero() {
               {word}{" "}
             </motion.span>
           ))}
+          <motion.span
+            variants={wordVariants}
+            className="bg-gradient-to-r from-orange-500 to-yellow-500 bg-clip-text text-transparent"
+            style={{ display: 'inline-block', marginRight: '0.3rem' }}
+          >
+            {highlightText}
+          </motion.span>
         </motion.h1>
         
         {/* Subheadline */}

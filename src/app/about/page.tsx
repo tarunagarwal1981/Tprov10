@@ -63,7 +63,7 @@ export default function AboutPage() {
         {/* Hero Section */}
         <section className="relative bg-gradient-to-br from-orange-50 via-white to-blue-50 py-20 px-4">
           <div className="max-w-4xl mx-auto text-center">
-            <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
+            <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6" style={{ fontFamily: 'var(--font-space-grotesk), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
               Digitizing the Future of <span className="bg-gradient-to-r from-orange-500 to-yellow-500 bg-clip-text text-transparent">Global Travel Trade</span>
             </h1>
             <p 
