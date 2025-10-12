@@ -9,11 +9,10 @@ const nextConfig = {
   // Enable strict mode
   reactStrictMode: true,
 
-  // Compiler options
-  compiler: {
-    // Remove console logs in production
-    removeConsole: process.env.NODE_ENV === 'production',
-  },
+  // Compiler options (removeConsole disabled for faster builds)
+  // compiler: {
+  //   removeConsole: process.env.NODE_ENV === 'production',
+  // },
 
   // Webpack configuration for cross-platform compatibility
   webpack: (config: any, { isServer }: { isServer: boolean }) => {
