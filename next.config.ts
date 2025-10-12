@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Static export for Netlify
+  output: 'export',
+  
   // Enable experimental features
   experimental: {
     // Server actions are enabled by default in Next.js 15
@@ -25,9 +28,9 @@ const nextConfig = {
     return config;
   },
 
-  // Image configuration
+  // Image configuration - unoptimized for static export
   images: {
-    unoptimized: false,
+    unoptimized: true,
     domains: [],
     formats: ['image/webp', 'image/avif'],
   },
