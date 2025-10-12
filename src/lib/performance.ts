@@ -27,7 +27,7 @@ export function useIntersectionObserver(
     if (!ref.current) return;
 
     const observer = new IntersectionObserver(
-      ([entry]) => setEntry(entry),
+      ([entry]) => entry && setEntry(entry),
       {
         threshold: 0.1,
         rootMargin: '50px',

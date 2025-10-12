@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, useInView, useMotionValue, useSpring } from 'framer-motion';
-import { ArrowRight, Sparkles, Users, Building2, Star, MessageCircle } from 'lucide-react';
+import { FiArrowRight, FiStar, FiUsers, FiBriefcase, FiMessageCircle } from 'react-icons/fi';
 import Link from 'next/link';
 import styles from './CTASection.module.css';
 
@@ -21,19 +21,19 @@ import styles from './CTASection.module.css';
 // Trust stats data
 const trustStats = [
   {
-    icon: Building2,
+    icon: FiBriefcase,
     value: 500,
     suffix: '+',
     label: 'Tour Operators',
   },
   {
-    icon: Users,
+    icon: FiUsers,
     value: 10000,
     suffix: '+',
     label: 'Travel Agents',
   },
   {
-    icon: Star,
+    icon: FiStar,
     value: 4.9,
     suffix: '★',
     label: 'Average Rating',
@@ -198,7 +198,7 @@ const MagneticButton: React.FC<MagneticButtonProps> = ({ href, children, variant
               ease: "linear",
             }}
           >
-            <Sparkles className={styles.sparkleIcon} />
+            <FiStar className={styles.sparkleIcon} />
           </motion.div>
         )}
       </Link>
@@ -262,10 +262,6 @@ export default function CTASection() {
     visible: {
       opacity: 1,
       y: 0,
-      transition: {
-        duration: 0.5,
-        ease: "easeOut",
-      },
     },
   };
 
@@ -328,7 +324,7 @@ export default function CTASection() {
           <MagneticButton
             href="/auth/register"
             variant="primary"
-            icon={ArrowRight}
+            icon={FiArrowRight}
           >
             Start Free
           </MagneticButton>
@@ -336,7 +332,7 @@ export default function CTASection() {
           <MagneticButton
             href="/contact"
             variant="secondary"
-            icon={MessageCircle}
+            icon={FiMessageCircle}
           >
             Talk to Our Team
           </MagneticButton>

@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { FiMenu, FiX, FiChevronDown, FiUsers, FiGlobe, FiArrowRight, FiSparkles } from 'react-icons/fi';
+import { FiMenu, FiX, FiChevronDown, FiUsers, FiGlobe, FiArrowRight, FiStar } from 'react-icons/fi';
 import { Logo } from './Logo';
 import { motion, AnimatePresence } from 'framer-motion';
 import styles from './MarketingHeader.module.css';
@@ -205,7 +205,7 @@ export default function MarketingHeader() {
             </Link>
             <Link href="/register" className={styles.getStartedButton}>
               <span className={styles.buttonText}>Get Started</span>
-              <FiSparkles className={styles.buttonIcon} />
+              <FiStar className={styles.buttonIcon} />
               <div
                 className={styles.shine}
                 style={{ left: `${shinePosition}%` }}
@@ -390,7 +390,7 @@ export default function MarketingHeader() {
                   onClick={closeMobileMenu}
                 >
                   Get Started
-                  <FiSparkles className={styles.buttonIcon} />
+                  <FiStar className={styles.buttonIcon} />
                 </Link>
               </motion.div>
             </motion.div>

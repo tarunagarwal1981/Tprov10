@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowUp } from 'lucide-react';
+import { FiArrowUp } from 'react-icons/fi';
 
 /**
  * Back to Top Button Component
@@ -51,7 +51,7 @@ export default function BackToTop() {
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.95 }}
         >
-          <ArrowUp className="w-5 h-5" />
+          <FiArrowUp className="w-5 h-5" />
         </motion.button>
       )}
     </AnimatePresence>

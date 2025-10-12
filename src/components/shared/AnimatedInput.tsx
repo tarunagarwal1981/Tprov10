@@ -56,6 +56,7 @@ export default function AnimatedInput({
       const timer = setTimeout(() => setHasShaken(false), 500);
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, [error]);
 
   const inputClasses = `

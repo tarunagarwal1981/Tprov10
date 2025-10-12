@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
 import useEmblaCarousel from 'embla-carousel-react';
 import Autoplay from 'embla-carousel-autoplay';
-import { Quote, Star, ChevronLeft, ChevronRight } from 'lucide-react';
+import { FiMessageSquare, FiStar, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import styles from './Testimonials.module.css';
 
 /**
@@ -80,7 +80,7 @@ const StarRating: React.FC<StarRatingProps> = ({ rating, animate = false }) => {
             ease: "easeOut",
           }}
         >
-          <Star
+          <FiStar
             className={styles.star}
             fill={star <= rating ? "#FFB800" : "none"}
             stroke={star <= rating ? "#FFB800" : "#D1D5DB"}
@@ -121,7 +121,7 @@ const TestimonialCard: React.FC<TestimonialCardProps> = ({ testimonial, isActive
           ease: "easeInOut",
         }}
       >
-        <Quote className={styles.quoteIconSvg} />
+        <FiMessageSquare className={styles.quoteIconSvg} />
       </motion.div>
 
       {/* Star Rating */}
@@ -129,7 +129,7 @@ const TestimonialCard: React.FC<TestimonialCardProps> = ({ testimonial, isActive
 
       {/* Quote Text */}
       <blockquote className={styles.quoteText}>
-        "{testimonial.quote}"
+        &ldquo;{testimonial.quote}&rdquo;
       </blockquote>
 
       {/* Author Info */}
@@ -270,7 +270,7 @@ export default function Testimonials() {
                   whileTap={{ scale: 0.95 }}
                   aria-label="Previous testimonial"
                 >
-                  <ChevronLeft className={styles.navIcon} />
+                  <FiChevronLeft className={styles.navIcon} />
                 </motion.button>
 
                 <motion.button
@@ -284,7 +284,7 @@ export default function Testimonials() {
                   whileTap={{ scale: 0.95 }}
                   aria-label="Next testimonial"
                 >
-                  <ChevronRight className={styles.navIcon} />
+                  <FiChevronRight className={styles.navIcon} />
                 </motion.button>
               </>
             )}

@@ -93,14 +93,20 @@ export function detectSwipe(
   let touchEndY = 0;
 
   element.addEventListener('touchstart', (e) => {
-    touchStartX = e.changedTouches[0].screenX;
-    touchStartY = e.changedTouches[0].screenY;
+    const touch = e.changedTouches[0];
+    if (touch) {
+      touchStartX = touch.screenX;
+      touchStartY = touch.screenY;
+    }
   }, { passive: true });
 
   element.addEventListener('touchend', (e) => {
-    touchEndX = e.changedTouches[0].screenX;
-    touchEndY = e.changedTouches[0].screenY;
-    handleSwipe();
+    const touch = e.changedTouches[0];
+    if (touch) {
+      touchEndX = touch.screenX;
+      touchEndY = touch.screenY;
+      handleSwipe();
+    }
   }, { passive: true });
 
   function handleSwipe() {
@@ -136,7 +142,7 @@ export function optimizeTouchScroll() {
   if (typeof document === 'undefined') return;
   
   // Enable momentum scrolling on iOS
-  document.body.style.webkitOverflowScrolling = 'touch';
+  (document.body.style as any).webkitOverflowScrolling = 'touch';
   
   // Disable pull-to-refresh on mobile Chrome
   document.body.style.overscrollBehavior = 'none';
@@ -265,17 +271,23 @@ export function preventIOSRubberBand() {
   let startY = 0;
   
   document.addEventListener('touchstart', (e) => {
-    startY = e.touches[0].pageY;
+    const touch = e.touches[0];
+    if (touch) {
+      startY = touch.pageY;
+    }
   }, { passive: true });
   
   document.addEventListener('touchmove', (e) => {
-    const y = e.touches[0].pageY;
-    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-    const isScrollingUp = y > startY;
-    const isAtTop = scrollTop === 0;
-    
-    if (isAtTop && isScrollingUp) {
-      e.preventDefault();
+    const touch = e.touches[0];
+    if (touch) {
+      const y = touch.pageY;
+      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      const isScrollingUp = y > startY;
+      const isAtTop = scrollTop === 0;
+      
+      if (isAtTop && isScrollingUp) {
+        e.preventDefault();
+      }
     }
   }, { passive: false });
 }

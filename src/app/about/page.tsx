@@ -94,7 +94,7 @@ export default function AboutPage() {
                 </div>
                 <h2 className="text-3xl font-bold text-gray-900 mb-4">Our Vision</h2>
                 <p className="text-gray-600 text-lg leading-relaxed">
-                  To become the world's most trusted B2B travel ecosystem where every travel professional—regardless of size or location—can access opportunities, scale efficiently, and thrive in the digital era.
+                  To become the world&apos;s most trusted B2B travel ecosystem where every travel professional—regardless of size or location—can access opportunities, scale efficiently, and thrive in the digital era.
                 </p>
               </div>
             </div>
@@ -165,7 +165,7 @@ export default function AboutPage() {
             <p className="text-xl text-gray-600 mb-8">Coming Soon</p>
             <div className="bg-white/50 backdrop-blur-sm rounded-2xl p-16 border-2 border-dashed border-gray-300">
               <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500 text-lg">We're building an amazing team. Check back soon to meet the people behind TravelSelbuy!</p>
+              <p className="text-gray-500 text-lg">We&apos;re building an amazing team. Check back soon to meet the people behind TravelSelbuy!</p>
             </div>
           </div>
         </section>

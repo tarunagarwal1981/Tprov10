@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ChevronRight, Home } from 'lucide-react';
+import { FiChevronRight, FiHome } from 'react-icons/fi';
 
 interface BreadcrumbItem {
   label: string;
@@ -29,7 +29,7 @@ export default function Breadcrumb({ items }: BreadcrumbProps) {
             href="/"
             className="flex items-center gap-1 text-gray-600 hover:text-orange-500 transition-colors"
           >
-            <Home className="w-4 h-4" />
+            <FiHome className="w-4 h-4" />
             <span>Home</span>
           </Link>
         </li>
@@ -40,7 +40,7 @@ export default function Breadcrumb({ items }: BreadcrumbProps) {
           
           return (
             <React.Fragment key={index}>
-              <ChevronRight className="w-4 h-4 text-gray-400" />
+              <FiChevronRight className="w-4 h-4 text-gray-400" />
               <li>
                 {item.href && !isLast ? (
                   <Link

@@ -6,7 +6,7 @@ import MarketingFooter from '@/components/marketing/MarketingFooter';
 import SkipToContent from '@/components/shared/SkipToContent';
 import Breadcrumb from '@/components/shared/Breadcrumb';
 import BackToTop from '@/components/shared/BackToTop';
-import { Globe, Users, TrendingUp, MessageSquare, BarChart3, Package, CheckCircle, ArrowRight, Play } from 'lucide-react';
+import { FiGlobe, FiUsers, FiTrendingUp, FiMessageSquare, FiBarChart2, FiPackage, FiCheckCircle, FiArrowRight, FiPlay } from 'react-icons/fi';
 import { motion } from 'framer-motion';
 
 /**
@@ -23,27 +23,27 @@ export default function ForTourOperatorsPage() {
 
   const coreTools = [
     {
-      icon: Package,
+      icon: FiPackage,
       title: 'Package Management',
       description: 'List and manage unlimited packages. Update availability, pricing, and details in real-time across all channels.',
       stats: 'Save 10+ hours/week',
     },
     {
-      icon: Globe,
+      icon: FiGlobe,
       title: 'Global Reach',
       description: 'Your packages instantly visible to 10,000+ travel agents worldwide. Expand beyond your local market.',
       stats: '150+ countries',
     },
     {
-      icon: MessageSquare,
+      icon: FiMessageSquare,
       title: 'Lead Management',
       description: 'Receive and respond to inquiries instantly. Automated notifications ensure you never miss an opportunity.',
       stats: '40% faster response',
     },
     {
-      icon: BarChart3,
+      icon: FiBarChart2,
       title: 'Analytics Dashboard',
-      description: 'Track views, inquiries, bookings, and revenue. Understand what's working and optimize your offerings.',
+      description: 'Track views, inquiries, bookings, and revenue. Understand what\'s working and optimize your offerings.',
       stats: 'Real-time insights',
     },
   ];
@@ -131,7 +131,7 @@ export default function ForTourOperatorsPage() {
                 onClick={() => setShowVideoModal(true)}
                 className="inline-flex items-center gap-2 bg-white text-gray-900 font-semibold px-8 py-4 rounded-full border-2 border-gray-200 hover:border-blue-500 transition-all"
               >
-                <Play className="w-5 h-5" />
+                <FiPlay className="w-5 h-5" />
                 Watch Demo
               </button>
             </div>
@@ -217,7 +217,7 @@ export default function ForTourOperatorsPage() {
                   viewport={{ once: true }}
                   transition={{ delay: index * 0.03 }}
                 >
-                  <CheckCircle className="w-6 h-6 text-green-500 flex-shrink-0 mt-0.5" />
+                  <FiCheckCircle className="w-6 h-6 text-green-500 flex-shrink-0 mt-0.5" />
                   <span className="text-gray-700">{benefit}</span>
                 </motion.div>
               ))}
@@ -239,7 +239,7 @@ export default function ForTourOperatorsPage() {
                   key={index}
                   className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-8 shadow-lg"
                 >
-                  <div className="text-4xl text-blue-600 mb-4">"</div>
+                  <div className="text-4xl text-blue-600 mb-4">&ldquo;</div>
                   <p className="text-lg text-gray-700 mb-6 italic">{testimonial.quote}</p>
                   <div className="border-t border-blue-200 pt-4">
                     <div className="font-bold text-gray-900">{testimonial.author}</div>
@@ -302,7 +302,7 @@ export default function ForTourOperatorsPage() {
               className="inline-flex items-center gap-2 bg-white text-blue-600 font-semibold px-8 py-4 rounded-full hover:shadow-lg transition-all hover:scale-105"
             >
               List Your First Package Free
-              <ArrowRight className="w-5 h-5" />
+              <FiArrowRight className="w-5 h-5" />
             </a>
             <p className="mt-6 text-sm opacity-80">No listing fees • Only pay on successful bookings • Cancel anytime</p>
           </div>
@@ -334,7 +334,7 @@ export default function ForTourOperatorsPage() {
             </div>
             <div className="bg-gray-100 rounded-xl aspect-video flex items-center justify-center">
               <div className="text-center">
-                <Play className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                <FiPlay className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                 <p className="text-gray-500">Video Demo Coming Soon</p>
               </div>
             </div>

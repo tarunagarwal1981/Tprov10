@@ -5,7 +5,7 @@ import MarketingFooter from '@/components/marketing/MarketingFooter';
 import SkipToContent from '@/components/shared/SkipToContent';
 import Breadcrumb from '@/components/shared/Breadcrumb';
 import BackToTop from '@/components/shared/BackToTop';
-import { Zap, Users, TrendingUp, Clock, DollarSign, Shield, CheckCircle, XCircle } from 'lucide-react';
+import { FiUsers, FiTrendingUp, FiClock, FiDollarSign, FiShield, FiCheckCircle, FiXCircle } from 'react-icons/fi';
 
 export const metadata: Metadata = {
   title: 'Benefits - TravelSelbuy | Why Travel Businesses Choose Us',
@@ -24,37 +24,37 @@ export const metadata: Metadata = {
 export default function BenefitsPage() {
   const benefits = [
     {
-      icon: Zap,
+      icon: FiCheckCircle,
       title: 'Save 15+ Hours Per Week',
       description: 'Automate repetitive tasks like quotations, follow-ups, and booking confirmations. Focus on what matters—growing your business.',
       color: 'from-orange-500 to-yellow-500',
     },
     {
-      icon: Users,
+      icon: FiUsers,
       title: 'Access 500+ Verified Suppliers',
       description: 'Connect with tour operators worldwide. No middlemen, no markup—just direct connections and better margins.',
       color: 'from-blue-600 to-cyan-500',
     },
     {
-      icon: TrendingUp,
+      icon: FiTrendingUp,
       title: 'Increase Revenue by 35%',
       description: 'AI-powered lead generation, smart CRM, and marketplace access help you close more deals faster.',
       color: 'from-purple-600 to-pink-500',
     },
     {
-      icon: Clock,
+      icon: FiClock,
       title: 'Real-Time Updates',
       description: 'Instant availability checks, booking confirmations, and notifications. Stay ahead with real-time information.',
       color: 'from-green-500 to-emerald-600',
     },
     {
-      icon: DollarSign,
+      icon: FiDollarSign,
       title: 'Lower Your Costs by 40%',
       description: 'No expensive CRM subscriptions, no lead generation fees. All-in-one platform at a fraction of traditional costs.',
       color: 'from-orange-600 to-red-500',
     },
     {
-      icon: Shield,
+      icon: FiShield,
       title: 'Verified & Secure',
       description: 'All suppliers are verified. Secure payments, data protection, and 24/7 support for peace of mind.',
       color: 'from-indigo-600 to-blue-600',
@@ -114,6 +114,9 @@ export default function BenefitsPage() {
     },
   ];
 
+  const TrueIcon = FiCheckCircle;
+  const FalseIcon = FiXCircle;
+
   return (
     <div data-theme="marketing" className="min-h-screen flex flex-col">
       <SkipToContent />
@@ -128,7 +131,7 @@ export default function BenefitsPage() {
               Why Travel Businesses <span className="bg-gradient-to-r from-orange-500 to-yellow-500 bg-clip-text text-transparent">Love TravelSelbuy</span>
             </h1>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Join thousands of travel professionals who've transformed their operations, increased efficiency, and accelerated growth.
+              Join thousands of travel professionals who&apos;ve transformed their operations, increased efficiency, and accelerated growth.
             </p>
           </div>
         </section>
@@ -212,16 +215,16 @@ export default function BenefitsPage() {
                   <div className="font-medium text-gray-900">{item.feature}</div>
                   <div className="flex justify-center">
                     {item.traditional ? (
-                      <CheckCircle className="w-6 h-6 text-green-500" />
+                      <TrueIcon className="w-6 h-6 text-green-500" />
                     ) : (
-                      <XCircle className="w-6 h-6 text-red-500" />
+                      <FalseIcon className="w-6 h-6 text-red-500" />
                     )}
                   </div>
                   <div className="flex justify-center">
                     {item.travelselbuy ? (
-                      <CheckCircle className="w-6 h-6 text-green-500" />
+                      <TrueIcon className="w-6 h-6 text-green-500" />
                     ) : (
-                      <XCircle className="w-6 h-6 text-red-500" />
+                      <FalseIcon className="w-6 h-6 text-red-500" />
                     )}
                   </div>
                 </div>

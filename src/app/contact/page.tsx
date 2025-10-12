@@ -6,7 +6,7 @@ import MarketingFooter from '@/components/marketing/MarketingFooter';
 import SkipToContent from '@/components/shared/SkipToContent';
 import Breadcrumb from '@/components/shared/Breadcrumb';
 import BackToTop from '@/components/shared/BackToTop';
-import { Mail, MessageCircle, Phone, MapPin, Send, CheckCircle } from 'lucide-react';
+import { FiMail, FiMessageCircle, FiPhone, FiMapPin, FiSend, FiCheckCircle } from 'react-icons/fi';
 import { motion, AnimatePresence } from 'framer-motion';
 
 /**
@@ -85,19 +85,19 @@ export default function ContactPage() {
 
   const contactMethods = [
     {
-      icon: Mail,
+      icon: FiMail,
       title: 'Email Us',
       value: 'hello@travelselbuy.com',
       link: 'mailto:hello@travelselbuy.com',
     },
     {
-      icon: Phone,
+      icon: FiPhone,
       title: 'Call Us',
       value: '+1 (555) 123-4567',
       link: 'tel:+15551234567',
     },
     {
-      icon: MessageCircle,
+      icon: FiMessageCircle,
       title: 'Live Chat',
       value: 'Chat with our team',
       link: '#',
@@ -115,10 +115,10 @@ export default function ContactPage() {
         <section className="relative bg-gradient-to-br from-orange-50 via-white to-blue-50 py-20 px-4">
           <div className="max-w-4xl mx-auto text-center">
             <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
-              Let's Build the Future of Travel — <span className="bg-gradient-to-r from-orange-500 to-yellow-500 bg-clip-text text-transparent">Together</span>
+              Let&apos;s Build the Future of Travel — <span className="bg-gradient-to-r from-orange-500 to-yellow-500 bg-clip-text text-transparent">Together</span>
             </h1>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Have questions? Want to join our platform? Or just want to say hello? We'd love to hear from you.
+              Have questions? Want to join our platform? Or just want to say hello? We&apos;d love to hear from you.
             </p>
           </div>
         </section>
@@ -272,7 +272,7 @@ export default function ContactPage() {
                         ) : (
                           <>
                             Send Message
-                            <Send className="w-5 h-5" />
+                            <FiSend className="w-5 h-5" />
                           </>
                         )}
                       </button>
@@ -285,10 +285,10 @@ export default function ContactPage() {
                       className="py-12 text-center"
                     >
                       <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <CheckCircle className="w-10 h-10 text-green-600" />
+                        <FiCheckCircle className="w-10 h-10 text-green-600" />
                       </div>
                       <h3 className="text-2xl font-bold text-gray-900 mb-2">Message Sent!</h3>
-                      <p className="text-gray-600">We'll get back to you within 24 hours.</p>
+                      <p className="text-gray-600">We&apos;ll get back to you within 24 hours.</p>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -301,7 +301,7 @@ export default function ContactPage() {
                   <h2 className="text-3xl font-bold text-gray-900 mb-6">Visit Our Office</h2>
                   <div className="flex items-start gap-4 mb-6">
                     <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <MapPin className="w-6 h-6 text-white" />
+                      <FiMapPin className="w-6 h-6 text-white" />
                     </div>
                     <div>
                       <h3 className="font-bold text-gray-900 mb-2">Global Headquarters</h3>
@@ -316,7 +316,7 @@ export default function ContactPage() {
                   {/* Map Placeholder */}
                   <div className="bg-gray-100 rounded-xl h-64 flex items-center justify-center border-2 border-dashed border-gray-300">
                     <div className="text-center">
-                      <MapPin className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                      <FiMapPin className="w-12 h-12 text-gray-400 mx-auto mb-2" />
                       <p className="text-gray-500">Map Coming Soon</p>
                     </div>
                   </div>

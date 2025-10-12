@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from 'react';
 import { motion, useInView } from 'framer-motion';
-import { Briefcase, Globe, Star, ArrowRight } from 'lucide-react';
+import { FiBriefcase, FiGlobe, FiStar, FiArrowRight } from 'react-icons/fi';
 import Link from 'next/link';
 import styles from './WhoWeHelp.module.css';
 
@@ -26,7 +26,7 @@ import styles from './WhoWeHelp.module.css';
 const audiences = [
   {
     id: 'travel-agents',
-    icon: Briefcase,
+    icon: FiBriefcase,
     iconColor: 'blue',
     title: 'For Travel Agents',
     description: 'Find new suppliers, customize packages, and close deals faster.',
@@ -41,7 +41,7 @@ const audiences = [
   },
   {
     id: 'tour-operators',
-    icon: Globe,
+    icon: FiGlobe,
     iconColor: 'orange',
     title: 'For Tour Operators',
     description: 'List travel experiences, manage inquiries, and grow global visibility.',
@@ -56,7 +56,7 @@ const audiences = [
   },
   {
     id: 'freelancers',
-    icon: Star,
+    icon: FiStar,
     iconColor: 'purple',
     title: 'For Freelancers',
     description: 'Access verified inventory, build your brand, and earn more.',
@@ -147,7 +147,7 @@ const FlipCard: React.FC<FlipCardProps> = ({ audience, index }) => {
             transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
           >
             <span>Hover to learn more</span>
-            <ArrowRight className={styles.hintIcon} />
+            <FiArrowRight className={styles.hintIcon} />
           </motion.div>
         </div>
 
@@ -177,7 +177,7 @@ const FlipCard: React.FC<FlipCardProps> = ({ audience, index }) => {
               className={styles.ctaButton}
             >
               <span>{audience.ctaText}</span>
-              <ArrowRight className={styles.ctaIcon} />
+              <FiArrowRight className={styles.ctaIcon} />
             </Link>
           </div>
         </div>
@@ -202,7 +202,7 @@ export default function WhoWeHelp() {
         >
           <h2 className={styles.title}>Built for Every Travel Professional</h2>
           <p className={styles.subtitle}>
-            Whether you're an agent, operator, or freelancer, we have the tools you need to succeed
+            Whether you&apos;re an agent, operator, or freelancer, we have the tools you need to succeed
           </p>
         </motion.div>
 
@@ -222,7 +222,7 @@ export default function WhoWeHelp() {
         >
           <Link href="/auth/register" className={styles.mainCTA}>
             Join the Network
-            <ArrowRight className={styles.mainCTAIcon} />
+            <FiArrowRight className={styles.mainCTAIcon} />
           </Link>
         </motion.div>
       </div>

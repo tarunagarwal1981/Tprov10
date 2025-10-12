@@ -6,7 +6,7 @@ import MarketingFooter from '@/components/marketing/MarketingFooter';
 import SkipToContent from '@/components/shared/SkipToContent';
 import Breadcrumb from '@/components/shared/Breadcrumb';
 import BackToTop from '@/components/shared/BackToTop';
-import { Search, MessageSquare, FileText, BarChart3, Zap, CheckCircle, ArrowRight } from 'lucide-react';
+import { FiSearch, FiMessageSquare, FiFileText, FiBarChart2, FiCheckCircle, FiArrowRight } from 'react-icons/fi';
 import { motion } from 'framer-motion';
 
 /**
@@ -24,7 +24,7 @@ export default function ForTravelAgentsPage() {
   const tools = [
     {
       id: 'search',
-      icon: Search,
+      icon: FiSearch,
       title: 'Smart Package Search',
       description: 'Find the perfect package in seconds with AI-powered search across 500+ suppliers.',
       demo: 'Search by destination, budget, dates, or activities. Our AI understands natural language queries.',
@@ -32,7 +32,7 @@ export default function ForTravelAgentsPage() {
     },
     {
       id: 'crm',
-      icon: MessageSquare,
+      icon: FiMessageSquare,
       title: 'Unified CRM',
       description: 'Manage all customer interactions in one place. Syncs with WhatsApp, email, and social media.',
       demo: 'Track every conversation, set reminders, automate follow-ups, and never miss an opportunity.',
@@ -40,7 +40,7 @@ export default function ForTravelAgentsPage() {
     },
     {
       id: 'quotes',
-      icon: FileText,
+      icon: FiFileText,
       title: 'Instant Quotations',
       description: 'Generate professional quotes in minutes with our drag-and-drop itinerary builder.',
       demo: 'Select packages, customize itineraries, add your branding, and send—all in under 5 minutes.',
@@ -48,7 +48,7 @@ export default function ForTravelAgentsPage() {
     },
     {
       id: 'analytics',
-      icon: BarChart3,
+      icon: FiBarChart2,
       title: 'Performance Analytics',
       description: 'Track your metrics, understand customer behavior, and optimize your sales strategy.',
       demo: 'Real-time dashboards showing conversion rates, popular destinations, and revenue trends.',
@@ -56,7 +56,7 @@ export default function ForTravelAgentsPage() {
     },
     {
       id: 'automation',
-      icon: Zap,
+      icon: FiCheckCircle,
       title: 'Smart Automation',
       description: 'Automate repetitive tasks like follow-ups, booking confirmations, and reminders.',
       demo: 'Set rules once, and let AI handle routine communications while you focus on relationships.',
@@ -195,7 +195,7 @@ export default function ForTravelAgentsPage() {
                   viewport={{ once: true }}
                   transition={{ delay: index * 0.05 }}
                 >
-                  <CheckCircle className="w-6 h-6 text-green-500 flex-shrink-0 mt-0.5" />
+                  <FiCheckCircle className="w-6 h-6 text-green-500 flex-shrink-0 mt-0.5" />
                   <span className="text-gray-700">{benefit}</span>
                 </motion.div>
               ))}
@@ -217,7 +217,7 @@ export default function ForTravelAgentsPage() {
                   key={index}
                   className="bg-gradient-to-br from-orange-50 to-yellow-50 rounded-2xl p-8 shadow-lg"
                 >
-                  <div className="text-4xl text-orange-500 mb-4">"</div>
+                  <div className="text-4xl text-orange-500 mb-4">&ldquo;</div>
                   <p className="text-lg text-gray-700 mb-6 italic">{testimonial.quote}</p>
                   <div className="border-t border-orange-200 pt-4">
                     <div className="font-bold text-gray-900">{testimonial.author}</div>
@@ -234,14 +234,14 @@ export default function ForTravelAgentsPage() {
           <div className="max-w-4xl mx-auto text-center text-white">
             <h2 className="text-4xl md:text-5xl font-bold mb-6">Ready to Transform Your Business?</h2>
             <p className="text-xl mb-8 opacity-90">
-              Join 10,000+ travel agents who've already made the switch
+              Join 10,000+ travel agents who&apos;ve already made the switch
             </p>
             <a
               href="/auth/register?role=travel_agent"
               className="inline-flex items-center gap-2 bg-white text-orange-600 font-semibold px-8 py-4 rounded-full hover:shadow-lg transition-all hover:scale-105"
             >
               Get Started Free
-              <ArrowRight className="w-5 h-5" />
+              <FiArrowRight className="w-5 h-5" />
             </a>
             <p className="mt-6 text-sm opacity-80">No credit card required • 14-day free trial • Cancel anytime</p>
           </div>
