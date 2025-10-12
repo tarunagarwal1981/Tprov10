@@ -40,7 +40,7 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-slate-200/50 shadow-sm">
-      <div className="flex items-center justify-between px-6 py-4">
+      <div className="flex items-center justify-between px-3 py-2">
         {/* Left Section - Search */}
         <div className="flex items-center gap-4 flex-1 max-w-md">
           <div className="relative flex-1">

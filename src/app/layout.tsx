@@ -14,10 +14,19 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: 'TravelSelBuy - AI-Powered Travel Booking Platform',
   description: 'AI-Powered Travel Booking Platform for Small Travel Agents. Generate leads, manage customers, and book packages—all in one intelligent platform.',
+  icons: {
+    icon: '/logo-icon.svg',
+    apple: '/logo-icon.svg',
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
     title: 'TravelSelBuy',
+  },
+  openGraph: {
+    title: 'TravelSelBuy - AI-Powered Travel Booking Platform',
+    description: 'AI-Powered Travel Booking Platform for Small Travel Agents',
+    images: ['/logo-full.svg'],
   },
 };
 

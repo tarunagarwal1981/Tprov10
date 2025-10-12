@@ -12,13 +12,14 @@ import CTASection from '@/components/marketing/CTASection';
 // import Stats from '@/components/marketing/Stats';
 
 export const metadata = {
-  title: 'TravelSelbuy - B2B Travel Marketplace for Tour Operators & Travel Agents',
-  description: 'Connect tour operators with travel agents worldwide. Streamline bookings, manage packages, and grow your travel business with TravelSelbuy.',
+  title: 'TravelSelBuy - B2B Travel Marketplace for Tour Operators & Travel Agents',
+  description: 'Connect tour operators with travel agents worldwide. Streamline bookings, manage packages, and grow your travel business with TravelSelBuy.',
   keywords: 'B2B travel, tour operators, travel agents, travel marketplace, booking platform',
   openGraph: {
-    title: 'TravelSelbuy - B2B Travel Marketplace',
+    title: 'TravelSelBuy - B2B Travel Marketplace',
     description: 'Connect tour operators with travel agents worldwide',
     type: 'website',
+    images: ['/logo-full.svg'],
   },
 };
 

@@ -11,6 +11,7 @@ import {
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { LogoSVG } from '@/components/marketing/Logo';
 
 export function Footer() {
   const footerLinks = {
@@ -53,11 +54,10 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
           {/* Brand Column */}
           <div className="space-y-6">
-            <Link href="/" className="flex items-center gap-2 group">
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center">
-                <FiSend className="w-6 h-6 text-white" />
+            <Link href="/" className="block">
+              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 inline-block">
+                <LogoSVG width={200} height={48} />
               </div>
-              <span className="text-xl font-bold text-white">TravelPro</span>
             </Link>
             <p className="text-sm text-slate-400 leading-relaxed">
               Empowering travel professionals worldwide with AI-powered tools and global networks.
@@ -138,7 +138,7 @@ export function Footer() {
         {/* Bottom Bar */}
         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-sm text-slate-400">
-            © {new Date().getFullYear()} TravelPro. All rights reserved.
+            © {new Date().getFullYear()} TravelSelBuy. All rights reserved.
           </p>
           <div className="flex items-center gap-6">
             <Button variant="ghost" size="sm" className="text-sm text-slate-400 hover:text-white">

@@ -1,0 +1,43 @@
+<svg viewBox="0 0 420 100" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="orangePurple" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#F59E0B"/>
+      <stop offset="50%" style="stop-color:#EC4899"/>
+      <stop offset="100%" style="stop-color:#8B5CF6"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Star/Compass Icon -->
+  <g transform="translate(35, 50)">
+    <!-- North -->
+    <path d="M 0 -26 L 4 -4 L -4 -4 Z" fill="#F59E0B"/>
+    <!-- East -->
+    <path d="M 26 0 L 4 4 L 4 -4 Z" fill="#F97316"/>
+    <!-- South -->
+    <path d="M 0 26 L 4 4 L -4 4 Z" fill="#EC4899"/>
+    <!-- West -->
+    <path d="M -26 0 L -4 4 L -4 -4 Z" fill="#8B5CF6"/>
+    <!-- Center -->
+    <circle cx="0" cy="0" r="5" fill="white"/>
+    <circle cx="0" cy="0" r="3" fill="url(#orangePurple)"/>
+  </g>
+  
+  <!-- Wordmark - "Travel" in blue -->
+  <text x="75" y="58" 
+        font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" 
+        font-size="32" 
+        font-weight="600" 
+        fill="#004E89">
+    Travel
+  </text>
+  
+  <!-- Wordmark - "SelBuy" in orange -->
+  <text x="161" y="58" 
+        font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" 
+        font-size="32" 
+        font-weight="600" 
+        fill="#FF6B35">
+    SelBuy
+  </text>
+</svg>
+

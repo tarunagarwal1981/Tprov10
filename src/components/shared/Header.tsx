@@ -568,7 +568,7 @@ export function Header({
         role="banner"
         aria-label="Global Header"
       >
-        <div className="flex h-14 md:h-16 items-center px-4 md:px-6">
+        <div className="flex h-7 md:h-8 items-center px-2 md:px-3">
           {/* Mobile Menu Button */}
           <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
             <SheetTrigger asChild>

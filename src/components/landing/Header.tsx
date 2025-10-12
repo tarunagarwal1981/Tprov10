@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiSend, FiMenu, FiX } from 'react-icons/fi';
 import { Button } from '@/components/ui/button';
+import { Logo } from '@/components/marketing/Logo';
 
 export function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -39,20 +40,15 @@ export function Header() {
           : 'bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm'
       }`}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-20">
+      <div className="max-w-7xl mx-auto px-2 sm:px-3 lg:px-4">
+        <div className="flex items-center justify-between h-12">
           {/* Logo */}
-          <Link href="/" className="flex items-center space-x-3 group">
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-[#FF6B35] to-[#FF4B8C] rounded-lg blur-sm opacity-75 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <div className="relative bg-gradient-to-r from-[#FF6B35] to-[#FFB800] p-2 rounded-lg flex items-center justify-center">
-                <span className="text-xl">✈️</span>
-              </div>
-            </div>
-            <span className="text-2xl font-bold text-gray-900 dark:text-white">
-              TravelSelBuy
-            </span>
-          </Link>
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <Logo variant="light" size="md" />
+          </motion.div>
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
@@ -125,7 +121,7 @@ export function Header() {
             transition={{ duration: 0.3, ease: 'easeInOut' }}
             className="md:hidden bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-700"
           >
-            <div className="px-4 py-6 space-y-4">
+            <div className="px-2 py-3 space-y-4">
               {navItems.map((item, index) => (
                 <motion.div
                   key={item.name}

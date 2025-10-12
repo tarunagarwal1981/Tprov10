@@ -119,19 +119,13 @@ export default function MarketingHeader() {
       <header className={`${styles.header} ${isScrolled ? styles.scrolled : ''}`}>
         <div className={styles.headerContainer}>
           {/* Logo - Interactive with hover animation */}
-          <Link href="/" className={styles.logo}>
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.98 }}
-              className={styles.logoWrapper}
-            >
-              <Logo variant="dark" size="md" showText={false} />
-              <span className={styles.logoText}>
-                <span className={styles.logoTextTravel}>Travel</span>
-                <span className={styles.logoTextSelbuy}>Selbuy</span>
-              </span>
-            </motion.div>
-          </Link>
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.98 }}
+            className={styles.logoWrapper}
+          >
+            <Logo variant="dark" size="md" />
+          </motion.div>
 
           {/* Navigation Menu - Desktop */}
           <nav className={styles.nav}>
@@ -263,11 +257,7 @@ export default function MarketingHeader() {
           >
             <div className={styles.mobileMenuHeader}>
               <div className={styles.mobileLogoWrapper}>
-                <Logo variant="dark" size="sm" showText={false} />
-                <span className={styles.logoText}>
-                  <span className={styles.logoTextTravel}>Travel</span>
-                  <span className={styles.logoTextSelbuy}>Selbuy</span>
-                </span>
+                <Logo variant="dark" size="sm" />
               </div>
               <button
                 type="button"

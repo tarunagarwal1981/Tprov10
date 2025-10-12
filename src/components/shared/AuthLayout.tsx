@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 import Image from 'next/image';
+import { LogoSVG } from '@/components/marketing/Logo';
 
 interface AuthLayoutProps {
   children: React.ReactNode;
@@ -220,11 +221,8 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({
               animate={{ opacity: isLoaded ? 1 : 0, y: 0 }}
               transition={{ delay: 0.2 }}
             >
-              <div className="flex items-center space-x-3 mb-8">
-                <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
-                  <span className="text-2xl">✈️</span>
-                </div>
-                <h1 className="text-2xl font-bold text-white">TravelSelBuy</h1>
+              <div className="mb-8 bg-white/10 backdrop-blur-sm rounded-xl p-4 inline-block">
+                <LogoSVG width={280} height={67} />
               </div>
               <h2 className="text-4xl font-bold text-white mb-4">
                 Empower Your Travel Business
@@ -348,11 +346,8 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({
           animate={{ opacity: isLoaded ? 1 : 0, y: 0 }}
           transition={{ delay: 0.2 }}
         >
-          <div className="flex items-center space-x-3 mb-6">
-            <div className="w-8 h-8 bg-[#FF6B35] rounded-lg flex items-center justify-center">
-              <span className="text-white text-lg">✈️</span>
-            </div>
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white">TravelSelBuy</h1>
+          <div className="flex items-center mb-6">
+            <LogoSVG width={200} height={48} />
           </div>
           
           {showFeatures && (

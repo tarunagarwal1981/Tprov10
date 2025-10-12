@@ -25,12 +25,9 @@ const nextConfig = {
     return config;
   },
 
-  // Output configuration for static export
-  output: 'export',
-  
-  // Disable image optimization for static export
+  // Image configuration
   images: {
-    unoptimized: true,
+    unoptimized: false,
     domains: [],
     formats: ['image/webp', 'image/avif'],
   },

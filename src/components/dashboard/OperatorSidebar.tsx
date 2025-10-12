@@ -22,6 +22,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { LogoSVG } from "@/components/marketing/Logo";
 
 interface NavItem {
 	id: string;
@@ -124,13 +125,35 @@ const isActive = (href: string) => {
 			{/* Logo & Toggle */}
 			<div className="h-20 flex items-center justify-between px-6 border-b border-zinc-200/50 dark:border-zinc-800/50">
 				{!effectiveCollapsed && (
-					<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-3">
-						<div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#FF6B35] to-[#FF4B8C] flex items-center justify-center shadow-lg">
-							<PackageIcon className="w-6 h-6 text-white" />
-						</div>
-						<span className="text-xl font-bold bg-gradient-to-r from-[#FF6B35] to-[#FF4B8C] bg-clip-text text-transparent">
-							TravelSelBuy
-						</span>
+					<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center">
+						<Link href="/operator">
+							<LogoSVG width={220} height={52} />
+						</Link>
+					</motion.div>
+				)}
+				{effectiveCollapsed && (
+					<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center justify-center w-full">
+						<Link href="/operator">
+							<div className="w-10 h-10 flex items-center justify-center">
+								<svg viewBox="0 0 70 100" xmlns="http://www.w3.org/2000/svg" width="35" height="50">
+									<defs>
+										<linearGradient id="sidebarGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+											<stop offset="0%" style={{ stopColor: '#F59E0B' }} />
+											<stop offset="50%" style={{ stopColor: '#EC4899' }} />
+											<stop offset="100%" style={{ stopColor: '#8B5CF6' }} />
+										</linearGradient>
+									</defs>
+									<g transform="translate(35, 50)">
+										<path d="M 0 -26 L 4 -4 L -4 -4 Z" fill="#F59E0B"/>
+										<path d="M 26 0 L 4 4 L 4 -4 Z" fill="#F97316"/>
+										<path d="M 0 26 L 4 4 L -4 4 Z" fill="#EC4899"/>
+										<path d="M -26 0 L -4 4 L -4 -4 Z" fill="#8B5CF6"/>
+										<circle cx="0" cy="0" r="5" fill="white"/>
+										<circle cx="0" cy="0" r="3" fill="url(#sidebarGradient)"/>
+									</g>
+								</svg>
+							</div>
+						</Link>
 					</motion.div>
 				)}
 				<Button
