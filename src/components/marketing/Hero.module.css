@@ -74,11 +74,12 @@
 /* Content Styles */
 .headline {
   font-size: 3rem;
-  font-weight: 700;
+  font-weight: 600;
   color: #1F2937;
   margin-bottom: 1.5rem;
-  line-height: 1.2;
-  letter-spacing: -0.025em;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+  font-family: var(--font-space-grotesk), 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 .word {

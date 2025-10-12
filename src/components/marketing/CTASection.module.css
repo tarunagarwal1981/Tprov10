@@ -18,14 +18,12 @@
   right: 0;
   bottom: 0;
   background: linear-gradient(135deg, 
-    #FF6B35 0%, 
-    #FFB800 25%, 
-    #004E89 50%, 
-    #00B4D8 75%, 
-    #FF6B35 100%
+    #0077B6 0%, 
+    #0096C7 50%, 
+    #00B4D8 100%
   );
-  background-size: 400% 400%;
-  animation: gradientShift 15s ease infinite;
+  background-size: 200% 200%;
+  animation: gradientShift 20s ease infinite;
   z-index: 0;
 }
 
@@ -52,7 +50,7 @@
 
 .particle {
   position: absolute;
-  background: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.4);
   border-radius: 50%;
   pointer-events: none;
 }
@@ -66,7 +64,7 @@
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(255, 255, 255, 0.3) 50%,
+    rgba(255, 255, 255, 0.15) 50%,
     transparent 100%
   );
   z-index: 1;
@@ -94,11 +92,8 @@
 .word {
   display: inline-block;
   margin-right: 0.3rem;
-  background: linear-gradient(135deg, #FFFFFF 0%, #FFE5D9 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  color: #FFFFFF;
+  text-shadow: 0 2px 15px rgba(0, 0, 0, 0.15);
 }
 
 /* Subheadline */
@@ -158,29 +153,29 @@
 /* Primary Button (Start Free) */
 .primaryButton {
   background: white;
-  color: #FF6B35;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+  color: #0077B6;
+  box-shadow: 0 6px 25px rgba(0, 0, 0, 0.2);
 }
 
 .primaryButton:hover {
   transform: translateY(-3px) scale(1.02);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.3);
 }
 
 /* Secondary Button (Talk to Team) */
 .secondaryButton {
   background: transparent;
   color: white;
-  border: 2px solid rgba(255, 255, 255, 0.8);
+  border: 2px solid rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(10px);
 }
 
 .secondaryButton:hover {
   background: white;
-  color: #004E89;
+  color: #0077B6;
   border-color: white;
   transform: translateY(-3px) scale(1.02);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.3);
 }
 
 /* Ripple Effect */
@@ -196,11 +191,11 @@
 }
 
 .primaryButton .ripple {
-  background: rgba(255, 107, 53, 0.4);
+  background: rgba(0, 119, 182, 0.3);
 }
 
 .secondaryButton .ripple {
-  background: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.3);
 }
 
 /* Sparkle Effect */
@@ -215,8 +210,8 @@
 .sparkleIcon {
   width: 20px;
   height: 20px;
-  color: #FFB800;
-  filter: drop-shadow(0 0 4px rgba(255, 184, 0, 0.8));
+  color: #FFFFFF;
+  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.6));
 }
 
 /* Trust Badges */
@@ -232,25 +227,25 @@
   display: flex;
   align-items: center;
   gap: 1rem;
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.2);
   backdrop-filter: blur(20px);
   padding: 1rem 1.75rem;
   border-radius: 50px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.4);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
 }
 
 .trustBadge:hover {
   transform: translateY(-3px);
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.3);
   box-shadow: 0 6px 25px rgba(0, 0, 0, 0.15);
 }
 
 .badgeIcon {
   width: 40px;
   height: 40px;
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.3);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -481,7 +476,7 @@
 /* High contrast mode */
 @media (prefers-contrast: high) {
   .gradientBackground {
-    background: #004E89;
+    background: #0077B6;
   }
 
   .word {

@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { useState } from 'react';
+import Link from 'next/link';
 
 export function Testimonials() {
   const [currentTestimonial, setCurrentTestimonial] = useState(0);
@@ -24,7 +25,7 @@ export function Testimonials() {
       company: 'Adventure Tours UK',
       avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=128&h=128&fit=crop&crop=face',
       rating: 5,
-      content: 'TravelPro has completely transformed our business. The AI lead generation feature alone has increased our bookings by 300% in just 6 months. The platform is intuitive, and the support team is incredible.',
+      content: 'TravelSelBuy has completely transformed our business. The AI lead generation feature alone has increased our bookings by 300% in just 6 months. The platform is intuitive, and the support team is incredible.',
       results: '300% increase in bookings',
       location: 'London, UK',
       verified: true
@@ -36,7 +37,7 @@ export function Testimonials() {
       company: 'Global Travel Solutions',
       avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=128&h=128&fit=crop&crop=face',
       rating: 5,
-      content: 'As a travel agent, finding reliable tour operators was always a challenge. TravelPro connected me with verified partners worldwide, and my commission income has doubled. The platform is a game-changer.',
+      content: 'As a travel agent, finding reliable tour operators was always a challenge. TravelSelBuy connected me with verified partners worldwide, and my commission income has doubled. The platform is a game-changer.',
       results: 'Doubled commission income',
       location: 'New York, USA',
       verified: true
@@ -72,7 +73,7 @@ export function Testimonials() {
       company: 'Wildlife Adventures',
       avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=128&h=128&fit=crop&crop=face',
       rating: 5,
-      content: 'TravelPro helped us expand internationally. We now have agents in 15 countries selling our packages. The commission tracking and payment system is seamless. This platform is worth every penny.',
+      content: 'TravelSelBuy helped us expand internationally. We now have agents in 15 countries selling our packages. The commission tracking and payment system is seamless. This platform is worth every penny.',
       results: 'Expanded to 15 countries',
       location: 'Cape Town, South Africa',
       verified: true
@@ -116,7 +117,7 @@ export function Testimonials() {
             </span>
           </h2>
           <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-            Real stories from travel professionals who have transformed their business with TravelPro
+            Real stories from travel professionals who have transformed their business with TravelSelBuy
           </p>
         </motion.div>
 
@@ -318,15 +319,17 @@ export function Testimonials() {
               Ready to Write Your Success Story?
             </h3>
             <p className="text-slate-600 mb-6 max-w-2xl mx-auto">
-              Join thousands of travel professionals who have transformed their business with TravelPro. Start your free trial today.
+              Join thousands of travel professionals who have transformed their business with TravelSelBuy. Start your free trial today.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button
-                size="lg"
-                className="px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
-              >
-                Start Free Trial
-              </Button>
+              <Link href="/register">
+                <Button
+                  size="lg"
+                  className="px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
+                >
+                  Start Free Trial
+                </Button>
+              </Link>
               <Button
                 variant="outline"
                 size="lg"

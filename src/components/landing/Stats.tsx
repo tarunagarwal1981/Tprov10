@@ -13,6 +13,7 @@ import {
   FiCheckCircle 
 } from 'react-icons/fi';
 import { StatCard, StatCardGrid } from '@/components/ui/stat-card';
+import Link from 'next/link';
 
 // Animated Counter Component
 function AnimatedCounter({ 
@@ -263,16 +264,18 @@ export function Stats() {
               Ready to Join Our Growing Community?
             </h3>
             <p className="text-slate-600 mb-6 max-w-2xl mx-auto">
-              Start your free trial today and see why thousands of travel professionals trust TravelPro to grow their business.
+              Start your free trial today and see why thousands of travel professionals trust TravelSelBuy to grow their business.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-300"
-              >
-                Start Free Trial
-              </motion.button>
+              <Link href="/register">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-300"
+                >
+                  Start Free Trial
+                </motion.button>
+              </Link>
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}

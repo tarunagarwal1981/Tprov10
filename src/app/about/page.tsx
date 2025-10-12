@@ -8,9 +8,9 @@ import BackToTop from '@/components/shared/BackToTop';
 import { FiTarget as Target, FiEye as Eye, FiHeart as Heart, FiUsers as Users, FiZap as Zap, FiShield as Shield, FiAward as Award, FiTrendingUp as TrendingUp } from 'react-icons/fi';
 
 export const metadata: Metadata = {
-  title: 'About Us - TravelSelbuy | Digitizing Global Travel Trade',
-  description: 'Learn about TravelSelbuy\'s mission to connect travel professionals worldwide through innovative B2B travel technology.',
-  keywords: 'about TravelSelbuy, travel B2B platform, travel technology, mission, vision',
+  title: 'About Us - TravelSelBuy | Digitizing Global Travel Trade',
+  description: 'Learn about TravelSelBuy\'s mission to connect travel professionals worldwide through innovative B2B travel technology.',
+  keywords: 'about TravelSelBuy, travel B2B platform, travel technology, mission, vision',
 };
 
 /**
@@ -47,7 +47,7 @@ export default function AboutPage() {
   ];
 
   const milestones = [
-    { year: '2023', title: 'Founded', description: 'TravelSelbuy was born from a vision to connect travel professionals' },
+    { year: '2024', title: 'Founded', description: 'TravelSelBuy was born from a vision to connect travel professionals' },
     { year: '2024', title: 'Launch', description: 'Platform launched with 100+ tour operators and 1,000+ agents' },
     { year: '2024', title: 'Growth', description: 'Expanded to 500+ operators and 10,000+ agents globally' },
     { year: '2025', title: 'Future', description: 'Continuing to innovate and scale worldwide' },
@@ -66,8 +66,11 @@ export default function AboutPage() {
             <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
               Digitizing the Future of <span className="bg-gradient-to-r from-orange-500 to-yellow-500 bg-clip-text text-transparent">Global Travel Trade</span>
             </h1>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              TravelSelbuy is revolutionizing how travel professionals connect, collaborate, and grow their businesses worldwide.
+            <p 
+              className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed tracking-tight"
+              style={{ fontFamily: 'var(--font-space-grotesk), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}
+            >
+              TravelSelBuy is the AI-powered B2B Travel Operating System transforming how travel businesses operate. We connect small travel agents and tour operators globally, automating up to 75% of manual tasks to save time, reduce errors, and boost productivity. Our platform empowers travel entrepreneurs to expand profitably, streamline operations, and deliver exceptional service—all through one seamless, AI-driven ecosystem redefining B2B travel commerce.
             </p>
           </div>
         </section>
@@ -165,7 +168,7 @@ export default function AboutPage() {
             <p className="text-xl text-gray-600 mb-8">Coming Soon</p>
             <div className="bg-white/50 backdrop-blur-sm rounded-2xl p-16 border-2 border-dashed border-gray-300">
               <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500 text-lg">We&apos;re building an amazing team. Check back soon to meet the people behind TravelSelbuy!</p>
+              <p className="text-gray-500 text-lg">We&apos;re building an amazing team. Check back soon to meet the people behind TravelSelBuy!</p>
             </div>
           </div>
         </section>

@@ -356,7 +356,7 @@ const RegisterPageWithSearchParams: React.FC = () => {
         
         // Show success message
         const { toast } = await import('sonner');
-        toast.success('Account created successfully! Welcome to TravelPro.');
+        toast.success('Account created successfully! Welcome to TravelSelBuy.');
         
         // Redirect to the appropriate dashboard based on role
         router.push(redirectUrl);

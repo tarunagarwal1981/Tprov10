@@ -21,9 +21,12 @@ import styles from './MarketingHeader.module.css';
  * - Cross-browser compatibility
  */
 
-const navItems = [
+const navItemsBefore = [
   { label: 'Home', href: '/' },
-  { label: 'Benefits', href: '/benefits' },
+  { label: 'Advantages', href: '/benefits' },
+];
+
+const navItemsAfter = [
   { label: 'About', href: '/about' },
   { label: 'Contact', href: '/contact' },
 ];
@@ -129,7 +132,7 @@ export default function MarketingHeader() {
 
           {/* Navigation Menu - Desktop */}
           <nav className={styles.nav}>
-            {navItems.map((item) => (
+            {navItemsBefore.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
@@ -194,6 +197,18 @@ export default function MarketingHeader() {
                 )}
               </AnimatePresence>
             </div>
+
+            {navItemsAfter.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`${styles.navItem} ${
+                  pathname === item.href ? styles.active : ''
+                }`}
+              >
+                {item.label}
+              </Link>
+            ))}
           </nav>
 
           {/* CTA Buttons - Desktop */}
@@ -282,7 +297,7 @@ export default function MarketingHeader() {
                 }
               }}
             >
-              {navItems.map((item) => (
+              {navItemsBefore.map((item) => (
                 <motion.div
                   key={item.href}
                   variants={{
@@ -357,6 +372,38 @@ export default function MarketingHeader() {
                   );
                 })}
               </motion.div>
+
+              {navItemsAfter.map((item) => (
+                <motion.div
+                  key={item.href}
+                  variants={{
+                    open: {
+                      y: 0,
+                      opacity: 1,
+                      transition: {
+                        y: { stiffness: 1000, velocity: -100 }
+                      }
+                    },
+                    closed: {
+                      y: 50,
+                      opacity: 0,
+                      transition: {
+                        y: { stiffness: 1000 }
+                      }
+                    }
+                  }}
+                >
+                  <Link
+                    href={item.href}
+                    className={`${styles.mobileNavItem} ${
+                      pathname === item.href ? styles.active : ''
+                    }`}
+                    onClick={closeMobileMenu}
+                  >
+                    {item.label}
+                  </Link>
+                </motion.div>
+              ))}
 
               <motion.div
                 className={styles.mobileCtaButtons}

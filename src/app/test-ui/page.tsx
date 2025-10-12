@@ -619,7 +619,7 @@ export default function UITestPage() {
             </CardHeader>
             <CardContent>
               <footer className="rounded-lg border border-gray-200 bg-white p-4 text-xs text-gray-600">
-                <div>© {new Date().getFullYear()} TravelPro. All rights reserved.</div>
+                <div>© {new Date().getFullYear()} TravelSelBuy. All rights reserved.</div>
                 <div className="mt-1">Built for cross-browser consistency and accessibility.</div>
               </footer>
             </CardContent>

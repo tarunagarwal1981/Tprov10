@@ -56,7 +56,7 @@ export function CTA() {
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white">
             Join 10,000+ Travel Professionals
             <br />
-            Growing with TravelPro
+            Growing with TravelSelBuy
           </h2>
 
           {/* Description */}

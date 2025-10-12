@@ -8,8 +8,8 @@ import BackToTop from '@/components/shared/BackToTop';
 import { FiUsers, FiTrendingUp, FiClock, FiDollarSign, FiShield, FiCheckCircle, FiXCircle } from 'react-icons/fi';
 
 export const metadata: Metadata = {
-  title: 'Benefits - TravelSelbuy | Why Travel Businesses Choose Us',
-  description: 'Discover how TravelSelbuy simplifies operations, increases efficiency, and drives growth for travel professionals worldwide.',
+  title: 'Benefits - TravelSelBuy | Why Travel Businesses Choose Us',
+  description: 'Discover how TravelSelBuy simplifies operations, increases efficiency, and drives growth for travel professionals worldwide.',
   keywords: 'travel platform benefits, B2B travel advantages, travel business solutions',
 };
 
@@ -128,7 +128,7 @@ export default function BenefitsPage() {
         <section className="relative bg-gradient-to-br from-orange-50 via-white to-blue-50 py-20 px-4">
           <div className="max-w-4xl mx-auto text-center">
             <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
-              Why Travel Businesses <span className="bg-gradient-to-r from-orange-500 to-yellow-500 bg-clip-text text-transparent">Love TravelSelbuy</span>
+              Why Travel Businesses <span className="bg-gradient-to-r from-orange-500 to-yellow-500 bg-clip-text text-transparent">Love TravelSelBuy</span>
             </h1>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
               Join thousands of travel professionals who&apos;ve transformed their operations, increased efficiency, and accelerated growth.
@@ -192,7 +192,7 @@ export default function BenefitsPage() {
         <section className="py-20 px-4 bg-gray-50">
           <div className="max-w-5xl mx-auto">
             <div className="text-center mb-16">
-              <h2 className="text-4xl font-bold text-gray-900 mb-4">The TravelSelbuy Edge</h2>
+              <h2 className="text-4xl font-bold text-gray-900 mb-4">The TravelSelBuy Edge</h2>
               <p className="text-xl text-gray-600">See how we compare to traditional methods</p>
             </div>
 
@@ -201,7 +201,7 @@ export default function BenefitsPage() {
               <div className="grid grid-cols-3 bg-gradient-to-r from-orange-500 to-yellow-500 text-white font-bold p-6">
                 <div className="text-left">Feature</div>
                 <div className="text-center">Traditional Way</div>
-                <div className="text-center">TravelSelbuy</div>
+                <div className="text-center">TravelSelBuy</div>
               </div>
 
               {/* Table Rows */}
@@ -249,7 +249,7 @@ export default function BenefitsPage() {
             <div className="bg-gradient-to-br from-blue-600 to-cyan-500 rounded-3xl p-12 text-white text-center shadow-2xl">
               <h2 className="text-4xl font-bold mb-6">Calculate Your Savings</h2>
               <p className="text-xl mb-8 opacity-90">
-                On average, travel businesses save $2,500/month and increase revenue by $5,000/month using TravelSelbuy.
+                On average, travel businesses save $2,500/month and increase revenue by $5,000/month using TravelSelBuy.
               </p>
               <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-8 mb-8">
                 <div className="text-5xl font-bold mb-2">$7,500</div>

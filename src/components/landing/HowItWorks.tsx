@@ -10,6 +10,7 @@ import {
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import Link from 'next/link';
 
 export function HowItWorks() {
   const steps = [
@@ -123,15 +124,17 @@ export function HowItWorks() {
                 Ready to Get Started?
               </h3>
               <p className="text-slate-600">
-                Join thousands of travel professionals who are already growing their business with TravelPro
+                Join thousands of travel professionals who are already growing their business with TravelSelBuy
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button
-                  size="lg"
-                  className="px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
-                >
-                  Start Free Trial
-                </Button>
+                <Link href="/register">
+                  <Button
+                    size="lg"
+                    className="px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
+                  >
+                    Start Free Trial
+                  </Button>
+                </Link>
                 <Button
                   variant="outline"
                   size="lg"

@@ -290,7 +290,7 @@ export default function Hero() {
   const y = useTransform(scrollY, [0, 300], [0, 100]);
 
   // Split headline into words for animation
-  const headline = "Connecting the World of Travel — Simply, Digitally, and Seamlessly.";
+  const headline = "Transforming How Travel Business Connects - Globally";
   const words = headline.split(" ");
 
   const containerVariants = {

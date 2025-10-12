@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Inter } from 'next/font/google';
+import { Inter, Space_Grotesk } from 'next/font/google';
 import './globals.css';
 import { SupabaseAuthProvider } from '@/context/SupabaseAuthContext';
 import { Toaster } from 'sonner';
@@ -8,7 +8,16 @@ const inter = Inter({
   subsets: ['latin'],
   display: 'swap',
   preload: true,
-  fallback: ['system-ui', 'arial']
+  fallback: ['system-ui', 'arial'],
+  variable: '--font-inter',
+});
+
+const spaceGrotesk = Space_Grotesk({ 
+  subsets: ['latin'],
+  display: 'swap',
+  preload: true,
+  fallback: ['system-ui', 'arial'],
+  variable: '--font-space-grotesk',
 });
 
 export const metadata: Metadata = {
@@ -46,7 +55,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang='en'>
-      <body className={inter.className} suppressHydrationWarning={true}>
+      <body className={`${inter.variable} ${spaceGrotesk.variable} ${inter.className}`} suppressHydrationWarning={true}>
         <SupabaseAuthProvider>
           {children}
           <Toaster position="top-right" />

@@ -81,7 +81,8 @@ export function Footer() {
             </div>
           </div>
 
-          {/* Product Links */}
+          {/* Product, Company, and Legal Links - COMMENTED OUT - Will be connected to pages later */}
+          {/* 
           <div>
             <h3 className="text-white font-semibold mb-4">Product</h3>
             <ul className="space-y-3">
@@ -98,7 +99,6 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Company Links */}
           <div>
             <h3 className="text-white font-semibold mb-4">Company</h3>
             <ul className="space-y-3">
@@ -115,7 +115,6 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Legal Links */}
           <div>
             <h3 className="text-white font-semibold mb-4">Legal</h3>
             <ul className="space-y-3">
@@ -131,6 +130,7 @@ export function Footer() {
               ))}
             </ul>
           </div>
+          */}
         </div>
 
         <Separator className="bg-slate-800 mb-8" />

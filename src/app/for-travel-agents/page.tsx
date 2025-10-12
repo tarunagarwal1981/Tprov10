@@ -81,7 +81,7 @@ export default function ForTravelAgentsPage() {
 
   const testimonials = [
     {
-      quote: "TravelSelbuy has completely transformed how I work. I can now handle 3x more clients with less stress.",
+      quote: "TravelSelBuy has completely transformed how I work. I can now handle 3x more clients with less stress.",
       author: "Priya Sharma",
       role: "Independent Travel Agent, Mumbai",
     },
@@ -181,7 +181,7 @@ export default function ForTravelAgentsPage() {
         <section className="py-20 px-4 bg-gray-50">
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-16">
-              <h2 className="text-4xl font-bold text-gray-900 mb-4">Why Agents Choose TravelSelbuy</h2>
+              <h2 className="text-4xl font-bold text-gray-900 mb-4">Why Agents Choose TravelSelBuy</h2>
               <p className="text-xl text-gray-600">Everything you need to succeed, included</p>
             </div>
 
@@ -230,20 +230,20 @@ export default function ForTravelAgentsPage() {
         </section>
 
         {/* Final CTA */}
-        <section className="py-20 px-4 bg-gradient-to-r from-orange-500 to-yellow-500">
-          <div className="max-w-4xl mx-auto text-center text-white">
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">Ready to Transform Your Business?</h2>
-            <p className="text-xl mb-8 opacity-90">
+        <section className="py-20 px-4 bg-gradient-to-br from-orange-50 to-yellow-50">
+          <div className="max-w-4xl mx-auto text-center">
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">Ready to Transform Your Business?</h2>
+            <p className="text-xl text-gray-600 mb-8">
               Join 10,000+ travel agents who&apos;ve already made the switch
             </p>
             <a
               href="/auth/register?role=travel_agent"
-              className="inline-flex items-center gap-2 bg-white text-orange-600 font-semibold px-8 py-4 rounded-full hover:shadow-lg transition-all hover:scale-105"
+              className="inline-flex items-center gap-2 bg-gradient-to-r from-orange-500 to-yellow-500 text-white font-semibold px-8 py-4 rounded-full hover:shadow-lg transition-all hover:scale-105"
             >
               Get Started Free
               <FiArrowRight className="w-5 h-5" />
             </a>
-            <p className="mt-6 text-sm opacity-80">No credit card required • 14-day free trial • Cancel anytime</p>
+            <p className="mt-6 text-sm text-gray-500">No credit card required • 14-day free trial • Cancel anytime</p>
           </div>
         </section>
       </main>

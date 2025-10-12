@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import Link from 'next/link';
 
 export function Pricing() {
   const plans = [
@@ -214,18 +215,20 @@ export function Pricing() {
                     ))}
                   </div>
 
-                  <Button
-                    variant={plan.ctaVariant}
-                    size="lg"
-                    className={`w-full h-12 font-semibold ${
-                      plan.popular
-                        ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-lg hover:shadow-xl'
-                        : ''
-                    }`}
-                  >
-                    {plan.cta}
-                    <FiArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
+                  <Link href={plan.cta === 'Contact Sales' ? '/contact' : '/register'} className="w-full">
+                    <Button
+                      variant={plan.ctaVariant}
+                      size="lg"
+                      className={`w-full h-12 font-semibold ${
+                        plan.popular
+                          ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-lg hover:shadow-xl'
+                          : ''
+                      }`}
+                    >
+                      {plan.cta}
+                      <FiArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
+                  </Link>
 
                   {plan.limitations.length > 0 && (
                     <div className="mt-4 pt-4 border-t border-slate-200">
@@ -341,7 +344,7 @@ export function Pricing() {
               Still Not Sure Which Plan is Right for You?
             </h3>
             <p className="text-slate-600 mb-6 max-w-2xl mx-auto">
-              Our team is here to help you choose the perfect plan for your business needs. Get personalized recommendations and see TravelPro in action.
+              Our team is here to help you choose the perfect plan for your business needs. Get personalized recommendations and see TravelSelBuy in action.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button

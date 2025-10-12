@@ -88,7 +88,7 @@ export default function ForTourOperatorsPage() {
 
   const testimonials = [
     {
-      quote: "Since joining TravelSelbuy, we've seen a 40% increase in inquiries. The platform makes it incredibly easy to manage everything.",
+      quote: "Since joining TravelSelBuy, we've seen a 40% increase in inquiries. The platform makes it incredibly easy to manage everything.",
       author: "Sarah Johnson",
       company: "Tropical Adventures Co.",
       location: "Bali, Indonesia",
@@ -109,13 +109,13 @@ export default function ForTourOperatorsPage() {
       
       <main id="main-content" tabIndex={-1} className="flex-grow" role="main">
         {/* Hero Section */}
-        <section className="relative bg-gradient-to-br from-orange-50 via-white to-blue-50 py-20 px-4">
+        <section className="relative bg-gradient-to-br from-orange-50 via-white to-yellow-50 py-20 px-4">
           <div className="max-w-4xl mx-auto text-center">
-            <div className="inline-block bg-blue-100 text-blue-600 px-4 py-2 rounded-full text-sm font-semibold mb-6">
+            <div className="inline-block bg-orange-100 text-orange-600 px-4 py-2 rounded-full text-sm font-semibold mb-6">
               FOR TOUR OPERATORS
             </div>
             <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
-              Connect with Thousands of Global Agents — <span className="bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent">Instantly</span>
+              Connect with Thousands of Global Agents — <span className="bg-gradient-to-r from-orange-500 to-yellow-500 bg-clip-text text-transparent">Instantly</span>
             </h1>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8">
               List your packages once, reach travel agents worldwide. Automate inquiries, close more deals, and scale your business effortlessly.
@@ -123,13 +123,13 @@ export default function ForTourOperatorsPage() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <a
                 href="/auth/register?role=tour_operator"
-                className="inline-block bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-semibold px-8 py-4 rounded-full hover:shadow-lg transition-all"
+                className="inline-block bg-gradient-to-r from-orange-500 to-yellow-500 text-white font-semibold px-8 py-4 rounded-full hover:shadow-lg transition-all"
               >
                 List Your Packages Free
               </a>
               <button
                 onClick={() => setShowVideoModal(true)}
-                className="inline-flex items-center gap-2 bg-white text-gray-900 font-semibold px-8 py-4 rounded-full border-2 border-gray-200 hover:border-blue-500 transition-all"
+                className="inline-flex items-center gap-2 bg-white text-gray-900 font-semibold px-8 py-4 rounded-full border-2 border-gray-200 hover:border-orange-500 transition-all"
               >
                 <FiPlay className="w-5 h-5" />
                 Watch Demo
@@ -139,20 +139,21 @@ export default function ForTourOperatorsPage() {
         </section>
 
         {/* Success Metrics */}
-        <section className="py-16 px-4 bg-gradient-to-r from-blue-600 to-cyan-500">
+        <section className="py-16 px-4 bg-gray-50">
           <div className="max-w-6xl mx-auto">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center text-white">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
               {successMetrics.map((metric, index) => (
                 <motion.div
                   key={index}
+                  className="bg-white rounded-2xl p-6 shadow-lg"
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: index * 0.1 }}
                 >
-                  <div className="text-4xl md:text-5xl font-bold mb-2">{metric.value}</div>
-                  <div className="text-lg font-semibold mb-1">{metric.label}</div>
-                  <div className="text-sm opacity-80">{metric.description}</div>
+                  <div className="text-4xl md:text-5xl font-bold text-orange-600 mb-2">{metric.value}</div>
+                  <div className="text-lg font-semibold text-gray-900 mb-1">{metric.label}</div>
+                  <div className="text-sm text-gray-600">{metric.description}</div>
                 </motion.div>
               ))}
             </div>
@@ -181,13 +182,13 @@ export default function ForTourOperatorsPage() {
                     whileHover={{ y: -4 }}
                   >
                     <div className="flex items-start gap-4">
-                      <div className="w-14 h-14 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-xl flex items-center justify-center flex-shrink-0">
+                      <div className="w-14 h-14 bg-gradient-to-br from-orange-500 to-yellow-500 rounded-xl flex items-center justify-center flex-shrink-0">
                         <IconComponent className="w-7 h-7 text-white" />
                       </div>
                       <div className="flex-grow">
                         <h3 className="text-xl font-bold text-gray-900 mb-2">{tool.title}</h3>
                         <p className="text-gray-600 mb-3">{tool.description}</p>
-                        <div className="inline-block bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-sm font-semibold">
+                        <div className="inline-block bg-orange-50 text-orange-600 px-3 py-1 rounded-full text-sm font-semibold">
                           {tool.stats}
                         </div>
                       </div>
@@ -203,7 +204,7 @@ export default function ForTourOperatorsPage() {
         <section className="py-20 px-4 bg-gray-50">
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-16">
-              <h2 className="text-4xl font-bold text-gray-900 mb-4">Why Tour Operators Love TravelSelbuy</h2>
+              <h2 className="text-4xl font-bold text-gray-900 mb-4">Why Tour Operators Love TravelSelBuy</h2>
               <p className="text-xl text-gray-600">All the features you need to grow your business</p>
             </div>
 
@@ -237,11 +238,11 @@ export default function ForTourOperatorsPage() {
               {testimonials.map((testimonial, index) => (
                 <div
                   key={index}
-                  className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-8 shadow-lg"
+                  className="bg-gradient-to-br from-orange-50 to-yellow-50 rounded-2xl p-8 shadow-lg"
                 >
-                  <div className="text-4xl text-blue-600 mb-4">&ldquo;</div>
+                  <div className="text-4xl text-orange-600 mb-4">&ldquo;</div>
                   <p className="text-lg text-gray-700 mb-6 italic">{testimonial.quote}</p>
-                  <div className="border-t border-blue-200 pt-4">
+                  <div className="border-t border-orange-200 pt-4">
                     <div className="font-bold text-gray-900">{testimonial.author}</div>
                     <div className="text-sm text-gray-600">{testimonial.company}</div>
                     <div className="text-sm text-gray-500">{testimonial.location}</div>
@@ -278,33 +279,40 @@ export default function ForTourOperatorsPage() {
                   description: 'Travel agents worldwide can now discover and book your packages directly.',
                 },
               ].map((step, index) => (
-                <div key={index} className="text-center">
-                  <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-cyan-500 text-white text-2xl font-bold rounded-full flex items-center justify-center mx-auto mb-6">
+                <motion.div
+                  key={index}
+                  className="text-center"
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: index * 0.2 }}
+                >
+                  <div className="w-16 h-16 bg-gradient-to-br from-orange-100 to-yellow-100 text-orange-600 text-2xl font-bold rounded-full flex items-center justify-center mx-auto mb-6 shadow-md">
                     {step.step}
                   </div>
                   <h3 className="text-xl font-bold text-gray-900 mb-3">{step.title}</h3>
                   <p className="text-gray-600">{step.description}</p>
-                </div>
+                </motion.div>
               ))}
             </div>
           </div>
         </section>
 
         {/* Final CTA */}
-        <section className="py-20 px-4 bg-gradient-to-r from-blue-600 to-cyan-500">
-          <div className="max-w-4xl mx-auto text-center text-white">
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">Ready to Expand Your Reach?</h2>
-            <p className="text-xl mb-8 opacity-90">
-              Join 500+ tour operators already growing their business with TravelSelbuy
+        <section className="py-20 px-4 bg-gradient-to-br from-orange-50 to-yellow-50">
+          <div className="max-w-4xl mx-auto text-center">
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">Ready to Expand Your Reach?</h2>
+            <p className="text-xl text-gray-600 mb-8">
+              Join 500+ tour operators already growing their business with TravelSelBuy
             </p>
             <a
               href="/auth/register?role=tour_operator"
-              className="inline-flex items-center gap-2 bg-white text-blue-600 font-semibold px-8 py-4 rounded-full hover:shadow-lg transition-all hover:scale-105"
+              className="inline-flex items-center gap-2 bg-gradient-to-r from-orange-500 to-yellow-500 text-white font-semibold px-8 py-4 rounded-full hover:shadow-lg transition-all hover:scale-105"
             >
               List Your First Package Free
               <FiArrowRight className="w-5 h-5" />
             </a>
-            <p className="mt-6 text-sm opacity-80">No listing fees • Only pay on successful bookings • Cancel anytime</p>
+            <p className="mt-6 text-sm text-gray-500">No listing fees • Only pay on successful bookings • Cancel anytime</p>
           </div>
         </section>
       </main>

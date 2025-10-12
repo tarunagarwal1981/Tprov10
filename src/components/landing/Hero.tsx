@@ -108,7 +108,7 @@ export function Hero() {
               transition={{ duration: 0.8, delay: 0.6 }}
               className="text-lg sm:text-xl text-slate-600 leading-relaxed max-w-2xl mx-auto lg:mx-0"
             >
-              Empower your travel business with AI-driven lead generation, seamless package management, and a global network of partners. Join 10,000+ travel professionals growing with TravelPro.
+              Empower your travel business with AI-driven lead generation, seamless package management, and a global network of partners. Join 10,000+ travel professionals growing with TravelSelBuy.
             </motion.p>
 
             {/* CTA Buttons */}

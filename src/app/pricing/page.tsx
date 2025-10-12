@@ -2,6 +2,7 @@ import React from 'react';
 import MarketingHeader from '@/components/marketing/MarketingHeader';
 import MarketingFooter from '@/components/marketing/MarketingFooter';
 import { FaCheck } from 'react-icons/fa';
+import Link from 'next/link';
 
 /**
  * Pricing Page
@@ -123,15 +124,17 @@ export default function PricingPage() {
                       {plan.description}
                     </p>
                   </div>
-                  <button
-                    className={`w-full py-3 px-6 rounded-lg font-semibold mb-6 transition-colors ${
-                      plan.popular
-                        ? 'bg-white text-orange-600 hover:bg-gray-100'
-                        : 'bg-orange-600 text-white hover:bg-orange-700'
-                    }`}
-                  >
-                    {plan.cta}
-                  </button>
+                  <Link href={plan.cta === 'Contact Sales' ? '/contact' : '/register'}>
+                    <button
+                      className={`w-full py-3 px-6 rounded-lg font-semibold mb-6 transition-colors ${
+                        plan.popular
+                          ? 'bg-white text-orange-600 hover:bg-gray-100'
+                          : 'bg-orange-600 text-white hover:bg-orange-700'
+                      }`}
+                    >
+                      {plan.cta}
+                    </button>
+                  </Link>
                   <ul className="space-y-3">
                     {plan.features.map((feature, featureIndex) => (
                       <li key={featureIndex} className="flex items-start">

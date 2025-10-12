@@ -218,10 +218,11 @@ export default function MarketingFooter() {
           </AnimatePresence>
         </motion.div>
 
-        {/* Columns Section */}
+        {/* Columns Section - COMMENTED OUT - Will be connected to pages later */}
+        {/* 
         <div className={styles.columnsSection}>
           {/* Company Column */}
-          <motion.div
+          {/* <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -244,10 +245,10 @@ export default function MarketingFooter() {
                 </motion.div>
               ))}
             </div>
-          </motion.div>
+          </motion.div> */}
 
           {/* Products Column */}
-          <motion.div
+          {/* <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -270,10 +271,10 @@ export default function MarketingFooter() {
                 </motion.div>
               ))}
             </div>
-          </motion.div>
+          </motion.div> */}
 
           {/* Resources Column */}
-          <motion.div
+          {/* <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -296,10 +297,10 @@ export default function MarketingFooter() {
                 </motion.div>
               ))}
             </div>
-          </motion.div>
+          </motion.div> */}
 
           {/* Legal Column */}
-          <motion.div
+          {/* <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -323,8 +324,8 @@ export default function MarketingFooter() {
                 </motion.div>
               ))}
             </div>
-          </motion.div>
-        </div>
+          </motion.div> */}
+        {/* </div> */}
 
         {/* Social Media Section */}
         <motion.div

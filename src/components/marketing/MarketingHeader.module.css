@@ -75,6 +75,9 @@
   border-radius: 0.5rem;
   transition: all 0.2s ease;
   position: relative;
+  display: inline-flex;
+  align-items: center;
+  line-height: 1.5;
 }
 
 .navItem:hover {
@@ -90,21 +93,38 @@
 /* Solutions Dropdown */
 .solutionsDropdown {
   position: relative;
+  display: inline-flex;
+  align-items: center;
 }
 
 .solutionsButton {
-  display: flex;
+  /* Reset all button browser defaults */
+  all: unset;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  
+  /* Restore only what we need */
+  cursor: pointer;
+  display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-  cursor: pointer;
-  background: none;
-  border: none;
+  box-sizing: border-box;
+  
+  /* Match navItem font properties exactly */
   font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.5;
+  color: #374151;
 }
 
 .chevron {
   transition: transform 0.3s ease;
-  font-size: 0.875rem;
+  font-size: 0.75rem;
+  width: 0.75rem;
+  height: 0.75rem;
+  flex-shrink: 0;
 }
 
 .chevron.rotated {

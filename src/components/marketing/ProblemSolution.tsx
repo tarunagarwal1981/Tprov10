@@ -302,7 +302,7 @@ export default function ProblemSolution() {
               }}
               transition={{ duration: 0.5 }}
             >
-              {showTransformation ? 'Transformed to Solutions' : 'Challenges Travel Agents Face'}
+              {showTransformation ? 'Transformed to Solutions' : 'The Traditional Way'}
             </motion.h2>
             <div className={styles.itemsList}>
               {problems.map((problem, index) => (
@@ -325,7 +325,7 @@ export default function ProblemSolution() {
             transition={{ duration: 0.6, delay: 0.4 }}
           >
             <h2 className={`${styles.columnTitle} ${styles.solutionsTitle}`}>
-              How TravelSelBuy Solves This
+              The TravelSelBuy Way
             </h2>
             <div className={styles.itemsList}>
               {solutions.map((solution, index) => (
