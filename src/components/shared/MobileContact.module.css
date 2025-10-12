@@ -1,0 +1,153 @@
+/* Mobile Contact Styles */
+
+/* Call Link */
+.callLink {
+  color: #004E89;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.callLink:hover,
+.callLink:active {
+  background-color: rgba(0, 78, 137, 0.1);
+  transform: translateY(-1px);
+}
+
+/* Email Link */
+.emailLink {
+  color: #FF6B35;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.emailLink:hover,
+.emailLink:active {
+  background-color: rgba(255, 107, 53, 0.1);
+  transform: translateY(-1px);
+}
+
+/* Icon */
+.icon {
+  font-size: 1.125rem;
+  flex-shrink: 0;
+}
+
+/* Contact Card */
+.contactCard {
+  background: white;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  text-align: center;
+}
+
+.title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1F2937;
+  margin-bottom: 0.5rem;
+}
+
+.description {
+  font-size: 0.9375rem;
+  color: #6B7280;
+  margin-bottom: 1.5rem;
+}
+
+.contactLinks {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.contactButton {
+  width: 100%;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.callLink.contactButton {
+  background: linear-gradient(135deg, #004E89 0%, #0066B3 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(0, 78, 137, 0.3);
+}
+
+.callLink.contactButton:hover,
+.callLink.contactButton:active {
+  background: linear-gradient(135deg, #003A6B 0%, #004E89 100%);
+  box-shadow: 0 4px 12px rgba(0, 78, 137, 0.4);
+}
+
+.emailLink.contactButton {
+  background: linear-gradient(135deg, #FF6B35 0%, #FF4B8C 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.3);
+}
+
+.emailLink.contactButton:hover,
+.emailLink.contactButton:active {
+  background: linear-gradient(135deg, #FF5520 0%, #FF3377 100%);
+  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.4);
+}
+
+/* Mobile optimizations */
+@media (max-width: 767px) {
+  .contactButton {
+    /* Larger tap targets on mobile */
+    min-height: 52px;
+    font-size: 1.0625rem;
+  }
+  
+  .contactCard {
+    padding: 1.25rem;
+  }
+}
+
+/* Focus states */
+.callLink:focus-visible,
+.emailLink:focus-visible {
+  outline: 3px solid #FF6B35;
+  outline-offset: 2px;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .callLink,
+  .emailLink,
+  .contactButton {
+    transition: none;
+  }
+  
+  .callLink:hover,
+  .emailLink:hover,
+  .callLink:active,
+  .emailLink:active {
+    transform: none;
+  }
+}
+

@@ -1,0 +1,552 @@
+/* CTA Section Styles */
+
+.section {
+  position: relative;
+  min-height: 600px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 8rem 2rem;
+}
+
+/* Animated Gradient Background */
+.gradientBackground {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, 
+    #FF6B35 0%, 
+    #FFB800 25%, 
+    #004E89 50%, 
+    #00B4D8 75%, 
+    #FF6B35 100%
+  );
+  background-size: 400% 400%;
+  animation: gradientShift 15s ease infinite;
+  z-index: 0;
+}
+
+@keyframes gradientShift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+/* Particles Container */
+.particlesContainer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.particle {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+/* Shimmer Effect */
+.shimmer {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.3) 50%,
+    transparent 100%
+  );
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* Container */
+.container {
+  max-width: 1000px;
+  margin: 0 auto;
+  text-align: center;
+  position: relative;
+  z-index: 2;
+}
+
+/* Headline with Gradient Text */
+.headline {
+  font-size: 3.5rem;
+  font-weight: 800;
+  margin-bottom: 1.5rem;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.word {
+  display: inline-block;
+  margin-right: 0.3rem;
+  background: linear-gradient(135deg, #FFFFFF 0%, #FFE5D9 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Subheadline */
+.subheadline {
+  font-size: 1.375rem;
+  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.95);
+  max-width: 700px;
+  margin: 0 auto 3rem;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+/* Buttons Container */
+.buttonsContainer {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  margin-bottom: 4rem;
+  flex-wrap: wrap;
+}
+
+/* CTA Buttons */
+.ctaButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.125rem 2.5rem;
+  border-radius: 50px;
+  font-size: 1.125rem;
+  font-weight: 600;
+  text-decoration: none;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  min-width: 200px;
+}
+
+.buttonContent {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  position: relative;
+  z-index: 2;
+}
+
+.buttonIcon {
+  width: 20px;
+  height: 20px;
+  transition: transform 0.3s ease;
+}
+
+.ctaButton:hover .buttonIcon {
+  transform: translateX(5px);
+}
+
+/* Primary Button (Start Free) */
+.primaryButton {
+  background: white;
+  color: #FF6B35;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+}
+
+.primaryButton:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+/* Secondary Button (Talk to Team) */
+.secondaryButton {
+  background: transparent;
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+}
+
+.secondaryButton:hover {
+  background: white;
+  color: #004E89;
+  border-color: white;
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+/* Ripple Effect */
+.ripple {
+  position: absolute;
+  border-radius: 50%;
+  width: 100px;
+  height: 100px;
+  margin-left: -50px;
+  margin-top: -50px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.primaryButton .ripple {
+  background: rgba(255, 107, 53, 0.4);
+}
+
+.secondaryButton .ripple {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+/* Sparkle Effect */
+.sparkle {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.sparkleIcon {
+  width: 20px;
+  height: 20px;
+  color: #FFB800;
+  filter: drop-shadow(0 0 4px rgba(255, 184, 0, 0.8));
+}
+
+/* Trust Badges */
+.trustBadges {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 3rem;
+  flex-wrap: wrap;
+}
+
+.trustBadge {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(20px);
+  padding: 1rem 1.75rem;
+  border-radius: 50px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.trustBadge:hover {
+  transform: translateY(-3px);
+  background: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 6px 25px rgba(0, 0, 0, 0.15);
+}
+
+.badgeIcon {
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.badgeIconSvg {
+  width: 20px;
+  height: 20px;
+  color: white;
+  stroke-width: 2.5;
+}
+
+.badgeContent {
+  text-align: left;
+}
+
+.badgeValue {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: white;
+  line-height: 1;
+  margin-bottom: 0.25rem;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.badgeLabel {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 500;
+  text-shadow: 0 1px 5px rgba(0, 0, 0, 0.2);
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .section {
+    padding: 6rem 1.5rem;
+  }
+
+  .headline {
+    font-size: 3rem;
+  }
+
+  .subheadline {
+    font-size: 1.25rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .buttonsContainer {
+    gap: 1.25rem;
+    margin-bottom: 3rem;
+  }
+
+  .ctaButton {
+    padding: 1rem 2rem;
+    font-size: 1rem;
+    min-width: 180px;
+  }
+
+  .trustBadges {
+    gap: 2rem;
+  }
+
+  .trustBadge {
+    padding: 0.875rem 1.5rem;
+  }
+
+  .badgeValue {
+    font-size: 1.5rem;
+  }
+
+  .badgeLabel {
+    font-size: 0.8125rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .section {
+    min-height: 500px;
+    padding: 5rem 1rem;
+  }
+
+  .headline {
+    font-size: 2.5rem;
+  }
+
+  .word {
+    margin-right: 0.25rem;
+  }
+
+  .subheadline {
+    font-size: 1.125rem;
+    margin-bottom: 2rem;
+  }
+
+  .buttonsContainer {
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .ctaButton {
+    width: 100%;
+    max-width: 300px;
+    padding: 1rem 2rem;
+  }
+
+  .trustBadges {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .trustBadge {
+    width: 100%;
+    max-width: 300px;
+    justify-content: center;
+  }
+
+  .badgeIcon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .badgeIconSvg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .badgeValue {
+    font-size: 1.375rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .section {
+    min-height: 450px;
+    padding: 4rem 1rem;
+  }
+
+  .headline {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+  }
+
+  .subheadline {
+    font-size: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .buttonsContainer {
+    margin-bottom: 2rem;
+  }
+
+  .ctaButton {
+    padding: 0.875rem 1.75rem;
+    font-size: 0.9375rem;
+  }
+
+  .buttonIcon {
+    width: 18px;
+    height: 18px;
+  }
+
+  .sparkleIcon {
+    width: 16px;
+    height: 16px;
+  }
+
+  .trustBadge {
+    padding: 0.75rem 1.25rem;
+  }
+
+  .badgeIcon {
+    width: 32px;
+    height: 32px;
+  }
+
+  .badgeIconSvg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .badgeValue {
+    font-size: 1.25rem;
+  }
+
+  .badgeLabel {
+    font-size: 0.75rem;
+  }
+
+  .particlesContainer {
+    display: none;
+  }
+}
+
+/* Focus states for accessibility */
+.ctaButton:focus-visible {
+  outline: 3px solid white;
+  outline-offset: 3px;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .gradientBackground {
+    animation: none;
+  }
+
+  .particle,
+  .shimmer,
+  .sparkle {
+    animation: none;
+    display: none;
+  }
+
+  .ctaButton,
+  .trustBadge {
+    transition: none;
+  }
+
+  .ctaButton:hover,
+  .trustBadge:hover {
+    transform: none;
+  }
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+  .gradientBackground {
+    background: #004E89;
+  }
+
+  .word {
+    color: white;
+    -webkit-text-fill-color: white;
+  }
+
+  .subheadline {
+    color: white;
+  }
+
+  .primaryButton {
+    border: 3px solid white;
+  }
+
+  .secondaryButton {
+    border: 3px solid white;
+  }
+
+  .trustBadge {
+    border: 2px solid white;
+    background: rgba(0, 0, 0, 0.3);
+  }
+}
+
+/* Print styles */
+@media print {
+  .section {
+    background: white;
+    padding: 2rem 0;
+    min-height: auto;
+  }
+
+  .gradientBackground,
+  .particlesContainer,
+  .shimmer,
+  .sparkle {
+    display: none;
+  }
+
+  .headline {
+    color: #1F2937;
+  }
+
+  .word {
+    color: #1F2937;
+    -webkit-text-fill-color: #1F2937;
+  }
+
+  .subheadline {
+    color: #6B7280;
+  }
+
+  .buttonsContainer {
+    display: none;
+  }
+
+  .trustBadge {
+    background: #F9FAFB;
+    border: 1px solid #E5E7EB;
+  }
+
+  .badgeValue,
+  .badgeLabel {
+    color: #1F2937;
+  }
+}
+

@@ -1,0 +1,416 @@
+/**
+ * Mobile-Specific Styles
+ * 
+ * Optimizations for touch devices and mobile viewports
+ */
+
+/* ========================================
+   TOUCH INTERACTIONS
+   ======================================== */
+
+/* Minimum touch target size (44x44px per Apple HIG) */
+.touch-target {
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Touch feedback - scale down on tap */
+.touch-feedback {
+  transition: transform 0.1s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.touch-feedback:active {
+  transform: scale(0.95);
+}
+
+/* Disable double-tap zoom */
+.no-zoom {
+  touch-action: manipulation;
+}
+
+/* ========================================
+   MOBILE TYPOGRAPHY
+   ======================================== */
+
+@media (max-width: 767px) {
+  /* Base font size - minimum 16px to prevent zoom on input focus */
+  html {
+    font-size: 16px;
+  }
+  
+  /* Body text */
+  body {
+    font-size: 1rem;
+    line-height: 1.6;
+  }
+  
+  /* Headings - larger for mobile readability */
+  h1 {
+    font-size: 2rem;
+    line-height: 1.2;
+    margin-bottom: 1rem;
+  }
+  
+  h2 {
+    font-size: 1.5rem;
+    line-height: 1.3;
+    margin-bottom: 0.875rem;
+  }
+  
+  h3 {
+    font-size: 1.25rem;
+    line-height: 1.4;
+    margin-bottom: 0.75rem;
+  }
+  
+  /* Paragraph spacing */
+  p {
+    margin-bottom: 1rem;
+    max-width: 75ch; /* Optimal line length */
+  }
+}
+
+/* ========================================
+   MOBILE FORMS
+   ======================================== */
+
+@media (max-width: 767px) {
+  /* Large, easy-to-tap inputs */
+  input,
+  textarea,
+  select {
+    font-size: 16px !important; /* Prevent zoom on iOS */
+    min-height: 44px;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+  }
+  
+  /* Full-width buttons for better tap targets */
+  button:not(.inline-button) {
+    width: 100%;
+    min-height: 48px;
+    font-size: 1rem;
+  }
+  
+  /* Form labels */
+  label {
+    font-size: 0.9375rem;
+    margin-bottom: 0.5rem;
+    display: block;
+  }
+}
+
+/* ========================================
+   MOBILE LAYOUT
+   ======================================== */
+
+@media (max-width: 767px) {
+  /* Reduce padding on mobile */
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  /* Stack columns vertically */
+  .grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  /* Full-width cards */
+  .card {
+    width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+  }
+  
+  /* Reduce section spacing */
+  section {
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+  }
+}
+
+/* ========================================
+   MOBILE NAVIGATION
+   ======================================== */
+
+@media (max-width: 767px) {
+  /* Large tap targets for nav items */
+  nav a,
+  nav button {
+    min-height: 48px;
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+  }
+  
+  /* Full-screen mobile menu */
+  .mobile-menu {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    background: white;
+    z-index: 1000;
+  }
+}
+
+/* ========================================
+   MOBILE PERFORMANCE
+   ======================================== */
+
+/* Optimize animations on mobile */
+@media (max-width: 767px) {
+  /* Reduce animation complexity */
+  * {
+    animation-duration: 0.2s !important;
+  }
+  
+  /* Disable parallax on mobile */
+  .parallax {
+    transform: none !important;
+  }
+  
+  /* Simplify gradients */
+  .complex-gradient {
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+  }
+}
+
+/* Hardware acceleration for smooth scrolling */
+@media (max-width: 767px) {
+  body {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: none;
+  }
+  
+  * {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* ========================================
+   MOBILE-SPECIFIC FEATURES
+   ======================================== */
+
+/* Click-to-call styling */
+.call-link {
+  color: #004E89;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  transition: background-color 0.2s ease;
+}
+
+.call-link:hover,
+.call-link:active {
+  background-color: rgba(0, 78, 137, 0.1);
+}
+
+/* Tap-to-email styling */
+.email-link {
+  color: #FF6B35;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  transition: background-color 0.2s ease;
+}
+
+.email-link:hover,
+.email-link:active {
+  background-color: rgba(255, 107, 53, 0.1);
+}
+
+/* ========================================
+   SAFE AREA INSETS (iPhone X, etc.)
+   ======================================== */
+
+@supports (padding: max(0px)) {
+  body {
+    padding-left: max(0px, env(safe-area-inset-left));
+    padding-right: max(0px, env(safe-area-inset-right));
+  }
+  
+  .safe-top {
+    padding-top: max(0px, env(safe-area-inset-top));
+  }
+  
+  .safe-bottom {
+    padding-bottom: max(0px, env(safe-area-inset-bottom));
+  }
+}
+
+/* ========================================
+   MOBILE MEDIA QUERIES
+   ======================================== */
+
+/* Small phones (< 375px) */
+@media (max-width: 374px) {
+  html {
+    font-size: 14px;
+  }
+  
+  h1 {
+    font-size: 1.75rem;
+  }
+  
+  .container {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+}
+
+/* Landscape orientation */
+@media (max-width: 767px) and (orientation: landscape) {
+  /* Reduce vertical spacing in landscape */
+  section {
+    padding-top: 1.5rem;
+    padding-bottom: 1.5rem;
+  }
+  
+  /* Smaller headings in landscape */
+  h1 {
+    font-size: 1.75rem;
+  }
+  
+  h2 {
+    font-size: 1.375rem;
+  }
+}
+
+/* Tablets (768px - 1023px) */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .container {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+  
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+  }
+}
+
+/* ========================================
+   TOUCH-SPECIFIC STYLES
+   ======================================== */
+
+/* Only apply hover effects on non-touch devices */
+@media (hover: hover) and (pointer: fine) {
+  .hover-only:hover {
+    /* Hover styles here */
+  }
+}
+
+/* Touch-specific styles */
+@media (hover: none) and (pointer: coarse) {
+  /* Remove hover effects on touch devices */
+  * {
+    transition-duration: 0.1s;
+  }
+  
+  /* Larger tap targets */
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    min-height: 44px;
+  }
+  
+  /* No hover effects, only active */
+  .interactive:hover {
+    transform: none;
+  }
+  
+  .interactive:active {
+    transform: scale(0.95);
+  }
+}
+
+/* ========================================
+   MOBILE SCROLLING OPTIMIZATION
+   ======================================== */
+
+/* Smooth momentum scrolling on iOS */
+.scroll-container {
+  -webkit-overflow-scrolling: touch;
+  overflow-y: auto;
+}
+
+/* Snap scrolling for carousels */
+.snap-scroll {
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+
+.snap-scroll > * {
+  scroll-snap-align: start;
+}
+
+/* ========================================
+   REDUCED DATA MODE
+   ======================================== */
+
+/* Simplified styles for slow connections */
+@media (prefers-reduced-data: reduce) {
+  /* Remove background images */
+  * {
+    background-image: none !important;
+  }
+  
+  /* Disable animations */
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+  
+  /* Simplify shadows */
+  * {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+}
+
+/* ========================================
+   PRINT STYLES
+   ======================================== */
+
+@media print {
+  /* Hide navigation and non-essential elements */
+  nav,
+  .no-print {
+    display: none !important;
+  }
+  
+  /* Optimize for print */
+  body {
+    font-size: 12pt;
+    line-height: 1.5;
+    color: #000;
+    background: #fff;
+  }
+  
+  /* Page breaks */
+  h1, h2, h3 {
+    page-break-after: avoid;
+  }
+  
+  /* Links */
+  a[href]:after {
+    content: " (" attr(href) ")";
+  }
+}
+

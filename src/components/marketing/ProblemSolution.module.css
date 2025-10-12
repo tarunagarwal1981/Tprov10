@@ -10,6 +10,52 @@
   margin: 0 auto;
 }
 
+/* Toggle Button */
+.toggleContainer {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 3rem;
+}
+
+.toggleButton {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1.75rem;
+  background: linear-gradient(135deg, #FF6B35 0%, #FFB800 100%);
+  color: white;
+  border: none;
+  border-radius: 50px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
+  transition: all 0.3s ease;
+}
+
+.toggleButton:hover {
+  box-shadow: 0 6px 20px rgba(255, 107, 53, 0.4);
+  filter: brightness(1.05);
+}
+
+.toggleActive {
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+}
+
+.toggleActive:hover {
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+}
+
+.toggleIcon {
+  font-size: 1.25rem;
+  transition: transform 0.3s ease;
+}
+
+.toggleActive .toggleIcon {
+  transform: rotate(180deg);
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -65,19 +111,46 @@
   border-radius: 12px;
   transition: all 0.3s ease;
   background: transparent;
+  position: relative;
+  overflow: visible;
+  border: 1px solid transparent;
 }
 
 .card:hover {
   background: rgba(0, 0, 0, 0.02);
-  transform: translateX(4px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
 }
 
 .problemCard:hover {
   background: rgba(220, 38, 38, 0.05);
+  border-color: rgba(220, 38, 38, 0.2);
 }
 
 .solutionCard:hover {
   background: rgba(16, 185, 129, 0.05);
+  border-color: rgba(16, 185, 129, 0.2);
+}
+
+/* Card Glow Effect */
+.cardGlow {
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border-radius: 12px;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.problemCard .cardGlow {
+  background: linear-gradient(135deg, rgba(220, 38, 38, 0.3), rgba(251, 146, 60, 0.3));
+  box-shadow: 0 0 30px rgba(220, 38, 38, 0.4);
+}
+
+.solutionCard .cardGlow {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.3), rgba(59, 130, 246, 0.3));
+  box-shadow: 0 0 30px rgba(16, 185, 129, 0.4);
 }
 
 /* Icon Container */
@@ -139,6 +212,76 @@
   font-size: 1rem;
   line-height: 1.6;
   color: #6B7280;
+  margin-bottom: 1rem;
+}
+
+/* Stat Counter */
+.statCounter {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-top: auto;
+  padding-top: 0.75rem;
+  border-top: 2px solid rgba(0, 0, 0, 0.05);
+}
+
+.statValue {
+  font-size: 1.75rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #FF6B35 0%, #FFB800 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1;
+}
+
+.problemCard .statValue {
+  background: linear-gradient(135deg, #DC2626 0%, #F97316 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.solutionCard .statValue {
+  background: linear-gradient(135deg, #10B981 0%, #3B82F6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.statLabel {
+  font-size: 0.875rem;
+  color: #6B7280;
+  font-weight: 500;
+}
+
+/* Transformation Arrow */
+.transformArrow {
+  position: absolute;
+  top: 50%;
+  right: 1rem;
+  transform: translateY(-50%);
+  color: #10B981;
+  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  background: rgba(16, 185, 129, 0.1);
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: translateY(-50%) scale(1.1);
+  }
 }
 
 /* Responsive Design */
@@ -163,6 +306,25 @@
   .cardDescription {
     font-size: 0.9375rem;
   }
+  
+  .statValue {
+    font-size: 1.5rem;
+  }
+  
+  .statLabel {
+    font-size: 0.8125rem;
+  }
+  
+  .toggleButton {
+    font-size: 0.9375rem;
+    padding: 0.75rem 1.5rem;
+  }
+  
+  .transformArrow {
+    width: 2rem;
+    height: 2rem;
+    font-size: 1.25rem;
+  }
 }
 
 @media (max-width: 768px) {
@@ -178,6 +340,15 @@
   /* Hide divider on mobile */
   .grid::before {
     display: none;
+  }
+  
+  .toggleContainer {
+    margin-bottom: 2rem;
+  }
+  
+  .toggleButton {
+    font-size: 0.875rem;
+    padding: 0.75rem 1.25rem;
   }
   
   .columnTitle {
@@ -206,6 +377,21 @@
     font-size: 0.875rem;
   }
   
+  .statValue {
+    font-size: 1.25rem;
+  }
+  
+  .statLabel {
+    font-size: 0.75rem;
+  }
+  
+  .transformArrow {
+    width: 1.75rem;
+    height: 1.75rem;
+    font-size: 1rem;
+    right: 0.75rem;
+  }
+  
   .itemsList {
     gap: 1.5rem;
   }
@@ -214,6 +400,19 @@
 @media (max-width: 480px) {
   .section {
     padding: 3rem 1rem;
+  }
+  
+  .toggleContainer {
+    margin-bottom: 1.5rem;
+  }
+  
+  .toggleButton {
+    font-size: 0.8125rem;
+    padding: 0.625rem 1rem;
+  }
+  
+  .toggleIcon {
+    font-size: 1rem;
   }
   
   .columnTitle {
@@ -225,6 +424,7 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 1rem;
+    padding-bottom: 1.5rem;
   }
   
   .card:hover {
@@ -247,6 +447,31 @@
   .cardDescription {
     font-size: 0.8125rem;
   }
+  
+  .statCounter {
+    padding-top: 0.5rem;
+  }
+  
+  .statValue {
+    font-size: 1.125rem;
+  }
+  
+  .statLabel {
+    font-size: 0.6875rem;
+  }
+  
+  .transformArrow {
+    position: static;
+    transform: none;
+    margin-top: 0.5rem;
+    width: 1.5rem;
+    height: 1.5rem;
+    font-size: 0.875rem;
+  }
+  
+  .cardGlow {
+    display: none;
+  }
 }
 
 /* Focus states for accessibility */
@@ -256,11 +481,19 @@
   border-radius: 12px;
 }
 
+.toggleButton:focus-visible {
+  outline: 2px solid #FF6B35;
+  outline-offset: 2px;
+}
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .card,
-  .iconContainer {
+  .iconContainer,
+  .toggleButton,
+  .transformArrow {
     transition: none;
+    animation: none;
   }
   
   .card:hover {
@@ -269,6 +502,17 @@
   
   .card:hover .iconContainer {
     transform: none;
+  }
+  
+  .toggleIcon {
+    transition: none;
+  }
+  
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+      transform: translateY(-50%) scale(1);
+    }
   }
 }
 
@@ -279,7 +523,7 @@
   }
   
   .card {
-    border: 1px solid #E5E7EB;
+    border: 2px solid #000000;
   }
   
   .cardTitle {
@@ -288,5 +532,26 @@
   
   .cardDescription {
     color: #333333;
+  }
+  
+  .cardGlow {
+    display: none;
+  }
+  
+  .toggleButton {
+    border: 2px solid #000000;
+  }
+  
+  .statValue {
+    color: #000000;
+    -webkit-text-fill-color: #000000;
+  }
+  
+  .statLabel {
+    color: #333333;
+  }
+  
+  .transformArrow {
+    border: 2px solid #10B981;
   }
 }
