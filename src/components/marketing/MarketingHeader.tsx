@@ -125,7 +125,7 @@ export default function MarketingHeader() {
               whileTap={{ scale: 0.98 }}
               className={styles.logoWrapper}
             >
-              <Logo variant="dark" size="md" />
+              <Logo variant="dark" size="md" showText={false} />
               <span className={styles.logoText}>
                 <span className={styles.logoTextTravel}>Travel</span>
                 <span className={styles.logoTextSelbuy}>Selbuy</span>
@@ -263,7 +263,7 @@ export default function MarketingHeader() {
           >
             <div className={styles.mobileMenuHeader}>
               <div className={styles.mobileLogoWrapper}>
-                <Logo variant="dark" size="sm" />
+                <Logo variant="dark" size="sm" showText={false} />
                 <span className={styles.logoText}>
                   <span className={styles.logoTextTravel}>Travel</span>
                   <span className={styles.logoTextSelbuy}>Selbuy</span>
