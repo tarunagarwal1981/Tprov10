@@ -39,40 +39,47 @@ const trustBadges = [
 
 // Animated particles component
 const FloatingParticles = () => {
-  const particles = Array.from({ length: 20 }, (_, i) => ({
-    id: i,
-    size: Math.random() * 6 + 2,
-    x: Math.random() * 100,
-    y: Math.random() * 100,
-    duration: Math.random() * 10 + 10,
-    delay: Math.random() * 5,
-  }));
+  // Use deterministic values based on index to avoid hydration mismatches
+  const particles = Array.from({ length: 20 }, (_, i) => {
+    const seed = i * 0.618033988749895; // Golden ratio for better distribution
+    return {
+      id: i,
+      size: (Math.sin(seed) * 0.5 + 0.5) * 6 + 2, // Convert to 2-8 range
+      x: (Math.sin(seed * 1.3) * 0.5 + 0.5) * 100, // Convert to 0-100 range
+      y: (Math.cos(seed * 2.1) * 0.5 + 0.5) * 100, // Convert to 0-100 range
+      duration: (Math.sin(seed * 3.7) * 0.5 + 0.5) * 10 + 10, // Convert to 10-20 range
+      delay: (Math.cos(seed * 4.1) * 0.5 + 0.5) * 5, // Convert to 0-5 range
+    };
+  });
 
   return (
     <div className={styles.particlesContainer}>
-      {particles.map((particle) => (
-        <motion.div
-          key={particle.id}
-          className={styles.particle}
-          style={{
-            width: particle.size,
-            height: particle.size,
-            left: `${particle.x}%`,
-            top: `${particle.y}%`,
-          }}
-          animate={{
-            y: [0, -30, 0],
-            x: [0, Math.random() * 20 - 10, 0],
-            opacity: [0.2, 0.5, 0.2],
-          }}
-          transition={{
-            duration: particle.duration,
-            repeat: Infinity,
-            delay: particle.delay,
-            ease: "easeInOut",
-          }}
-        />
-      ))}
+      {particles.map((particle) => {
+        const seed = particle.id * 0.618033988749895; // Golden ratio for better distribution
+        return (
+          <motion.div
+            key={particle.id}
+            className={styles.particle}
+            style={{
+              width: particle.size,
+              height: particle.size,
+              left: `${particle.x}%`,
+              top: `${particle.y}%`,
+            }}
+            animate={{
+              y: [0, -30, 0],
+              x: [0, (Math.sin(seed * 2.1) * 0.5 + 0.5) * 40 - 20, 0], // Convert to -20 to 20 range
+              opacity: [0.2, 0.5, 0.2],
+            }}
+            transition={{
+              duration: particle.duration,
+              repeat: Infinity,
+              delay: particle.delay,
+              ease: "easeInOut",
+            }}
+          />
+        );
+      })}
     </div>
   );
 };
@@ -293,6 +300,9 @@ export default function Hero() {
   const headline = "Transforming How Travel Business Connects";
   const highlightText = "Globally";
   const words = headline.split(" ");
+  
+  // Logo-style text for TravelSelBuy
+  const logoText = "TravelSelBuy";
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -347,6 +357,17 @@ export default function Hero() {
             {highlightText}
           </motion.span>
         </motion.h1>
+        
+        {/* Logo-style TravelSelBuy */}
+        <motion.div
+          className={styles.logoText}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.6 }}
+        >
+          <span className={styles.logoTravel}>Travel</span>
+          <span className={styles.logoSelBuy}>SelBuy</span>
+        </motion.div>
         
         {/* Subheadline */}
         <motion.p
@@ -409,7 +430,9 @@ export default function Hero() {
       </motion.div>
 
       {/* Scroll Indicator */}
-      <ScrollIndicator />
+      <div className={styles.scrollIndicatorContainer}>
+        <ScrollIndicator />
+      </div>
     </section>
   );
 }

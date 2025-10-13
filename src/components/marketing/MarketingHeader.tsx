@@ -127,7 +127,7 @@ export default function MarketingHeader() {
             whileTap={{ scale: 0.98 }}
             className={styles.logoWrapper}
           >
-            <Logo variant="dark" size="md" />
+            <Logo variant="light" size="md" />
           </motion.div>
 
           {/* Navigation Menu - Desktop */}
@@ -272,7 +272,7 @@ export default function MarketingHeader() {
           >
             <div className={styles.mobileMenuHeader}>
               <div className={styles.mobileLogoWrapper}>
-                <Logo variant="dark" size="sm" />
+                <Logo variant="light" size="sm" />
               </div>
               <button
                 type="button"

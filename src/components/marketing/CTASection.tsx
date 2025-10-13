@@ -43,14 +43,18 @@ const trustStats = [
 
 // Animated particles/stars component
 const FloatingParticles = () => {
-  const particles = Array.from({ length: 30 }, (_, i) => ({
-    id: i,
-    size: Math.random() * 4 + 1,
-    x: Math.random() * 100,
-    y: Math.random() * 100,
-    duration: Math.random() * 15 + 10,
-    delay: Math.random() * 5,
-  }));
+  // Use deterministic values based on index to avoid hydration mismatches
+  const particles = Array.from({ length: 30 }, (_, i) => {
+    const seed = i * 0.618033988749895; // Golden ratio for better distribution
+    return {
+      id: i,
+      size: (Math.sin(seed) * 0.5 + 0.5) * 4 + 1, // Convert to 1-5 range
+      x: (Math.sin(seed * 1.3) * 0.5 + 0.5) * 100, // Convert to 0-100 range
+      y: (Math.cos(seed * 2.1) * 0.5 + 0.5) * 100, // Convert to 0-100 range
+      duration: (Math.sin(seed * 3.7) * 0.5 + 0.5) * 15 + 10, // Convert to 10-25 range
+      delay: (Math.cos(seed * 4.1) * 0.5 + 0.5) * 5, // Convert to 0-5 range
+    };
+  });
 
   return (
     <div className={styles.particlesContainer}>

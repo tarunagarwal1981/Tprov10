@@ -15,10 +15,11 @@ export interface LogoProps {
 }
 
 // SVG Logo Component
-const LogoSVG: React.FC<{ width: number; height: number; className?: string }> = ({ 
+const LogoSVG: React.FC<{ width: number; height: number; className?: string; variant?: 'light' | 'dark' }> = ({ 
   width, 
   height,
-  className = '' 
+  className = '',
+  variant = 'light'
 }) => {
   const scale = width / 400;
   const viewBoxHeight = 100;
@@ -55,26 +56,26 @@ const LogoSVG: React.FC<{ width: number; height: number; className?: string }> =
         <circle cx="0" cy="0" r="3" fill="url(#orangePurple)"/>
       </g>
       
-      {/* Wordmark - "Travel" in blue */}
+      {/* Wordmark - "Travel" in blue or white based on variant */}
       <text 
         x="75" 
         y="58" 
         fontFamily="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" 
         fontSize="32" 
         fontWeight="600" 
-        fill="#004E89"
+        fill={variant === 'dark' ? '#FFFFFF' : '#004E89'}
       >
         Travel
       </text>
       
-      {/* Wordmark - "SelBuy" in orange - positioned right after "Travel" */}
+      {/* Wordmark - "SelBuy" in orange or yellow based on variant */}
       <text 
         x="161" 
         y="58" 
         fontFamily="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" 
         fontSize="32" 
         fontWeight="600" 
-        fill="#FF6B35"
+        fill={variant === 'dark' ? '#FFB800' : '#FF6B35'}
       >
         SelBuy
       </text>
@@ -162,7 +163,7 @@ const Logo: React.FC<LogoProps> = ({
 
   const logoContent = (
     <div style={containerStyles} className={className}>
-      <LogoSVG width={config.width} height={config.height} />
+      <LogoSVG width={config.width} height={config.height} variant={variant} />
       {showTagline && (
         <span style={taglineStyles} className="tagline">
           {BRAND.tagline}
