@@ -16,7 +16,7 @@ export default function FeaturesPage() {
         {/* Hero Section */}
         <section className="bg-gradient-to-br from-orange-50 to-blue-50 py-20">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6" style={{ fontFamily: 'var(--font-space-grotesk), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
+            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
               Powerful Features for <span className="bg-gradient-to-r from-orange-500 to-yellow-500 bg-clip-text text-transparent">Modern Travel Businesses</span>
             </h1>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
