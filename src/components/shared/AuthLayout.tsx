@@ -221,8 +221,8 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({
               animate={{ opacity: isLoaded ? 1 : 0, y: 0 }}
               transition={{ delay: 0.2 }}
             >
-              <div className="mb-8 bg-white/10 backdrop-blur-sm rounded-xl p-4 inline-block">
-                <LogoSVG width={280} height={67} />
+              <div className="mb-8">
+                <LogoSVG width={280} height={67} variant="dark" />
               </div>
               <h2 className="text-4xl font-bold text-white mb-4">
                 Empower Your Travel Business
@@ -347,7 +347,7 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({
           transition={{ delay: 0.2 }}
         >
           <div className="flex items-center mb-6">
-            <LogoSVG width={200} height={48} />
+            <LogoSVG width={200} height={48} variant="light" />
           </div>
           
           {showFeatures && (

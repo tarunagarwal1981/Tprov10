@@ -409,7 +409,9 @@ export default function Hero() {
       </motion.div>
 
       {/* Scroll Indicator */}
-      <ScrollIndicator />
+      <div className={styles.scrollIndicatorContainer}>
+        <ScrollIndicator />
+      </div>
     </section>
   );
 }

@@ -269,12 +269,19 @@
   z-index: 1;
 }
 
-/* Scroll Indicator */
-.scrollIndicator {
+/* Scroll Indicator Container */
+.scrollIndicatorContainer {
   position: absolute;
   bottom: 2rem;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  z-index: 3;
+}
+
+/* Scroll Indicator */
+.scrollIndicator {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -282,8 +289,8 @@
   color: #6B7280;
   font-size: 0.875rem;
   font-weight: 500;
-  z-index: 3;
   cursor: pointer;
+  width: max-content;
 }
 
 .scrollIcon {

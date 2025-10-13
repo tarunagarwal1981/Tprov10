@@ -56,7 +56,7 @@ export function Footer() {
           <div className="space-y-6">
             <Link href="/" className="block">
               <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 inline-block">
-                <LogoSVG width={200} height={48} />
+                <LogoSVG width={200} height={48} variant="light" />
               </div>
             </Link>
             <p className="text-sm text-slate-400 leading-relaxed">
