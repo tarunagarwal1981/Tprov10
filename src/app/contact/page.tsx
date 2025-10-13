@@ -87,14 +87,14 @@ export default function ContactPage() {
     {
       icon: FiMail,
       title: 'Email Us',
-      value: 'hello@travelselbuy.com',
-      link: 'mailto:hello@travelselbuy.com',
+      value: 'contact@travelselbuy.com',
+      link: 'mailto:contact@travelselbuy.com',
     },
     {
       icon: FiPhone,
       title: 'Call Us',
-      value: '+1 (555) 123-4567',
-      link: 'tel:+15551234567',
+      value: '+91 9940530511',
+      link: 'tel:+919940530511',
     },
     {
       icon: FiMessageCircle,
@@ -306,9 +306,9 @@ export default function ContactPage() {
                     <div>
                       <h3 className="font-bold text-gray-900 mb-2">Global Headquarters</h3>
                       <p className="text-gray-600">
-                        123 Travel Street<br />
-                        San Francisco, CA 94102<br />
-                        United States
+                        Campus-1a, Millenia business Park-I,<br />
+                        2nd St. Kodandarama Nagar, Perungudi,<br />
+                        Chennai, Tamil Nadu. 600096
                       </p>
                     </div>
                   </div>

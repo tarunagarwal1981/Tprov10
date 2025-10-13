@@ -87,6 +87,29 @@
   margin-right: 0.3rem;
 }
 
+/* Logo-style text */
+.logoText {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  margin: 1rem 0 2rem;
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-family: var(--font-space-grotesk), 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.logoTravel {
+  color: #004E89;
+  font-weight: 600;
+}
+
+.logoSelBuy {
+  color: #FF6B35;
+  font-weight: 600;
+}
+
 .subheadline {
   font-size: 1.25rem;
   font-weight: 400;
@@ -269,12 +292,19 @@
   z-index: 1;
 }
 
-/* Scroll Indicator */
-.scrollIndicator {
+/* Scroll Indicator Container */
+.scrollIndicatorContainer {
   position: absolute;
   bottom: 2rem;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  z-index: 3;
+}
+
+/* Scroll Indicator */
+.scrollIndicator {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -282,8 +312,8 @@
   color: #6B7280;
   font-size: 0.875rem;
   font-weight: 500;
-  z-index: 3;
   cursor: pointer;
+  width: max-content;
 }
 
 .scrollIcon {
@@ -305,6 +335,10 @@
   
   .headline {
     font-size: 2.5rem;
+  }
+  
+  .logoText {
+    font-size: 2rem;
   }
   
   .subheadline {
@@ -347,6 +381,11 @@
   .headline {
     font-size: 2rem;
     margin-bottom: 1rem;
+  }
+  
+  .logoText {
+    font-size: 1.75rem;
+    margin: 0.75rem 0 1.5rem;
   }
   
   .subheadline {
@@ -401,6 +440,11 @@
   
   .headline {
     font-size: 1.75rem;
+  }
+  
+  .logoText {
+    font-size: 1.5rem;
+    margin: 0.5rem 0 1rem;
   }
   
   .word {

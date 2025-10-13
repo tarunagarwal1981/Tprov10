@@ -127,7 +127,7 @@ const isActive = (href: string) => {
 				{!effectiveCollapsed && (
 					<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center">
 						<Link href="/operator">
-							<LogoSVG width={220} height={52} />
+							<LogoSVG width={220} height={52} variant="light" />
 						</Link>
 					</motion.div>
 				)}
