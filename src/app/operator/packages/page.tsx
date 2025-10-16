@@ -512,24 +512,36 @@ export default function PackagesPage() {
 						>
 							<Card className="bg-white/80 dark:bg-zinc-900/70 backdrop-blur-sm border-slate-200/60 shadow-lg hover:shadow-xl transition-all overflow-hidden">
 								{/* Package Image */}
-								{pkg.image && (
-									<div className="relative h-48 w-full bg-slate-200">
+								<div className="relative h-48 w-full bg-gradient-to-br from-slate-100 to-slate-200">
+									{pkg.image ? (
 										<Image 
 											src={pkg.image} 
 											alt={pkg.title}
 											fill
 											className="object-cover"
 											onError={(e) => {
-												e.currentTarget.src = '/images/placeholder-package.jpg';
+												// Hide the image and show placeholder instead
+												e.currentTarget.style.display = 'none';
+												const placeholder = e.currentTarget.parentElement?.querySelector('.image-placeholder') as HTMLElement;
+												if (placeholder) placeholder.style.display = 'flex';
 											}}
 										/>
-										<div className="absolute top-2 right-2">
-											<Badge className={getStatusColor(pkg.status)}>
-												{getStatusLabel(pkg.status)}
-											</Badge>
-										</div>
+									) : null}
+									
+									{/* Placeholder when no image */}
+									<div 
+										className={`image-placeholder absolute inset-0 flex flex-col items-center justify-center text-slate-400 ${pkg.image ? 'hidden' : 'flex'}`}
+									>
+										<PackageIcon className="w-12 h-12 mb-2 opacity-50" />
+										<span className="text-sm font-medium">No Image</span>
 									</div>
-								)}
+									
+									<div className="absolute top-2 right-2">
+										<Badge className={getStatusColor(pkg.status)}>
+											{getStatusLabel(pkg.status)}
+										</Badge>
+									</div>
+								</div>
 								
 								<CardContent className="p-4">
 									<h3 className="text-lg font-bold text-slate-900 mb-2 line-clamp-2">{pkg.title}</h3>
