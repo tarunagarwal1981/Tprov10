@@ -25,9 +25,9 @@ export interface BasicInformation {
   fullDescription: string;
   destination: LocationInfo;
   duration: DurationInfo;
-  difficultyLevel: DifficultyLevel;
-  languagesSupported: Language[];
-  tags: Tag[];
+  // difficultyLevel: DifficultyLevel;
+  // languagesSupported: Language[];
+  // tags: Tag[];
   featuredImage: ImageInfo | null;
   imageGallery: ImageInfo[];
 }
@@ -328,9 +328,9 @@ export const DEFAULT_FORM_DATA: ActivityPackageFormData = {
       country: '',
     },
     duration: { hours: 2, minutes: 0 },
-    difficultyLevel: 'EASY',
-    languagesSupported: ['EN'],
-    tags: [],
+    // difficultyLevel: 'EASY',
+    // languagesSupported: ['EN'],
+    // tags: [],
     featuredImage: null,
     imageGallery: [],
   },

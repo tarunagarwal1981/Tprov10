@@ -109,24 +109,49 @@ function OperatorDashboard() {
           return;
         }
 
-        // Fetch packages count
-        const { data: packagesData, error: packagesError } = await supabase
-          .from('activity_packages')
-          .select('id, status, base_price', { count: 'exact' })
-          .eq('operator_id', user.id);
+        // Fetch operator-related metrics in parallel
+        const [
+          activityPackagesRes,
+          multiCityPackagesRes,
+          transferPackagesRes,
+          travelAgentsRes,
+        ] = await Promise.all([
+          supabase.from('activity_packages').select('id, status, base_price').eq('operator_id', user.id),
+          supabase.from('multi_city_packages').select('id, status, base_price').eq('operator_id', user.id),
+          supabase.from('transfer_packages').select('id, status, base_price').eq('operator_id', user.id),
+          supabase.from('users').select('id, role').eq('role', 'TRAVEL_AGENT'),
+        ]);
 
-        if (!packagesError && packagesData) {
-          const totalPackages = packagesData.length;
-          const activePackages = packagesData.filter(p => p.status === 'published').length;
-          const totalRevenue = packagesData.reduce((sum, p) => sum + (p.base_price || 0), 0);
+        const allPackages = [
+          ...(activityPackagesRes.data || []),
+          ...(multiCityPackagesRes.data || []),
+          ...(transferPackagesRes.data || []),
+        ] as Array<{ id: string; status?: string; base_price?: number | null }>;
 
-          setStats([
-            { icon: PackageIcon, title: 'Total Packages', value: totalPackages.toString(), change: '+12%', trend: 'up', color: 'blue' },
-            { icon: CalendarIcon, title: 'Active Packages', value: activePackages.toString(), change: '+8%', trend: 'up', color: 'green' },
-            { icon: UsersIcon, title: 'Travel Agents', value: '0', change: '+5%', trend: 'up', color: 'purple' },
-            { icon: DollarSignIcon, title: 'Total Value', value: `$${totalRevenue.toFixed(0)}`, change: '+15%', trend: 'up', color: 'orange' },
-          ]);
-        }
+        const totalPackages = allPackages.length;
+        const activePackages = allPackages.filter(p => p.status === 'published').length;
+        const totalValue = allPackages.reduce((sum, p) => sum + (p.base_price || 0), 0);
+        const travelAgentsCount = (travelAgentsRes.data || []).length;
+
+        const fmt = (v: number | null | undefined) => {
+          if (v === null || v === undefined) return '-';
+          return Number.isFinite(v) ? v.toString() : '-';
+        };
+        const fmtCurrency = (v: number | null | undefined) => {
+          if (!Number.isFinite(v || 0)) return '-';
+          try {
+            return `$${(v || 0).toFixed(0)}`;
+          } catch {
+            return '-';
+          }
+        };
+
+        setStats([
+          { icon: PackageIcon, title: 'Total Packages', value: fmt(totalPackages), change: '+0%', trend: 'up', color: 'blue' },
+          { icon: CalendarIcon, title: 'Active Packages', value: fmt(activePackages), change: '+0%', trend: 'up', color: 'green' },
+          { icon: UsersIcon, title: 'Travel Agents', value: fmt(travelAgentsCount), change: '+0%', trend: 'up', color: 'purple' },
+          { icon: DollarSignIcon, title: 'Total Value', value: fmtCurrency(totalValue), change: '+0%', trend: 'up', color: 'orange' },
+        ]);
 
         setLoading(false);
       } catch (error) {

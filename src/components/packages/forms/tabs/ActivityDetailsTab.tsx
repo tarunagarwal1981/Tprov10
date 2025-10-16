@@ -196,6 +196,30 @@ const TimeSlotCard: React.FC<{
           <div>
             <label className="text-sm font-medium mb-2 block">Operating Days</label>
             <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const allDays = DAY_OPTIONS.map(d => d.value);
+                  const isAllSelected = allDays.every(day => editData.days.includes(day));
+                  
+                  if (isAllSelected) {
+                    // Deselect all
+                    setEditData({ ...editData, days: [] });
+                  } else {
+                    // Select all
+                    setEditData({ ...editData, days: allDays });
+                  }
+                }}
+                className="package-button-fix text-xs bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+              >
+                {(() => {
+                  const allDays = DAY_OPTIONS.map(d => d.value);
+                  const isAllSelected = allDays.every(day => editData.days.includes(day));
+                  return isAllSelected ? 'Deselect All' : 'Select All';
+                })()}
+              </Button>
               {DAY_OPTIONS.map((day) => (
                 <Badge
                   key={day.value}
@@ -372,44 +396,6 @@ export const ActivityDetailsTab: React.FC = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-6">
-            {/* Operating Days */}
-            <div>
-              <FormField
-                control={control}
-                name="activityDetails.operationalHours.operatingDays"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Operating Days</FormLabel>
-                    <div className="grid grid-cols-7 gap-2">
-                      {DAY_OPTIONS.map((day) => (
-                        <div key={day.value} className="flex items-center space-x-2">
-                          <Checkbox
-                            id={day.value}
-                            checked={field.value?.includes(day.value)}
-                            onCheckedChange={(checked) => {
-                              const current = field.value || [];
-                              if (checked) {
-                                field.onChange([...current, day.value]);
-                              } else {
-                                field.onChange(current.filter((d: DayOfWeek) => d !== day.value));
-                              }
-                            }}
-                          />
-                          <label
-                            htmlFor={day.value}
-                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                          >
-                            {day.short}
-                          </label>
-                        </div>
-                      ))}
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
             {/* Add Time Slot */}
             <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800">
               <h4 className="font-medium mb-4">Add Time Slot</h4>
@@ -447,6 +433,32 @@ export const ActivityDetailsTab: React.FC = () => {
               <div className="mb-4">
                 <label className="text-sm font-medium mb-2 block">Select Days</label>
                 <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const allDays = DAY_OPTIONS.map(d => d.value);
+                      const currentDays = newTimeSlot.days || [];
+                      const isAllSelected = allDays.every(day => currentDays.includes(day));
+                      
+                      if (isAllSelected) {
+                        // Deselect all
+                        setNewTimeSlot({ ...newTimeSlot, days: [] });
+                      } else {
+                        // Select all
+                        setNewTimeSlot({ ...newTimeSlot, days: allDays });
+                      }
+                    }}
+                    className="package-button-fix text-xs bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                  >
+                    {(() => {
+                      const allDays = DAY_OPTIONS.map(d => d.value);
+                      const currentDays = newTimeSlot.days || [];
+                      const isAllSelected = allDays.every(day => currentDays.includes(day));
+                      return isAllSelected ? 'Deselect All' : 'Select All';
+                    })()}
+                  </Button>
                   {DAY_OPTIONS.map((day) => (
                     <Badge
                       key={day.value}

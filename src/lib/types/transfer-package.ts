@@ -76,13 +76,17 @@ export interface TransferDetails {
 export interface OneWayTransferDetails {
   pickupLocation: LocationInfo;
   dropoffLocation: LocationInfo;
+  pickupDate: string;
+  pickupTime: string;
+  numberOfPassengers: number;
+  numberOfLuggagePieces: number;
   estimatedDuration: DurationInfo;
   distance: number;
   distanceUnit: DistanceUnit;
 }
 
 export interface RoundTripTransferDetails extends OneWayTransferDetails {
-  returnDate: Date;
+  returnDate: string;
   returnTime: string;
   waitTimeAtDestination?: DurationInfo;
 }
@@ -390,6 +394,54 @@ export const DEFAULT_TRANSFER_FORM_DATA: TransferPackageFormData = {
   },
   transferDetails: {
     transferType: 'ONE_WAY',
+    oneWayDetails: {
+      pickupLocation: {
+        name: '',
+        address: '',
+        coordinates: { latitude: 0, longitude: 0 },
+        city: '',
+        country: '',
+      },
+      dropoffLocation: {
+        name: '',
+        address: '',
+        coordinates: { latitude: 0, longitude: 0 },
+        city: '',
+        country: '',
+      },
+      pickupDate: '',
+      pickupTime: '',
+      numberOfPassengers: 1,
+      numberOfLuggagePieces: 0,
+      estimatedDuration: { hours: 1, minutes: 0 },
+      distance: 0,
+      distanceUnit: 'KM',
+    },
+    roundTripDetails: {
+      pickupLocation: {
+        name: '',
+        address: '',
+        coordinates: { latitude: 0, longitude: 0 },
+        city: '',
+        country: '',
+      },
+      dropoffLocation: {
+        name: '',
+        address: '',
+        coordinates: { latitude: 0, longitude: 0 },
+        city: '',
+        country: '',
+      },
+      pickupDate: '',
+      pickupTime: '',
+      numberOfPassengers: 1,
+      numberOfLuggagePieces: 0,
+      estimatedDuration: { hours: 1, minutes: 0 },
+      distance: 0,
+      distanceUnit: 'KM',
+      returnDate: '',
+      returnTime: '',
+    },
     routeInfo: {
       totalDistance: 0,
       distanceUnit: 'KM',

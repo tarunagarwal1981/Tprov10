@@ -29,48 +29,48 @@ import { FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescripti
 import { cn } from "@/lib/utils";
 import {
   ActivityPackageFormData,
-  DifficultyLevel,
-  Language,
-  Tag,
+  // DifficultyLevel,
+  // Language,
+  // Tag,
   ImageInfo,
 } from "@/lib/types/activity-package";
 import { ImageUpload } from "@/components/packages/ImageUpload";
 
-// Language options with flags
-const LANGUAGE_OPTIONS: { value: Language; label: string; flag: string }[] = [
-  { value: 'EN', label: 'English', flag: '🇺🇸' },
-  { value: 'ES', label: 'Spanish', flag: '🇪🇸' },
-  { value: 'FR', label: 'French', flag: '🇫🇷' },
-  { value: 'DE', label: 'German', flag: '🇩🇪' },
-  { value: 'IT', label: 'Italian', flag: '🇮🇹' },
-  { value: 'PT', label: 'Portuguese', flag: '🇵🇹' },
-  { value: 'RU', label: 'Russian', flag: '🇷🇺' },
-  { value: 'ZH', label: 'Chinese', flag: '🇨🇳' },
-  { value: 'JA', label: 'Japanese', flag: '🇯🇵' },
-  { value: 'KO', label: 'Korean', flag: '🇰🇷' },
-];
+// // Language options with flags
+// const LANGUAGE_OPTIONS: { value: Language; label: string; flag: string }[] = [
+//   { value: 'EN', label: 'English', flag: '🇺🇸' },
+//   { value: 'ES', label: 'Spanish', flag: '🇪🇸' },
+//   { value: 'FR', label: 'French', flag: '🇫🇷' },
+//   { value: 'DE', label: 'German', flag: '🇩🇪' },
+//   { value: 'IT', label: 'Italian', flag: '🇮🇹' },
+//   { value: 'PT', label: 'Portuguese', flag: '🇵🇹' },
+//   { value: 'RU', label: 'Russian', flag: '🇷🇺' },
+//   { value: 'ZH', label: 'Chinese', flag: '🇨🇳' },
+//   { value: 'JA', label: 'Japanese', flag: '🇯🇵' },
+//   { value: 'KO', label: 'Korean', flag: '🇰🇷' },
+// ];
 
-// Tag options
-const TAG_OPTIONS: { value: Tag; label: string; color: string }[] = [
-  { value: 'ADVENTURE', label: 'Adventure', color: 'bg-orange-100 text-orange-800' },
-  { value: 'FAMILY_FRIENDLY', label: 'Family Friendly', color: 'bg-blue-100 text-blue-800' },
-  { value: 'ROMANTIC', label: 'Romantic', color: 'bg-pink-100 text-pink-800' },
-  { value: 'CULTURAL', label: 'Cultural', color: 'bg-purple-100 text-purple-800' },
-  { value: 'NATURE', label: 'Nature', color: 'bg-green-100 text-green-800' },
-  { value: 'SPORTS', label: 'Sports', color: 'bg-red-100 text-red-800' },
-  { value: 'FOOD', label: 'Food', color: 'bg-yellow-100 text-yellow-800' },
-  { value: 'NIGHTLIFE', label: 'Nightlife', color: 'bg-indigo-100 text-indigo-800' },
-  { value: 'EDUCATIONAL', label: 'Educational', color: 'bg-teal-100 text-teal-800' },
-  { value: 'RELAXATION', label: 'Relaxation', color: 'bg-gray-100 text-gray-800' },
-];
+// // Tag options
+// const TAG_OPTIONS: { value: Tag; label: string; color: string }[] = [
+//   { value: 'ADVENTURE', label: 'Adventure', color: 'bg-orange-100 text-orange-800' },
+//   { value: 'FAMILY_FRIENDLY', label: 'Family Friendly', color: 'bg-blue-100 text-blue-800' },
+//   { value: 'ROMANTIC', label: 'Romantic', color: 'bg-pink-100 text-pink-800' },
+//   { value: 'CULTURAL', label: 'Cultural', color: 'bg-purple-100 text-purple-800' },
+//   { value: 'NATURE', label: 'Nature', color: 'bg-green-100 text-green-800' },
+//   { value: 'SPORTS', label: 'Sports', color: 'bg-red-100 text-red-800' },
+//   { value: 'FOOD', label: 'Food', color: 'bg-yellow-100 text-yellow-800' },
+//   { value: 'NIGHTLIFE', label: 'Nightlife', color: 'bg-indigo-100 text-indigo-800' },
+//   { value: 'EDUCATIONAL', label: 'Educational', color: 'bg-teal-100 text-teal-800' },
+//   { value: 'RELAXATION', label: 'Relaxation', color: 'bg-gray-100 text-gray-800' },
+// ];
 
-// Difficulty levels
-const DIFFICULTY_OPTIONS: { value: DifficultyLevel; label: string; description: string }[] = [
-  { value: 'EASY', label: 'Easy', description: 'Suitable for all fitness levels' },
-  { value: 'MODERATE', label: 'Moderate', description: 'Some physical activity required' },
-  { value: 'CHALLENGING', label: 'Challenging', description: 'Good fitness level recommended' },
-  { value: 'DIFFICULT', label: 'Difficult', description: 'High fitness level required' },
-];
+// // Difficulty levels
+// const DIFFICULTY_OPTIONS: { value: DifficultyLevel; label: string; description: string }[] = [
+//   { value: 'EASY', label: 'Easy', description: 'Suitable for all fitness levels' },
+//   { value: 'MODERATE', label: 'Moderate', description: 'Some physical activity required' },
+//   { value: 'CHALLENGING', label: 'Challenging', description: 'Good fitness level recommended' },
+//   { value: 'DIFFICULT', label: 'Difficult', description: 'High fitness level required' },
+// ];
 
 // Helper function to process uploaded files
 const processUploadedFiles = (files: File[]): Promise<ImageInfo[]> => {
@@ -355,133 +355,19 @@ export const BasicInformationTab: React.FC = () => {
         </Card>
       </div>
 
-      {/* Difficulty & Languages */}
+      {/* Difficulty & Languages (commented out) */}
+      {/**
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="package-selector-glass package-shadow-fix">
-          <CardHeader>
-            <CardTitle>Difficulty Level</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <FormField
-              control={control}
-              name="basicInformation.difficultyLevel"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Select Difficulty *</FormLabel>
-                  <FormControl>
-                    <select
-                      value={field.value}
-                      onChange={(e) => field.onChange(e.target.value)}
-                      className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring package-text-fix"
-                    >
-                      <option value="" disabled>Choose difficulty level</option>
-                      {DIFFICULTY_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label} — {option.description}
-                        </option>
-                      ))}
-                    </select>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </CardContent>
-        </Card>
-
-        <Card className="package-selector-glass package-shadow-fix">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FaFlag className="h-5 w-5 text-red-600" />
-              Languages Supported
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <FormField
-              control={control}
-              name="basicInformation.languagesSupported"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Select Languages</FormLabel>
-                  <div className="grid grid-cols-2 gap-2">
-                    {LANGUAGE_OPTIONS.map((language) => (
-                      <div key={language.value} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={language.value}
-                          checked={field.value?.includes(language.value)}
-                          onCheckedChange={(checked) => {
-                            const current = field.value || [];
-                            if (checked) {
-                              field.onChange([...current, language.value]);
-                            } else {
-                              field.onChange(current.filter((l: Language) => l !== language.value));
-                            }
-                          }}
-                        />
-                        <label
-                          htmlFor={language.value}
-                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-2"
-                        >
-                          <span>{language.flag}</span>
-                          {language.label}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </CardContent>
-        </Card>
+        ... difficulty and languages UI ...
       </div>
+      **/}
 
-      {/* Tags */}
+      {/* Tags (commented out) */}
+      {/**
       <Card className="package-selector-glass package-shadow-fix">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FaTag className="h-5 w-5 text-orange-600" />
-            Tags
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <FormField
-            control={control}
-            name="basicInformation.tags"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Select Tags</FormLabel>
-                <div className="flex flex-wrap gap-2">
-                  {TAG_OPTIONS.map((tag) => (
-                    <Badge
-                      key={tag.value}
-                      variant={field.value?.includes(tag.value) ? "default" : "outline"}
-                      className={cn(
-                        "cursor-pointer package-button-fix",
-                        field.value?.includes(tag.value) && tag.color
-                      )}
-                      onClick={() => {
-                        const current = field.value || [];
-                        if (current.includes(tag.value)) {
-                          field.onChange(current.filter((t: Tag) => t !== tag.value));
-                        } else {
-                          field.onChange([...current, tag.value]);
-                        }
-                      }}
-                    >
-                      {tag.label}
-                    </Badge>
-                  ))}
-                </div>
-                <FormDescription>
-                  Tags help customers find your activity more easily
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </CardContent>
+        ... tags UI ...
       </Card>
+      **/}
 
 
       {/* Pricing */}
