@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
 import SkeletonLoader from './SkeletonLoader';
 
 interface LazyLoadProps {
@@ -138,12 +139,12 @@ export function LazyImage({
           }}
         />
       )}
-      <img
+      <Image
         ref={imgRef}
-        src={imageSrc || undefined}
+        src={imageSrc || ''}
         alt={alt}
-        width={width}
-        height={height}
+        width={width || 300}
+        height={height || 200}
         loading={priority ? 'eager' : 'lazy'}
         onLoad={() => setIsLoaded(true)}
         style={{

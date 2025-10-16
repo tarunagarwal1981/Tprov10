@@ -93,7 +93,7 @@ const VehicleCard: React.FC<{
                 <SelectTrigger className="package-text-fix">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="z-[60] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-lg">
                   {VEHICLE_TYPES.map((type) => (
                     <SelectItem key={type.value} value={type.value}>
                       <div className="flex items-center gap-2">
@@ -675,7 +675,7 @@ export const VehicleOptionsTab: React.FC = () => {
                     <SelectTrigger className="package-text-fix">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="z-[60] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-lg">
                       {VEHICLE_TYPES.map((type) => (
                         <SelectItem key={type.value} value={type.value}>
                           <div className="flex items-center gap-2">

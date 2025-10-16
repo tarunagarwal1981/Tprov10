@@ -95,10 +95,10 @@ const useFormValidation = (data: TransferPackageFormData): FormValidation => {
     const errors: FormValidation['errors'] = [];
     const warnings: FormValidation['warnings'] = [];
 
-    // Basic Information validation
+    // Basic Information validation - MOVED TO TRANSFER DETAILS
     if (!data.basicInformation.title.trim()) {
       errors.push({
-        tab: 'basic-info',
+        tab: 'transfer-details',
         field: 'title',
         message: 'Package title is required',
         severity: 'error',
@@ -107,21 +107,22 @@ const useFormValidation = (data: TransferPackageFormData): FormValidation => {
 
     if (!data.basicInformation.shortDescription.trim()) {
       errors.push({
-        tab: 'basic-info',
+        tab: 'transfer-details',
         field: 'shortDescription',
         message: 'Short description is required',
         severity: 'error',
       });
     }
 
-    if (!data.basicInformation.destination.name.trim()) {
-      errors.push({
-        tab: 'basic-info',
-        field: 'destination',
-        message: 'Destination is required',
-        severity: 'error',
-      });
-    }
+    // Destination validation - REMOVED (moved to transfer details)
+    // if (!data.basicInformation.destination.name.trim()) {
+    //   errors.push({
+    //     tab: 'basic-info',
+    //     field: 'destination',
+    //     message: 'Destination is required',
+    //     severity: 'error',
+    //   });
+    // }
 
     // Transfer Details validation
     if (!data.transferDetails.transferType) {
@@ -154,20 +155,20 @@ const useFormValidation = (data: TransferPackageFormData): FormValidation => {
       });
     }
 
-    // Availability validation
-    if (data.availabilityBooking.availableDays.length === 0) {
-      errors.push({
-        tab: 'availability-booking',
-        field: 'availableDays',
-        message: 'At least one available day is required',
-        severity: 'error',
-      });
-    }
+    // Availability validation - COMMENTED OUT (tab removed)
+    // if (data.availabilityBooking.availableDays.length === 0) {
+    //   errors.push({
+    //     tab: 'availability-booking',
+    //     field: 'availableDays',
+    //     message: 'At least one available day is required',
+    //     severity: 'error',
+    //   });
+    // }
 
     // Warnings
     if (data.basicInformation.imageGallery.length === 0) {
       warnings.push({
-        tab: 'basic-info',
+        tab: 'transfer-details',
         field: 'imageGallery',
         message: 'Adding images will improve your transfer package visibility',
       });
@@ -198,7 +199,7 @@ export const TransferPackageForm: React.FC<TransferPackageFormProps> = ({
   mode = 'create',
   packageId,
 }) => {
-  const [activeTab, setActiveTab] = useState('basic-info');
+  const [activeTab, setActiveTab] = useState('transfer-details');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
 
@@ -219,14 +220,14 @@ export const TransferPackageForm: React.FC<TransferPackageFormProps> = ({
 
   // Tab configuration
   const tabs: TabInfo[] = [
-    {
-      id: 'basic-info',
-      label: 'Basic Info',
-      icon: <FaInfoCircle className="h-4 w-4" />,
-      badge: validation.errors.filter(e => e.tab === 'basic-info').length,
-      isComplete: !validation.errors.some(e => e.tab === 'basic-info'),
-      hasErrors: validation.errors.some(e => e.tab === 'basic-info'),
-    },
+    // {
+    //   id: 'basic-info',
+    //   label: 'Basic Info',
+    //   icon: <FaInfoCircle className="h-4 w-4" />,
+    //   badge: validation.errors.filter(e => e.tab === 'basic-info').length,
+    //   isComplete: !validation.errors.some(e => e.tab === 'basic-info'),
+    //   hasErrors: validation.errors.some(e => e.tab === 'basic-info'),
+    // },
     {
       id: 'transfer-details',
       label: 'Transfer Details',
@@ -259,14 +260,14 @@ export const TransferPackageForm: React.FC<TransferPackageFormProps> = ({
       isComplete: !validation.errors.some(e => e.tab === 'pricing-policies'),
       hasErrors: validation.errors.some(e => e.tab === 'pricing-policies'),
     },
-    {
-      id: 'availability-booking',
-      label: 'Availability',
-      icon: <FaCalendarAlt className="h-4 w-4" />,
-      badge: validation.errors.filter(e => e.tab === 'availability-booking').length,
-      isComplete: !validation.errors.some(e => e.tab === 'availability-booking'),
-      hasErrors: validation.errors.some(e => e.tab === 'availability-booking'),
-    },
+    // {
+    //   id: 'availability-booking',
+    //   label: 'Availability',
+    //   icon: <FaCalendarAlt className="h-4 w-4" />,
+    //   badge: validation.errors.filter(e => e.tab === 'availability-booking').length,
+    //   isComplete: !validation.errors.some(e => e.tab === 'availability-booking'),
+    //   hasErrors: validation.errors.some(e => e.tab === 'availability-booking'),
+    // },
     {
       id: 'review',
       label: 'Review',
@@ -316,12 +317,12 @@ export const TransferPackageForm: React.FC<TransferPackageFormProps> = ({
   };
 
   const tabContent = {
-    'basic-info': <BasicInformationTab />,
+    // 'basic-info': <BasicInformationTab />,
     'transfer-details': <TransferDetailsTab />,
     'vehicle-options': <VehicleOptionsTab />,
     'driver-service': <DriverServiceTab />,
     'pricing-policies': <PricingPoliciesTab />,
-    'availability-booking': <AvailabilityBookingTab />,
+    // 'availability-booking': <AvailabilityBookingTab />,
     'review': <ReviewPublishTab validation={validation} onPreview={handlePreview} />,
   };
 

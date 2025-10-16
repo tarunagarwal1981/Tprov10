@@ -19,6 +19,7 @@ import {
 	FiCopy as Copy,
 } from 'react-icons/fi';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -513,10 +514,11 @@ export default function PackagesPage() {
 								{/* Package Image */}
 								{pkg.image && (
 									<div className="relative h-48 w-full bg-slate-200">
-										<img 
+										<Image 
 											src={pkg.image} 
 											alt={pkg.title}
-											className="w-full h-full object-cover"
+											fill
+											className="object-cover"
 											onError={(e) => {
 												e.currentTarget.src = '/images/placeholder-package.jpg';
 											}}

@@ -21,6 +21,7 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://travelselbuy.com'),
   title: 'TravelSelBuy - AI-Powered Travel Booking Platform',
   description: 'AI-Powered Travel Booking Platform for Small Travel Agents. Generate leads, manage customers, and book packages—all in one intelligent platform.',
   icons: {

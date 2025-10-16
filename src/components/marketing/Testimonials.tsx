@@ -5,6 +5,7 @@ import { motion, AnimatePresence, useInView } from 'framer-motion';
 import useEmblaCarousel from 'embla-carousel-react';
 import Autoplay from 'embla-carousel-autoplay';
 import { FiMessageSquare, FiStar, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
+import Image from 'next/image';
 import styles from './Testimonials.module.css';
 
 /**
@@ -136,7 +137,7 @@ const TestimonialCard: React.FC<TestimonialCardProps> = ({ testimonial, isActive
       <div className={styles.authorInfo}>
         {testimonial.avatar && (
           <div className={styles.avatar}>
-            <img src={testimonial.avatar} alt={testimonial.author} />
+            <Image src={testimonial.avatar} alt={testimonial.author} width={48} height={48} className="rounded-full" />
           </div>
         )}
         <div className={styles.authorDetails}>
