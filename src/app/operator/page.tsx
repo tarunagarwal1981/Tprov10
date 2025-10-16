@@ -25,6 +25,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Link from 'next/link';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { UserRole } from '@/lib/types';
+import { createClient } from '@/lib/supabase/client';
 
 const OPERATOR_ROLES: UserRole[] = ['TOUR_OPERATOR', 'ADMIN', 'SUPER_ADMIN'];
 
@@ -42,41 +43,60 @@ const ActivityItem = ({ icon: Icon, title, time, color }: any) => (
 );
 
 function OperatorDashboard() {
-  // Stats data
-  const stats = [
-    {
-      title: 'Total Packages',
-      value: '24',
-      change: '+12%',
-      trend: 'up',
-      icon: Package,
-      color: 'blue',
-    },
-    {
-      title: 'Active Bookings',
-      value: '156',
-      change: '+8%',
-      trend: 'up',
-      icon: Calendar,
-      color: 'green',
-    },
-    {
-      title: 'Travel Agents',
-      value: '42',
-      change: '+5%',
-      trend: 'up',
-      icon: Users,
-      color: 'purple',
-    },
-    {
-      title: 'Monthly Revenue',
-      value: '$24,580',
-      change: '+15%',
-      trend: 'up',
-      icon: DollarSign,
-      color: 'orange',
-    },
-  ];
+  const [stats, setStats] = useState([
+    { title: 'Total Packages', value: '-', change: '+0%', trend: 'up', icon: Package, color: 'blue' },
+    { title: 'Active Bookings', value: '-', change: '+0%', trend: 'up', icon: Calendar, color: 'green' },
+    { title: 'Travel Agents', value: '-', change: '+0%', trend: 'up', icon: Users, color: 'purple' },
+    { title: 'Monthly Revenue', value: '-', change: '+0%', trend: 'up', icon: DollarSign, color: 'orange' },
+  ] as Array<{ title: string; value: string; change: string; trend: 'up' | 'down'; icon: any; color: string }>);
+  const [overview, setOverview] = useState({ bookings: '-', revenue: '-', newAgents: '-' });
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const [activityPkgs, multiCityPkgs, transferPkgs, agents] = await Promise.all([
+          supabase.from('activity_packages').select('id, status, base_price').eq('operator_id', user.id),
+          supabase.from('multi_city_packages').select('id, status, base_price').eq('operator_id', user.id),
+          supabase.from('transfer_packages').select('id, status, base_price').eq('operator_id', user.id),
+          supabase.from('users').select('id').eq('role', 'TRAVEL_AGENT'),
+        ]);
+
+        const all = [
+          ...(activityPkgs.data || []),
+          ...(multiCityPkgs.data || []),
+          ...(transferPkgs.data || []),
+        ] as Array<{ id: string; status?: string; base_price?: number | null }>;
+
+        const totalPackages = all.length;
+        const activePackages = all.filter(p => p.status === 'published').length; // used as proxy for "Active Bookings" if none exist
+        const totalValue = all.reduce((s, p) => s + (p.base_price || 0), 0);
+        const agentsCount = (agents.data || []).length;
+
+        const fmt = (n: number | null | undefined) => (typeof n === 'number' && isFinite(n) ? n.toString() : '-');
+        const fmtCurrency = (n: number | null | undefined) => (typeof n === 'number' && isFinite(n) ? `$${n.toFixed(0)}` : '-');
+
+        setStats([
+          { title: 'Total Packages', value: fmt(totalPackages), change: '+0%', trend: 'up', icon: Package, color: 'blue' },
+          { title: 'Active Bookings', value: '-', change: '+0%', trend: 'up', icon: Calendar, color: 'green' },
+          { title: 'Travel Agents', value: fmt(agentsCount), change: '+0%', trend: 'up', icon: Users, color: 'purple' },
+          { title: 'Monthly Revenue', value: fmtCurrency(totalValue), change: '+0%', trend: 'up', icon: DollarSign, color: 'orange' },
+        ]);
+
+        setOverview({
+          bookings: '-',
+          revenue: fmtCurrency(totalValue),
+          newAgents: '-',
+        });
+      } catch (e) {
+        // swallow; UI will show "-"
+      }
+    };
+    load();
+  }, []);
 
   // Recent activities
   const recentActivities = [
@@ -242,21 +262,21 @@ function OperatorDashboard() {
                     <Calendar className="w-5 h-5 text-[#FF6B35]" />
                     <span className="text-sm font-medium text-slate-700">Bookings</span>
                   </div>
-                  <span className="text-lg font-bold text-[#FF6B35]">12</span>
+                  <span className="text-lg font-bold text-[#FF6B35]">{overview.bookings}</span>
                 </div>
                 <div className="flex items-center justify-between p-2 bg-green-50 rounded-lg">
                   <div className="flex items-center gap-3">
                     <DollarSign className="w-5 h-5 text-green-600" />
                     <span className="text-sm font-medium text-slate-700">Revenue</span>
               </div>
-                  <span className="text-lg font-bold text-green-600">£3,240</span>
+                  <span className="text-lg font-bold text-green-600">{overview.revenue}</span>
             </div>
                 <div className="flex items-center justify-between p-2 bg-pink-50 rounded-lg">
                   <div className="flex items-center gap-3">
                     <Users className="w-5 h-5 text-[#FF4B8C]" />
                     <span className="text-sm font-medium text-slate-700">New Agents</span>
               </div>
-                  <span className="text-lg font-bold text-[#FF4B8C]">3</span>
+                  <span className="text-lg font-bold text-[#FF4B8C]">{overview.newAgents}</span>
             </div>
             </CardContent>
           </Card>
