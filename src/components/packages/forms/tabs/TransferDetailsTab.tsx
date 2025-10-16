@@ -18,14 +18,18 @@ import {
   FaPlane,
   FaHotel,
   FaEdit,
+  FaInfoCircle,
+  FaImage,
 } from "react-icons/fa";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
+import { ImageUpload } from "@/components/packages/ImageUpload";
 import { cn } from "@/lib/utils";
 import {
   TransferPackageFormData,
@@ -48,12 +52,12 @@ const TRANSFER_TYPES: { value: TransferType; label: string; icon: React.ReactNod
     icon: <FaExchangeAlt className="h-6 w-6" />,
     description: 'Return journey with pickup and dropoff at same locations'
   },
-  {
-    value: 'MULTI_STOP',
-    label: 'Multi-Stop Transfer',
-    icon: <FaRoute className="h-6 w-6" />,
-    description: 'Multiple stops along the route with flexible itinerary'
-  },
+  // {
+  //   value: 'MULTI_STOP',
+  //   label: 'Multi-Stop Transfer',
+  //   icon: <FaRoute className="h-6 w-6" />,
+  //   description: 'Multiple stops along the route with flexible itinerary'
+  // },
 ];
 
 // Location autocomplete component
@@ -404,6 +408,8 @@ const RouteVisualization: React.FC<{
 
 export const TransferDetailsTab: React.FC = () => {
   const { control, watch, setValue } = useFormContext<TransferPackageFormData>();
+  const watchedTransferData = watch('transferDetails');
+  const watchedBasicData = watch('basicInformation');
   const [editingStop, setEditingStop] = useState<string | null>(null);
   const [distanceUnit, setDistanceUnit] = useState<DistanceUnit>('KM');
 
@@ -444,6 +450,64 @@ export const TransferDetailsTab: React.FC = () => {
 
   return (
     <div className="space-y-6 package-scroll-fix">
+      {/* Package Title */}
+      <Card className="package-selector-glass package-shadow-fix">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FaInfoCircle className="h-5 w-5 text-blue-600" />
+            Package Title
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <FormField
+            control={control}
+            name="basicInformation.title"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Package Title *</FormLabel>
+                <FormControl>
+                  <Input
+                    {...field}
+                    placeholder="Enter your transfer package title"
+                    maxLength={100}
+                    className="package-text-fix"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Short Description */}
+      <Card className="package-selector-glass package-shadow-fix">
+        <CardHeader>
+          <CardTitle>Package Description</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <FormField
+            control={control}
+            name="basicInformation.shortDescription"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Short Description *</FormLabel>
+                <FormControl>
+                  <Textarea
+                    {...field}
+                    placeholder="Brief description for cards and listings (max 160 characters)"
+                    maxLength={160}
+                    rows={3}
+                    className="package-text-fix"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </CardContent>
+      </Card>
+
       {/* Transfer Type Selection */}
       <Card className="package-selector-glass package-shadow-fix">
         <CardHeader>
@@ -549,7 +613,154 @@ export const TransferDetailsTab: React.FC = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Pickup Date and Time */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={control}
+                  name="transferDetails.oneWayDetails.pickupDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Pickup Date *</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          type="date"
+                          className="package-text-fix"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={control}
+                  name="transferDetails.oneWayDetails.pickupTime"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Pickup Time *</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          type="time"
+                          className="package-text-fix"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Passengers and Luggage */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={control}
+                  name="transferDetails.oneWayDetails.numberOfPassengers"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>No. of Passengers *</FormLabel>
+                      <FormControl>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const currentValue = parseInt(String(field.value || 1)) || 1;
+                              if (currentValue > 1) {
+                                field.onChange(currentValue - 1);
+                              }
+                            }}
+                            className="package-button-fix"
+                          >
+                            -
+                          </Button>
+                          <Input
+                            {...field}
+                            type="number"
+                            min="1"
+                            max="50"
+                            value={field.value || 1}
+                            onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                            className="package-text-fix text-center"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const currentValue = parseInt(String(field.value || 1)) || 1;
+                              if (currentValue < 50) {
+                                field.onChange(currentValue + 1);
+                              }
+                            }}
+                            className="package-button-fix"
+                          >
+                            +
+                          </Button>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={control}
+                  name="transferDetails.oneWayDetails.numberOfLuggagePieces"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Luggage Pieces *</FormLabel>
+                      <FormControl>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const currentValue = parseInt(String(field.value || 0)) || 0;
+                              if (currentValue > 0) {
+                                field.onChange(currentValue - 1);
+                              }
+                            }}
+                            className="package-button-fix"
+                          >
+                            -
+                          </Button>
+                          <Input
+                            {...field}
+                            type="number"
+                            min="0"
+                            max="20"
+                            value={field.value || 0}
+                            onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                            className="package-text-fix text-center"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const currentValue = parseInt(String(field.value || 0)) || 0;
+                              if (currentValue < 20) {
+                                field.onChange(currentValue + 1);
+                              }
+                            }}
+                            className="package-button-fix"
+                          >
+                            +
+                          </Button>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Distance, Unit, and Duration fields - COMMENTED OUT for One-Way transfers */}
+              {/* <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <FormField
                   control={control}
                   name="transferDetails.oneWayDetails.distance"
@@ -611,7 +822,7 @@ export const TransferDetailsTab: React.FC = () => {
                     />
                   </div>
                 </div>
-              </div>
+              </div> */}
             </div>
           </CardContent>
         </Card>
@@ -665,6 +876,152 @@ export const TransferDetailsTab: React.FC = () => {
                 />
               </div>
 
+              {/* Pickup Date and Time */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={control}
+                  name="transferDetails.roundTripDetails.pickupDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Pickup Date *</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          type="date"
+                          className="package-text-fix"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={control}
+                  name="transferDetails.roundTripDetails.pickupTime"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Pickup Time *</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          type="time"
+                          className="package-text-fix"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Passengers and Luggage */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={control}
+                  name="transferDetails.roundTripDetails.numberOfPassengers"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>No. of Passengers *</FormLabel>
+                      <FormControl>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const currentValue = parseInt(String(field.value || 1)) || 1;
+                              if (currentValue > 1) {
+                                field.onChange(currentValue - 1);
+                              }
+                            }}
+                            className="package-button-fix"
+                          >
+                            -
+                          </Button>
+                          <Input
+                            {...field}
+                            type="number"
+                            min="1"
+                            max="50"
+                            value={field.value || 1}
+                            onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                            className="package-text-fix text-center"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const currentValue = parseInt(String(field.value || 1)) || 1;
+                              if (currentValue < 50) {
+                                field.onChange(currentValue + 1);
+                              }
+                            }}
+                            className="package-button-fix"
+                          >
+                            +
+                          </Button>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={control}
+                  name="transferDetails.roundTripDetails.numberOfLuggagePieces"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Luggage Pieces *</FormLabel>
+                      <FormControl>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const currentValue = parseInt(String(field.value || 0)) || 0;
+                              if (currentValue > 0) {
+                                field.onChange(currentValue - 1);
+                              }
+                            }}
+                            className="package-button-fix"
+                          >
+                            -
+                          </Button>
+                          <Input
+                            {...field}
+                            type="number"
+                            min="0"
+                            max="20"
+                            value={field.value || 0}
+                            onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                            className="package-text-fix text-center"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const currentValue = parseInt(String(field.value || 0)) || 0;
+                              if (currentValue < 20) {
+                                field.onChange(currentValue + 1);
+                              }
+                            }}
+                            className="package-button-fix"
+                          >
+                            +
+                          </Button>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
               {/* Return Details */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
@@ -683,7 +1040,8 @@ export const TransferDetailsTab: React.FC = () => {
                 </div>
               </div>
 
-              <div>
+              {/* Wait Time at Destination - COMMENTED OUT */}
+              {/* <div>
                 <FormLabel>Wait Time at Destination (Optional)</FormLabel>
                 <div className="grid grid-cols-2 gap-2">
                   <Input
@@ -701,7 +1059,7 @@ export const TransferDetailsTab: React.FC = () => {
                     className="package-text-fix"
                   />
                 </div>
-              </div>
+              </div> */}
             </div>
           </CardContent>
         </Card>
@@ -795,6 +1153,49 @@ export const TransferDetailsTab: React.FC = () => {
         routeInfo={watchedData.routeInfo}
         transferType={watchedData.transferType}
       />
+
+      {/* Image Gallery */}
+      <Card className="package-selector-glass package-shadow-fix">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FaImage className="h-5 w-5 text-purple-600" />
+            Package Images
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {/* Featured Image */}
+            <div>
+              <h4 className="font-medium mb-3">Featured Image</h4>
+              <ImageUpload
+                images={watchedBasicData?.featuredImage ? [watchedBasicData.featuredImage] : []}
+                onImagesChange={(images) => {
+                  setValue('basicInformation.featuredImage', images.length > 0 ? images[0] || null : null);
+                }}
+                maxImages={1}
+                allowMultiple={false}
+                showMetadata={true}
+                className="package-animation-fix"
+              />
+            </div>
+
+            {/* Image Gallery */}
+            <div>
+              <h4 className="font-medium mb-3">Image Gallery</h4>
+              <ImageUpload
+                images={watchedBasicData?.imageGallery || []}
+                onImagesChange={(images) => {
+                  setValue('basicInformation.imageGallery', images);
+                }}
+                maxImages={10}
+                allowMultiple={true}
+                showMetadata={true}
+                className="package-animation-fix"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

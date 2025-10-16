@@ -251,7 +251,7 @@ const DestinationsTab: React.FC = () => {
         }))
       );
     }
-  }, [cities.length]);
+  }, [cities, days, setValue]);
 
   const includeTransport = watch("includeIntercityTransport");
 
@@ -459,7 +459,7 @@ const TransportTab: React.FC = () => {
       });
       replace(newConnections as any);
     }
-  }, [include, cityPairs.length, cities.length]);
+  }, [include, cityPairs, connections, replace]);
 
   const iconForType = (t: TransportType) => t === "FLIGHT" ? <FaPlane /> : t === "TRAIN" ? <FaTrain /> : t === "BUS" ? <FaBus /> : <FaCar />;
 
