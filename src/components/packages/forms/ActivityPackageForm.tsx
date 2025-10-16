@@ -36,9 +36,9 @@ import { databaseToFormData } from "@/lib/supabase/activity-packages";
 // Import tab components
 import { BasicInformationTab } from "./tabs/BasicInformationTab";
 import { ActivityDetailsTab } from "./tabs/ActivityDetailsTab";
-import { PackageVariantsTab } from "./tabs/PackageVariantsTab";
-import { PoliciesRestrictionsTab } from "./tabs/PoliciesRestrictionsTab";
-import { FAQTab } from "./tabs/FAQTab";
+// import { PackageVariantsTab } from "./tabs/PackageVariantsTab";
+// import { PoliciesRestrictionsTab } from "./tabs/PoliciesRestrictionsTab";
+// import { FAQTab } from "./tabs/FAQTab";
 import { PricingTab } from "./tabs/PricingTab";
 import ReviewPublishActivityTab from "./tabs/ReviewPublishActivityTab";
 
@@ -246,30 +246,30 @@ export const ActivityPackageForm: React.FC<ActivityPackageFormProps> = ({
       isComplete: !validation.errors.some(e => e.tab === 'activity-details'),
       hasErrors: validation.errors.some(e => e.tab === 'activity-details'),
     },
-    {
-      id: 'variants',
-      label: 'Variants',
-      icon: <FaLayerGroup className="h-4 w-4" />,
-      badge: validation.errors.filter(e => e.tab === 'variants').length,
-      isComplete: !validation.errors.some(e => e.tab === 'variants'),
-      hasErrors: validation.errors.some(e => e.tab === 'variants'),
-    },
-    {
-      id: 'policies',
-      label: 'Policies',
-      icon: <FaShieldAlt className="h-4 w-4" />,
-      badge: validation.errors.filter(e => e.tab === 'policies').length,
-      isComplete: !validation.errors.some(e => e.tab === 'policies'),
-      hasErrors: validation.errors.some(e => e.tab === 'policies'),
-    },
-    {
-      id: 'faq',
-      label: 'FAQ',
-      icon: <FaQuestionCircle className="h-4 w-4" />,
-      badge: validation.errors.filter(e => e.tab === 'faq').length,
-      isComplete: !validation.errors.some(e => e.tab === 'faq'),
-      hasErrors: validation.errors.some(e => e.tab === 'faq'),
-    },
+    // {
+    //   id: 'variants',
+    //   label: 'Variants',
+    //   icon: <FaLayerGroup className="h-4 w-4" />,
+    //   badge: validation.errors.filter(e => e.tab === 'variants').length,
+    //   isComplete: !validation.errors.some(e => e.tab === 'variants'),
+    //   hasErrors: validation.errors.some(e => e.tab === 'variants'),
+    // },
+    // {
+    //   id: 'policies',
+    //   label: 'Policies',
+    //   icon: <FaShieldAlt className="h-4 w-4" />,
+    //   badge: validation.errors.filter(e => e.tab === 'policies').length,
+    //   isComplete: !validation.errors.some(e => e.tab === 'policies'),
+    //   hasErrors: validation.errors.some(e => e.tab === 'policies'),
+    // },
+    // {
+    //   id: 'faq',
+    //   label: 'FAQ',
+    //   icon: <FaQuestionCircle className="h-4 w-4" />,
+    //   badge: validation.errors.filter(e => e.tab === 'faq').length,
+    //   isComplete: !validation.errors.some(e => e.tab === 'faq'),
+    //   hasErrors: validation.errors.some(e => e.tab === 'faq'),
+    // },
     {
       id: 'pricing',
       label: 'Pricing',
@@ -350,9 +350,9 @@ export const ActivityPackageForm: React.FC<ActivityPackageFormProps> = ({
   const tabContent = {
     'basic-info': <BasicInformationTab />,
     'activity-details': <ActivityDetailsTab />,
-    'variants': <PackageVariantsTab />,
-    'policies': <PoliciesRestrictionsTab />,
-    'faq': <FAQTab />,
+    // 'variants': <PackageVariantsTab />,
+    // 'policies': <PoliciesRestrictionsTab />,
+    // 'faq': <FAQTab />,
     'pricing': <PricingTab />,
     'review': <ReviewPublishActivityTab validation={validation} onPreview={handlePreview} />,
   };
