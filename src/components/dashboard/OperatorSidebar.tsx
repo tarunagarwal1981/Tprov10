@@ -21,6 +21,12 @@ import { useAuth } from "@/context/SupabaseAuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { LogoSVG } from "@/components/marketing/Logo";
 
@@ -243,31 +249,41 @@ const isActive = (href: string) => {
 
 			{/* User Section */}
 			<div className="p-4 border-t border-zinc-200/50 dark:border-zinc-800/50">
-				<div className={cn("flex items-center gap-3", effectiveCollapsed ? "justify-center" : "") }>
-					<Avatar className="w-10 h-10">
-						<AvatarImage src={(user as any)?.avatar_url} />
-						<AvatarFallback className="bg-gradient-to-br from-[#FF6B35] to-[#FF4B8C] text-white font-semibold">
-							{((user as any)?.name?.charAt(0) || "T")}
-						</AvatarFallback>
-					</Avatar>
-					{!effectiveCollapsed && (
-						<div className="flex-1 min-w-0">
-							<p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate">{(user as any)?.name || "Tour Operator"}</p>
-							<p className="text-xs text-zinc-500 dark:text-zinc-400">Operator</p>
-						</div>
-					)}
-					{!effectiveCollapsed && (
-						<Button
-							variant="ghost"
-							size="icon"
-							onClick={logout}
-							className="w-8 h-8 text-zinc-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
-							aria-label="Log out"
-						>
-							<LogOut className="w-4 h-4" />
+				<DropdownMenu>
+					<DropdownMenuTrigger asChild>
+						<Button variant="ghost" className={cn("w-full flex items-center gap-3 p-2 h-auto hover:bg-zinc-50 dark:hover:bg-zinc-800/60", effectiveCollapsed ? "justify-center" : "")}>
+							<Avatar className="w-10 h-10">
+								<AvatarImage src={(user as any)?.avatar_url} />
+								<AvatarFallback className="bg-gradient-to-br from-[#FF6B35] to-[#FF4B8C] text-white font-semibold">
+									{((user as any)?.name?.charAt(0) || "T")}
+								</AvatarFallback>
+							</Avatar>
+							{!effectiveCollapsed && (
+								<div className="flex-1 min-w-0 text-left">
+									<p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate">{(user as any)?.name || "Tour Operator"}</p>
+									<p className="text-xs text-zinc-500 dark:text-zinc-400">Operator</p>
+								</div>
+							)}
 						</Button>
-					)}
-				</div>
+					</DropdownMenuTrigger>
+					<DropdownMenuContent align="end" className="bg-white border border-zinc-200 shadow-lg w-48">
+						<DropdownMenuItem className="cursor-pointer hover:bg-zinc-50 text-zinc-700">
+							<UserIcon className="w-4 h-4 mr-2" />
+							Profile
+						</DropdownMenuItem>
+						<DropdownMenuItem className="cursor-pointer hover:bg-zinc-50 text-zinc-700">
+							<Settings className="w-4 h-4 mr-2" />
+							Settings
+						</DropdownMenuItem>
+						<DropdownMenuItem 
+							className="cursor-pointer hover:bg-red-50 text-red-600"
+							onClick={logout}
+						>
+							<LogOut className="w-4 h-4 mr-2" />
+							Logout
+						</DropdownMenuItem>
+					</DropdownMenuContent>
+				</DropdownMenu>
 			</div>
 		</motion.aside>
 	);
