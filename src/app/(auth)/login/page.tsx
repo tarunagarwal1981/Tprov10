@@ -53,7 +53,7 @@ const LoginPage: React.FC = () => {
   const [passwordValue, setPasswordValue] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const router = useRouter();
-  const { login, loginWithGoogle, loading, error, isInitialized, getRedirectPath } = useAuth();
+  const { login, loginWithGoogle, logout, user, loading, error, isInitialized, getRedirectPath } = useAuth();
   
   // SSR-safe stable IDs for inputs
   const autoId = useId();
@@ -78,7 +78,8 @@ const LoginPage: React.FC = () => {
     if (isInitialized) {
       forceLogoutExistingSession();
     }
-  }, [isInitialized, user, loading, logout]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isInitialized]);
   
   // Redirect if already authenticated (after force logout check)
   useEffect(() => {
@@ -87,7 +88,8 @@ const LoginPage: React.FC = () => {
       console.log('🔄 Login page redirect - URL:', redirectUrl);
       router.push(redirectUrl);
     }
-  }, [isInitialized, loading, getRedirectPath, router, user]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isInitialized, loading, getRedirectPath, router]);
 
   // Clear error when user starts typing
   useEffect(() => {
