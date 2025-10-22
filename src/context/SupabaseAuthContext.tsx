@@ -299,29 +299,15 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
           console.log('📡 User ID:', data.user.id);
           console.log('📡 Supabase URL:', (supabase as any).supabaseUrl);
           
-          // Create a timeout promise to prevent infinite hanging
-          const timeoutPromise = new Promise<{ data: null; error: any }>((_, reject) => {
-            setTimeout(() => {
-              reject(new Error('Database query timeout after 30 seconds'));
-            }, 30000);
-          });
+          // Query the user profile from database
+          console.log('📡 Loading user profile from database...');
+          console.log('📡 Query URL:', `${(supabase as any).supabaseUrl}/rest/v1/users?id=eq.${data.user.id}`);
           
-          // Query the user profile from database with timeout
-          console.log('📡 Starting database query with 30s timeout...');
-          const profileQuery = supabase
+          const { data: userProfile, error: profileError } = await supabase
             .from('users')
             .select('*')
             .eq('id', data.user.id)
             .single();
-          
-          // Race between the query and timeout
-          const { data: userProfile, error: profileError } = await Promise.race([
-            profileQuery,
-            timeoutPromise
-          ]).catch((err) => {
-            console.error('📡 Query or timeout error:', err);
-            return { data: null, error: err };
-          }) as { data: any; error: any };
           
           console.log('📡 Query completed! Result:', { userProfile, profileError });
           
