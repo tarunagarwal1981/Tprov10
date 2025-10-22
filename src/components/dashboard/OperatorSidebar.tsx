@@ -36,6 +36,7 @@ interface NavItem {
 	href: string;
 	icon: React.ElementType;
 	badge?: number;
+	enabled?: boolean; // false for not yet implemented features
 	submenu?: {
 		label: string;
 		href: string;
@@ -79,13 +80,14 @@ export function OperatorSidebar() {
 	};
 
 	const navItems: NavItem[] = [
-		{ id: "dashboard", label: "Dashboard", href: "/operator", icon: LayoutDashboard },
+		{ id: "dashboard", label: "Dashboard", href: "/operator", icon: LayoutDashboard, enabled: true },
 		{
 			id: "packages",
 			label: "Packages",
 			href: "/operator/packages",
 			icon: PackageIcon,
 			badge: 24,
+			enabled: true,
 			submenu: [
 				{ label: "All Packages", href: "/operator/packages" },
 				{ label: "Create New", href: "/operator/packages/create" },
@@ -98,6 +100,7 @@ export function OperatorSidebar() {
 			href: "/operator/bookings",
 			icon: Calendar,
 			badge: 156,
+			enabled: false, // Not yet implemented
 			submenu: [
 				{ label: "All Bookings", href: "/operator/bookings" },
 				{ label: "Pending", href: "/operator/bookings/pending" },
@@ -105,10 +108,10 @@ export function OperatorSidebar() {
 				{ label: "Completed", href: "/operator/bookings/completed" },
 			],
 		},
-		{ id: "agents", label: "Travel Agents", href: "/operator/agents", icon: Users, badge: 42 },
-		{ id: "analytics", label: "Analytics", href: "/operator/analytics", icon: BarChart3 },
-		{ id: "communication", label: "Communication", href: "/operator/communication", icon: MessageSquare, badge: 8 },
-		{ id: "settings", label: "Settings", href: "/operator/settings", icon: Settings },
+		{ id: "agents", label: "Travel Agents", href: "/operator/agents", icon: Users, badge: 42, enabled: false },
+		{ id: "analytics", label: "Analytics", href: "/operator/analytics", icon: BarChart3, enabled: false },
+		{ id: "communication", label: "Communication", href: "/operator/communication", icon: MessageSquare, badge: 8, enabled: false },
+		{ id: "settings", label: "Settings", href: "/operator/settings", icon: Settings, enabled: false },
 	];
 
 const isActive = (href: string) => {
@@ -179,37 +182,61 @@ const isActive = (href: string) => {
 
 			{/* Navigation */}
 			<nav className="flex-1 px-3 py-6 space-y-2 overflow-y-auto" aria-label="Primary">
-				{navItems.map((item) => (
+				{navItems.map((item) => {
+					const isDisabled = item.enabled === false;
+					const NavWrapper = isDisabled ? 'div' : Link;
+					const wrapperProps = isDisabled ? {} : { href: item.href };
+					
+					return (
 					<div key={item.id}>
 						{/* Main Nav Item */}
-						<Link href={item.href} className="block">
+						<NavWrapper {...wrapperProps} className={isDisabled ? "" : "block"}>
 							<motion.div
-								whileHover={{ x: 4 }}
+								whileHover={isDisabled ? {} : { x: 4 }}
 								className={cn(
-									"flex items-center gap-3 px-3 py-3 rounded-xl transition-all group cursor-pointer",
-									isActive(item.href)
+									"flex items-center gap-3 px-3 py-3 rounded-xl transition-all group",
+									isDisabled
+										? "opacity-40 cursor-not-allowed"
+										: "cursor-pointer",
+									!isDisabled && isActive(item.href)
 										? "bg-gradient-to-r from-orange-50 to-pink-50 text-[#FF6B35] border border-orange-100 shadow-sm dark:from-orange-900/10 dark:to-pink-900/10"
-										: "text-zinc-600 hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-zinc-800/60"
+										: !isDisabled 
+										? "text-zinc-600 hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-zinc-800/60"
+										: "text-zinc-400 dark:text-zinc-600"
 								)}
-								role="link"
-								aria-current={isActive(item.href) ? "page" : undefined}
+								role={isDisabled ? undefined : "link"}
+								aria-current={!isDisabled && isActive(item.href) ? "page" : undefined}
+								aria-disabled={isDisabled}
+								title={isDisabled ? "Coming soon" : undefined}
 							>
-								<item.icon className={cn("w-5 h-5 flex-shrink-0", isActive(item.href) ? "text-[#FF6B35]" : "text-zinc-500 group-hover:text-zinc-700 dark:group-hover:text-zinc-100")} />
+								<item.icon className={cn(
+									"w-5 h-5 flex-shrink-0", 
+									isDisabled 
+										? "text-zinc-400 dark:text-zinc-600" 
+										: isActive(item.href) 
+										? "text-[#FF6B35]" 
+										: "text-zinc-500 group-hover:text-zinc-700 dark:group-hover:text-zinc-100"
+								)} />
 								{!effectiveCollapsed && (
 									<>
 										<span className="flex-1 font-medium text-sm">{item.label}</span>
-										{item.badge && (
+										{item.badge && !isDisabled && (
 											<Badge className="h-6 min-w-[24px] px-2 bg-gradient-to-r from-[#FF6B35] to-[#FF4B8C] text-white border-0 text-xs">
 												{item.badge}
 											</Badge>
 										)}
+										{isDisabled && !effectiveCollapsed && (
+											<span className="text-[10px] text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded">
+												Soon
+											</span>
+										)}
 									</>
 								)}
 							</motion.div>
-						</Link>
+						</NavWrapper>
 
 						{/* Submenu Toggle (click item again to toggle) */}
-						{item.submenu && !effectiveCollapsed && (
+						{item.submenu && !effectiveCollapsed && !isDisabled && (
 							<div className="pl-12 pt-1">
 								<Button variant="ghost" size="sm" onClick={() => toggleSubmenu(item.id)} className="h-7 px-2 text-xs">
 									{openSubmenus.includes(item.id) ? "Hide" : "Show"} {item.label} menu
@@ -219,7 +246,7 @@ const isActive = (href: string) => {
 
 						{/* Submenu */}
 						<AnimatePresence>
-							{item.submenu && !effectiveCollapsed && openSubmenus.includes(item.id) && (
+							{item.submenu && !effectiveCollapsed && !isDisabled && openSubmenus.includes(item.id) && (
 								<motion.div
 									initial={{ opacity: 0, height: 0 }}
 									animate={{ opacity: 1, height: "auto" }}
@@ -244,7 +271,8 @@ const isActive = (href: string) => {
 							)}
 						</AnimatePresence>
 					</div>
-				))}
+					);
+				})}
 			</nav>
 
 			{/* User Section */}
