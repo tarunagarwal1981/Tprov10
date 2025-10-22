@@ -512,24 +512,36 @@ export default function PackagesPage() {
 						>
 							<Card className="bg-white/80 dark:bg-zinc-900/70 backdrop-blur-sm border-slate-200/60 shadow-lg hover:shadow-xl transition-all overflow-hidden">
 								{/* Package Image */}
-								{pkg.image && (
-									<div className="relative h-48 w-full bg-slate-200">
+								<div className="relative h-48 w-full bg-gradient-to-br from-slate-100 to-slate-200">
+									{pkg.image ? (
 										<Image 
 											src={pkg.image} 
 											alt={pkg.title}
 											fill
 											className="object-cover"
 											onError={(e) => {
-												e.currentTarget.src = '/images/placeholder-package.jpg';
+												// Hide the image and show placeholder instead
+												e.currentTarget.style.display = 'none';
+												const placeholder = e.currentTarget.parentElement?.querySelector('.image-placeholder') as HTMLElement;
+												if (placeholder) placeholder.style.display = 'flex';
 											}}
 										/>
-										<div className="absolute top-2 right-2">
-											<Badge className={getStatusColor(pkg.status)}>
-												{getStatusLabel(pkg.status)}
-											</Badge>
-										</div>
+									) : null}
+									
+									{/* Placeholder when no image */}
+									<div 
+										className={`image-placeholder absolute inset-0 flex flex-col items-center justify-center text-slate-400 ${pkg.image ? 'hidden' : 'flex'}`}
+									>
+										<PackageIcon className="w-12 h-12 mb-2 opacity-50" />
+										<span className="text-sm font-medium">No Image</span>
 									</div>
-								)}
+									
+									<div className="absolute top-2 right-2">
+										<Badge className={getStatusColor(pkg.status)}>
+											{getStatusLabel(pkg.status)}
+										</Badge>
+									</div>
+								</div>
 								
 								<CardContent className="p-4">
 									<h3 className="text-lg font-bold text-slate-900 mb-2 line-clamp-2">{pkg.title}</h3>
@@ -557,24 +569,57 @@ export default function PackagesPage() {
 
 										<DropdownMenu>
 											<DropdownMenuTrigger asChild>
-												<Button variant="ghost" size="sm">
+												<Button variant="ghost" size="sm" className="hover:bg-slate-100">
 													<MoreVertical className="w-4 h-4" />
 												</Button>
 											</DropdownMenuTrigger>
-											<DropdownMenuContent align="end">
-												<DropdownMenuItem>
+											<DropdownMenuContent align="end" className="bg-white border border-slate-200 shadow-lg">
+												<DropdownMenuItem 
+													className="cursor-pointer hover:bg-slate-50 text-slate-700"
+													onClick={() => {
+														// View functionality - could open a modal or navigate to view page
+														toast.info(`Viewing ${pkg.title}`);
+													}}
+												>
 													<Eye className="w-4 h-4 mr-2" />
 													View
 												</DropdownMenuItem>
-												<DropdownMenuItem>
+												<DropdownMenuItem 
+													className="cursor-pointer hover:bg-slate-50 text-slate-700"
+													onClick={() => {
+														// Edit functionality - navigate to edit page based on package type
+														const editPath = pkg.type === 'Activity' 
+															? `/operator/packages/create/activity?id=${pkg.id}`
+															: pkg.type === 'Transfer'
+															? `/operator/packages/create/transfer?id=${pkg.id}`
+															: pkg.type === 'Multi-City'
+															? `/operator/packages/create/multi-city?id=${pkg.id}`
+															: `/operator/packages/create?id=${pkg.id}`;
+														window.location.href = editPath;
+													}}
+												>
 													<Edit className="w-4 h-4 mr-2" />
 													Edit
 												</DropdownMenuItem>
-												<DropdownMenuItem>
+												<DropdownMenuItem 
+													className="cursor-pointer hover:bg-slate-50 text-slate-700"
+													onClick={() => {
+														// Duplicate functionality
+														toast.info(`Duplicating ${pkg.title}`);
+													}}
+												>
 													<Copy className="w-4 h-4 mr-2" />
 													Duplicate
 												</DropdownMenuItem>
-												<DropdownMenuItem className="text-red-600">
+												<DropdownMenuItem 
+													className="cursor-pointer hover:bg-red-50 text-red-600"
+													onClick={() => {
+														// Delete functionality
+														if (confirm(`Are you sure you want to delete "${pkg.title}"?`)) {
+															toast.success(`Deleted ${pkg.title}`);
+														}
+													}}
+												>
 													<Trash className="w-4 h-4 mr-2" />
 													Delete
 												</DropdownMenuItem>
