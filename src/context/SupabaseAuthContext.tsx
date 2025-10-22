@@ -299,35 +299,34 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
           console.log('📡 User ID:', data.user.id);
           console.log('📡 Supabase URL:', (supabase as any).supabaseUrl);
           
-          // Create a timeout promise to prevent infinite hanging
-          const timeoutPromise = new Promise<{ data: null; error: any }>((_, reject) => {
-            setTimeout(() => {
-              reject(new Error('Database query timeout after 10 seconds'));
-            }, 10000);
-          });
+          // Query the user profile from database
+          console.log('📡 Loading user profile from database...');
+          console.log('📡 Query URL:', `${(supabase as any).supabaseUrl}/rest/v1/users?id=eq.${data.user.id}`);
           
-          // Query the user profile from database with timeout
-          console.log('📡 Starting database query with 10s timeout...');
-          const profileQuery = supabase
+          const { data: userProfile, error: profileError } = await supabase
             .from('users')
             .select('*')
             .eq('id', data.user.id)
             .single();
           
-          // Race between the query and timeout
-          const { data: userProfile, error: profileError } = await Promise.race([
-            profileQuery,
-            timeoutPromise
-          ]).catch((err) => {
-            console.error('📡 Query or timeout error:', err);
-            return { data: null, error: err };
-          }) as { data: any; error: any };
-          
           console.log('📡 Query completed! Result:', { userProfile, profileError });
           
           if (profileError) {
             console.error('❌ Profile error:', profileError);
-            throw profileError;
+            console.error('❌ Error details:', {
+              message: profileError.message,
+              code: profileError.code,
+              details: profileError.details,
+              hint: profileError.hint
+            });
+            
+            // Show user-friendly error
+            setError({
+              type: 'login_error',
+              message: 'Database connection timeout. Please check your internet connection and try again.',
+              timestamp: new Date()
+            });
+            return false;
           }
 
           if (userProfile) {
