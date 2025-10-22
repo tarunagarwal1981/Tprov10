@@ -91,43 +91,26 @@ const LoginPage: React.FC = () => {
         const supabaseKeys = storageKeys.filter(key => key.includes('supabase') || key.includes('sb-'));
         
         if (supabaseKeys.length > 0) {
-          // Check if any session data is expired or corrupted
-          let needsClear = false;
+          // Only clear data that's MORE than 1 hour expired to avoid interfering with active sessions
+          const oneHourAgo = (Date.now() / 1000) - 3600;
           
           supabaseKeys.forEach(key => {
             try {
               const data = localStorage.getItem(key);
               if (data) {
                 const parsed = JSON.parse(data);
-                // Check if it's a session token and if it's expired
-                if (parsed.expires_at && parsed.expires_at < Date.now() / 1000) {
-                  needsClear = true;
-                  console.log('🧹 Found expired session data, clearing...');
+                // Only clear if expired more than 1 hour ago
+                if (parsed.expires_at && parsed.expires_at < oneHourAgo) {
+                  localStorage.removeItem(key);
+                  console.log('🧹 Cleared old expired session:', key);
                 }
               }
             } catch (e) {
-              // Corrupted data - needs clearing
-              needsClear = true;
-              console.log('🧹 Found corrupted session data, clearing...');
+              // Only clear truly corrupted data (can't parse JSON)
+              // Don't clear everything on first error
+              console.warn('⚠️ Found corrupted data in:', key);
             }
           });
-          
-          // Clear expired/corrupted data
-          if (needsClear) {
-            supabaseKeys.forEach(key => {
-              localStorage.removeItem(key);
-              console.log('Removed:', key);
-            });
-            
-            // Also clear sessionStorage
-            Object.keys(sessionStorage).forEach(key => {
-              if (key.includes('supabase') || key.includes('sb-')) {
-                sessionStorage.removeItem(key);
-              }
-            });
-            
-            console.log('✅ Old session data cleared automatically');
-          }
         }
       } catch (error) {
         console.error('Error checking storage:', error);
