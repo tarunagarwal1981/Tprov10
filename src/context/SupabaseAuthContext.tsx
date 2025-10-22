@@ -302,12 +302,12 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
           // Create a timeout promise to prevent infinite hanging
           const timeoutPromise = new Promise<{ data: null; error: any }>((_, reject) => {
             setTimeout(() => {
-              reject(new Error('Database query timeout after 10 seconds'));
-            }, 10000);
+              reject(new Error('Database query timeout after 30 seconds'));
+            }, 30000);
           });
           
           // Query the user profile from database with timeout
-          console.log('📡 Starting database query with 10s timeout...');
+          console.log('📡 Starting database query with 30s timeout...');
           const profileQuery = supabase
             .from('users')
             .select('*')
@@ -327,7 +327,20 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
           
           if (profileError) {
             console.error('❌ Profile error:', profileError);
-            throw profileError;
+            console.error('❌ Error details:', {
+              message: profileError.message,
+              code: profileError.code,
+              details: profileError.details,
+              hint: profileError.hint
+            });
+            
+            // Show user-friendly error
+            setError({
+              type: 'login_error',
+              message: 'Database connection timeout. Please check your internet connection and try again.',
+              timestamp: new Date()
+            });
+            return false;
           }
 
           if (userProfile) {
