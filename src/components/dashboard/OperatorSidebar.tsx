@@ -184,56 +184,63 @@ const isActive = (href: string) => {
 			<nav className="flex-1 px-3 py-6 space-y-2 overflow-y-auto" aria-label="Primary">
 				{navItems.map((item) => {
 					const isDisabled = item.enabled === false;
-					const NavWrapper = isDisabled ? 'div' : Link;
-					const wrapperProps = isDisabled ? {} : { href: item.href };
 					
 					return (
 					<div key={item.id}>
 						{/* Main Nav Item */}
-						<NavWrapper {...wrapperProps} className={isDisabled ? "" : "block"}>
-							<motion.div
-								whileHover={isDisabled ? {} : { x: 4 }}
-								className={cn(
-									"flex items-center gap-3 px-3 py-3 rounded-xl transition-all group",
-									isDisabled
-										? "opacity-40 cursor-not-allowed"
-										: "cursor-pointer",
-									!isDisabled && isActive(item.href)
-										? "bg-gradient-to-r from-orange-50 to-pink-50 text-[#FF6B35] border border-orange-100 shadow-sm dark:from-orange-900/10 dark:to-pink-900/10"
-										: !isDisabled 
-										? "text-zinc-600 hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-zinc-800/60"
-										: "text-zinc-400 dark:text-zinc-600"
-								)}
-								role={isDisabled ? undefined : "link"}
-								aria-current={!isDisabled && isActive(item.href) ? "page" : undefined}
-								aria-disabled={isDisabled}
-								title={isDisabled ? "Coming soon" : undefined}
-							>
-								<item.icon className={cn(
-									"w-5 h-5 flex-shrink-0", 
-									isDisabled 
-										? "text-zinc-400 dark:text-zinc-600" 
-										: isActive(item.href) 
-										? "text-[#FF6B35]" 
-										: "text-zinc-500 group-hover:text-zinc-700 dark:group-hover:text-zinc-100"
-								)} />
-								{!effectiveCollapsed && (
-									<>
-										<span className="flex-1 font-medium text-sm">{item.label}</span>
-										{item.badge && !isDisabled && (
-											<Badge className="h-6 min-w-[24px] px-2 bg-gradient-to-r from-[#FF6B35] to-[#FF4B8C] text-white border-0 text-xs">
-												{item.badge}
-											</Badge>
-										)}
-										{isDisabled && !effectiveCollapsed && (
+						{isDisabled ? (
+							<div>
+								<motion.div
+									className={cn(
+										"flex items-center gap-3 px-3 py-3 rounded-xl transition-all group",
+										"opacity-40 cursor-not-allowed text-zinc-400 dark:text-zinc-600"
+									)}
+									aria-disabled={true}
+									title="Coming soon"
+								>
+									<item.icon className="w-5 h-5 flex-shrink-0 text-zinc-400 dark:text-zinc-600" />
+									{!effectiveCollapsed && (
+										<>
+											<span className="flex-1 font-medium text-sm">{item.label}</span>
 											<span className="text-[10px] text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded">
 												Soon
 											</span>
-										)}
-									</>
-								)}
-							</motion.div>
-						</NavWrapper>
+										</>
+									)}
+								</motion.div>
+							</div>
+						) : (
+							<Link href={item.href} className="block">
+								<motion.div
+									whileHover={{ x: 4 }}
+									className={cn(
+										"flex items-center gap-3 px-3 py-3 rounded-xl transition-all group cursor-pointer",
+										isActive(item.href)
+											? "bg-gradient-to-r from-orange-50 to-pink-50 text-[#FF6B35] border border-orange-100 shadow-sm dark:from-orange-900/10 dark:to-pink-900/10"
+											: "text-zinc-600 hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-zinc-800/60"
+									)}
+									role="link"
+									aria-current={isActive(item.href) ? "page" : undefined}
+								>
+									<item.icon className={cn(
+										"w-5 h-5 flex-shrink-0", 
+										isActive(item.href) 
+											? "text-[#FF6B35]" 
+											: "text-zinc-500 group-hover:text-zinc-700 dark:group-hover:text-zinc-100"
+									)} />
+									{!effectiveCollapsed && (
+										<>
+											<span className="flex-1 font-medium text-sm">{item.label}</span>
+											{item.badge && (
+												<Badge className="h-6 min-w-[24px] px-2 bg-gradient-to-r from-[#FF6B35] to-[#FF4B8C] text-white border-0 text-xs">
+													{item.badge}
+												</Badge>
+											)}
+										</>
+									)}
+								</motion.div>
+							</Link>
+						)}
 
 						{/* Submenu Toggle (click item again to toggle) */}
 						{item.submenu && !effectiveCollapsed && !isDisabled && (
