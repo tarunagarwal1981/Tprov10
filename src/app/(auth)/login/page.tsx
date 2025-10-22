@@ -82,6 +82,61 @@ const LoginPage: React.FC = () => {
     }
   }, [error]);
 
+  // Automatic cache clearing on mount to prevent login issues
+  useEffect(() => {
+    const clearOldSupabaseStorage = () => {
+      try {
+        // Check for corrupted or old Supabase session data
+        const storageKeys = Object.keys(localStorage);
+        const supabaseKeys = storageKeys.filter(key => key.includes('supabase') || key.includes('sb-'));
+        
+        if (supabaseKeys.length > 0) {
+          // Check if any session data is expired or corrupted
+          let needsClear = false;
+          
+          supabaseKeys.forEach(key => {
+            try {
+              const data = localStorage.getItem(key);
+              if (data) {
+                const parsed = JSON.parse(data);
+                // Check if it's a session token and if it's expired
+                if (parsed.expires_at && parsed.expires_at < Date.now() / 1000) {
+                  needsClear = true;
+                  console.log('🧹 Found expired session data, clearing...');
+                }
+              }
+            } catch (e) {
+              // Corrupted data - needs clearing
+              needsClear = true;
+              console.log('🧹 Found corrupted session data, clearing...');
+            }
+          });
+          
+          // Clear expired/corrupted data
+          if (needsClear) {
+            supabaseKeys.forEach(key => {
+              localStorage.removeItem(key);
+              console.log('Removed:', key);
+            });
+            
+            // Also clear sessionStorage
+            Object.keys(sessionStorage).forEach(key => {
+              if (key.includes('supabase') || key.includes('sb-')) {
+                sessionStorage.removeItem(key);
+              }
+            });
+            
+            console.log('✅ Old session data cleared automatically');
+          }
+        }
+      } catch (error) {
+        console.error('Error checking storage:', error);
+      }
+    };
+    
+    clearOldSupabaseStorage();
+  }, []);
+
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError(null);

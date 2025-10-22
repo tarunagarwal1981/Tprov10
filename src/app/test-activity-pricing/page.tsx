@@ -429,7 +429,7 @@ function Option2View({ viewMode }: { viewMode: "operator" | "customer" }) {
                       </tr>
                     </thead>
                     <tbody>
-                      {variant.transfers.map((transfer, idx) => (
+                      {(variant.transfers || []).map((transfer, idx) => (
                         <tr key={idx} className="border-b last:border-b-0">
                           <td className="py-3 px-4">{transfer.type}</td>
                           <td className="py-3 px-4 text-right">
@@ -497,7 +497,7 @@ function Option2View({ viewMode }: { viewMode: "operator" | "customer" }) {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {variant.transfers.map((t, idx) => (
+                        {(variant.transfers || []).map((t, idx) => (
                           <SelectItem key={idx} value={idx.toString()}>
                             {t.type}
                           </SelectItem>
@@ -543,7 +543,7 @@ function Option2View({ viewMode }: { viewMode: "operator" | "customer" }) {
                   </td>
                   <td className="py-4 px-4 text-right">
                     <div className="text-lg font-bold text-green-600">
-                      ₹ {(variant.transfers[0].adultPrice * 2).toLocaleString()}
+                      ₹ {((variant.transfers?.[0]?.adultPrice || 0) * 2).toLocaleString()}
                     </div>
                   </td>
                   <td className="py-4 px-4 text-center">
@@ -744,8 +744,8 @@ function Option3View({ viewMode }: { viewMode: "operator" | "customer" }) {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="ticketOnly">Ticket Only</SelectItem>
-                        <SelectItem value="hotelPickup">Hotel Pickup (+₹{prices.hotelPickup - prices.ticketOnly})</SelectItem>
-                        <SelectItem value="privateTransfer">Private Transfer (+₹{prices.privateTransfer - prices.ticketOnly})</SelectItem>
+                        <SelectItem value="hotelPickup">Hotel Pickup (+₹{(prices.hotelPickup || 0) - (prices.ticketOnly || 0)})</SelectItem>
+                        <SelectItem value="privateTransfer">Private Transfer (+₹{(prices.privateTransfer || 0) - (prices.ticketOnly || 0)})</SelectItem>
                       </SelectContent>
                     </Select>
                   </td>
@@ -787,7 +787,7 @@ function Option3View({ viewMode }: { viewMode: "operator" | "customer" }) {
                   </td>
                   <td className="py-4 px-4 text-right">
                     <div className="text-lg font-bold text-green-600">
-                      ₹ {(prices.ticketOnly * 2).toLocaleString()}
+                      ₹ {((prices.ticketOnly || 0) * 2).toLocaleString()}
                     </div>
                   </td>
                   <td className="py-4 px-4 text-center">
