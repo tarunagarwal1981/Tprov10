@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Diagnostic Tool</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .test-section {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .test-section h2 {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .status.pass {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status.fail {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .status.warn {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .status.pending {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        
+        .test-result {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: transform 0.2s;
+            display: block;
+            margin: 20px auto;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        .summary {
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 20px;
+            border-radius: 6px;
+            margin-top: 20px;
+        }
+        
+        .summary h3 {
+            color: #1976D2;
+            margin-bottom: 10px;
+        }
+        
+        .recommendation {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 20px;
+            border-radius: 6px;
+            margin-top: 20px;
+        }
+        
+        .recommendation h3 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+        
+        .recommendation ul {
+            margin-left: 20px;
+        }
+        
+        .recommendation li {
+            margin: 8px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 Login Diagnostic Tool</h1>
+            <p>Diagnose why login works on some laptops but not others</p>
+        </div>
+        
+        <div class="content">
+            <button onclick="runDiagnostics()">🚀 Run Full Diagnostics</button>
+            
+            <div id="results"></div>
+        </div>
+    </div>
+
+    <script>
+        async function runDiagnostics() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<div class="test-section"><h2>Running diagnostics...</h2></div>';
+            
+            const results = {
+                tests: [],
+                issues: [],
+                recommendations: []
+            };
+            
+            // Add user ID info at the top
+            const userIdInfo = {
+                name: 'Expected User Information',
+                status: 'pass',
+                details: {
+                    'Expected User ID': '0afbb77a-e2fa-4de8-8a24-2ed473ab7c2c',
+                    'Expected Email': 'operator@gmail.com',
+                    'Expected Role': 'TOUR_OPERATOR',
+                    'Note': 'This user EXISTS in database - issue is on client side'
+                }
+            };
+            results.tests.push(userIdInfo);
+            
+            // Test 1: Browser Information
+            const browserTest = {
+                name: 'Browser & System Information',
+                status: 'pass',
+                details: {
+                    'User Agent': navigator.userAgent,
+                    'Platform': navigator.platform,
+                    'Language': navigator.language,
+                    'Cookies Enabled': navigator.cookieEnabled,
+                    'Online Status': navigator.onLine,
+                    'Screen Resolution': `${screen.width}x${screen.height}`,
+                    'Color Depth': `${screen.colorDepth}-bit`
+                }
+            };
+            results.tests.push(browserTest);
+            
+            // Test 2: LocalStorage
+            let storageTest = {
+                name: 'Browser Storage',
+                status: 'pass',
+                details: {}
+            };
+            
+            try {
+                const testKey = '__test__';
+                localStorage.setItem(testKey, 'test');
+                localStorage.removeItem(testKey);
+                storageTest.details['LocalStorage'] = '✅ Working';
+                
+                // Check for Supabase data
+                const supabaseKeys = Object.keys(localStorage).filter(k => k.includes('supabase'));
+                if (supabaseKeys.length > 0) {
+                    storageTest.details['Supabase Data'] = `Found ${supabaseKeys.length} items`;
+                    storageTest.details['Keys'] = supabaseKeys.join(', ');
+                    
+                    // Check for old/corrupted session
+                    const authKey = supabaseKeys.find(k => k.includes('auth-token'));
+                    if (authKey) {
+                        try {
+                            const authData = JSON.parse(localStorage.getItem(authKey));
+                            if (authData?.expires_at) {
+                                const expiryDate = new Date(authData.expires_at * 1000);
+                                const isExpired = expiryDate < new Date();
+                                storageTest.details['Session Status'] = isExpired ? 
+                                    '❌ EXPIRED (This could be the issue!)' : 
+                                    '✅ Valid';
+                                if (isExpired) {
+                                    storageTest.status = 'warn';
+                                    results.issues.push('Expired session found in localStorage');
+                                    results.recommendations.push('Clear browser localStorage and try again');
+                                }
+                            }
+                        } catch (e) {
+                            storageTest.details['Session Parse'] = '❌ Invalid JSON (corrupted)';
+                            storageTest.status = 'fail';
+                            results.issues.push('Corrupted session data in localStorage');
+                            results.recommendations.push('Clear browser localStorage: localStorage.clear()');
+                        }
+                    }
+                } else {
+                    storageTest.details['Supabase Data'] = 'No Supabase data found (fresh start)';
+                }
+            } catch (e) {
+                storageTest.status = 'fail';
+                storageTest.details['Error'] = e.message;
+                results.issues.push('LocalStorage not working');
+            }
+            results.tests.push(storageTest);
+            
+            // Test 3: Network Connectivity
+            const networkTest = {
+                name: 'Network & Supabase Connectivity',
+                status: 'pending',
+                details: {}
+            };
+            
+            try {
+                const supabaseUrl = 'https://megmjzszmqnmzdxwzigt.supabase.co';
+                const startTime = Date.now();
+                const response = await fetch(supabaseUrl, { method: 'HEAD' });
+                const endTime = Date.now();
+                const latency = endTime - startTime;
+                
+                networkTest.details['Supabase URL'] = supabaseUrl;
+                networkTest.details['Reachable'] = response.ok ? '✅ Yes' : '❌ No';
+                networkTest.details['Status Code'] = response.status;
+                networkTest.details['Latency'] = `${latency}ms`;
+                
+                if (response.ok) {
+                    networkTest.status = 'pass';
+                    if (latency > 3000) {
+                        networkTest.details['Warning'] = 'High latency detected';
+                        results.recommendations.push('Network is slow - check VPN or connection');
+                    }
+                } else {
+                    networkTest.status = 'fail';
+                    results.issues.push(`Supabase not reachable (Status: ${response.status})`);
+                    results.recommendations.push('Check firewall, VPN, or network settings');
+                }
+            } catch (e) {
+                networkTest.status = 'fail';
+                networkTest.details['Error'] = e.message;
+                networkTest.details['Possible Causes'] = 'Firewall, VPN, or network blocking Supabase';
+                results.issues.push('Cannot reach Supabase server');
+                results.recommendations.push('Disable VPN and check firewall settings');
+                results.recommendations.push('Try accessing https://megmjzszmqnmzdxwzigt.supabase.co directly');
+            }
+            results.tests.push(networkTest);
+            
+            // Test 4: CORS & Security
+            const securityTest = {
+                name: 'Security & CORS Settings',
+                status: 'pass',
+                details: {}
+            };
+            
+            try {
+                securityTest.details['Mixed Content'] = location.protocol === 'https:' ? 
+                    '✅ Secure (HTTPS)' : 
+                    '⚠️ Insecure (HTTP) - may cause issues';
+                securityTest.details['Referrer Policy'] = document.referrerPolicy || 'default';
+                securityTest.details['Same Origin'] = 
+                    location.origin === 'http://localhost:3000' || 
+                    location.origin.includes('netlify.app') ? 
+                    '✅ Expected origin' : 
+                    `⚠️ Unexpected: ${location.origin}`;
+            } catch (e) {
+                securityTest.details['Error'] = e.message;
+            }
+            results.tests.push(securityTest);
+            
+            // Test 5: Environment Detection
+            const envTest = {
+                name: 'Environment Variables (Client-side check)',
+                status: 'warn',
+                details: {
+                    'Note': 'Environment variables are build-time only in Next.js',
+                    'Current Location': location.href,
+                    'Environment': location.hostname === 'localhost' ? 'Development' : 'Production'
+                }
+            };
+            
+            // Try to detect if this is running in the actual Next.js app
+            if (typeof window !== 'undefined' && window.localStorage) {
+                const hasSupabaseConfig = Object.keys(localStorage).some(k => k.includes('supabase'));
+                envTest.details['Supabase Config Detected'] = hasSupabaseConfig ? 
+                    '✅ Yes (via localStorage)' : 
+                    '❌ No - may need to check .env.local';
+                
+                if (!hasSupabaseConfig && location.hostname === 'localhost') {
+                    results.issues.push('No Supabase configuration detected');
+                    results.recommendations.push('Check if .env.local file exists in project root');
+                    results.recommendations.push('Ensure NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY are set');
+                }
+            }
+            results.tests.push(envTest);
+            
+            // Generate HTML output
+            let html = '';
+            
+            results.tests.forEach(test => {
+                html += `
+                    <div class="test-section">
+                        <h2>
+                            ${test.name}
+                            <span class="status ${test.status}">${test.status}</span>
+                        </h2>
+                        <div class="test-result">`;
+                
+                for (const [key, value] of Object.entries(test.details)) {
+                    html += `${key}: ${value}\n`;
+                }
+                
+                html += `</div>
+                    </div>`;
+            });
+            
+            // Summary
+            const passCount = results.tests.filter(t => t.status === 'pass').length;
+            const failCount = results.tests.filter(t => t.status === 'fail').length;
+            const warnCount = results.tests.filter(t => t.status === 'warn').length;
+            
+            html += `
+                <div class="summary">
+                    <h3>📊 Summary</h3>
+                    <p>
+                        <strong>Tests Passed:</strong> ${passCount}/${results.tests.length}<br>
+                        <strong>Tests Failed:</strong> ${failCount}<br>
+                        <strong>Warnings:</strong> ${warnCount}
+                    </p>`;
+            
+            if (results.issues.length > 0) {
+                html += `<p style="margin-top: 15px;"><strong>Issues Found:</strong></p><ul>`;
+                results.issues.forEach(issue => {
+                    html += `<li>${issue}</li>`;
+                });
+                html += `</ul>`;
+            }
+            
+            html += `</div>`;
+            
+            // Recommendations
+            if (results.recommendations.length > 0) {
+                html += `
+                    <div class="recommendation">
+                        <h3>💡 Recommendations</h3>
+                        <ul>`;
+                results.recommendations.forEach(rec => {
+                    html += `<li>${rec}</li>`;
+                });
+                html += `</ul>
+                    </div>`;
+            } else if (failCount === 0) {
+                html += `
+                    <div class="summary" style="background: #d4edda; border-left-color: #28a745;">
+                        <h3 style="color: #155724;">✅ All Tests Passed!</h3>
+                        <p>Your environment looks good. If login still fails, the issue might be:</p>
+                        <ul>
+                            <li>Database RLS policies blocking access</li>
+                            <li>User account not created in database</li>
+                            <li>Wrong email/password</li>
+                            <li>Browser extension blocking requests</li>
+                        </ul>
+                    </div>`;
+            }
+            
+            // Add quick fixes
+            html += `
+                <div class="test-section">
+                    <h2>🔧 Quick Fix Commands</h2>
+                    <p style="margin-bottom: 10px;">Click to copy and run in browser console:</p>
+                    <div class="test-result" style="cursor: pointer;" onclick="copyToClipboard(this.textContent)">
+// Clear all storage (fixes most session issues)
+localStorage.clear();
+sessionStorage.clear();
+location.reload(true);
+                    </div>
+                    <p style="margin-top: 15px;">Or run this in your project terminal:</p>
+                    <div class="test-result" style="cursor: pointer;" onclick="copyToClipboard(this.textContent)">
+# Clear and reinstall (fixes environment issues)
+rm -rf node_modules .next
+npm install
+npm run dev
+                    </div>
+                </div>`;
+            
+            resultsDiv.innerHTML = html;
+        }
+        
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text.trim()).then(() => {
+                alert('Copied to clipboard!');
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+            });
+        }
+        
+        // Auto-run on load
+        window.addEventListener('load', () => {
+            setTimeout(runDiagnostics, 500);
+        });
+    </script>
+</body>
+</html>
+
