@@ -53,7 +53,7 @@ const LoginPage: React.FC = () => {
   const [passwordValue, setPasswordValue] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const router = useRouter();
-  const { login, loginWithGoogle, loading, error, isInitialized, getRedirectPath } = useAuth();
+  const { login, loginWithGoogle, logout, user, loading, error, isInitialized, getRedirectPath } = useAuth();
   
   // SSR-safe stable IDs for inputs
   const autoId = useId();
@@ -66,13 +66,29 @@ const LoginPage: React.FC = () => {
     console.log('Login page mounted');
   }, []);
 
-  // Redirect if already authenticated
+  // Force logout any existing session on login page
   useEffect(() => {
-    if (isInitialized && !loading && getRedirectPath() !== '/login') {
+    const forceLogoutExistingSession = async () => {
+      if (user && !loading) {
+        console.log('⚠️ Found existing session on login page, logging out...');
+        await logout();
+      }
+    };
+    
+    if (isInitialized) {
+      forceLogoutExistingSession();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isInitialized]);
+  
+  // Redirect if already authenticated (after force logout check)
+  useEffect(() => {
+    if (isInitialized && !loading && getRedirectPath() !== '/login' && user) {
       const redirectUrl = getRedirectPath();
       console.log('🔄 Login page redirect - URL:', redirectUrl);
       router.push(redirectUrl);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isInitialized, loading, getRedirectPath, router]);
 
   // Clear error when user starts typing
@@ -84,57 +100,77 @@ const LoginPage: React.FC = () => {
 
   // Automatic cache clearing on mount to prevent login issues
   useEffect(() => {
-    const clearOldSupabaseStorage = () => {
+    const clearAllSupabaseData = async () => {
       try {
-        // Check for corrupted or old Supabase session data
-        const storageKeys = Object.keys(localStorage);
-        const supabaseKeys = storageKeys.filter(key => key.includes('supabase') || key.includes('sb-'));
+        console.log('🧹 Comprehensive Supabase data cleanup...');
+        let needsReload = false;
         
-        if (supabaseKeys.length > 0) {
-          // Check if any session data is expired or corrupted
-          let needsClear = false;
-          
-          supabaseKeys.forEach(key => {
-            try {
-              const data = localStorage.getItem(key);
-              if (data) {
-                const parsed = JSON.parse(data);
-                // Check if it's a session token and if it's expired
-                if (parsed.expires_at && parsed.expires_at < Date.now() / 1000) {
-                  needsClear = true;
-                  console.log('🧹 Found expired session data, clearing...');
-                }
-              }
-            } catch (e) {
-              // Corrupted data - needs clearing
-              needsClear = true;
-              console.log('🧹 Found corrupted session data, clearing...');
-            }
+        // 1. Check localStorage
+        const localStorageKeys = Object.keys(localStorage);
+        const supabaseLocalKeys = localStorageKeys.filter(key => 
+          key.includes('supabase') || key.includes('sb-')
+        );
+        console.log('🔍 Found', supabaseLocalKeys.length, 'Supabase keys in localStorage');
+        
+        if (supabaseLocalKeys.length > 0) {
+          supabaseLocalKeys.forEach(key => {
+            console.log('🧹 Clearing localStorage:', key);
+            localStorage.removeItem(key);
           });
-          
-          // Clear expired/corrupted data
-          if (needsClear) {
-            supabaseKeys.forEach(key => {
-              localStorage.removeItem(key);
-              console.log('Removed:', key);
-            });
-            
-            // Also clear sessionStorage
-            Object.keys(sessionStorage).forEach(key => {
-              if (key.includes('supabase') || key.includes('sb-')) {
-                sessionStorage.removeItem(key);
+          needsReload = true;
+        }
+        
+        // 2. Check sessionStorage
+        const sessionStorageKeys = Object.keys(sessionStorage);
+        const supabaseSessionKeys = sessionStorageKeys.filter(key => 
+          key.includes('supabase') || key.includes('sb-')
+        );
+        console.log('🔍 Found', supabaseSessionKeys.length, 'Supabase keys in sessionStorage');
+        
+        if (supabaseSessionKeys.length > 0) {
+          supabaseSessionKeys.forEach(key => {
+            console.log('🧹 Clearing sessionStorage:', key);
+            sessionStorage.removeItem(key);
+          });
+          needsReload = true;
+        }
+        
+        // 3. Clear IndexedDB (where Supabase might store session)
+        if (typeof indexedDB !== 'undefined') {
+          try {
+            const databases = await indexedDB.databases();
+            for (const db of databases) {
+              if (db.name && (db.name.includes('supabase') || db.name.includes('sb-'))) {
+                console.log('🧹 Deleting IndexedDB:', db.name);
+                indexedDB.deleteDatabase(db.name);
+                needsReload = true;
               }
-            });
-            
-            console.log('✅ Old session data cleared automatically');
+            }
+          } catch (e) {
+            console.log('⚠️ Could not check IndexedDB:', e.message);
           }
         }
+        
+        if (needsReload) {
+          console.log('✅ Cleared all Supabase data');
+          console.log('💡 Reloading page to ensure clean state...');
+          setTimeout(() => window.location.reload(), 100);
+        } else {
+          console.log('✅ No Supabase data found to clear');
+        }
       } catch (error) {
-        console.error('Error checking storage:', error);
+        console.error('Error during cleanup:', error);
       }
     };
     
-    clearOldSupabaseStorage();
+    // Only run once per session
+    const hasCleared = sessionStorage.getItem('supabase-cleanup-done');
+    if (!hasCleared) {
+      sessionStorage.setItem('supabase-cleanup-done', 'true');
+      clearAllSupabaseData();
+    } else {
+      console.log('✅ Cleanup already done this session');
+    }
   }, []);
 
   const onSubmit = async (e: React.FormEvent) => {
