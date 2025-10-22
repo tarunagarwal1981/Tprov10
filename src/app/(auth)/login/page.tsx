@@ -147,7 +147,8 @@ const LoginPage: React.FC = () => {
               }
             }
           } catch (e) {
-            console.log('⚠️ Could not check IndexedDB:', e.message);
+            const errorMessage = e instanceof Error ? e.message : 'Unknown error';
+            console.log('⚠️ Could not check IndexedDB:', errorMessage);
           }
         }
         
