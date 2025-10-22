@@ -86,31 +86,47 @@ const LoginPage: React.FC = () => {
   useEffect(() => {
     const clearOldSupabaseStorage = () => {
       try {
+        console.log('🧹 Checking for old Supabase session data...');
+        
         // Check for corrupted or old Supabase session data
         const storageKeys = Object.keys(localStorage);
         const supabaseKeys = storageKeys.filter(key => key.includes('supabase') || key.includes('sb-'));
         
+        console.log('🔍 Found', supabaseKeys.length, 'Supabase keys in localStorage');
+        
         if (supabaseKeys.length > 0) {
-          // Only clear data that's MORE than 1 hour expired to avoid interfering with active sessions
-          const oneHourAgo = (Date.now() / 1000) - 3600;
+          let clearedCount = 0;
+          const now = Date.now() / 1000;
           
           supabaseKeys.forEach(key => {
             try {
               const data = localStorage.getItem(key);
               if (data) {
                 const parsed = JSON.parse(data);
-                // Only clear if expired more than 1 hour ago
-                if (parsed.expires_at && parsed.expires_at < oneHourAgo) {
+                
+                // Clear if expired (ANY expired session, not just old ones)
+                if (parsed.expires_at && parsed.expires_at < now) {
                   localStorage.removeItem(key);
-                  console.log('🧹 Cleared old expired session:', key);
+                  console.log('🧹 Cleared expired session:', key, '(expired:', new Date(parsed.expires_at * 1000).toLocaleString(), ')');
+                  clearedCount++;
                 }
               }
             } catch (e) {
-              // Only clear truly corrupted data (can't parse JSON)
-              // Don't clear everything on first error
-              console.warn('⚠️ Found corrupted data in:', key);
+              // Clear corrupted data
+              console.warn('⚠️ Found corrupted data, clearing:', key);
+              localStorage.removeItem(key);
+              clearedCount++;
             }
           });
+          
+          if (clearedCount > 0) {
+            console.log('✅ Cleared', clearedCount, 'expired/corrupted session(s)');
+            console.log('💡 Page will refresh to ensure clean state...');
+            // Reload page once after clearing to ensure clean state
+            setTimeout(() => window.location.reload(), 100);
+          } else {
+            console.log('✅ No expired sessions found');
+          }
         }
       } catch (error) {
         console.error('Error checking storage:', error);
