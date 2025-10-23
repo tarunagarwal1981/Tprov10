@@ -84,22 +84,12 @@ const LoginPage: React.FC = () => {
 
   // Automatic cache clearing on mount to prevent login issues
   useEffect(() => {
-    const clearOldSupabaseData = () => {
+    const clearAllSupabaseData = () => {
       try {
-        // Check if cleanup already done (use a persistent flag in localStorage)
-        const cleanupDone = localStorage.getItem('supabase-cleanup-done');
-        const now = Date.now();
-        
-        // Only run cleanup if not done in the last 24 hours
-        if (cleanupDone && (now - parseInt(cleanupDone)) < 24 * 60 * 60 * 1000) {
-          console.log('✅ Cleanup already done recently');
-          return;
-        }
-        
-        console.log('🧹 Checking for old Supabase session data...');
+        console.log('🧹 Clearing ALL Supabase session data on login page...');
         let clearedCount = 0;
         
-        // 1. Check localStorage for expired sessions only
+        // Clear ALL Supabase data from localStorage (not just expired)
         const localStorageKeys = Object.keys(localStorage);
         const supabaseLocalKeys = localStorageKeys.filter(key => 
           key.includes('supabase') || key.includes('sb-')
@@ -107,45 +97,36 @@ const LoginPage: React.FC = () => {
         
         console.log('🔍 Found', supabaseLocalKeys.length, 'Supabase keys in localStorage');
         
-        const nowSec = now / 1000;
         supabaseLocalKeys.forEach(key => {
-          // Don't clear the cleanup-done flag
-          if (key === 'supabase-cleanup-done') return;
-          
-          try {
-            const data = localStorage.getItem(key);
-            if (data) {
-              const parsed = JSON.parse(data);
-              // Only clear if expired
-              if (parsed.expires_at && parsed.expires_at < nowSec) {
-                console.log('🧹 Clearing expired:', key);
-                localStorage.removeItem(key);
-                clearedCount++;
-              }
-            }
-          } catch (e) {
-            // Clear corrupted data
-            console.log('🧹 Clearing corrupted:', key);
-            localStorage.removeItem(key);
-            clearedCount++;
-          }
+          console.log('🧹 Clearing:', key);
+          localStorage.removeItem(key);
+          clearedCount++;
+        });
+        
+        // Also clear sessionStorage
+        const sessionStorageKeys = Object.keys(sessionStorage);
+        const supabaseSessionKeys = sessionStorageKeys.filter(key => 
+          key.includes('supabase') || key.includes('sb-')
+        );
+        
+        supabaseSessionKeys.forEach(key => {
+          console.log('🧹 Clearing sessionStorage:', key);
+          sessionStorage.removeItem(key);
+          clearedCount++;
         });
         
         if (clearedCount > 0) {
-          console.log('✅ Cleared', clearedCount, 'expired/corrupted sessions');
+          console.log('✅ Cleared', clearedCount, 'Supabase session(s)');
         } else {
-          console.log('✅ No expired sessions found');
+          console.log('✅ No Supabase sessions found');
         }
-        
-        // Mark cleanup as done
-        localStorage.setItem('supabase-cleanup-done', now.toString());
         
       } catch (error) {
         console.error('Error during cleanup:', error);
       }
     };
     
-    clearOldSupabaseData();
+    clearAllSupabaseData();
   }, []);
 
   const onSubmit = async (e: React.FormEvent) => {
