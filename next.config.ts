@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Static export for Netlify
-  output: 'export',
+  // Use Netlify adapter for server-side features (API routes, SSR)
+  // Removed 'output: export' to enable API routes
   
   // Enable experimental features
   experimental: {
