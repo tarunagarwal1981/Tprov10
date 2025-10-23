@@ -134,26 +134,26 @@ const useFormValidation = (data: TransferPackageFormData): FormValidation => {
       });
     }
 
-    // Vehicle Options validation
-    if (data.vehicleOptions.vehicles.length === 0) {
-      errors.push({
-        tab: 'vehicle-options',
-        field: 'vehicles',
-        message: 'At least one vehicle configuration is required',
-        severity: 'error',
-      });
-    }
+    // Vehicle Options validation - REMOVED (tab removed)
+    // if (data.vehicleOptions.vehicles.length === 0) {
+    //   errors.push({
+    //     tab: 'vehicle-options',
+    //     field: 'vehicles',
+    //     message: 'At least one vehicle configuration is required',
+    //     severity: 'error',
+    //   });
+    // }
 
-    // Validate that vehicles have base prices
-    const vehiclesWithoutPrice = data.vehicleOptions.vehicles.filter(v => !v.basePrice || v.basePrice <= 0);
-    if (vehiclesWithoutPrice.length > 0) {
-      errors.push({
-        tab: 'vehicle-options',
-        field: 'basePrice',
-        message: `${vehiclesWithoutPrice.length} vehicle(s) missing base price`,
-        severity: 'error',
-      });
-    }
+    // Validate that vehicles have base prices - REMOVED (tab removed)
+    // const vehiclesWithoutPrice = data.vehicleOptions.vehicles.filter(v => !v.basePrice || v.basePrice <= 0);
+    // if (vehiclesWithoutPrice.length > 0) {
+    //   errors.push({
+    //     tab: 'vehicle-options',
+    //     field: 'basePrice',
+    //     message: `${vehiclesWithoutPrice.length} vehicle(s) missing base price`,
+    //     severity: 'error',
+    //   });
+    // }
 
     // Availability validation - COMMENTED OUT (tab removed)
     // if (data.availabilityBooking.availableDays.length === 0) {
@@ -174,13 +174,14 @@ const useFormValidation = (data: TransferPackageFormData): FormValidation => {
       });
     }
 
-    if (data.vehicleOptions.vehicles.length < 2) {
-      warnings.push({
-        tab: 'vehicle-options',
-        field: 'vehicles',
-        message: 'Adding multiple vehicle options will give customers more choice',
-      });
-    }
+    // Vehicle warning - REMOVED (tab removed)
+    // if (data.vehicleOptions.vehicles.length < 2) {
+    //   warnings.push({
+    //     tab: 'vehicle-options',
+    //     field: 'vehicles',
+    //     message: 'Adding multiple vehicle options will give customers more choice',
+    //   });
+    // }
 
     return {
       isValid: errors.length === 0,
