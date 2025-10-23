@@ -114,11 +114,53 @@ export interface TransferAdditionalService {
   created_at: string;
 }
 
+export interface TransferHourlyPricing {
+  id: string;
+  package_id: string;
+  hours: number;
+  vehicle_type: 'SEDAN' | 'SUV' | 'VAN' | 'BUS' | 'LUXURY' | 'MINIBUS';
+  vehicle_name: string;
+  max_passengers: number;
+  rate_usd: number;
+  description: string | null;
+  features: string[];
+  is_active: boolean;
+  display_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TransferPointToPointPricing {
+  id: string;
+  package_id: string;
+  from_location: string;
+  from_address: string | null;
+  from_coordinates: any;
+  to_location: string;
+  to_address: string | null;
+  to_coordinates: any;
+  distance: number | null;
+  distance_unit: 'KM' | 'MILES';
+  estimated_duration_minutes: number | null;
+  vehicle_type: 'SEDAN' | 'SUV' | 'VAN' | 'BUS' | 'LUXURY' | 'MINIBUS';
+  vehicle_name: string;
+  max_passengers: number;
+  cost_usd: number;
+  description: string | null;
+  features: string[];
+  is_active: boolean;
+  display_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface TransferPackageWithRelations extends TransferPackage {
   images: TransferPackageImage[];
   vehicles: TransferPackageVehicle[];
   stops: TransferPackageStop[];
   additional_services: TransferAdditionalService[];
+  hourly_pricing: TransferHourlyPricing[];
+  point_to_point_pricing: TransferPointToPointPricing[];
 }
 
 export interface CreateTransferPackageData {
@@ -127,6 +169,8 @@ export interface CreateTransferPackageData {
   vehicles?: Partial<TransferPackageVehicle>[];
   stops?: Partial<TransferPackageStop>[];
   additional_services?: Partial<TransferAdditionalService>[];
+  hourly_pricing?: Partial<TransferHourlyPricing>[];
+  point_to_point_pricing?: Partial<TransferPointToPointPricing>[];
 }
 
 // ============================================================================
@@ -242,12 +286,48 @@ export function formDataToDatabase(
     is_active: true,
   }));
 
+  // Hourly Pricing Options
+  const hourly_pricing: Partial<TransferHourlyPricing>[] = (formData.pricingPolicies.hourlyPricingOptions || []).map((option, index) => ({
+    hours: option.hours,
+    vehicle_type: option.vehicleType,
+    vehicle_name: option.vehicleName,
+    max_passengers: option.maxPassengers,
+    rate_usd: option.rateUSD,
+    description: option.description || null,
+    features: option.features || [],
+    is_active: option.isActive,
+    display_order: option.displayOrder || index,
+  }));
+
+  // Point-to-Point Pricing Options
+  const point_to_point_pricing: Partial<TransferPointToPointPricing>[] = (formData.pricingPolicies.pointToPointPricingOptions || []).map((option, index) => ({
+    from_location: option.fromLocation,
+    from_address: option.fromAddress || null,
+    from_coordinates: option.fromCoordinates || null,
+    to_location: option.toLocation,
+    to_address: option.toAddress || null,
+    to_coordinates: option.toCoordinates || null,
+    distance: option.distance || null,
+    distance_unit: option.distanceUnit,
+    estimated_duration_minutes: option.estimatedDurationMinutes || null,
+    vehicle_type: option.vehicleType,
+    vehicle_name: option.vehicleName,
+    max_passengers: option.maxPassengers,
+    cost_usd: option.costUSD,
+    description: option.description || null,
+    features: option.features || [],
+    is_active: option.isActive,
+    display_order: option.displayOrder || index,
+  }));
+
   return {
     package: packageData,
     images,
     vehicles,
     stops,
     additional_services,
+    hourly_pricing,
+    point_to_point_pricing,
   };
 }
 
@@ -316,6 +396,8 @@ export async function createTransferPackage(
       vehicles: [],
       stops: [],
       additional_services: [],
+      hourly_pricing: [],
+      point_to_point_pricing: [],
     };
 
     // Insert images
@@ -382,6 +464,38 @@ export async function createTransferPackage(
       result.additional_services = servicesData || [];
     }
 
+    // Insert hourly pricing options
+    if (data.hourly_pricing && data.hourly_pricing.length > 0) {
+      const hourlyPricingWithPackageId = data.hourly_pricing.map(option => ({
+        ...option,
+        package_id: packageId,
+      })) as any[];
+
+      const { data: hourlyPricingData, error: hourlyPricingError } = await supabase
+        .from('transfer_hourly_pricing')
+        .insert(hourlyPricingWithPackageId)
+        .select();
+
+      if (hourlyPricingError) throw hourlyPricingError;
+      result.hourly_pricing = hourlyPricingData || [];
+    }
+
+    // Insert point-to-point pricing options
+    if (data.point_to_point_pricing && data.point_to_point_pricing.length > 0) {
+      const p2pPricingWithPackageId = data.point_to_point_pricing.map(option => ({
+        ...option,
+        package_id: packageId,
+      })) as any[];
+
+      const { data: p2pPricingData, error: p2pPricingError } = await supabase
+        .from('transfer_point_to_point_pricing')
+        .insert(p2pPricingWithPackageId)
+        .select();
+
+      if (p2pPricingError) throw p2pPricingError;
+      result.point_to_point_pricing = p2pPricingData || [];
+    }
+
     return { data: result, error: null };
   });
 }
@@ -406,11 +520,13 @@ export async function getTransferPackage(
     if (packageError) throw packageError;
 
     // Get related data
-    const [imagesResult, vehiclesResult, stopsResult, servicesResult] = await Promise.all([
+    const [imagesResult, vehiclesResult, stopsResult, servicesResult, hourlyPricingResult, p2pPricingResult] = await Promise.all([
       supabase.from('transfer_package_images').select('*').eq('package_id', id).order('display_order'),
       supabase.from('transfer_package_vehicles').select('*').eq('package_id', id).order('display_order'),
       supabase.from('transfer_package_stops').select('*').eq('package_id', id).order('stop_order'),
       supabase.from('transfer_additional_services').select('*').eq('package_id', id),
+      supabase.from('transfer_hourly_pricing').select('*').eq('package_id', id).order('display_order'),
+      supabase.from('transfer_point_to_point_pricing').select('*').eq('package_id', id).order('display_order'),
     ]);
 
     const result: TransferPackageWithRelations = {
@@ -419,6 +535,8 @@ export async function getTransferPackage(
       vehicles: vehiclesResult.data || [],
       stops: stopsResult.data || [],
       additional_services: servicesResult.data || [],
+      hourly_pricing: hourlyPricingResult.data || [],
+      point_to_point_pricing: p2pPricingResult.data || [],
     };
 
     return { data: result, error: null };
@@ -455,6 +573,8 @@ export async function updateTransferPackage(
       supabase.from('transfer_package_vehicles').delete().eq('package_id', id),
       supabase.from('transfer_package_stops').delete().eq('package_id', id),
       supabase.from('transfer_additional_services').delete().eq('package_id', id),
+      supabase.from('transfer_hourly_pricing').delete().eq('package_id', id),
+      supabase.from('transfer_point_to_point_pricing').delete().eq('package_id', id),
     ]);
 
     // Re-insert as in create
@@ -464,6 +584,8 @@ export async function updateTransferPackage(
       vehicles: [],
       stops: [],
       additional_services: [],
+      hourly_pricing: [],
+      point_to_point_pricing: [],
     };
 
     // Insert new data (similar to create logic)
