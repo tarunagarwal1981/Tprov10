@@ -20,10 +20,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { UserRole } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { createClient } from '@/lib/supabase/client';
-
-const OPERATOR_ROLES: UserRole[] = ['TOUR_OPERATOR', 'ADMIN', 'SUPER_ADMIN'];
 
 type StatColor = 'blue' | 'green' | 'purple' | 'orange' | 'yellow' | 'red';
 
@@ -269,9 +266,5 @@ function OperatorDashboard() {
 }
 
 export default function OperatorDashboardPage() {
-  return (
-    <ProtectedRoute requiredRoles={OPERATOR_ROLES}>
-      <OperatorDashboard />
-    </ProtectedRoute>
-  );
+  return <OperatorDashboard />;
 }
