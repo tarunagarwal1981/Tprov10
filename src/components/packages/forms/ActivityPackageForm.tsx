@@ -388,7 +388,6 @@ export const ActivityPackageForm: React.FC<ActivityPackageFormProps> = ({
               </p>
             </div>
             
-            {/* Auto-save status */}
             {/* Auto-save status - DISABLED */}
             {/* <div className="flex items-center gap-4">
               <AnimatePresence>
@@ -429,11 +428,13 @@ export const ActivityPackageForm: React.FC<ActivityPackageFormProps> = ({
                     <FaExclamationTriangle className="h-4 w-4" />
                     {autoSaveState.error}
                   </motion.div>
-                )} */}
-                
-                {/* Package error still active */}
-                <AnimatePresence>
-                
+                )}
+              </AnimatePresence>
+            </div> */}
+            
+            {/* Package error display */}
+            <div className="flex items-center gap-4">
+              <AnimatePresence>
                 {packageError && (
                   <motion.div
                     key="package-error"
