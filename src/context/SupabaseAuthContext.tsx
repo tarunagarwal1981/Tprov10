@@ -295,11 +295,11 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         console.log('🔍 Loading user profile from database...');
         
         try {
-          console.log('📡 [CLIENT] Loading user profile via API route...');
+          console.log('📡 [CLIENT] Loading user profile via Netlify Function...');
           console.log('📡 User ID:', data.user.id);
           
-          // Fetch user profile from server-side API route (bypasses browser blocking)
-          const response = await fetch('/api/user/profile', {
+          // Fetch user profile from Netlify Function (bypasses browser blocking)
+          const response = await fetch('/.netlify/functions/user-profile', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -310,11 +310,11 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
             }),
           });
           
-          console.log('📡 [CLIENT] API response status:', response.status);
+          console.log('📡 [CLIENT] Function response status:', response.status);
           
           if (!response.ok) {
             const errorData = await response.json();
-            console.error('❌ [CLIENT] API error:', errorData);
+            console.error('❌ [CLIENT] Function error:', errorData);
             
             // Show user-friendly error
             setError({
@@ -326,10 +326,10 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
           }
           
           const { profile: userProfile } = await response.json();
-          console.log('✅ [CLIENT] Profile loaded from API:', userProfile);
+          console.log('✅ [CLIENT] Profile loaded from Function:', userProfile);
           
           if (!userProfile) {
-            console.error('❌ [CLIENT] No profile returned from API');
+            console.error('❌ [CLIENT] No profile returned from Function');
             setError({
               type: 'login_error',
               message: 'User profile not found. Please contact support.',
