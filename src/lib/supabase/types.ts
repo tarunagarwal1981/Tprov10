@@ -1835,6 +1835,142 @@ export type Database = {
           }
         ]
       }
+      transfer_hourly_pricing: {
+        Row: {
+          id: string
+          package_id: string
+          hours: number
+          vehicle_type: 'SEDAN' | 'SUV' | 'VAN' | 'BUS' | 'LUXURY' | 'MINIBUS'
+          vehicle_name: string
+          max_passengers: number
+          rate_usd: number
+          description: string | null
+          features: string[]
+          is_active: boolean
+          display_order: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          package_id: string
+          hours: number
+          vehicle_type: 'SEDAN' | 'SUV' | 'VAN' | 'BUS' | 'LUXURY' | 'MINIBUS'
+          vehicle_name: string
+          max_passengers: number
+          rate_usd: number
+          description?: string | null
+          features?: string[]
+          is_active?: boolean
+          display_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          package_id?: string
+          hours?: number
+          vehicle_type?: 'SEDAN' | 'SUV' | 'VAN' | 'BUS' | 'LUXURY' | 'MINIBUS'
+          vehicle_name?: string
+          max_passengers?: number
+          rate_usd?: number
+          description?: string | null
+          features?: string[]
+          is_active?: boolean
+          display_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transfer_hourly_pricing_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "transfer_packages"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      transfer_point_to_point_pricing: {
+        Row: {
+          id: string
+          package_id: string
+          from_location: string
+          from_address: string | null
+          from_coordinates: Json | null
+          to_location: string
+          to_address: string | null
+          to_coordinates: Json | null
+          distance: number | null
+          distance_unit: 'KM' | 'MILES'
+          estimated_duration_minutes: number | null
+          vehicle_type: 'SEDAN' | 'SUV' | 'VAN' | 'BUS' | 'LUXURY' | 'MINIBUS'
+          vehicle_name: string
+          max_passengers: number
+          cost_usd: number
+          description: string | null
+          features: string[]
+          is_active: boolean
+          display_order: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          package_id: string
+          from_location: string
+          from_address?: string | null
+          from_coordinates?: Json | null
+          to_location: string
+          to_address?: string | null
+          to_coordinates?: Json | null
+          distance?: number | null
+          distance_unit?: 'KM' | 'MILES'
+          estimated_duration_minutes?: number | null
+          vehicle_type: 'SEDAN' | 'SUV' | 'VAN' | 'BUS' | 'LUXURY' | 'MINIBUS'
+          vehicle_name: string
+          max_passengers: number
+          cost_usd: number
+          description?: string | null
+          features?: string[]
+          is_active?: boolean
+          display_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          package_id?: string
+          from_location?: string
+          from_address?: string | null
+          from_coordinates?: Json | null
+          to_location?: string
+          to_address?: string | null
+          to_coordinates?: Json | null
+          distance?: number | null
+          distance_unit?: 'KM' | 'MILES'
+          estimated_duration_minutes?: number | null
+          vehicle_type?: 'SEDAN' | 'SUV' | 'VAN' | 'BUS' | 'LUXURY' | 'MINIBUS'
+          vehicle_name?: string
+          max_passengers?: number
+          cost_usd?: number
+          description?: string | null
+          features?: string[]
+          is_active?: boolean
+          display_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transfer_point_to_point_pricing_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "transfer_packages"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: {
       [_ in never]: never
