@@ -31,7 +31,10 @@ import {
   TransferPackageFormData,
   AdditionalCharge,
   CancellationPolicy,
+  HourlyPricingOption,
+  PointToPointPricingOption,
 } from "@/lib/types/transfer-package";
+import { TransferPricingOptionsManager } from "./TransferPricingOptionsManager";
 
 // Additional charge types
 const CHARGE_TYPES = [
@@ -283,8 +286,24 @@ export const PricingPoliciesTab: React.FC = () => {
     setValue('pricingPolicies.additionalCharges', updatedCharges);
   }, [watchedData.additionalCharges, setValue]);
 
+  const handleUpdateHourlyOptions = useCallback((options: HourlyPricingOption[]) => {
+    setValue('pricingPolicies.hourlyPricingOptions', options);
+  }, [setValue]);
+
+  const handleUpdatePointToPointOptions = useCallback((options: PointToPointPricingOption[]) => {
+    setValue('pricingPolicies.pointToPointPricingOptions', options);
+  }, [setValue]);
+
   return (
     <div className="space-y-6 package-scroll-fix">
+      {/* Transfer Pricing Options */}
+      <TransferPricingOptionsManager
+        hourlyOptions={watchedData.hourlyPricingOptions || []}
+        pointToPointOptions={watchedData.pointToPointPricingOptions || []}
+        onUpdateHourly={handleUpdateHourlyOptions}
+        onUpdatePointToPoint={handleUpdatePointToPointOptions}
+      />
+
       {/* Base Pricing */}
       <Card className="package-selector-glass package-shadow-fix">
         <CardHeader>
