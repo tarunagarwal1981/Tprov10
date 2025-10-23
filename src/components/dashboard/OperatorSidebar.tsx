@@ -301,17 +301,17 @@ const isActive = (href: string) => {
 							)}
 						</Button>
 					</DropdownMenuTrigger>
-					<DropdownMenuContent align="end" className="bg-white border border-zinc-200 shadow-lg w-48">
-						<DropdownMenuItem className="cursor-pointer hover:bg-zinc-50 text-zinc-700">
+					<DropdownMenuContent align="end" className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-lg w-48">
+						<DropdownMenuItem className="cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
 							<UserIcon className="w-4 h-4 mr-2" />
 							Profile
 						</DropdownMenuItem>
-						<DropdownMenuItem className="cursor-pointer hover:bg-zinc-50 text-zinc-700">
+						<DropdownMenuItem className="cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
 							<Settings className="w-4 h-4 mr-2" />
 							Settings
 						</DropdownMenuItem>
 						<DropdownMenuItem 
-							className="cursor-pointer hover:bg-red-50 text-red-600"
+							className="cursor-pointer hover:bg-red-50 dark:hover:bg-red-950/30 text-red-600 dark:text-red-400"
 							onClick={logout}
 						>
 							<LogOut className="w-4 h-4 mr-2" />
