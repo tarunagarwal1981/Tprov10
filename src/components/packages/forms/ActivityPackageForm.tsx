@@ -222,11 +222,12 @@ export const ActivityPackageForm: React.FC<ActivityPackageFormProps> = ({
   }, [dbPackage, mode, reset]);
 
   const validation = useFormValidation(formData);
-  const autoSaveState = useAutoSave(formData, async (data) => {
-    if (onSave) {
-      await onSave(data);
-    }
-  });
+  // Auto-save disabled
+  // const autoSaveState = useAutoSave(formData, async (data) => {
+  //   if (onSave) {
+  //     await onSave(data);
+  //   }
+  // });
 
   // Tab configuration
   const tabs: TabInfo[] = [
@@ -388,7 +389,8 @@ export const ActivityPackageForm: React.FC<ActivityPackageFormProps> = ({
             </div>
             
             {/* Auto-save status */}
-            <div className="flex items-center gap-4">
+            {/* Auto-save status - DISABLED */}
+            {/* <div className="flex items-center gap-4">
               <AnimatePresence>
                 {autoSaveState.isSaving && (
                   <motion.div
@@ -427,7 +429,10 @@ export const ActivityPackageForm: React.FC<ActivityPackageFormProps> = ({
                     <FaExclamationTriangle className="h-4 w-4" />
                     {autoSaveState.error}
                   </motion.div>
-                )}
+                )} */}
+                
+                {/* Package error still active */}
+                <AnimatePresence>
                 
                 {packageError && (
                   <motion.div

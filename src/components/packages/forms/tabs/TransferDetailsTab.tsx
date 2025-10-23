@@ -20,6 +20,12 @@ import {
   FaEdit,
   FaInfoCircle,
   FaImage,
+  FaDollarSign,
+  FaMoon,
+  FaSuitcase,
+  FaBaby,
+  FaShieldAlt,
+  FaFileAlt,
 } from "react-icons/fa";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -337,72 +343,6 @@ const StopCard: React.FC<{
         </div>
       </div>
     </motion.div>
-  );
-};
-
-// Route visualization component
-const RouteVisualization: React.FC<{
-  routeInfo: any;
-  transferType: TransferType;
-}> = ({ routeInfo, transferType }) => {
-  return (
-    <Card className="package-selector-glass package-shadow-fix">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <FaMap className="h-5 w-5 text-blue-600" />
-          Route Visualization
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {/* Route Summary */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-              <FaRuler className="h-4 w-4 text-blue-600" />
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Distance</p>
-                <p className="font-medium">
-                  {routeInfo.totalDistance} {routeInfo.distanceUnit}
-                </p>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-              <FaClock className="h-4 w-4 text-green-600" />
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Duration</p>
-                <p className="font-medium">
-                  {routeInfo.estimatedDuration.hours}h {routeInfo.estimatedDuration.minutes}m
-                </p>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-2 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-              <FaRoute className="h-4 w-4 text-purple-600" />
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Type</p>
-                <p className="font-medium capitalize">
-                  {transferType.replace('_', ' ').toLowerCase()}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Mock Map */}
-          <div className="h-64 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center">
-            <div className="text-center">
-              <FaMap className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-              <p className="text-gray-600 dark:text-gray-400">
-                Interactive map will be displayed here
-              </p>
-              <p className="text-sm text-gray-500 mt-1">
-                Showing route with {routeInfo.routePoints?.length || 0} waypoints
-              </p>
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
   );
 };
 
@@ -828,12 +768,6 @@ export const TransferDetailsTab: React.FC = () => {
           </CardContent>
         </Card>
       )}
-
-      {/* Route Visualization */}
-      <RouteVisualization
-        routeInfo={watchedData.routeInfo}
-        transferType={watchedData.transferType}
-      />
 
       {/* Image Gallery */}
       <Card className="package-selector-glass package-shadow-fix">
