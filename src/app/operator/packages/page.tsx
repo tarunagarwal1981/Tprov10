@@ -20,6 +20,7 @@ import {
 } from 'react-icons/fi';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -66,6 +67,7 @@ function AnimatedNumber({ value, prefix = '', suffix = '' }: { value: number; pr
 }
 
 export default function PackagesPage() {
+	const router = useRouter();
 	const [packages, setPackages] = useState<Package[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -183,6 +185,18 @@ export default function PackagesPage() {
 			const coverImage = pkg.activity_package_images?.find((img: any) => img.is_cover);
 			const imageUrl = coverImage?.public_url || pkg.activity_package_images?.[0]?.public_url || '';
 
+			// Debug logging for image data
+			if (pkg.activity_package_images && pkg.activity_package_images.length > 0) {
+				console.log(`Activity package "${pkg.title}" images:`, {
+					totalImages: pkg.activity_package_images.length,
+					coverImage: coverImage?.public_url || 'none',
+					firstImage: pkg.activity_package_images[0]?.public_url,
+					selectedImage: imageUrl,
+				});
+			} else {
+				console.log(`Activity package "${pkg.title}" has no images`);
+			}
+
 			return {
 				id: pkg.id,
 				title: pkg.title,
@@ -203,6 +217,18 @@ export default function PackagesPage() {
 			const coverImage = pkg.transfer_package_images?.find((img: any) => img.is_cover);
 			const imageUrl = coverImage?.public_url || pkg.transfer_package_images?.[0]?.public_url || '';
 
+			// Debug logging for image data
+			if (pkg.transfer_package_images && pkg.transfer_package_images.length > 0) {
+				console.log(`Transfer package "${pkg.title}" images:`, {
+					totalImages: pkg.transfer_package_images.length,
+					coverImage: coverImage?.public_url || 'none',
+					firstImage: pkg.transfer_package_images[0]?.public_url,
+					selectedImage: imageUrl,
+				});
+			} else {
+				console.log(`Transfer package "${pkg.title}" has no images`);
+			}
+
 			return {
 				id: pkg.id,
 				title: pkg.title,
@@ -222,6 +248,18 @@ export default function PackagesPage() {
 		const multiCityPackages: Package[] = (multiCityResult.data || []).map((pkg: any) => {
 			const coverImage = pkg.multi_city_package_images?.find((img: any) => img.is_cover);
 			const imageUrl = coverImage?.public_url || pkg.multi_city_package_images?.[0]?.public_url || '';
+
+			// Debug logging for image data
+			if (pkg.multi_city_package_images && pkg.multi_city_package_images.length > 0) {
+				console.log(`Multi-City package "${pkg.title}" images:`, {
+					totalImages: pkg.multi_city_package_images.length,
+					coverImage: coverImage?.public_url || 'none',
+					firstImage: pkg.multi_city_package_images[0]?.public_url,
+					selectedImage: imageUrl,
+				});
+			} else {
+				console.log(`Multi-City package "${pkg.title}" has no images`);
+			}
 
 			return {
 				id: pkg.id,
@@ -307,6 +345,335 @@ export default function PackagesPage() {
 				return 'Suspended';
 			default:
 				return status;
+		}
+	};
+
+	const handleViewPackage = (pkg: Package) => {
+		// Navigate to view/edit page based on package type
+		const viewPath = pkg.type === 'Activity' 
+			? `/operator/packages/create/activity?id=${pkg.id}&view=true`
+			: pkg.type === 'Transfer'
+			? `/operator/packages/create/transfer?id=${pkg.id}&view=true`
+			: pkg.type === 'Multi-City'
+			? `/operator/packages/create/multi-city?id=${pkg.id}&view=true`
+			: `/operator/packages/create?id=${pkg.id}&view=true`;
+		router.push(viewPath);
+	};
+
+	const handleEditPackage = (pkg: Package) => {
+		// Navigate to edit page based on package type
+		const editPath = pkg.type === 'Activity' 
+			? `/operator/packages/create/activity?id=${pkg.id}`
+			: pkg.type === 'Transfer'
+			? `/operator/packages/create/transfer?id=${pkg.id}`
+			: pkg.type === 'Multi-City'
+			? `/operator/packages/create/multi-city?id=${pkg.id}`
+			: `/operator/packages/create?id=${pkg.id}`;
+		router.push(editPath);
+	};
+
+	const handleDuplicatePackage = async (pkg: Package) => {
+		try {
+			const supabase = createClient();
+			const { data: { user } } = await supabase.auth.getUser();
+			
+			if (!user) {
+				toast.error('Please log in to duplicate packages');
+				return;
+			}
+
+			toast.info('Duplicating package...');
+
+			// Determine the table name based on package type
+			const tableName = pkg.type === 'Activity' 
+				? 'activity_packages'
+				: pkg.type === 'Transfer'
+				? 'transfer_packages'
+				: pkg.type === 'Multi-City'
+				? 'multi_city_packages'
+				: null;
+
+			if (!tableName) {
+				toast.error('Unknown package type');
+				return;
+			}
+
+			// Fetch the original package data
+			const { data: originalPackage, error: fetchError } = await supabase
+				.from(tableName)
+				.select('*')
+				.eq('id', pkg.id)
+				.single();
+
+			if (fetchError || !originalPackage) {
+				console.error('Error fetching package:', fetchError);
+				toast.error('Failed to duplicate package');
+				return;
+			}
+
+			// Create a copy with new title and reset certain fields
+			const { id, created_at, updated_at, published_at, ...packageData } = originalPackage;
+			const duplicatedPackage = {
+				...packageData,
+				title: `${originalPackage.title} (Copy)`,
+				status: 'draft' as const,
+				operator_id: user.id,
+			};
+
+			// Insert the duplicated package
+			const { data: newPackage, error: insertError } = await supabase
+				.from(tableName)
+				.insert(duplicatedPackage)
+				.select()
+				.single();
+
+			if (insertError || !newPackage) {
+				console.error('Error duplicating package:', insertError);
+				toast.error('Failed to duplicate package');
+				return;
+			}
+
+			// Copy images if they exist
+			const imageTableName = pkg.type === 'Activity'
+				? 'activity_package_images'
+				: pkg.type === 'Transfer'
+				? 'transfer_package_images'
+				: pkg.type === 'Multi-City'
+				? 'multi_city_package_images'
+				: null;
+
+			if (imageTableName) {
+				// All image tables use 'package_id' as the foreign key column
+				const { data: images } = await supabase
+					.from(imageTableName)
+					.select('*')
+					.eq('package_id', pkg.id);
+
+				if (images && images.length > 0) {
+					const copiedImages = images.map(({ id, created_at, updated_at, uploaded_at, ...imgData }: any) => ({
+						...imgData,
+						package_id: newPackage.id,
+					}));
+
+					await supabase.from(imageTableName).insert(copiedImages);
+				}
+			}
+
+			toast.success('Package duplicated successfully');
+			
+			// Refresh the packages list
+			const fetchPackages = async () => {
+				const supabase = createClient();
+				const { data: { user } } = await supabase.auth.getUser();
+				
+				if (!user) return;
+
+				const [activityResult, transferResult, multiCityResult] = await Promise.all([
+					supabase
+						.from('activity_packages')
+						.select(`
+							id,
+							title,
+							short_description,
+							status,
+							base_price,
+							currency,
+							destination_city,
+							destination_country,
+							created_at,
+							published_at,
+							activity_package_images (
+								id,
+								public_url,
+								is_cover
+							)
+						`)
+						.eq('operator_id', user.id)
+						.order('created_at', { ascending: false }),
+					supabase
+						.from('transfer_packages' as any)
+						.select(`
+							id,
+							title,
+							short_description,
+							status,
+							base_price,
+							currency,
+							destination_city,
+							destination_country,
+							created_at,
+							published_at,
+							transfer_package_images (
+								id,
+								public_url,
+								is_cover
+							)
+						`)
+						.eq('operator_id', user.id)
+						.order('created_at', { ascending: false }),
+					supabase
+						.from('multi_city_packages' as any)
+						.select(`
+							id,
+							title,
+							short_description,
+							status,
+							base_price,
+							currency,
+							destination_region,
+							total_cities,
+							total_nights,
+							created_at,
+							published_at,
+							multi_city_package_images (
+								id,
+								public_url,
+								is_cover
+							)
+						`)
+						.eq('operator_id', user.id)
+						.order('created_at', { ascending: false })
+				]);
+
+				const activityPackages: Package[] = (activityResult.data || []).map((pkg: any) => {
+					const coverImage = pkg.activity_package_images?.find((img: any) => img.is_cover);
+					const imageUrl = coverImage?.public_url || pkg.activity_package_images?.[0]?.public_url || '';
+
+					return {
+						id: pkg.id,
+						title: pkg.title,
+						type: 'Activity',
+						status: pkg.status?.toUpperCase() as 'DRAFT' | 'ACTIVE' | 'INACTIVE',
+						price: pkg.base_price || 0,
+						rating: 0,
+						reviews: 0,
+						bookings: 0,
+						views: 0,
+						image: imageUrl,
+						createdAt: new Date(pkg.created_at),
+					};
+				});
+
+				const transferPackages: Package[] = (transferResult.data || []).map((pkg: any) => {
+					const coverImage = pkg.transfer_package_images?.find((img: any) => img.is_cover);
+					const imageUrl = coverImage?.public_url || pkg.transfer_package_images?.[0]?.public_url || '';
+
+					return {
+						id: pkg.id,
+						title: pkg.title,
+						type: 'Transfer',
+						status: pkg.status?.toUpperCase() as 'DRAFT' | 'ACTIVE' | 'INACTIVE',
+						price: pkg.base_price || 0,
+						rating: 0,
+						reviews: 0,
+						bookings: 0,
+						views: 0,
+						image: imageUrl,
+						createdAt: new Date(pkg.created_at),
+					};
+				});
+
+				const multiCityPackages: Package[] = (multiCityResult.data || []).map((pkg: any) => {
+					const coverImage = pkg.multi_city_package_images?.find((img: any) => img.is_cover);
+					const imageUrl = coverImage?.public_url || pkg.multi_city_package_images?.[0]?.public_url || '';
+
+					return {
+						id: pkg.id,
+						title: pkg.title,
+						type: 'Multi-City',
+						status: pkg.status?.toUpperCase() as 'DRAFT' | 'ACTIVE' | 'INACTIVE',
+						price: pkg.base_price || 0,
+						rating: 0,
+						reviews: 0,
+						bookings: 0,
+						views: 0,
+						image: imageUrl,
+						createdAt: new Date(pkg.created_at),
+					};
+				});
+
+				const allPackages = [...activityPackages, ...transferPackages, ...multiCityPackages]
+					.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+				setPackages(allPackages);
+
+				const activeCount = allPackages.filter(p => p.status === 'PUBLISHED' || p.status === 'ACTIVE').length;
+				const totalRevenue = allPackages.reduce((sum, p) => sum + (p.bookings * p.price), 0);
+				
+				setStats({
+					total: allPackages.length,
+					active: activeCount,
+					revenue: totalRevenue,
+					avgRating: 4.8,
+				});
+			};
+
+			await fetchPackages();
+
+		} catch (error) {
+			console.error('Error duplicating package:', error);
+			toast.error('Failed to duplicate package');
+		}
+	};
+
+	const handleDeletePackage = async (pkg: Package) => {
+		if (!confirm(`Are you sure you want to delete "${pkg.title}"? This action cannot be undone.`)) {
+			return;
+		}
+
+		try {
+			const supabase = createClient();
+			const { data: { user } } = await supabase.auth.getUser();
+			
+			if (!user) {
+				toast.error('Please log in to delete packages');
+				return;
+			}
+
+			toast.info('Deleting package...');
+
+			// Determine the table name based on package type
+			const tableName = pkg.type === 'Activity' 
+				? 'activity_packages'
+				: pkg.type === 'Transfer'
+				? 'transfer_packages'
+				: pkg.type === 'Multi-City'
+				? 'multi_city_packages'
+				: null;
+
+			if (!tableName) {
+				toast.error('Unknown package type');
+				return;
+			}
+
+			// Delete the package (images will be cascade deleted if foreign keys are set up)
+			const { error: deleteError } = await supabase
+				.from(tableName)
+				.delete()
+				.eq('id', pkg.id)
+				.eq('operator_id', user.id); // Ensure user owns the package
+
+			if (deleteError) {
+				console.error('Error deleting package:', deleteError);
+				toast.error('Failed to delete package');
+				return;
+			}
+
+			toast.success('Package deleted successfully');
+			
+			// Remove from local state
+			setPackages(prev => prev.filter(p => p.id !== pkg.id));
+			
+			// Update stats
+			setStats(prev => ({
+				...prev,
+				total: prev.total - 1,
+				active: pkg.status === 'PUBLISHED' || pkg.status === 'ACTIVE' ? prev.active - 1 : prev.active,
+			}));
+
+		} catch (error) {
+			console.error('Error deleting package:', error);
+			toast.error('Failed to delete package');
 		}
 	};
 
@@ -576,49 +943,28 @@ export default function PackagesPage() {
 											<DropdownMenuContent align="end" className="bg-white border border-slate-200 shadow-lg">
 												<DropdownMenuItem 
 													className="cursor-pointer hover:bg-slate-50 text-slate-700"
-													onClick={() => {
-														// View functionality - could open a modal or navigate to view page
-														toast.info(`Viewing ${pkg.title}`);
-													}}
+													onClick={() => handleViewPackage(pkg)}
 												>
 													<Eye className="w-4 h-4 mr-2" />
 													View
 												</DropdownMenuItem>
 												<DropdownMenuItem 
 													className="cursor-pointer hover:bg-slate-50 text-slate-700"
-													onClick={() => {
-														// Edit functionality - navigate to edit page based on package type
-														const editPath = pkg.type === 'Activity' 
-															? `/operator/packages/create/activity?id=${pkg.id}`
-															: pkg.type === 'Transfer'
-															? `/operator/packages/create/transfer?id=${pkg.id}`
-															: pkg.type === 'Multi-City'
-															? `/operator/packages/create/multi-city?id=${pkg.id}`
-															: `/operator/packages/create?id=${pkg.id}`;
-														window.location.href = editPath;
-													}}
+													onClick={() => handleEditPackage(pkg)}
 												>
 													<Edit className="w-4 h-4 mr-2" />
 													Edit
 												</DropdownMenuItem>
 												<DropdownMenuItem 
 													className="cursor-pointer hover:bg-slate-50 text-slate-700"
-													onClick={() => {
-														// Duplicate functionality
-														toast.info(`Duplicating ${pkg.title}`);
-													}}
+													onClick={() => handleDuplicatePackage(pkg)}
 												>
 													<Copy className="w-4 h-4 mr-2" />
 													Duplicate
 												</DropdownMenuItem>
 												<DropdownMenuItem 
 													className="cursor-pointer hover:bg-red-50 text-red-600"
-													onClick={() => {
-														// Delete functionality
-														if (confirm(`Are you sure you want to delete "${pkg.title}"?`)) {
-															toast.success(`Deleted ${pkg.title}`);
-														}
-													}}
+													onClick={() => handleDeletePackage(pkg)}
 												>
 													<Trash className="w-4 h-4 mr-2" />
 													Delete
