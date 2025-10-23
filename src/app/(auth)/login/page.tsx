@@ -84,12 +84,12 @@ const LoginPage: React.FC = () => {
 
   // Automatic cache clearing on mount to prevent login issues
   useEffect(() => {
-    const clearAllSupabaseData = () => {
+    const clearAllSupabaseData = async () => {
       try {
-        console.log('🧹 Clearing ALL Supabase session data on login page...');
+        console.log('🧹 COMPREHENSIVE browser cleanup starting...');
         let clearedCount = 0;
         
-        // Clear ALL Supabase data from localStorage (not just expired)
+        // 1. Clear ALL Supabase data from localStorage
         const localStorageKeys = Object.keys(localStorage);
         const supabaseLocalKeys = localStorageKeys.filter(key => 
           key.includes('supabase') || key.includes('sb-')
@@ -98,12 +98,12 @@ const LoginPage: React.FC = () => {
         console.log('🔍 Found', supabaseLocalKeys.length, 'Supabase keys in localStorage');
         
         supabaseLocalKeys.forEach(key => {
-          console.log('🧹 Clearing:', key);
+          console.log('🧹 Clearing localStorage:', key);
           localStorage.removeItem(key);
           clearedCount++;
         });
         
-        // Also clear sessionStorage
+        // 2. Clear sessionStorage
         const sessionStorageKeys = Object.keys(sessionStorage);
         const supabaseSessionKeys = sessionStorageKeys.filter(key => 
           key.includes('supabase') || key.includes('sb-')
@@ -115,10 +115,56 @@ const LoginPage: React.FC = () => {
           clearedCount++;
         });
         
+        // 3. Clear cookies
+        if (typeof document !== 'undefined' && document.cookie) {
+          const cookies = document.cookie.split(';');
+          cookies.forEach(cookie => {
+            if (cookie) {
+              const cookieName = cookie.split('=')[0]?.trim();
+              if (cookieName && (cookieName.includes('supabase') || cookieName.includes('sb-'))) {
+                console.log('🧹 Clearing cookie:', cookieName);
+                document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+                clearedCount++;
+              }
+            }
+          });
+        }
+        
+        // 4. Unregister service workers
+        if ('serviceWorker' in navigator) {
+          try {
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            for (const registration of registrations) {
+              console.log('🧹 Unregistering service worker:', registration.scope);
+              await registration.unregister();
+              clearedCount++;
+            }
+          } catch (e) {
+            console.log('⚠️ Could not unregister service workers:', e);
+          }
+        }
+        
+        // 5. Clear IndexedDB
+        if (typeof indexedDB !== 'undefined' && indexedDB.databases) {
+          try {
+            const databases = await indexedDB.databases();
+            for (const db of databases) {
+              if (db.name && (db.name.includes('supabase') || db.name.includes('sb-'))) {
+                console.log('🧹 Deleting IndexedDB:', db.name);
+                indexedDB.deleteDatabase(db.name);
+                clearedCount++;
+              }
+            }
+          } catch (e) {
+            console.log('⚠️ Could not check IndexedDB:', e);
+          }
+        }
+        
         if (clearedCount > 0) {
-          console.log('✅ Cleared', clearedCount, 'Supabase session(s)');
+          console.log('✅ COMPREHENSIVE cleanup completed! Cleared', clearedCount, 'items');
+          console.log('💡 If login still fails, try clearing browser cache manually (Ctrl+Shift+Del)');
         } else {
-          console.log('✅ No Supabase sessions found');
+          console.log('✅ No cached data found');
         }
         
       } catch (error) {
