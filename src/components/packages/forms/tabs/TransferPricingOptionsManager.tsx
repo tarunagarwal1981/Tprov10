@@ -123,7 +123,7 @@ const HourlyPricingCard: React.FC<HourlyPricingCardProps> = ({
                 <SelectTrigger className="package-text-fix">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
                   {VEHICLE_TYPES.map((type) => (
                     <SelectItem key={type.value} value={type.value}>
                       <div className="flex items-center gap-2">
@@ -374,7 +374,7 @@ const PointToPointPricingCard: React.FC<PointToPointPricingCardProps> = ({
                 <SelectTrigger className="package-text-fix">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
                   {VEHICLE_TYPES.map((type) => (
                     <SelectItem key={type.value} value={type.value}>
                       <div className="flex items-center gap-2">
