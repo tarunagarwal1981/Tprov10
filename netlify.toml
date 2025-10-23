@@ -5,8 +5,8 @@
   # Build command - Next.js with server features
   command = "npm run build"
   
-  # Publish directory is handled by @netlify/plugin-nextjs
-  # No 'publish' needed - the plugin handles it
+  # Override UI setting - plugin handles deployment, no publish directory needed
+  publish = ".next"
 
 [build.environment]
   # Node.js version
