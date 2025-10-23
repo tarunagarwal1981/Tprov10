@@ -842,7 +842,7 @@ export const TransferPricingOptionsManager: React.FC<TransferPricingOptionsManag
                   <div className="text-center py-12 text-gray-500">
                     <FaClock className="h-12 w-12 mx-auto mb-4 text-gray-400" />
                     <p className="text-lg font-medium">No hourly pricing options yet</p>
-                    <p className="text-sm">Click "Add Option" to create your first hourly pricing option</p>
+                    <p className="text-sm">Click &quot;Add Option&quot; to create your first hourly pricing option</p>
                   </div>
                 ) : (
                   <AnimatePresence>
@@ -989,7 +989,7 @@ export const TransferPricingOptionsManager: React.FC<TransferPricingOptionsManag
                   <div className="text-center py-12 text-gray-500">
                     <FaMapMarkerAlt className="h-12 w-12 mx-auto mb-4 text-gray-400" />
                     <p className="text-lg font-medium">No point-to-point routes yet</p>
-                    <p className="text-sm">Click "Add Route" to create your first route pricing option</p>
+                    <p className="text-sm">Click &quot;Add Route&quot; to create your first route pricing option</p>
                   </div>
                 ) : (
                   <AnimatePresence>
