@@ -295,35 +295,44 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         console.log('🔍 Loading user profile from database...');
         
         try {
-          console.log('📡 Loading user profile from database...');
+          console.log('📡 [CLIENT] Loading user profile via API route...');
           console.log('📡 User ID:', data.user.id);
-          console.log('📡 Supabase URL:', (supabase as any).supabaseUrl);
           
-          // Query the user profile from database
-          console.log('📡 Loading user profile from database...');
-          console.log('📡 Query URL:', `${(supabase as any).supabaseUrl}/rest/v1/users?id=eq.${data.user.id}`);
+          // Fetch user profile from server-side API route (bypasses browser blocking)
+          const response = await fetch('/api/user/profile', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              userId: data.user.id,
+              accessToken: data.session.access_token,
+            }),
+          });
           
-          const { data: userProfile, error: profileError } = await supabase
-            .from('users')
-            .select('*')
-            .eq('id', data.user.id)
-            .single();
+          console.log('📡 [CLIENT] API response status:', response.status);
           
-          console.log('📡 Query completed! Result:', { userProfile, profileError });
-          
-          if (profileError) {
-            console.error('❌ Profile error:', profileError);
-            console.error('❌ Error details:', {
-              message: profileError.message,
-              code: profileError.code,
-              details: profileError.details,
-              hint: profileError.hint
-            });
+          if (!response.ok) {
+            const errorData = await response.json();
+            console.error('❌ [CLIENT] API error:', errorData);
             
             // Show user-friendly error
             setError({
               type: 'login_error',
-              message: 'Database connection timeout. Please check your internet connection and try again.',
+              message: errorData.error || 'Failed to load user profile. Please try again.',
+              timestamp: new Date()
+            });
+            return false;
+          }
+          
+          const { profile: userProfile } = await response.json();
+          console.log('✅ [CLIENT] Profile loaded from API:', userProfile);
+          
+          if (!userProfile) {
+            console.error('❌ [CLIENT] No profile returned from API');
+            setError({
+              type: 'login_error',
+              message: 'User profile not found. Please contact support.',
               timestamp: new Date()
             });
             return false;
