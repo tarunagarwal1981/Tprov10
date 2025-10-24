@@ -164,14 +164,6 @@ const useFormValidation = (data: ActivityPackageFormData): FormValidation => {
       });
     }
 
-    if (data.faq.faqs.length === 0) {
-      warnings.push({
-        tab: 'faq',
-        field: 'faqs',
-        message: 'Adding FAQs will help customers understand your package better',
-      });
-    }
-
     return {
       isValid: errors.length === 0,
       errors,
