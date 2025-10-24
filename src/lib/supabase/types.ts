@@ -757,6 +757,166 @@ export type Database = {
           }
         ]
       }
+      activity_ticket_only_pricing: {
+        Row: {
+          id: string
+          package_id: string
+          option_name: string
+          description: string | null
+          adult_price: number
+          child_price: number
+          child_min_age: number
+          child_max_age: number
+          infant_price: number | null
+          infant_max_age: number | null
+          included_items: string[]
+          excluded_items: string[]
+          is_active: boolean
+          is_featured: boolean
+          display_order: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          package_id: string
+          option_name: string
+          description?: string | null
+          adult_price: number
+          child_price: number
+          child_min_age?: number
+          child_max_age?: number
+          infant_price?: number | null
+          infant_max_age?: number | null
+          included_items?: string[]
+          excluded_items?: string[]
+          is_active?: boolean
+          is_featured?: boolean
+          display_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          package_id?: string
+          option_name?: string
+          description?: string | null
+          adult_price?: number
+          child_price?: number
+          child_min_age?: number
+          child_max_age?: number
+          infant_price?: number | null
+          infant_max_age?: number | null
+          included_items?: string[]
+          excluded_items?: string[]
+          is_active?: boolean
+          is_featured?: boolean
+          display_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_ticket_only_pricing_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "activity_packages"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      activity_ticket_with_transfer_pricing: {
+        Row: {
+          id: string
+          package_id: string
+          option_name: string
+          description: string | null
+          vehicle_type: string
+          vehicle_name: string
+          max_capacity: number
+          vehicle_features: string[]
+          adult_price: number
+          child_price: number
+          child_min_age: number
+          child_max_age: number
+          infant_price: number | null
+          infant_max_age: number | null
+          pickup_location: string | null
+          pickup_instructions: string | null
+          dropoff_location: string | null
+          dropoff_instructions: string | null
+          included_items: string[]
+          excluded_items: string[]
+          is_active: boolean
+          is_featured: boolean
+          display_order: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          package_id: string
+          option_name: string
+          description?: string | null
+          vehicle_type: string
+          vehicle_name: string
+          max_capacity: number
+          vehicle_features?: string[]
+          adult_price: number
+          child_price: number
+          child_min_age?: number
+          child_max_age?: number
+          infant_price?: number | null
+          infant_max_age?: number | null
+          pickup_location?: string | null
+          pickup_instructions?: string | null
+          dropoff_location?: string | null
+          dropoff_instructions?: string | null
+          included_items?: string[]
+          excluded_items?: string[]
+          is_active?: boolean
+          is_featured?: boolean
+          display_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          package_id?: string
+          option_name?: string
+          description?: string | null
+          vehicle_type?: string
+          vehicle_name?: string
+          max_capacity?: number
+          vehicle_features?: string[]
+          adult_price?: number
+          child_price?: number
+          child_min_age?: number
+          child_max_age?: number
+          infant_price?: number | null
+          infant_max_age?: number | null
+          pickup_location?: string | null
+          pickup_instructions?: string | null
+          dropoff_location?: string | null
+          dropoff_instructions?: string | null
+          included_items?: string[]
+          excluded_items?: string[]
+          is_active?: boolean
+          is_featured?: boolean
+          display_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_ticket_with_transfer_pricing_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "activity_packages"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       multi_city_packages: {
         Row: {
           id: string
