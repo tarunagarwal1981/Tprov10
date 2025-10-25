@@ -2131,6 +2131,123 @@ export type Database = {
           }
         ]
       }
+      lead_marketplace: {
+        Row: {
+          id: string
+          title: string
+          destination: string
+          trip_type: 'ADVENTURE' | 'CULTURAL' | 'BEACH' | 'WILDLIFE' | 'LUXURY' | 'BUDGET' | 'FAMILY' | 'HONEYMOON'
+          budget_min: number
+          budget_max: number
+          duration_days: number
+          travelers_count: number
+          travel_date_start: string | null
+          travel_date_end: string | null
+          special_requirements: string
+          lead_quality_score: number
+          lead_price: number
+          status: 'AVAILABLE' | 'PURCHASED' | 'EXPIRED'
+          posted_at: string
+          expires_at: string
+          created_at: string
+          updated_at: string
+          customer_name?: string
+          customer_email?: string
+          customer_phone?: string
+          detailed_requirements?: string
+        }
+        Insert: {
+          id?: string
+          title: string
+          destination: string
+          trip_type: 'ADVENTURE' | 'CULTURAL' | 'BEACH' | 'WILDLIFE' | 'LUXURY' | 'BUDGET' | 'FAMILY' | 'HONEYMOON'
+          budget_min: number
+          budget_max: number
+          duration_days: number
+          travelers_count?: number
+          travel_date_start?: string | null
+          travel_date_end?: string | null
+          special_requirements: string
+          lead_quality_score?: number
+          lead_price: number
+          status?: 'AVAILABLE' | 'PURCHASED' | 'EXPIRED'
+          posted_at?: string
+          expires_at: string
+          created_at?: string
+          updated_at?: string
+          customer_name?: string
+          customer_email?: string
+          customer_phone?: string
+          detailed_requirements?: string
+        }
+        Update: {
+          id?: string
+          title?: string
+          destination?: string
+          trip_type?: 'ADVENTURE' | 'CULTURAL' | 'BEACH' | 'WILDLIFE' | 'LUXURY' | 'BUDGET' | 'FAMILY' | 'HONEYMOON'
+          budget_min?: number
+          budget_max?: number
+          duration_days?: number
+          travelers_count?: number
+          travel_date_start?: string | null
+          travel_date_end?: string | null
+          special_requirements?: string
+          lead_quality_score?: number
+          lead_price?: number
+          status?: 'AVAILABLE' | 'PURCHASED' | 'EXPIRED'
+          posted_at?: string
+          expires_at?: string
+          created_at?: string
+          updated_at?: string
+          customer_name?: string
+          customer_email?: string
+          customer_phone?: string
+          detailed_requirements?: string
+        }
+        Relationships: []
+      }
+      lead_purchases: {
+        Row: {
+          id: string
+          lead_id: string
+          agent_id: string
+          purchase_price: number
+          purchased_at: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          lead_id: string
+          agent_id: string
+          purchase_price: number
+          purchased_at?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          lead_id?: string
+          agent_id?: string
+          purchase_price?: number
+          purchased_at?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_purchases_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "lead_marketplace"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_purchases_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -2154,6 +2271,8 @@ export type Database = {
       vehicle_type: 'SEDAN' | 'SUV' | 'VAN' | 'BUS' | 'LUXURY' | 'MINIBUS'
       transfer_policy_type: 'FLEXIBLE' | 'MODERATE' | 'STRICT' | 'CUSTOM'
       distance_unit: 'KM' | 'MILES'
+      lead_status: 'AVAILABLE' | 'PURCHASED' | 'EXPIRED'
+      trip_type: 'ADVENTURE' | 'CULTURAL' | 'BEACH' | 'WILDLIFE' | 'LUXURY' | 'BUDGET' | 'FAMILY' | 'HONEYMOON'
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2266,4 +2385,10 @@ export type TransferAdditionalServiceUpdate = Database['public']['Tables']['tran
 export type TransferPricingRuleUpdate = Database['public']['Tables']['transfer_pricing_rules']['Update']
 export type TransferTimeSlotUpdate = Database['public']['Tables']['transfer_time_slots']['Update']
 export type TransferBookingRestrictionUpdate = Database['public']['Tables']['transfer_booking_restrictions']['Update']
+export type LeadMarketplace = Database['public']['Tables']['lead_marketplace']['Row']
+export type LeadPurchase = Database['public']['Tables']['lead_purchases']['Row']
+export type LeadMarketplaceInsert = Database['public']['Tables']['lead_marketplace']['Insert']
+export type LeadPurchaseInsert = Database['public']['Tables']['lead_purchases']['Insert']
+export type LeadMarketplaceUpdate = Database['public']['Tables']['lead_marketplace']['Update']
+export type LeadPurchaseUpdate = Database['public']['Tables']['lead_purchases']['Update']
 
