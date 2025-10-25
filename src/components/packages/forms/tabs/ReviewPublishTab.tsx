@@ -115,24 +115,20 @@ export const ReviewPublishTab: React.FC<ReviewPublishTabProps> = ({
 
   const formData = watch();
 
-  // Calculate completion percentage
+  // Calculate completion percentage based on actual form sections
   const completionPercentage = useMemo(() => {
-    const sections = [
-      'basicInformation',
-      'transferDetails',
-      // 'vehicleOptions', // REMOVED
-      // 'driverService', // REMOVED
-      'pricingPolicies',
-      // 'availabilityBooking', // REMOVED
-    ];
+    // Only count transfer-details section as that's the only tab now
+    const hasErrors = validation.errors.length > 0;
+    const hasTitle = formData.basicInformation?.title?.trim();
+    const hasVehicles = (formData.transferDetails?.vehicles?.length || 0) > 0;
+    const hasPricing = (formData.pricingPolicies?.hourlyPricingOptions?.length || 0) > 0 || 
+                       (formData.pricingPolicies?.pointToPointPricingOptions?.length || 0) > 0;
 
-    const completedSections = sections.filter(section => {
-      const sectionErrors = validation.errors.filter(error => error.tab === section);
-      return sectionErrors.length === 0;
-    });
-
-    return Math.round((completedSections.length / sections.length) * 100);
-  }, [validation.errors]);
+    const requirements = [hasTitle, hasVehicles, !hasErrors];
+    const completedCount = requirements.filter(Boolean).length;
+    
+    return Math.round((completedCount / requirements.length) * 100);
+  }, [validation.errors, formData]);
 
   // Check section completion
   const isSectionComplete = (sectionName: string) => {
@@ -232,12 +228,12 @@ export const ReviewPublishTab: React.FC<ReviewPublishTabProps> = ({
 
       {/* Review Sections */}
       <div className="space-y-6">
-        {/* Basic Information */}
+        {/* Basic Information - Title & Description Only */}
         <ReviewSection
           title="Basic Information"
           icon={<FaInfoCircle className="h-5 w-5 text-blue-600" />}
-          isComplete={isSectionComplete('basic-info')}
-          hasErrors={hasSectionErrors('basic-info')}
+          isComplete={isSectionComplete('transfer-details')}
+          hasErrors={hasSectionErrors('transfer-details')}
         >
           <div className="space-y-3">
             <SummaryItem
@@ -246,137 +242,109 @@ export const ReviewPublishTab: React.FC<ReviewPublishTabProps> = ({
               isEmpty={!formData.basicInformation.title}
             />
             <SummaryItem
-              label="Short Description"
+              label="Description"
               value={formData.basicInformation.shortDescription || ''}
               isEmpty={!formData.basicInformation.shortDescription}
-            />
-            <SummaryItem
-              label="Destination"
-              value={formData.basicInformation.destination.name || ''}
-              isEmpty={!formData.basicInformation.destination.name}
-            />
-            <SummaryItem
-              label="Duration"
-              value={`${formData.basicInformation.duration.hours}h ${formData.basicInformation.duration.minutes}m`}
-            />
-            <SummaryItem
-              label="Languages"
-              value={
-                <div className="flex flex-wrap gap-1">
-                  {formData.basicInformation.languagesSupported.map((lang) => (
-                    <Badge key={lang} variant="outline" className="text-xs">
-                      {lang}
-                    </Badge>
-                  ))}
-                </div>
-              }
-              isEmpty={formData.basicInformation.languagesSupported.length === 0}
-            />
-            <SummaryItem
-              label="Tags"
-              value={
-                <div className="flex flex-wrap gap-1">
-                  {formData.basicInformation.tags.map((tag) => (
-                    <Badge key={tag} variant="outline" className="text-xs">
-                      {tag.replace('_', ' ')}
-                    </Badge>
-                  ))}
-                </div>
-              }
-              isEmpty={formData.basicInformation.tags.length === 0}
-            />
-            <SummaryItem
-              label="Images"
-              value={`${formData.basicInformation.imageGallery.length} images`}
-              isEmpty={formData.basicInformation.imageGallery.length === 0}
             />
           </div>
         </ReviewSection>
 
-        {/* Transfer Details */}
+        {/* Vehicle Details */}
         <ReviewSection
-          title="Transfer Details"
-          icon={<FaRoute className="h-5 w-5 text-purple-600" />}
+          title="Vehicle Details"
+          icon={<FaCar className="h-5 w-5 text-purple-600" />}
+          isComplete={isSectionComplete('transfer-details') && (formData.transferDetails?.vehicles?.length || 0) > 0}
+          hasErrors={hasSectionErrors('transfer-details')}
+        >
+          <div className="space-y-3">
+            <SummaryItem
+              label="Total Vehicles"
+              value={`${formData.transferDetails?.vehicles?.filter(v => v.vehicleName?.trim()).length || 0} vehicle(s)`}
+              isEmpty={(formData.transferDetails?.vehicles?.filter(v => v.vehicleName?.trim()).length || 0) === 0}
+            />
+            {formData.transferDetails?.vehicles?.filter(v => v.vehicleName?.trim()).map((vehicle, idx) => (
+              <div key={vehicle.id} className="pl-4 border-l-2 border-gray-200 dark:border-gray-700">
+                <SummaryItem
+                  label={`Vehicle ${idx + 1}`}
+                  value={
+                    <div className="space-y-1">
+                      <div className="font-medium">{vehicle.vehicleName}</div>
+                      <div className="text-xs flex gap-2">
+                        {vehicle.vehicleType && (
+                          <Badge variant="outline" className="text-xs">
+                            {vehicle.vehicleType}
+                          </Badge>
+                        )}
+                        <Badge variant="outline" className="text-xs">
+                          <FaUsers className="h-3 w-3 mr-1 inline" />
+                          {vehicle.maxCapacity} passengers
+                        </Badge>
+                        {vehicle.vehicleImage && (
+                          <Badge variant="outline" className="text-xs text-green-600">
+                            ✓ Image
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  }
+                />
+              </div>
+            ))}
+          </div>
+        </ReviewSection>
+
+        {/* Pricing Options */}
+        <ReviewSection
+          title="Pricing Options"
+          icon={<FaDollarSign className="h-5 w-5 text-green-600" />}
           isComplete={isSectionComplete('transfer-details')}
           hasErrors={hasSectionErrors('transfer-details')}
         >
           <div className="space-y-3">
             <SummaryItem
-              label="Transfer Type"
-              value={formData.transferDetails.transferType?.replace('_', ' ').toLowerCase() || ''}
-              isEmpty={!formData.transferDetails.transferType}
+              label="Hourly Rentals"
+              value={`${formData.pricingPolicies.hourlyPricingOptions?.length || 0} option(s)`}
+              isEmpty={(formData.pricingPolicies.hourlyPricingOptions?.length || 0) === 0}
             />
+            {formData.pricingPolicies.hourlyPricingOptions && formData.pricingPolicies.hourlyPricingOptions.length > 0 && (
+              <div className="pl-4 border-l-2 border-gray-200 dark:border-gray-700 space-y-2">
+                {formData.pricingPolicies.hourlyPricingOptions.map((option, idx) => (
+                  <div key={idx} className="text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600 dark:text-gray-400">
+                        {option.vehicleName} - {option.hours}h
+                      </span>
+                      <span className="font-medium">${option.rateUSD}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            
             <SummaryItem
-              label="Distance"
-              value={`${formData.transferDetails.routeInfo.totalDistance} ${formData.transferDetails.routeInfo.distanceUnit}`}
+              label="One Way Transfers"
+              value={`${formData.pricingPolicies.pointToPointPricingOptions?.length || 0} route(s)`}
+              isEmpty={(formData.pricingPolicies.pointToPointPricingOptions?.length || 0) === 0}
             />
-            <SummaryItem
-              label="Estimated Duration"
-              value={`${formData.transferDetails.routeInfo.estimatedDuration.hours}h ${formData.transferDetails.routeInfo.estimatedDuration.minutes}m`}
-            />
-            {formData.transferDetails.transferType === 'MULTI_STOP' && (
-              <SummaryItem
-                label="Stops"
-                value={`${formData.transferDetails.multiStopDetails?.stops?.length || 0} stops`}
-                isEmpty={(formData.transferDetails.multiStopDetails?.stops?.length || 0) === 0}
-              />
+            {formData.pricingPolicies.pointToPointPricingOptions && formData.pricingPolicies.pointToPointPricingOptions.length > 0 && (
+              <div className="pl-4 border-l-2 border-gray-200 dark:border-gray-700 space-y-2">
+                {formData.pricingPolicies.pointToPointPricingOptions.map((option, idx) => (
+                  <div key={idx} className="text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600 dark:text-gray-400">
+                        {option.fromLocation} → {option.toLocation}
+                      </span>
+                      <span className="font-medium">${option.costUSD}</span>
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {option.vehicleName}
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         </ReviewSection>
-
-        {/* Vehicle Options - REMOVED */}
-        {/* Driver & Service - REMOVED */}
-
-        {/* Pricing & Policies */}
-        <ReviewSection
-          title="Pricing & Policies"
-          icon={<FaDollarSign className="h-5 w-5 text-green-600" />}
-          isComplete={isSectionComplete('pricing-policies')}
-          hasErrors={hasSectionErrors('pricing-policies')}
-        >
-          <div className="space-y-3">
-            {/* Base Pricing - REMOVED */}
-            <SummaryItem
-              label="Hourly Pricing Options"
-              value={`${formData.pricingPolicies.hourlyPricingOptions?.length || 0} options`}
-              isEmpty={(formData.pricingPolicies.hourlyPricingOptions?.length || 0) === 0}
-            />
-            <SummaryItem
-              label="Point-to-Point Options"
-              value={`${formData.pricingPolicies.pointToPointPricingOptions?.length || 0} routes`}
-              isEmpty={(formData.pricingPolicies.pointToPointPricingOptions?.length || 0) === 0}
-            />
-            <SummaryItem
-              label="Additional Charges"
-              value={`${formData.pricingPolicies.additionalCharges.length} charges`}
-              isEmpty={formData.pricingPolicies.additionalCharges.length === 0}
-            />
-            <SummaryItem
-              label="Cancellation Policy"
-              value={formData.pricingPolicies.cancellationPolicy.type}
-            />
-            <SummaryItem
-              label="Refund Percentage"
-              value={`${formData.pricingPolicies.cancellationPolicy.refundPercentage}%`}
-            />
-            <SummaryItem
-              label="Cancellation Deadline"
-              value={`${formData.pricingPolicies.cancellationPolicy.cancellationDeadline} hours`}
-            />
-            <SummaryItem
-              label="No-Show Policy"
-              value={formData.pricingPolicies.noShowPolicy ? "Configured" : "Not configured"}
-              isEmpty={!formData.pricingPolicies.noShowPolicy}
-            />
-            <SummaryItem
-              label="Terms & Conditions"
-              value={formData.pricingPolicies.termsAndConditions ? "Configured" : "Not configured"}
-              isEmpty={!formData.pricingPolicies.termsAndConditions}
-            />
-          </div>
-        </ReviewSection>
-
-        {/* Availability & Booking - REMOVED */}
       </div>
 
       {/* Action Buttons */}
