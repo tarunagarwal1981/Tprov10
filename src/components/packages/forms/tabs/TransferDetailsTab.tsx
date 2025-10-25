@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { useFormContext } from "react-hook-form";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -36,13 +36,20 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { ImageUpload } from "@/components/packages/ImageUpload";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import {
   TransferPackageFormData,
   TransferType,
   DistanceUnit,
   TransferStop,
+  VehicleDetail,
+  VehicleType,
+  VEHICLE_TYPES,
+  HourlyPricingOption,
+  PointToPointPricingOption,
 } from "@/lib/types/transfer-package";
+import { TransferPricingOptionsManager } from "./TransferPricingOptionsManager";
 
 // Transfer type options
 const TRANSFER_TYPES: { value: TransferType; label: string; icon: React.ReactNode; description: string }[] = [
@@ -346,6 +353,158 @@ const StopCard: React.FC<{
   );
 };
 
+// Vehicle Detail Row Component
+const VehicleDetailRow: React.FC<{
+  vehicle: VehicleDetail;
+  index: number;
+  onUpdate: (vehicle: VehicleDetail) => void;
+  onRemove: (id: string) => void;
+  control: any;
+}> = ({ vehicle, index, onUpdate, onRemove, control }) => {
+  const [localVehicle, setLocalVehicle] = useState<VehicleDetail>(vehicle);
+
+  // Update local state when vehicle prop changes
+  useEffect(() => {
+    setLocalVehicle(vehicle);
+  }, [vehicle]);
+
+  const handleFieldChange = useCallback((field: keyof VehicleDetail, value: any) => {
+    const updated = { ...localVehicle, [field]: value };
+    setLocalVehicle(updated);
+    onUpdate(updated);
+  }, [localVehicle, onUpdate]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      className="p-6 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 space-y-4"
+    >
+      <div className="flex items-center justify-between mb-4">
+        <h4 className="font-semibold text-lg flex items-center gap-2">
+          <FaCar className="h-5 w-5 text-blue-600" />
+          Vehicle {index + 1}
+        </h4>
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          onClick={() => onRemove(vehicle.id)}
+          className="package-button-fix text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+        >
+          <FaTrash className="h-4 w-4" />
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Vehicle Name */}
+        <div>
+          <Label className="text-sm font-medium mb-2 block">
+            Vehicle Name *
+          </Label>
+          <Input
+            value={localVehicle.vehicleName}
+            onChange={(e) => handleFieldChange('vehicleName', e.target.value)}
+            placeholder="e.g., Mercedes S-Class"
+            className="package-text-fix"
+          />
+        </div>
+
+        {/* Vehicle Type */}
+        <div>
+          <Label className="text-sm font-medium mb-2 block">
+            Vehicle Type
+          </Label>
+          <Select
+            value={localVehicle.vehicleType || ''}
+            onValueChange={(value) => handleFieldChange('vehicleType', value as VehicleType)}
+          >
+            <SelectTrigger className="package-text-fix bg-white dark:bg-gray-800">
+              <SelectValue placeholder="Select vehicle type" />
+            </SelectTrigger>
+            <SelectContent className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+              {VEHICLE_TYPES.map((type) => (
+                <SelectItem key={type.value} value={type.value} className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700">
+                  <div className="flex items-center gap-2">
+                    <span>{type.icon}</span>
+                    <span>{type.label}</span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Vehicle Max Capacity */}
+        <div>
+          <Label className="text-sm font-medium mb-2 block">
+            Vehicle Max Capacity *
+          </Label>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const currentValue = localVehicle.maxCapacity || 1;
+                if (currentValue > 1) {
+                  handleFieldChange('maxCapacity', currentValue - 1);
+                }
+              }}
+              className="package-button-fix"
+            >
+              -
+            </Button>
+            <Input
+              type="number"
+              min="1"
+              max="50"
+              value={localVehicle.maxCapacity}
+              onChange={(e) => handleFieldChange('maxCapacity', parseInt(e.target.value) || 1)}
+              className="package-text-fix text-center"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const currentValue = localVehicle.maxCapacity || 1;
+                if (currentValue < 50) {
+                  handleFieldChange('maxCapacity', currentValue + 1);
+                }
+              }}
+              className="package-button-fix"
+            >
+              +
+            </Button>
+          </div>
+        </div>
+
+        {/* Vehicle Image */}
+        <div className="md:col-span-2">
+          <Label className="text-sm font-medium mb-2 block">
+            Vehicle Image (Optional)
+          </Label>
+          <ImageUpload
+            images={localVehicle.vehicleImage ? [localVehicle.vehicleImage] : []}
+            onImagesChange={(images) => {
+              handleFieldChange('vehicleImage', images.length > 0 ? images[0] : null);
+            }}
+            maxImages={1}
+            allowMultiple={false}
+            showMetadata={false}
+            className="package-animation-fix"
+          />
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+            Upload an image specific to this vehicle
+          </p>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
 export const TransferDetailsTab: React.FC = () => {
   const { control, watch, setValue } = useFormContext<TransferPackageFormData>();
   const watchedTransferData = watch('transferDetails');
@@ -354,6 +513,22 @@ export const TransferDetailsTab: React.FC = () => {
   const [distanceUnit, setDistanceUnit] = useState<DistanceUnit>('KM');
 
   const watchedData = watch('transferDetails');
+
+  // Initialize with one empty vehicle row if none exist
+  useEffect(() => {
+    if (!watchedData.vehicles || watchedData.vehicles.length === 0) {
+      const newVehicle: VehicleDetail = {
+        id: Date.now().toString(),
+        vehicleName: '',
+        vehicleType: undefined,
+        maxCapacity: 1,
+        vehicleImage: null,
+        order: 1,
+      };
+      setValue('transferDetails.vehicles', [newVehicle]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run only on mount - intentionally empty deps
 
   const handleAddStop = useCallback(() => {
     const newStop: TransferStop = {
@@ -390,12 +565,12 @@ export const TransferDetailsTab: React.FC = () => {
 
   return (
     <div className="space-y-6 package-scroll-fix">
-      {/* Package Title */}
+      {/* Title */}
       <Card className="package-selector-glass package-shadow-fix">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FaInfoCircle className="h-5 w-5 text-blue-600" />
-            Package Title
+            Title
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -404,7 +579,7 @@ export const TransferDetailsTab: React.FC = () => {
             name="basicInformation.title"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Package Title *</FormLabel>
+                <FormLabel>Title *</FormLabel>
                 <FormControl>
                   <Input
                     {...field}
@@ -420,10 +595,10 @@ export const TransferDetailsTab: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Short Description */}
+      {/* Description (Optional) */}
       <Card className="package-selector-glass package-shadow-fix">
         <CardHeader>
-          <CardTitle>Package Description</CardTitle>
+          <CardTitle>Description</CardTitle>
         </CardHeader>
         <CardContent>
           <FormField
@@ -431,7 +606,7 @@ export const TransferDetailsTab: React.FC = () => {
             name="basicInformation.shortDescription"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Short Description *</FormLabel>
+                <FormLabel>Description (Optional)</FormLabel>
                 <FormControl>
                   <Textarea
                     {...field}
@@ -769,46 +944,98 @@ export const TransferDetailsTab: React.FC = () => {
         </Card>
       )}
 
-      {/* Image Gallery */}
+      {/* Vehicle Details Section */}
       <Card className="package-selector-glass package-shadow-fix">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <FaImage className="h-5 w-5 text-purple-600" />
-            Package Images
+            <FaCar className="h-5 w-5 text-purple-600" />
+            Vehicle Details
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {/* Featured Image */}
-            <div>
-              <h4 className="font-medium mb-3">Featured Image</h4>
-              <ImageUpload
-                images={watchedBasicData?.featuredImage ? [watchedBasicData.featuredImage] : []}
-                onImagesChange={(images) => {
-                  setValue('basicInformation.featuredImage', images.length > 0 ? images[0] || null : null);
-                }}
-                maxImages={1}
-                allowMultiple={false}
-                showMetadata={true}
-                className="package-animation-fix"
-              />
-            </div>
+            <AnimatePresence>
+              {(watchedData.vehicles || []).map((vehicle, index) => (
+                <VehicleDetailRow
+                  key={vehicle.id}
+                  vehicle={vehicle}
+                  index={index}
+                  onUpdate={(updatedVehicle) => {
+                    const currentVehicles = watchedData.vehicles || [];
+                    const updatedVehicles = currentVehicles.map((v) =>
+                      v.id === updatedVehicle.id ? updatedVehicle : v
+                    );
+                    setValue('transferDetails.vehicles', updatedVehicles);
+                  }}
+                  onRemove={(id) => {
+                    const currentVehicles = watchedData.vehicles || [];
+                    const updatedVehicles = currentVehicles.filter((v) => v.id !== id);
+                    setValue('transferDetails.vehicles', updatedVehicles);
+                  }}
+                  control={control}
+                />
+              ))}
+            </AnimatePresence>
 
-            {/* Image Gallery */}
-            <div>
-              <h4 className="font-medium mb-3">Image Gallery</h4>
-              <ImageUpload
-                images={watchedBasicData?.imageGallery || []}
-                onImagesChange={(images) => {
-                  setValue('basicInformation.imageGallery', images);
-                }}
-                maxImages={10}
-                allowMultiple={true}
-                showMetadata={true}
-                className="package-animation-fix"
-              />
-            </div>
+            {/* Add Vehicle Button */}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                const currentVehicles = watchedData.vehicles || [];
+                const newVehicle = {
+                  id: Date.now().toString(),
+                  vehicleName: '',
+                  vehicleType: undefined,
+                  maxCapacity: 1,
+                  vehicleImage: null,
+                  order: currentVehicles.length + 1,
+                };
+                setValue('transferDetails.vehicles', [...currentVehicles, newVehicle]);
+              }}
+              className="package-button-fix w-full"
+            >
+              <FaPlus className="h-4 w-4 mr-2" />
+              Add Vehicle
+            </Button>
+
+            {/* Show message if no vehicles */}
+            {(!watchedData.vehicles || watchedData.vehicles.length === 0) && (
+              <div className="text-center p-6 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg">
+                <FaCar className="h-12 w-12 mx-auto text-gray-400 mb-3" />
+                <p className="text-gray-600 dark:text-gray-400">
+                  No vehicles added yet. Click &quot;Add Vehicle&quot; to get started.
+                </p>
+              </div>
+            )}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Pricing Section */}
+      <Card className="package-selector-glass package-shadow-fix">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FaDollarSign className="h-5 w-5 text-green-600" />
+            Pricing Options
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <TransferPricingOptionsManager
+            hourlyOptions={watch('pricingPolicies.hourlyPricingOptions') || []}
+            pointToPointOptions={watch('pricingPolicies.pointToPointPricingOptions') || []}
+            onUpdateHourly={(options: HourlyPricingOption[]) => {
+              setValue('pricingPolicies.hourlyPricingOptions', options);
+            }}
+            onUpdatePointToPoint={(options: PointToPointPricingOption[]) => {
+              setValue('pricingPolicies.pointToPointPricingOptions', options);
+            }}
+            userVehicles={watchedData.vehicles?.map(v => ({
+              vehicleName: v.vehicleName,
+              vehicleType: v.vehicleType,
+              maxCapacity: v.maxCapacity
+            })) || []}
+          />
         </CardContent>
       </Card>
     </div>

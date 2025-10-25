@@ -100,19 +100,12 @@ const useFormValidation = (data: TransferPackageFormData): FormValidation => {
       errors.push({
         tab: 'transfer-details',
         field: 'title',
-        message: 'Package title is required',
+        message: 'Title is required',
         severity: 'error',
       });
     }
 
-    if (!data.basicInformation.shortDescription.trim()) {
-      errors.push({
-        tab: 'transfer-details',
-        field: 'shortDescription',
-        message: 'Short description is required',
-        severity: 'error',
-      });
-    }
+    // Description is now optional - no validation needed
 
     // Destination validation - REMOVED (moved to transfer details)
     // if (!data.basicInformation.destination.name.trim()) {
@@ -165,12 +158,27 @@ const useFormValidation = (data: TransferPackageFormData): FormValidation => {
     //   });
     // }
 
+    // Pricing validation - NOT REQUIRED
+    // Pricing (hourly and point-to-point) is optional
+    // No validation needed for pricing policies, cancellation, etc.
+
     // Warnings
     if (data.basicInformation.imageGallery.length === 0) {
       warnings.push({
         tab: 'transfer-details',
         field: 'imageGallery',
         message: 'Adding images will improve your transfer package visibility',
+      });
+    }
+
+    // Pricing warning (optional)
+    const hasPricing = (data.pricingPolicies.hourlyPricingOptions || []).length > 0 || 
+                       (data.pricingPolicies.pointToPointPricingOptions || []).length > 0;
+    if (!hasPricing) {
+      warnings.push({
+        tab: 'transfer-details',
+        field: 'pricing',
+        message: 'Adding pricing options will help customers understand your rates',
       });
     }
 
@@ -254,14 +262,15 @@ export const TransferPackageForm: React.FC<TransferPackageFormProps> = ({
     //   isComplete: !validation.errors.some(e => e.tab === 'driver-service'),
     //   hasErrors: validation.errors.some(e => e.tab === 'driver-service'),
     // },
-    {
-      id: 'pricing-policies',
-      label: 'Pricing & Policies',
-      icon: <FaDollarSign className="h-4 w-4" />,
-      badge: validation.errors.filter(e => e.tab === 'pricing-policies').length,
-      isComplete: !validation.errors.some(e => e.tab === 'pricing-policies'),
-      hasErrors: validation.errors.some(e => e.tab === 'pricing-policies'),
-    },
+    // Pricing is now in Transfer Details tab, not a separate tab
+    // {
+    //   id: 'pricing-policies',
+    //   label: 'Pricing & Policies',
+    //   icon: <FaDollarSign className="h-4 w-4" />,
+    //   badge: validation.errors.filter(e => e.tab === 'pricing-policies').length,
+    //   isComplete: !validation.errors.some(e => e.tab === 'pricing-policies'),
+    //   hasErrors: validation.errors.some(e => e.tab === 'pricing-policies'),
+    // },
     // {
     //   id: 'availability-booking',
     //   label: 'Availability',
@@ -323,7 +332,7 @@ export const TransferPackageForm: React.FC<TransferPackageFormProps> = ({
     'transfer-details': <TransferDetailsTab />,
     // 'vehicle-options': <VehicleOptionsTab />,
     // 'driver-service': <DriverServiceTab />,
-    'pricing-policies': <PricingPoliciesTab />,
+    // 'pricing-policies': <PricingPoliciesTab />, // Now in Transfer Details tab
     // 'availability-booking': <AvailabilityBookingTab />,
     'review': <ReviewPublishTab validation={validation} onPreview={handlePreview} />,
   };

@@ -154,9 +154,26 @@ export interface TransferPointToPointPricing {
   updated_at: string;
 }
 
+export interface TransferVehicleImage {
+  id: string;
+  vehicle_id: string;
+  file_name: string;
+  file_size: number | null;
+  mime_type: string | null;
+  storage_path: string;
+  public_url: string | null;
+  alt_text: string | null;
+  display_order: number;
+  created_at: string;
+}
+
+export interface TransferPackageVehicleWithImages extends TransferPackageVehicle {
+  vehicle_images: TransferVehicleImage[];
+}
+
 export interface TransferPackageWithRelations extends TransferPackage {
   images: TransferPackageImage[];
-  vehicles: TransferPackageVehicle[];
+  vehicles: TransferPackageVehicleWithImages[];
   stops: TransferPackageStop[];
   additional_services: TransferAdditionalService[];
   hourly_pricing: TransferHourlyPricing[];
@@ -167,6 +184,10 @@ export interface CreateTransferPackageData {
   package: Partial<TransferPackage>;
   images?: Partial<TransferPackageImage>[];
   vehicles?: Partial<TransferPackageVehicle>[];
+  vehicleImages?: Array<{
+    vehicleIndex: number;
+    image: Partial<TransferVehicleImage>;
+  }>;
   stops?: Partial<TransferPackageStop>[];
   additional_services?: Partial<TransferAdditionalService>[];
   hourly_pricing?: Partial<TransferHourlyPricing>[];
@@ -215,7 +236,7 @@ export function formDataToDatabase(
     real_time_tracking: formData.driverService.realTimeTracking,
     
     // Pricing
-    base_price: formData.vehicleOptions.vehicles[0]?.basePrice || 0,
+    base_price: 0, // Set from pricing policies section
     currency: 'USD', // You can make this dynamic
     
     // Policies
@@ -236,7 +257,7 @@ export function formDataToDatabase(
     featured: false,
   };
 
-  // Images
+  // Images - package gallery images ONLY (no vehicle images here)
   const images: Partial<TransferPackageImage>[] = formData.basicInformation.imageGallery.map((img, index) => ({
     file_name: img.fileName,
     file_size: img.fileSize,
@@ -248,17 +269,40 @@ export function formDataToDatabase(
     display_order: index,
   }));
 
-  // Vehicles
-  const vehicles: Partial<TransferPackageVehicle>[] = formData.vehicleOptions.vehicles.map((vehicle, index) => ({
-    vehicle_type: vehicle.vehicleType,
-    name: vehicle.name,
-    description: vehicle.description,
-    passenger_capacity: vehicle.passengerCapacity,
-    luggage_capacity: vehicle.luggageCapacity,
-    features: vehicle.features,
-    base_price: vehicle.basePrice,
-    is_active: vehicle.isActive,
-    display_order: index,
+  // Collect vehicle images separately (to be linked after vehicle creation)
+  const vehicleImages: Array<{
+    vehicleIndex: number;
+    image: Partial<TransferVehicleImage>;
+  }> = [];
+  
+  (formData.transferDetails.vehicles || []).forEach((vehicle, vehicleIndex) => {
+    if (vehicle.vehicleImage) {
+      vehicleImages.push({
+        vehicleIndex,
+        image: {
+          file_name: vehicle.vehicleImage.fileName,
+          file_size: vehicle.vehicleImage.fileSize,
+          mime_type: vehicle.vehicleImage.mimeType,
+          storage_path: vehicle.vehicleImage.url,
+          public_url: vehicle.vehicleImage.url,
+          alt_text: `${vehicle.vehicleName} - Vehicle Image`,
+          display_order: 0,
+        },
+      });
+    }
+  });
+
+  // Vehicles - from transferDetails.vehicles
+  const vehicles: Partial<TransferPackageVehicle>[] = (formData.transferDetails.vehicles || []).map((vehicle, index) => ({
+    vehicle_type: vehicle.vehicleType || 'SEDAN',
+    name: vehicle.vehicleName,
+    description: null,
+    passenger_capacity: vehicle.maxCapacity,
+    luggage_capacity: 0, // Not tracked in new form
+    features: [],
+    base_price: 0, // Set from pricing section
+    is_active: true,
+    display_order: vehicle.order || index,
   }));
 
   // Stops (for multi-stop transfers)
@@ -324,6 +368,7 @@ export function formDataToDatabase(
     package: packageData,
     images,
     vehicles,
+    vehicleImages,
     stops,
     additional_services,
     hourly_pricing,
@@ -393,7 +438,7 @@ export async function createTransferPackage(
     const result: TransferPackageWithRelations = {
       ...packageData,
       images: [],
-      vehicles: [],
+      vehicles: [] as TransferPackageVehicleWithImages[],
       stops: [],
       additional_services: [],
       hourly_pricing: [],
@@ -429,7 +474,65 @@ export async function createTransferPackage(
         .select();
 
       if (vehiclesError) throw vehiclesError;
-      result.vehicles = vehiclesData || [];
+      // Initialize vehicles with empty vehicle_images arrays
+      result.vehicles = (vehiclesData || []).map(vehicle => ({
+        ...vehicle,
+        vehicle_images: [],
+      }));
+
+      // Now insert vehicle images if any
+      if (data.vehicleImages && data.vehicleImages.length > 0 && vehiclesData) {
+        const vehicleImagesWithIds: any[] = [];
+
+        for (const vehicleImageData of data.vehicleImages) {
+          const vehicleId = vehiclesData[vehicleImageData.vehicleIndex]?.id;
+          if (vehicleId) {
+            // Handle base64 image upload if needed
+            let finalImage = vehicleImageData.image;
+            
+            if (vehicleImageData.image.storage_path?.startsWith('data:')) {
+              // Upload base64 image to storage
+              const fileName = vehicleImageData.image.file_name || `vehicle_${Date.now()}.jpg`;
+              const file = base64ToFile(vehicleImageData.image.storage_path, fileName);
+              
+              const uploadResult = await uploadImageFiles([file], userId, 'transfer-packages/vehicles');
+              
+              if (uploadResult[0] && uploadResult[0].data) {
+                finalImage = {
+                  ...vehicleImageData.image,
+                  storage_path: uploadResult[0].data.path,
+                  public_url: uploadResult[0].data.publicUrl,
+                };
+              }
+            }
+
+            vehicleImagesWithIds.push({
+              ...finalImage,
+              vehicle_id: vehicleId,
+            });
+          }
+        }
+
+        if (vehicleImagesWithIds.length > 0) {
+          const { data: vehicleImagesResult, error: vehicleImagesError } = await supabase
+            .from('transfer_vehicle_images')
+            .insert(vehicleImagesWithIds)
+            .select();
+
+          if (vehicleImagesError) {
+            console.error('Vehicle images insert error:', vehicleImagesError);
+            // Don't throw - vehicle images are optional
+          } else {
+            // Attach images to their respective vehicles in result
+            result.vehicles = result.vehicles.map(vehicle => ({
+              ...vehicle,
+              vehicle_images: (vehicleImagesResult || []).filter(
+                (img: any) => img.vehicle_id === vehicle.id
+              ),
+            }));
+          }
+        }
+      }
     }
 
     // Insert stops
@@ -529,10 +632,38 @@ export async function getTransferPackage(
       supabase.from('transfer_point_to_point_pricing').select('*').eq('package_id', id).order('display_order'),
     ]);
 
+    // Fetch vehicle images for all vehicles
+    const vehicleIds = (vehiclesResult.data || []).map((v: any) => v.id);
+    const vehicleImagesMap: { [key: string]: any[] } = {};
+    
+    if (vehicleIds.length > 0) {
+      const { data: vehicleImagesData } = await supabase
+        .from('transfer_vehicle_images')
+        .select('*')
+        .in('vehicle_id', vehicleIds)
+        .order('display_order');
+      
+      // Group images by vehicle_id
+      if (vehicleImagesData) {
+        vehicleImagesData.forEach((img: any) => {
+          if (!vehicleImagesMap[img.vehicle_id]) {
+            vehicleImagesMap[img.vehicle_id] = [];
+          }
+          vehicleImagesMap[img.vehicle_id]!.push(img);
+        });
+      }
+    }
+
+    // Attach vehicle images to vehicles
+    const vehiclesWithImages = (vehiclesResult.data || []).map((vehicle: any) => ({
+      ...vehicle,
+      vehicle_images: vehicleImagesMap[vehicle.id] || [],
+    }));
+
     const result: TransferPackageWithRelations = {
       ...packageData,
       images: imagesResult.data || [],
-      vehicles: vehiclesResult.data || [],
+      vehicles: vehiclesWithImages,
       stops: stopsResult.data || [],
       additional_services: servicesResult.data || [],
       hourly_pricing: hourlyPricingResult.data || [],
