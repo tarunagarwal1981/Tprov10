@@ -590,7 +590,7 @@ export const TransferPricingOptionsManager: React.FC<TransferPricingOptionsManag
   const [newHourlyOption, setNewHourlyOption] = useState<Partial<HourlyPricingOption>>({
     hours: 1,
     vehicleType: userVehicles[0]?.vehicleType || 'SEDAN',
-    vehicleName: userVehicles[0]?.vehicleName || '',
+    vehicleName: userVehicles[0]?.vehicleName || undefined, // Use undefined instead of empty string
     maxPassengers: userVehicles[0]?.maxCapacity || 4,
     rateUSD: 0,
     description: '',
@@ -604,7 +604,7 @@ export const TransferPricingOptionsManager: React.FC<TransferPricingOptionsManag
     fromLocation: '',
     toLocation: '',
     vehicleType: userVehicles[0]?.vehicleType || 'SEDAN',
-    vehicleName: userVehicles[0]?.vehicleName || '',
+    vehicleName: userVehicles[0]?.vehicleName || undefined, // Use undefined instead of empty string
     maxPassengers: userVehicles[0]?.maxCapacity || 4,
     costUSD: 0,
     distanceUnit: 'KM',
@@ -635,7 +635,7 @@ export const TransferPricingOptionsManager: React.FC<TransferPricingOptionsManag
       setNewHourlyOption({
         hours: 1,
         vehicleType: userVehicles[0]?.vehicleType || 'SEDAN',
-        vehicleName: userVehicles[0]?.vehicleName || '',
+        vehicleName: userVehicles[0]?.vehicleName || undefined, // Use undefined instead of empty string
         maxPassengers: userVehicles[0]?.maxCapacity || 4,
         rateUSD: 0,
         description: '',
@@ -688,7 +688,7 @@ export const TransferPricingOptionsManager: React.FC<TransferPricingOptionsManag
         fromLocation: '',
         toLocation: '',
         vehicleType: userVehicles[0]?.vehicleType || 'SEDAN',
-        vehicleName: userVehicles[0]?.vehicleName || '',
+        vehicleName: userVehicles[0]?.vehicleName || undefined, // Use undefined instead of empty string
         maxPassengers: userVehicles[0]?.maxCapacity || 4,
         costUSD: 0,
         distanceUnit: 'KM',

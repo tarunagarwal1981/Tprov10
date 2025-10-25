@@ -1030,11 +1030,13 @@ export const TransferDetailsTab: React.FC = () => {
             onUpdatePointToPoint={(options: PointToPointPricingOption[]) => {
               setValue('pricingPolicies.pointToPointPricingOptions', options);
             }}
-            userVehicles={watchedData.vehicles?.map(v => ({
-              vehicleName: v.vehicleName,
-              vehicleType: v.vehicleType,
-              maxCapacity: v.maxCapacity
-            })) || []}
+            userVehicles={watchedData.vehicles
+              ?.filter(v => v.vehicleName && v.vehicleName.trim() !== '') // Only include vehicles with names
+              .map(v => ({
+                vehicleName: v.vehicleName,
+                vehicleType: v.vehicleType,
+                maxCapacity: v.maxCapacity
+              })) || []}
           />
         </CardContent>
       </Card>
