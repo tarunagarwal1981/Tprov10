@@ -6,7 +6,7 @@ import { TransferPackageFormData } from "@/lib/types/transfer-package";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
-import { formDataToDatabase } from "@/lib/supabase/transfer-packages";
+import { formDataToDatabase, createTransferPackage } from "@/lib/supabase/transfer-packages";
 import { TransferPackageInsert } from "@/lib/supabase/types";
 
 export default function CreateTransferPackagePage() {
@@ -27,25 +27,18 @@ export default function CreateTransferPackagePage() {
       // Transform form data to database format
       const dbData = formDataToDatabase(data, user.id);
       
-      // Set status to draft and prepare insert data
-      const packageInsertData: TransferPackageInsert = {
-        ...dbData.package,
-        status: 'draft',
-      } as TransferPackageInsert;
+      // Set status to draft
+      dbData.package.status = 'draft';
       
-      // Insert main package
-      const { data: packageResult, error: packageError } = await supabase
-        .from('transfer_packages')
-        .insert(packageInsertData)
-        .select()
-        .single();
+      // Use the comprehensive service function to create package with all relations
+      const { data: packageResult, error: packageError } = await createTransferPackage(dbData, user.id);
       
       if (packageError) {
         console.error('Package insert error:', packageError);
         throw packageError;
       }
       
-      console.log('✅ Package saved:', packageResult);
+      console.log('✅ Package saved with all relations:', packageResult);
       toast.success("Transfer package draft saved successfully!");
     } catch (error: any) {
       console.error("Save failed:", error);
@@ -68,82 +61,42 @@ export default function CreateTransferPackagePage() {
       // Transform form data to database format
       const dbData = formDataToDatabase(data, user.id);
       
-      // Set status to published and prepare insert data
-      const packageInsertData: TransferPackageInsert = {
-        ...dbData.package,
-        status: 'published',
-        published_at: new Date().toISOString(),
-      } as TransferPackageInsert;
+      // Set status to published
+      dbData.package.status = 'published';
+      dbData.package.published_at = new Date().toISOString();
       
-      // Insert main package
-      const { data: packageResult, error: packageError } = await supabase
-        .from('transfer_packages')
-        .insert(packageInsertData)
-        .select()
-        .single();
+      // Use the comprehensive service function to create package with all relations
+      // This handles:
+      // - Main package insertion
+      // - Package images upload & insertion
+      // - Vehicles insertion
+      // - Vehicle images upload & insertion (to transfer-packages/vehicles/)
+      // - Stops insertion
+      // - Additional services insertion
+      // - Hourly pricing options insertion
+      // - Point-to-point pricing options insertion
+      const { data: packageResult, error: packageError } = await createTransferPackage(dbData, user.id);
       
       if (packageError) {
-        console.error('Package insert error:', packageError);
+        console.error('Package creation error:', packageError);
         throw packageError;
       }
-
-      const packageId = packageResult.id;
-
-      // Insert vehicles if any
-      if (dbData.vehicles && dbData.vehicles.length > 0) {
-        const vehiclesWithPackageId = dbData.vehicles.map(v => ({
-          ...v,
-          package_id: packageId,
-        })) as any[];
-        
-        const { error: vehiclesError } = await supabase
-          .from('transfer_package_vehicles')
-          .insert(vehiclesWithPackageId);
-        
-        if (vehiclesError) {
-          console.error('Vehicles insert error:', vehiclesError);
-        }
-      }
-
-      // Insert stops if any
-      if (dbData.stops && dbData.stops.length > 0) {
-        const stopsWithPackageId = dbData.stops.map(s => ({
-          ...s,
-          package_id: packageId,
-        })) as any[];
-        
-        const { error: stopsError } = await supabase
-          .from('transfer_package_stops')
-          .insert(stopsWithPackageId);
-        
-        if (stopsError) {
-          console.error('Stops insert error:', stopsError);
-        }
-      }
-
-      // Insert additional services if any
-      if (dbData.additional_services && dbData.additional_services.length > 0) {
-        const servicesWithPackageId = dbData.additional_services.map(s => ({
-          ...s,
-          package_id: packageId,
-        })) as any[];
-        
-        const { error: servicesError } = await supabase
-          .from('transfer_additional_services')
-          .insert(servicesWithPackageId);
-        
-        if (servicesError) {
-          console.error('Services insert error:', servicesError);
-        }
-      }
       
-      console.log('✅ Package published:', packageResult);
-      toast.success("Transfer package published successfully!");
+      console.log('✅ Package published with all relations:', {
+        package: packageResult,
+        images: packageResult?.images?.length || 0,
+        vehicles: packageResult?.vehicles?.length || 0,
+        vehicleImages: packageResult?.vehicles?.reduce((sum, v) => sum + (v.vehicle_images?.length || 0), 0) || 0,
+        hourlyPricing: packageResult?.hourly_pricing?.length || 0,
+        pointToPointPricing: packageResult?.point_to_point_pricing?.length || 0,
+      });
+      
+      toast.success("Transfer package published successfully! All data, images, and pricing saved.");
       
       // Redirect after a short delay to ensure toast is visible
       setTimeout(() => {
         router.push("/operator/packages");
-      }, 1000);
+      }, 1500);
     } catch (error: any) {
       console.error("Publish failed:", error);
       toast.error(error.message || "Failed to publish transfer package");
