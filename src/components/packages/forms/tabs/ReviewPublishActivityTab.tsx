@@ -84,7 +84,7 @@ export const ReviewPublishActivityTab: React.FC<ReviewPublishActivityTabProps> =
   const formData = watch();
 
   const completionPercentage = useMemo(() => {
-    const sections = ["basic-info", "activity-details", "variants", "policies", "faq", "pricing"];
+    const sections = ["basic-info", "activity-details", "pricing", "pricing-options"];
     const completedSections = sections.filter((section) => !validation.errors.some((e) => e.tab === section));
     return Math.round((completedSections.length / sections.length) * 100);
   }, [validation.errors]);
@@ -160,43 +160,34 @@ export const ReviewPublishActivityTab: React.FC<ReviewPublishActivityTabProps> =
         </ReviewSection>
 
         <ReviewSection
-          title="Variants"
-          icon={<FaLayerGroup className="h-5 w-5 text-indigo-600" />}
-          isComplete={isSectionComplete("variants")}
-          hasErrors={hasSectionErrors("variants")}
-        >
-          <div className="space-y-3">
-            <SummaryItem
-              label="Variants"
-              value={`${formData.packageVariants?.variants?.length || 0} variants`}
-              isEmpty={(formData.packageVariants?.variants?.length || 0) === 0}
-            />
-          </div>
-        </ReviewSection>
-
-        <ReviewSection
-          title="Policies"
-          icon={<FaShieldAlt className="h-5 w-5 text-green-600" />}
-          isComplete={isSectionComplete("policies")}
-          hasErrors={hasSectionErrors("policies")}
-        >
-          <div className="space-y-3">
-            <SummaryItem
-              label="Cancellation Policy"
-              value={formData.policiesRestrictions?.cancellationPolicy?.type || ""}
-              isEmpty={!formData.policiesRestrictions?.cancellationPolicy?.type}
-            />
-          </div>
-        </ReviewSection>
-
-        <ReviewSection
           title="Pricing"
           icon={<FaDollarSign className="h-5 w-5 text-green-600" />}
           isComplete={isSectionComplete("pricing")}
           hasErrors={hasSectionErrors("pricing")}
         >
           <div className="space-y-3">
-            <SummaryItem label="Base Price" value={`$${(formData.pricing?.basePrice ?? 0).toFixed(2)}`} />
+            <SummaryItem label="Base Price" value={`${formData.pricing?.currency || '$'}${(formData.pricing?.basePrice ?? 0).toFixed(2)}`} />
+            <SummaryItem label="Price Type" value={formData.pricing?.priceType === 'PERSON' ? 'Per Person' : 'Per Group'} />
+          </div>
+        </ReviewSection>
+        
+        <ReviewSection
+          title="Pricing Options"
+          icon={<FaDollarSign className="h-5 w-5 text-orange-600" />}
+          isComplete={isSectionComplete("pricing-options")}
+          hasErrors={hasSectionErrors("pricing-options")}
+        >
+          <div className="space-y-3">
+            <SummaryItem 
+              label="Ticket Only Options" 
+              value={`${formData.pricingOptions?.ticketOnlyOptions?.length || 0} options`}
+              isEmpty={(formData.pricingOptions?.ticketOnlyOptions?.length || 0) === 0}
+            />
+            <SummaryItem 
+              label="Ticket with Transfer Options" 
+              value={`${formData.pricingOptions?.ticketWithTransferOptions?.length || 0} options`}
+              isEmpty={(formData.pricingOptions?.ticketWithTransferOptions?.length || 0) === 0}
+            />
           </div>
         </ReviewSection>
       </div>
