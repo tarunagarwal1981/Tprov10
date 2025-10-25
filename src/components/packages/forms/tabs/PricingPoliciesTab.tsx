@@ -31,7 +31,10 @@ import {
   TransferPackageFormData,
   AdditionalCharge,
   CancellationPolicy,
+  HourlyPricingOption,
+  PointToPointPricingOption,
 } from "@/lib/types/transfer-package";
+import { TransferPricingOptionsManager } from "./TransferPricingOptionsManager";
 
 // Additional charge types
 const CHARGE_TYPES = [
@@ -283,46 +286,23 @@ export const PricingPoliciesTab: React.FC = () => {
     setValue('pricingPolicies.additionalCharges', updatedCharges);
   }, [watchedData.additionalCharges, setValue]);
 
+  const handleUpdateHourlyOptions = useCallback((options: HourlyPricingOption[]) => {
+    setValue('pricingPolicies.hourlyPricingOptions', options);
+  }, [setValue]);
+
+  const handleUpdatePointToPointOptions = useCallback((options: PointToPointPricingOption[]) => {
+    setValue('pricingPolicies.pointToPointPricingOptions', options);
+  }, [setValue]);
+
   return (
     <div className="space-y-6 package-scroll-fix">
-      {/* Base Pricing */}
-      <Card className="package-selector-glass package-shadow-fix">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FaDollarSign className="h-5 w-5 text-green-600" />
-            Base Pricing
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Base pricing is configured in the Vehicle Options tab. Each vehicle has its own base price.
-            </p>
-            
-            {vehicleOptions?.vehicles && vehicleOptions.vehicles.length > 0 ? (
-              <div className="space-y-2">
-                {vehicleOptions.vehicles.map((vehicle) => (
-                  <div key={vehicle.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                    <div>
-                      <span className="font-medium">{vehicle.name}</span>
-                      <span className="text-xs text-gray-500 ml-2">({vehicle.vehicleType})</span>
-                    </div>
-                    <span className="text-green-600 font-semibold">
-                      ${vehicle.basePrice?.toFixed(2) || '0.00'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-gray-500">
-                <FaCalculator className="h-8 w-8 mx-auto mb-2" />
-                <p>No vehicles configured yet</p>
-                <p className="text-sm">Add vehicles in the Vehicle Options tab first</p>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      {/* Transfer Pricing Options */}
+      <TransferPricingOptionsManager
+        hourlyOptions={watchedData.hourlyPricingOptions || []}
+        pointToPointOptions={watchedData.pointToPointPricingOptions || []}
+        onUpdateHourly={handleUpdateHourlyOptions}
+        onUpdatePointToPoint={handleUpdatePointToPointOptions}
+      />
 
       {/* Additional Charges */}
       <Card className="package-selector-glass package-shadow-fix">

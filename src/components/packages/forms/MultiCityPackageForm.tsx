@@ -1150,7 +1150,8 @@ export const MultiCityPackageForm: React.FC<{
   const formData = watch();
   const [activeTab, setActiveTab] = useState("basic");
   const validation = useFormValidation(formData);
-  const autoSave = useAutoSave(formData, onSave);
+  // Auto-save disabled
+  // const autoSave = useAutoSave(formData, onSave);
 
   const saveDraft = async (data: MultiCityPackageFormData) => { if (onSave) await onSave(data); };
   const publish = async (data: MultiCityPackageFormData) => { if (onPublish) await onPublish(data); };
@@ -1176,7 +1177,8 @@ export const MultiCityPackageForm: React.FC<{
               <p className="text-gray-600">Build an itinerary across multiple cities with intuitive tools.</p>
             </div>
             {/* Auto-save status and actions (aligned with other forms) */}
-            <div className="flex items-center gap-4">
+            {/* Auto-save status - DISABLED */}
+            {/* <div className="flex items-center gap-4">
               <AnimatePresence>
                 {autoSave.isSaving && (
                   <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="flex items-center gap-2 text-sm text-blue-600">
@@ -1194,6 +1196,8 @@ export const MultiCityPackageForm: React.FC<{
                   </motion.div>
                 )}
               </AnimatePresence>
+            </div> */}
+            <div>
               <div className="flex items-center gap-2">
                 <Button type="button" variant="outline" onClick={() => onPreview?.(formData)} className="package-button-fix">Preview</Button>
                 <Button type="button" variant="outline" onClick={() => saveDraft(formData)} className="package-button-fix">Save Draft</Button>

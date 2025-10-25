@@ -134,26 +134,26 @@ const useFormValidation = (data: TransferPackageFormData): FormValidation => {
       });
     }
 
-    // Vehicle Options validation
-    if (data.vehicleOptions.vehicles.length === 0) {
-      errors.push({
-        tab: 'vehicle-options',
-        field: 'vehicles',
-        message: 'At least one vehicle configuration is required',
-        severity: 'error',
-      });
-    }
+    // Vehicle Options validation - REMOVED (tab removed)
+    // if (data.vehicleOptions.vehicles.length === 0) {
+    //   errors.push({
+    //     tab: 'vehicle-options',
+    //     field: 'vehicles',
+    //     message: 'At least one vehicle configuration is required',
+    //     severity: 'error',
+    //   });
+    // }
 
-    // Validate that vehicles have base prices
-    const vehiclesWithoutPrice = data.vehicleOptions.vehicles.filter(v => !v.basePrice || v.basePrice <= 0);
-    if (vehiclesWithoutPrice.length > 0) {
-      errors.push({
-        tab: 'vehicle-options',
-        field: 'basePrice',
-        message: `${vehiclesWithoutPrice.length} vehicle(s) missing base price`,
-        severity: 'error',
-      });
-    }
+    // Validate that vehicles have base prices - REMOVED (tab removed)
+    // const vehiclesWithoutPrice = data.vehicleOptions.vehicles.filter(v => !v.basePrice || v.basePrice <= 0);
+    // if (vehiclesWithoutPrice.length > 0) {
+    //   errors.push({
+    //     tab: 'vehicle-options',
+    //     field: 'basePrice',
+    //     message: `${vehiclesWithoutPrice.length} vehicle(s) missing base price`,
+    //     severity: 'error',
+    //   });
+    // }
 
     // Availability validation - COMMENTED OUT (tab removed)
     // if (data.availabilityBooking.availableDays.length === 0) {
@@ -174,13 +174,14 @@ const useFormValidation = (data: TransferPackageFormData): FormValidation => {
       });
     }
 
-    if (data.vehicleOptions.vehicles.length < 2) {
-      warnings.push({
-        tab: 'vehicle-options',
-        field: 'vehicles',
-        message: 'Adding multiple vehicle options will give customers more choice',
-      });
-    }
+    // Vehicle warning - REMOVED (tab removed)
+    // if (data.vehicleOptions.vehicles.length < 2) {
+    //   warnings.push({
+    //     tab: 'vehicle-options',
+    //     field: 'vehicles',
+    //     message: 'Adding multiple vehicle options will give customers more choice',
+    //   });
+    // }
 
     return {
       isValid: errors.length === 0,
@@ -212,11 +213,12 @@ export const TransferPackageForm: React.FC<TransferPackageFormProps> = ({
   const formData = watch();
 
   const validation = useFormValidation(formData);
-  const autoSaveState = useAutoSave(formData, async (data) => {
-    if (onSave) {
-      await onSave(data);
-    }
-  });
+  // Auto-save disabled
+  // const autoSaveState = useAutoSave(formData, async (data) => {
+  //   if (onSave) {
+  //     await onSave(data);
+  //   }
+  // });
 
   // Tab configuration
   const tabs: TabInfo[] = [
@@ -236,22 +238,22 @@ export const TransferPackageForm: React.FC<TransferPackageFormProps> = ({
       isComplete: !validation.errors.some(e => e.tab === 'transfer-details'),
       hasErrors: validation.errors.some(e => e.tab === 'transfer-details'),
     },
-    {
-      id: 'vehicle-options',
-      label: 'Vehicle Options',
-      icon: <FaCar className="h-4 w-4" />,
-      badge: validation.errors.filter(e => e.tab === 'vehicle-options').length,
-      isComplete: !validation.errors.some(e => e.tab === 'vehicle-options'),
-      hasErrors: validation.errors.some(e => e.tab === 'vehicle-options'),
-    },
-    {
-      id: 'driver-service',
-      label: 'Driver & Service',
-      icon: <FaUserTie className="h-4 w-4" />,
-      badge: validation.errors.filter(e => e.tab === 'driver-service').length,
-      isComplete: !validation.errors.some(e => e.tab === 'driver-service'),
-      hasErrors: validation.errors.some(e => e.tab === 'driver-service'),
-    },
+    // {
+    //   id: 'vehicle-options',
+    //   label: 'Vehicle Options',
+    //   icon: <FaCar className="h-4 w-4" />,
+    //   badge: validation.errors.filter(e => e.tab === 'vehicle-options').length,
+    //   isComplete: !validation.errors.some(e => e.tab === 'vehicle-options'),
+    //   hasErrors: validation.errors.some(e => e.tab === 'vehicle-options'),
+    // },
+    // {
+    //   id: 'driver-service',
+    //   label: 'Driver & Service',
+    //   icon: <FaUserTie className="h-4 w-4" />,
+    //   badge: validation.errors.filter(e => e.tab === 'driver-service').length,
+    //   isComplete: !validation.errors.some(e => e.tab === 'driver-service'),
+    //   hasErrors: validation.errors.some(e => e.tab === 'driver-service'),
+    // },
     {
       id: 'pricing-policies',
       label: 'Pricing & Policies',
@@ -319,8 +321,8 @@ export const TransferPackageForm: React.FC<TransferPackageFormProps> = ({
   const tabContent = {
     // 'basic-info': <BasicInformationTab />,
     'transfer-details': <TransferDetailsTab />,
-    'vehicle-options': <VehicleOptionsTab />,
-    'driver-service': <DriverServiceTab />,
+    // 'vehicle-options': <VehicleOptionsTab />,
+    // 'driver-service': <DriverServiceTab />,
     'pricing-policies': <PricingPoliciesTab />,
     // 'availability-booking': <AvailabilityBookingTab />,
     'review': <ReviewPublishTab validation={validation} onPreview={handlePreview} />,
@@ -344,8 +346,8 @@ export const TransferPackageForm: React.FC<TransferPackageFormProps> = ({
               </p>
             </div>
             
-            {/* Auto-save status */}
-            <div className="flex items-center gap-4">
+            {/* Auto-save status - DISABLED */}
+            {/* <div className="flex items-center gap-4">
               <AnimatePresence>
                 {autoSaveState.isSaving && (
                   <motion.div
@@ -383,7 +385,7 @@ export const TransferPackageForm: React.FC<TransferPackageFormProps> = ({
                   </motion.div>
                 )}
               </AnimatePresence>
-            </div>
+            </div> */}
           </div>
         </div>
 

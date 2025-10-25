@@ -120,10 +120,10 @@ export const ReviewPublishTab: React.FC<ReviewPublishTabProps> = ({
     const sections = [
       'basicInformation',
       'transferDetails',
-      'vehicleOptions',
-      'driverService',
+      // 'vehicleOptions', // REMOVED
+      // 'driverService', // REMOVED
       'pricingPolicies',
-      'availabilityBooking',
+      // 'availabilityBooking', // REMOVED
     ];
 
     const completedSections = sections.filter(section => {
@@ -324,100 +324,8 @@ export const ReviewPublishTab: React.FC<ReviewPublishTabProps> = ({
           </div>
         </ReviewSection>
 
-        {/* Vehicle Options */}
-        <ReviewSection
-          title="Vehicle Options"
-          icon={<FaCar className="h-5 w-5 text-indigo-600" />}
-          isComplete={isSectionComplete('vehicle-options')}
-          hasErrors={hasSectionErrors('vehicle-options')}
-        >
-          <div className="space-y-3">
-            <SummaryItem
-              label="Vehicles"
-              value={`${formData.vehicleOptions.vehicles.length} vehicles`}
-              isEmpty={formData.vehicleOptions.vehicles.length === 0}
-            />
-            {formData.vehicleOptions.vehicles.length > 0 && (
-              <div className="space-y-2">
-                {formData.vehicleOptions.vehicles.slice(0, 3).map((vehicle) => (
-                  <div key={vehicle.id} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded">
-                    <span className="text-sm font-medium">{vehicle.name}</span>
-                    <div className="flex items-center gap-2">
-                      <Badge variant={vehicle.isActive ? "default" : "secondary"}>
-                        {vehicle.isActive ? "Active" : "Inactive"}
-                      </Badge>
-                      <span className="text-sm text-gray-600">
-                        ${vehicle.basePrice.toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-                {formData.vehicleOptions.vehicles.length > 3 && (
-                  <p className="text-xs text-gray-500 text-center">
-                    +{formData.vehicleOptions.vehicles.length - 3} more vehicles
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
-        </ReviewSection>
-
-        {/* Driver & Service */}
-        <ReviewSection
-          title="Driver & Service"
-          icon={<FaUserTie className="h-5 w-5 text-green-600" />}
-          isComplete={isSectionComplete('driver-service')}
-          hasErrors={hasSectionErrors('driver-service')}
-        >
-          <div className="space-y-3">
-            <SummaryItem
-              label="Meet & Greet"
-              value={formData.driverService.meetAndGreet ? "Yes" : "No"}
-            />
-            <SummaryItem
-              label="Name Board"
-              value={formData.driverService.nameBoard ? "Yes" : "No"}
-            />
-            <SummaryItem
-              label="Driver Uniform"
-              value={formData.driverService.driverUniform ? "Yes" : "No"}
-            />
-            <SummaryItem
-              label="Flight Tracking"
-              value={formData.driverService.flightTracking ? "Yes" : "No"}
-            />
-            <SummaryItem
-              label="Luggage Assistance"
-              value={formData.driverService.luggageAssistance ? "Yes" : "No"}
-            />
-            <SummaryItem
-              label="Door-to-Door Service"
-              value={formData.driverService.doorToDoorService ? "Yes" : "No"}
-            />
-            <SummaryItem
-              label="Real-time Tracking"
-              value={formData.driverService.realTimeTracking ? "Yes" : "No"}
-            />
-            <SummaryItem
-              label="Driver Languages"
-              value={
-                <div className="flex flex-wrap gap-1">
-                  {formData.driverService.driverLanguages.map((lang) => (
-                    <Badge key={lang} variant="outline" className="text-xs">
-                      {lang}
-                    </Badge>
-                  ))}
-                </div>
-              }
-              isEmpty={formData.driverService.driverLanguages.length === 0}
-            />
-            <SummaryItem
-              label="Additional Services"
-              value={`${formData.driverService.additionalServices.length} services`}
-              isEmpty={formData.driverService.additionalServices.length === 0}
-            />
-          </div>
-        </ReviewSection>
+        {/* Vehicle Options - REMOVED */}
+        {/* Driver & Service - REMOVED */}
 
         {/* Pricing & Policies */}
         <ReviewSection
@@ -427,10 +335,16 @@ export const ReviewPublishTab: React.FC<ReviewPublishTabProps> = ({
           hasErrors={hasSectionErrors('pricing-policies')}
         >
           <div className="space-y-3">
+            {/* Base Pricing - REMOVED */}
             <SummaryItem
-              label="Base Pricing"
-              value={`${formData.pricingPolicies.basePricing.length} vehicle prices`}
-              isEmpty={formData.pricingPolicies.basePricing.length === 0}
+              label="Hourly Pricing Options"
+              value={`${formData.pricingPolicies.hourlyPricingOptions?.length || 0} options`}
+              isEmpty={(formData.pricingPolicies.hourlyPricingOptions?.length || 0) === 0}
+            />
+            <SummaryItem
+              label="Point-to-Point Options"
+              value={`${formData.pricingPolicies.pointToPointPricingOptions?.length || 0} routes`}
+              isEmpty={(formData.pricingPolicies.pointToPointPricingOptions?.length || 0) === 0}
             />
             <SummaryItem
               label="Additional Charges"
@@ -462,48 +376,7 @@ export const ReviewPublishTab: React.FC<ReviewPublishTabProps> = ({
           </div>
         </ReviewSection>
 
-        {/* Availability & Booking */}
-        <ReviewSection
-          title="Availability & Booking"
-          icon={<FaCalendarAlt className="h-5 w-5 text-blue-600" />}
-          isComplete={isSectionComplete('availability-booking')}
-          hasErrors={hasSectionErrors('availability-booking')}
-        >
-          <div className="space-y-3">
-            <SummaryItem
-              label="Available Days"
-              value={`${formData.availabilityBooking.availableDays.length} days`}
-              isEmpty={formData.availabilityBooking.availableDays.length === 0}
-            />
-            <SummaryItem
-              label="Time Slots"
-              value={`${formData.availabilityBooking.availableTimeSlots.length} slots`}
-              isEmpty={formData.availabilityBooking.availableTimeSlots.length === 0}
-            />
-            <SummaryItem
-              label="Advance Booking Required"
-              value={`${formData.availabilityBooking.advanceBookingRequired} hours`}
-            />
-            <SummaryItem
-              label="Maximum Advance Booking"
-              value={`${formData.availabilityBooking.maximumAdvanceBooking} days`}
-            />
-            <SummaryItem
-              label="Instant Confirmation"
-              value={formData.availabilityBooking.instantConfirmation ? "Yes" : "No"}
-            />
-            <SummaryItem
-              label="Booking Restrictions"
-              value={`${formData.availabilityBooking.bookingRestrictions.length} restrictions`}
-              isEmpty={formData.availabilityBooking.bookingRestrictions.length === 0}
-            />
-            <SummaryItem
-              label="Special Instructions"
-              value={formData.availabilityBooking.specialInstructions ? "Configured" : "Not configured"}
-              isEmpty={!formData.availabilityBooking.specialInstructions}
-            />
-          </div>
-        </ReviewSection>
+        {/* Availability & Booking - REMOVED */}
       </div>
 
       {/* Action Buttons */}

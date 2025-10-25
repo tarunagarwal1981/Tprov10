@@ -226,6 +226,62 @@ export interface DynamicPricingInfo {
 }
 
 // ============================================================================
+// ACTIVITY PRICING OPTIONS TYPES (New)
+// ============================================================================
+
+export type VehicleType = 'SEDAN' | 'SUV' | 'VAN' | 'BUS' | 'LUXURY' | 'MINIBUS' | 'MINIVAN';
+
+// Ticket Only Pricing
+export interface TicketOnlyPricingOption {
+  id: string;
+  optionName: string;
+  description?: string;
+  adultPrice: number;
+  childPrice: number;
+  childMinAge: number;
+  childMaxAge: number;
+  infantPrice?: number;
+  infantMaxAge?: number;
+  includedItems: string[];
+  excludedItems: string[];
+  isActive: boolean;
+  isFeatured: boolean;
+  displayOrder: number;
+}
+
+// Ticket with Transfer Pricing
+export interface TicketWithTransferPricingOption {
+  id: string;
+  optionName: string;
+  description?: string;
+  vehicleType: VehicleType;
+  vehicleName: string;
+  maxCapacity: number;
+  vehicleFeatures: string[];
+  adultPrice: number;
+  childPrice: number;
+  childMinAge: number;
+  childMaxAge: number;
+  infantPrice?: number;
+  infantMaxAge?: number;
+  pickupLocation?: string;
+  pickupInstructions?: string;
+  dropoffLocation?: string;
+  dropoffInstructions?: string;
+  includedItems: string[];
+  excludedItems: string[];
+  isActive: boolean;
+  isFeatured: boolean;
+  displayOrder: number;
+}
+
+// Container for all pricing options
+export interface ActivityPricingOptions {
+  ticketOnlyOptions: TicketOnlyPricingOption[];
+  ticketWithTransferOptions: TicketWithTransferPricingOption[];
+}
+
+// ============================================================================
 // FORM STATE TYPES
 // ============================================================================
 
@@ -236,6 +292,7 @@ export interface ActivityPackageFormData {
   policiesRestrictions: PoliciesRestrictions;
   faq: FAQSection;
   pricing: PricingInfo;
+  pricingOptions?: ActivityPricingOptions;
 }
 
 export interface FormValidation {
@@ -392,6 +449,10 @@ export const DEFAULT_FORM_DATA: ActivityPackageFormData = {
       demandMultiplier: 1,
       seasonMultiplier: 1,
     },
+  },
+  pricingOptions: {
+    ticketOnlyOptions: [],
+    ticketWithTransferOptions: [],
   },
 };
 

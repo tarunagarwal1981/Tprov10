@@ -209,6 +209,8 @@ export interface AdditionalService {
 
 export interface PricingPolicies {
   basePricing: VehiclePricing[];
+  hourlyPricingOptions: HourlyPricingOption[];
+  pointToPointPricingOptions: PointToPointPricingOption[];
   additionalCharges: AdditionalCharge[];
   cancellationPolicy: CancellationPolicy;
   noShowPolicy: string;
@@ -235,6 +237,50 @@ export interface TimeBasedPricing {
   };
   surchargePercentage: number;
   description: string;
+}
+
+// ============================================================================
+// TRANSFER PRICING OPTIONS TYPES
+// ============================================================================
+
+export interface HourlyPricingOption {
+  id: string;
+  hours: number;
+  vehicleType: VehicleType;
+  vehicleName: string;
+  maxPassengers: number;
+  rateUSD: number;
+  description?: string;
+  features: VehicleFeature[];
+  isActive: boolean;
+  displayOrder: number;
+}
+
+export interface PointToPointPricingOption {
+  id: string;
+  fromLocation: string;
+  fromAddress?: string;
+  fromCoordinates?: {
+    latitude: number;
+    longitude: number;
+  };
+  toLocation: string;
+  toAddress?: string;
+  toCoordinates?: {
+    latitude: number;
+    longitude: number;
+  };
+  distance?: number;
+  distanceUnit: DistanceUnit;
+  estimatedDurationMinutes?: number;
+  vehicleType: VehicleType;
+  vehicleName: string;
+  maxPassengers: number;
+  costUSD: number;
+  description?: string;
+  features: VehicleFeature[];
+  isActive: boolean;
+  displayOrder: number;
 }
 
 export interface AdditionalCharge {
@@ -467,6 +513,8 @@ export const DEFAULT_TRANSFER_FORM_DATA: TransferPackageFormData = {
   },
   pricingPolicies: {
     basePricing: [],
+    hourlyPricingOptions: [],
+    pointToPointPricingOptions: [],
     additionalCharges: [],
     cancellationPolicy: {
       type: 'MODERATE',

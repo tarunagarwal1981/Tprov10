@@ -1,17 +1,22 @@
 import { Handler } from '@netlify/functions';
 import { createClient } from '@supabase/supabase-js';
 
-// Server-side Supabase client with service role (bypasses RLS)
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
+// Helper function to get Supabase admin client
+function getSupabaseAdmin() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error('Missing Supabase environment variables');
+  }
+
+  return createClient(supabaseUrl, supabaseServiceKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false
     }
-  }
-);
+  });
+}
 
 export const handler: Handler = async (event) => {
   // Only allow POST
@@ -33,6 +38,9 @@ export const handler: Handler = async (event) => {
         body: JSON.stringify({ error: 'Missing userId or accessToken' })
       };
     }
+
+    // Get Supabase admin client at runtime
+    const supabaseAdmin = getSupabaseAdmin();
 
     // Verify the access token is valid
     const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(accessToken);

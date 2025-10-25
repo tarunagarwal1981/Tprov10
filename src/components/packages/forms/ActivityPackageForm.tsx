@@ -164,14 +164,6 @@ const useFormValidation = (data: ActivityPackageFormData): FormValidation => {
       });
     }
 
-    if (data.faq.faqs.length === 0) {
-      warnings.push({
-        tab: 'faq',
-        field: 'faqs',
-        message: 'Adding FAQs will help customers understand your package better',
-      });
-    }
-
     return {
       isValid: errors.length === 0,
       errors,
@@ -222,11 +214,12 @@ export const ActivityPackageForm: React.FC<ActivityPackageFormProps> = ({
   }, [dbPackage, mode, reset]);
 
   const validation = useFormValidation(formData);
-  const autoSaveState = useAutoSave(formData, async (data) => {
-    if (onSave) {
-      await onSave(data);
-    }
-  });
+  // Auto-save disabled
+  // const autoSaveState = useAutoSave(formData, async (data) => {
+  //   if (onSave) {
+  //     await onSave(data);
+  //   }
+  // });
 
   // Tab configuration
   const tabs: TabInfo[] = [
@@ -387,8 +380,8 @@ export const ActivityPackageForm: React.FC<ActivityPackageFormProps> = ({
               </p>
             </div>
             
-            {/* Auto-save status */}
-            <div className="flex items-center gap-4">
+            {/* Auto-save status - DISABLED */}
+            {/* <div className="flex items-center gap-4">
               <AnimatePresence>
                 {autoSaveState.isSaving && (
                   <motion.div
@@ -428,7 +421,12 @@ export const ActivityPackageForm: React.FC<ActivityPackageFormProps> = ({
                     {autoSaveState.error}
                   </motion.div>
                 )}
-                
+              </AnimatePresence>
+            </div> */}
+            
+            {/* Package error display */}
+            <div className="flex items-center gap-4">
+              <AnimatePresence>
                 {packageError && (
                   <motion.div
                     key="package-error"

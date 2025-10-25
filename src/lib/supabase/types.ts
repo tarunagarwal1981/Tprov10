@@ -757,6 +757,166 @@ export type Database = {
           }
         ]
       }
+      activity_ticket_only_pricing: {
+        Row: {
+          id: string
+          package_id: string
+          option_name: string
+          description: string | null
+          adult_price: number
+          child_price: number
+          child_min_age: number
+          child_max_age: number
+          infant_price: number | null
+          infant_max_age: number | null
+          included_items: string[]
+          excluded_items: string[]
+          is_active: boolean
+          is_featured: boolean
+          display_order: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          package_id: string
+          option_name: string
+          description?: string | null
+          adult_price: number
+          child_price: number
+          child_min_age?: number
+          child_max_age?: number
+          infant_price?: number | null
+          infant_max_age?: number | null
+          included_items?: string[]
+          excluded_items?: string[]
+          is_active?: boolean
+          is_featured?: boolean
+          display_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          package_id?: string
+          option_name?: string
+          description?: string | null
+          adult_price?: number
+          child_price?: number
+          child_min_age?: number
+          child_max_age?: number
+          infant_price?: number | null
+          infant_max_age?: number | null
+          included_items?: string[]
+          excluded_items?: string[]
+          is_active?: boolean
+          is_featured?: boolean
+          display_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_ticket_only_pricing_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "activity_packages"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      activity_ticket_with_transfer_pricing: {
+        Row: {
+          id: string
+          package_id: string
+          option_name: string
+          description: string | null
+          vehicle_type: string
+          vehicle_name: string
+          max_capacity: number
+          vehicle_features: string[]
+          adult_price: number
+          child_price: number
+          child_min_age: number
+          child_max_age: number
+          infant_price: number | null
+          infant_max_age: number | null
+          pickup_location: string | null
+          pickup_instructions: string | null
+          dropoff_location: string | null
+          dropoff_instructions: string | null
+          included_items: string[]
+          excluded_items: string[]
+          is_active: boolean
+          is_featured: boolean
+          display_order: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          package_id: string
+          option_name: string
+          description?: string | null
+          vehicle_type: string
+          vehicle_name: string
+          max_capacity: number
+          vehicle_features?: string[]
+          adult_price: number
+          child_price: number
+          child_min_age?: number
+          child_max_age?: number
+          infant_price?: number | null
+          infant_max_age?: number | null
+          pickup_location?: string | null
+          pickup_instructions?: string | null
+          dropoff_location?: string | null
+          dropoff_instructions?: string | null
+          included_items?: string[]
+          excluded_items?: string[]
+          is_active?: boolean
+          is_featured?: boolean
+          display_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          package_id?: string
+          option_name?: string
+          description?: string | null
+          vehicle_type?: string
+          vehicle_name?: string
+          max_capacity?: number
+          vehicle_features?: string[]
+          adult_price?: number
+          child_price?: number
+          child_min_age?: number
+          child_max_age?: number
+          infant_price?: number | null
+          infant_max_age?: number | null
+          pickup_location?: string | null
+          pickup_instructions?: string | null
+          dropoff_location?: string | null
+          dropoff_instructions?: string | null
+          included_items?: string[]
+          excluded_items?: string[]
+          is_active?: boolean
+          is_featured?: boolean
+          display_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_ticket_with_transfer_pricing_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "activity_packages"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       multi_city_packages: {
         Row: {
           id: string
@@ -1828,6 +1988,142 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "transfer_booking_restrictions_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "transfer_packages"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      transfer_hourly_pricing: {
+        Row: {
+          id: string
+          package_id: string
+          hours: number
+          vehicle_type: 'SEDAN' | 'SUV' | 'VAN' | 'BUS' | 'LUXURY' | 'MINIBUS'
+          vehicle_name: string
+          max_passengers: number
+          rate_usd: number
+          description: string | null
+          features: string[]
+          is_active: boolean
+          display_order: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          package_id: string
+          hours: number
+          vehicle_type: 'SEDAN' | 'SUV' | 'VAN' | 'BUS' | 'LUXURY' | 'MINIBUS'
+          vehicle_name: string
+          max_passengers: number
+          rate_usd: number
+          description?: string | null
+          features?: string[]
+          is_active?: boolean
+          display_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          package_id?: string
+          hours?: number
+          vehicle_type?: 'SEDAN' | 'SUV' | 'VAN' | 'BUS' | 'LUXURY' | 'MINIBUS'
+          vehicle_name?: string
+          max_passengers?: number
+          rate_usd?: number
+          description?: string | null
+          features?: string[]
+          is_active?: boolean
+          display_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transfer_hourly_pricing_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "transfer_packages"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      transfer_point_to_point_pricing: {
+        Row: {
+          id: string
+          package_id: string
+          from_location: string
+          from_address: string | null
+          from_coordinates: Json | null
+          to_location: string
+          to_address: string | null
+          to_coordinates: Json | null
+          distance: number | null
+          distance_unit: 'KM' | 'MILES'
+          estimated_duration_minutes: number | null
+          vehicle_type: 'SEDAN' | 'SUV' | 'VAN' | 'BUS' | 'LUXURY' | 'MINIBUS'
+          vehicle_name: string
+          max_passengers: number
+          cost_usd: number
+          description: string | null
+          features: string[]
+          is_active: boolean
+          display_order: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          package_id: string
+          from_location: string
+          from_address?: string | null
+          from_coordinates?: Json | null
+          to_location: string
+          to_address?: string | null
+          to_coordinates?: Json | null
+          distance?: number | null
+          distance_unit?: 'KM' | 'MILES'
+          estimated_duration_minutes?: number | null
+          vehicle_type: 'SEDAN' | 'SUV' | 'VAN' | 'BUS' | 'LUXURY' | 'MINIBUS'
+          vehicle_name: string
+          max_passengers: number
+          cost_usd: number
+          description?: string | null
+          features?: string[]
+          is_active?: boolean
+          display_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          package_id?: string
+          from_location?: string
+          from_address?: string | null
+          from_coordinates?: Json | null
+          to_location?: string
+          to_address?: string | null
+          to_coordinates?: Json | null
+          distance?: number | null
+          distance_unit?: 'KM' | 'MILES'
+          estimated_duration_minutes?: number | null
+          vehicle_type?: 'SEDAN' | 'SUV' | 'VAN' | 'BUS' | 'LUXURY' | 'MINIBUS'
+          vehicle_name?: string
+          max_passengers?: number
+          cost_usd?: number
+          description?: string | null
+          features?: string[]
+          is_active?: boolean
+          display_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transfer_point_to_point_pricing_package_id_fkey"
             columns: ["package_id"]
             isOneToOne: false
             referencedRelation: "transfer_packages"

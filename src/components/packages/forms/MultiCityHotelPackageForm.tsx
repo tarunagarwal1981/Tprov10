@@ -687,7 +687,8 @@ export default function MultiCityHotelPackageForm({ className }: { className?: s
     }
   };
 
-  const autoSave = useAutoSave(data, onSave);
+  // Auto-save disabled
+  // const autoSave = useAutoSave(data, onSave);
 
   return (
     <FormProvider {...form}>
@@ -698,7 +699,8 @@ export default function MultiCityHotelPackageForm({ className }: { className?: s
               <h1 className="text-2xl font-bold">Create Multi-City with Hotel</h1>
               <p className="text-gray-600">Full multi-city itinerary builder with hotel selection and pricing.</p>
             </div>
-            <div className="flex items-center gap-4">
+            {/* Auto-save status - DISABLED */}
+            {/* <div className="flex items-center gap-4">
               <AnimatePresence>
                 {(saving || autoSave.isSaving) && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-2 text-sm text-blue-600">
@@ -711,6 +713,8 @@ export default function MultiCityHotelPackageForm({ className }: { className?: s
                   </motion.div>
                 )}
               </AnimatePresence>
+            </div> */}
+            <div>
               <div className="flex items-center gap-2">
                 <Button type="button" variant="outline" onClick={() => console.log("Preview", data)} className="package-button-fix">Preview</Button>
                 <Button type="submit" className="package-button-fix">Save</Button>
