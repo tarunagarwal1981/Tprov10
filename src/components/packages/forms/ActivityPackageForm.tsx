@@ -35,7 +35,7 @@ import { databaseToFormData } from "@/lib/supabase/activity-packages";
 
 // Import tab components
 import { BasicInformationTab } from "./tabs/BasicInformationTab";
-import { ActivityDetailsTab } from "./tabs/ActivityDetailsTab";
+// import { ActivityDetailsTab } from "./tabs/ActivityDetailsTab"; // Moved into BasicInformationTab
 // import { PackageVariantsTab } from "./tabs/PackageVariantsTab";
 // import { PoliciesRestrictionsTab } from "./tabs/PoliciesRestrictionsTab";
 // import { FAQTab } from "./tabs/FAQTab";
@@ -126,10 +126,10 @@ const useFormValidation = (data: ActivityPackageFormData): FormValidation => {
       });
     }
 
-    // Activity Details validation
+    // Activity Details validation (now in basic-info tab)
     if (data.activityDetails.operationalHours.timeSlots.length === 0) {
       errors.push({
-        tab: 'activity-details',
+        tab: 'basic-info',
         field: 'timeSlots',
         message: 'At least one time slot is required',
         severity: 'error',
@@ -138,7 +138,7 @@ const useFormValidation = (data: ActivityPackageFormData): FormValidation => {
 
     if (!data.activityDetails.meetingPoint.name.trim()) {
       errors.push({
-        tab: 'activity-details',
+        tab: 'basic-info',
         field: 'meetingPoint',
         message: 'Meeting point is required',
         severity: 'error',
@@ -207,11 +207,26 @@ export const ActivityPackageForm: React.FC<ActivityPackageFormProps> = ({
 
   // Update form when database package loads
   React.useEffect(() => {
-    if (dbPackage && mode === 'edit') {
-      const formData = databaseToFormData(dbPackage);
-      reset(formData);
-    }
-  }, [dbPackage, mode, reset]);
+    const loadPackageData = async () => {
+      if (dbPackage && mode === 'edit' && packageId) {
+        const formData = databaseToFormData(dbPackage);
+        
+        // Load pricing packages
+        try {
+          const { getPricingPackages } = await import('@/lib/supabase/activity-pricing-simple');
+          const pricingPackages = await getPricingPackages(packageId);
+          formData.pricingOptions = pricingPackages as any;
+        } catch (error) {
+          console.error('Error loading pricing packages:', error);
+          formData.pricingOptions = [];
+        }
+        
+        reset(formData);
+      }
+    };
+    
+    loadPackageData();
+  }, [dbPackage, mode, packageId, reset]);
 
   const validation = useFormValidation(formData);
   // Auto-save disabled
@@ -231,14 +246,15 @@ export const ActivityPackageForm: React.FC<ActivityPackageFormProps> = ({
       isComplete: !validation.errors.some(e => e.tab === 'basic-info'),
       hasErrors: validation.errors.some(e => e.tab === 'basic-info'),
     },
-    {
-      id: 'activity-details',
-      label: 'Activity Details',
-      icon: <FaClock className="h-4 w-4" />,
-      badge: validation.errors.filter(e => e.tab === 'activity-details').length,
-      isComplete: !validation.errors.some(e => e.tab === 'activity-details'),
-      hasErrors: validation.errors.some(e => e.tab === 'activity-details'),
-    },
+    // Activity Details tab has been merged into Basic Info tab
+    // {
+    //   id: 'activity-details',
+    //   label: 'Activity Details',
+    //   icon: <FaClock className="h-4 w-4" />,
+    //   badge: validation.errors.filter(e => e.tab === 'activity-details').length,
+    //   isComplete: !validation.errors.some(e => e.tab === 'activity-details'),
+    //   hasErrors: validation.errors.some(e => e.tab === 'activity-details'),
+    // },
     // {
     //   id: 'variants',
     //   label: 'Variants',
@@ -287,11 +303,29 @@ export const ActivityPackageForm: React.FC<ActivityPackageFormProps> = ({
     
     try {
       let success = false;
+      let savedPackageId = packageId;
       
       if (mode === 'create') {
-        success = await createPackage(data);
+        const result = await createPackage(data);
+        success = result ? true : false;
+        // Note: createPackage should return the package ID
+        // If it returns an object, extract the ID
+        if (typeof result === 'object' && result && 'id' in result) {
+          savedPackageId = (result as any).id;
+        }
       } else if (mode === 'edit' && packageId) {
         success = await updatePackage(data);
+      }
+      
+      // Save pricing packages if they exist
+      if (success && savedPackageId && data.pricingOptions && Array.isArray(data.pricingOptions)) {
+        try {
+          const { savePricingPackages } = await import('@/lib/supabase/activity-pricing-simple');
+          await savePricingPackages(savedPackageId, data.pricingOptions);
+        } catch (pricingError) {
+          console.error('Error saving pricing packages:', pricingError);
+          // Don't fail the entire save if pricing fails
+        }
       }
       
       if (success && onSave) {
@@ -316,11 +350,26 @@ export const ActivityPackageForm: React.FC<ActivityPackageFormProps> = ({
     try {
       // First save the package
       let success = false;
+      let savedPackageId = packageId;
       
       if (mode === 'create') {
-        success = await createPackage(data);
+        const result = await createPackage(data);
+        success = result ? true : false;
+        if (typeof result === 'object' && result && 'id' in result) {
+          savedPackageId = (result as any).id;
+        }
       } else if (mode === 'edit' && packageId) {
         success = await updatePackage(data);
+      }
+      
+      // Save pricing packages if they exist
+      if (success && savedPackageId && data.pricingOptions && Array.isArray(data.pricingOptions)) {
+        try {
+          const { savePricingPackages } = await import('@/lib/supabase/activity-pricing-simple');
+          await savePricingPackages(savedPackageId, data.pricingOptions);
+        } catch (pricingError) {
+          console.error('Error saving pricing packages:', pricingError);
+        }
       }
       
       if (success && onPublish) {
@@ -341,8 +390,7 @@ export const ActivityPackageForm: React.FC<ActivityPackageFormProps> = ({
   };
 
   const tabContent = {
-    'basic-info': <BasicInformationTab />,
-    'activity-details': <ActivityDetailsTab />,
+    'basic-info': <BasicInformationTab />, // All activity details merged into this tab
     // 'variants': <PackageVariantsTab />,
     // 'policies': <PoliciesRestrictionsTab />,
     // 'faq': <FAQTab />,
