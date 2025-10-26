@@ -761,6 +761,131 @@ export async function listTransferPackages(
 }
 
 // ============================================================================
+// LIST TRANSFER PACKAGES WITH CARD DATA (For Display Cards)
+// ============================================================================
+
+export async function listTransferPackagesWithCardData(
+  filters: { operator_id?: string; status?: string } = {}
+): Promise<{ data: TransferPackageWithRelations[] | null; error: SupabaseError | null }> {
+  const supabase = createSupabaseBrowserClient();
+  
+  return withErrorHandling(async () => {
+    // Get base packages
+    let query = supabase
+      .from('transfer_packages')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (filters.operator_id) {
+      query = query.eq('operator_id', filters.operator_id);
+    }
+
+    if (filters.status) {
+      query = query.eq('status', filters.status as any);
+    }
+
+    const { data: packages, error: packagesError } = await query;
+
+    if (packagesError) throw packagesError;
+    if (!packages || packages.length === 0) {
+      return { data: [], error: null };
+    }
+
+    // Get all package IDs
+    const packageIds = packages.map(p => p.id);
+
+    // Fetch all related data in parallel
+    const [vehiclesResult, hourlyPricingResult, p2pPricingResult] = await Promise.all([
+      supabase
+        .from('transfer_package_vehicles')
+        .select('*')
+        .in('package_id', packageIds)
+        .order('display_order'),
+      supabase
+        .from('transfer_hourly_pricing')
+        .select('rate_usd, hours, package_id')
+        .in('package_id', packageIds),
+      supabase
+        .from('transfer_point_to_point_pricing')
+        .select('cost_usd, from_location, to_location, package_id')
+        .in('package_id', packageIds),
+    ]);
+
+    // Get all vehicle IDs to fetch their images
+    const vehicleIds = (vehiclesResult.data || []).map(v => v.id);
+    let vehicleImagesData: any[] = [];
+
+    if (vehicleIds.length > 0) {
+      const { data: images } = await supabase
+        .from('transfer_vehicle_images')
+        .select('vehicle_id, public_url, alt_text')
+        .in('vehicle_id', vehicleIds)
+        .order('display_order');
+      
+      vehicleImagesData = images || [];
+    }
+
+    // Group data by package_id
+    const vehiclesByPackage: { [key: string]: any[] } = {};
+    const vehicleImagesMap: { [key: string]: any[] } = {};
+    const hourlyPricingByPackage: { [key: string]: any[] } = {};
+    const p2pPricingByPackage: { [key: string]: any[] } = {};
+
+    // Group vehicles
+    (vehiclesResult.data || []).forEach(vehicle => {
+      if (!vehiclesByPackage[vehicle.package_id]) {
+        vehiclesByPackage[vehicle.package_id] = [];
+      }
+      vehiclesByPackage[vehicle.package_id]!.push(vehicle);
+    });
+
+    // Group vehicle images by vehicle_id
+    vehicleImagesData.forEach(img => {
+      if (!vehicleImagesMap[img.vehicle_id]) {
+        vehicleImagesMap[img.vehicle_id] = [];
+      }
+      vehicleImagesMap[img.vehicle_id]!.push(img);
+    });
+
+    // Group pricing
+    (hourlyPricingResult.data || []).forEach(pricing => {
+      if (!hourlyPricingByPackage[pricing.package_id]) {
+        hourlyPricingByPackage[pricing.package_id] = [];
+      }
+      hourlyPricingByPackage[pricing.package_id]!.push(pricing);
+    });
+
+    (p2pPricingResult.data || []).forEach(pricing => {
+      if (!p2pPricingByPackage[pricing.package_id]) {
+        p2pPricingByPackage[pricing.package_id] = [];
+      }
+      p2pPricingByPackage[pricing.package_id]!.push(pricing);
+    });
+
+    // Combine everything
+    const packagesWithData: TransferPackageWithRelations[] = packages.map(pkg => {
+      // Get vehicles for this package and attach their images
+      const pkgVehicles = (vehiclesByPackage[pkg.id] || []).map(vehicle => ({
+        ...vehicle,
+        vehicle_images: vehicleImagesMap[vehicle.id] || [],
+      }));
+
+      return {
+        ...pkg,
+        images: [], // Not needed for card view
+        vehicles: pkgVehicles,
+        stops: [], // Not needed for card view
+        additional_services: [], // Not needed for card view
+        hourly_pricing: hourlyPricingByPackage[pkg.id] || [],
+        point_to_point_pricing: p2pPricingByPackage[pkg.id] || [],
+      };
+    });
+
+    return { data: packagesWithData, error: null };
+  });
+}
+
+// ============================================================================
 // DELETE TRANSFER PACKAGE
 // ============================================================================
 

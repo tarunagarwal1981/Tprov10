@@ -33,6 +33,9 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
+import { FaCar } from 'react-icons/fa';
+import { TransferPackageCard, TransferPackageCardData } from '@/components/packages/TransferPackageCard';
+import { listTransferPackagesWithCardData, deleteTransferPackage } from '@/lib/supabase/transfer-packages';
 
 interface Package {
 	id: string;
@@ -69,6 +72,7 @@ function AnimatedNumber({ value, prefix = '', suffix = '' }: { value: number; pr
 export default function PackagesPage() {
 	const router = useRouter();
 	const [packages, setPackages] = useState<Package[]>([]);
+	const [transferPackages, setTransferPackages] = useState<TransferPackageCardData[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 	const [searchQuery, setSearchQuery] = useState('');
@@ -97,7 +101,7 @@ export default function PackagesPage() {
 					return;
 				}
 
-		// Fetch ALL package types: activity, transfer, and multi-city
+		// Fetch ALL package types: activity, transfer (with full card data), and multi-city
 		const [activityResult, transferResult, multiCityResult] = await Promise.all([
 			// Activity packages
 			supabase
@@ -121,28 +125,8 @@ export default function PackagesPage() {
 				`)
 				.eq('operator_id', user.id)
 				.order('created_at', { ascending: false }),
-			// Transfer packages
-			supabase
-				.from('transfer_packages' as any)
-				.select(`
-					id,
-					title,
-					short_description,
-					status,
-					base_price,
-					currency,
-					destination_city,
-					destination_country,
-					created_at,
-					published_at,
-					transfer_package_images (
-						id,
-						public_url,
-						is_cover
-					)
-				`)
-				.eq('operator_id', user.id)
-				.order('created_at', { ascending: false }),
+			// Transfer packages with full card data (vehicles, images, pricing)
+			listTransferPackagesWithCardData({ operator_id: user.id }),
 			// Multi-city packages
 			supabase
 				.from('multi_city_packages' as any)
@@ -174,6 +158,7 @@ export default function PackagesPage() {
 		
 		if (transferResult.error) {
 			console.error('Error fetching transfer packages:', transferResult.error);
+			toast.error('Failed to load transfer packages');
 		}
 		
 		if (multiCityResult.error) {
@@ -184,18 +169,6 @@ export default function PackagesPage() {
 		const activityPackages: Package[] = (activityResult.data || []).map((pkg: any) => {
 			const coverImage = pkg.activity_package_images?.find((img: any) => img.is_cover);
 			const imageUrl = coverImage?.public_url || pkg.activity_package_images?.[0]?.public_url || '';
-
-			// Debug logging for image data
-			if (pkg.activity_package_images && pkg.activity_package_images.length > 0) {
-				console.log(`Activity package "${pkg.title}" images:`, {
-					totalImages: pkg.activity_package_images.length,
-					coverImage: coverImage?.public_url || 'none',
-					firstImage: pkg.activity_package_images[0]?.public_url,
-					selectedImage: imageUrl,
-				});
-			} else {
-				console.log(`Activity package "${pkg.title}" has no images`);
-			}
 
 			return {
 				id: pkg.id,
@@ -212,37 +185,9 @@ export default function PackagesPage() {
 			};
 		});
 
-		// Transform transfer packages
-		const transferPackages: Package[] = (transferResult.data || []).map((pkg: any) => {
-			const coverImage = pkg.transfer_package_images?.find((img: any) => img.is_cover);
-			const imageUrl = coverImage?.public_url || pkg.transfer_package_images?.[0]?.public_url || '';
-
-			// Debug logging for image data
-			if (pkg.transfer_package_images && pkg.transfer_package_images.length > 0) {
-				console.log(`Transfer package "${pkg.title}" images:`, {
-					totalImages: pkg.transfer_package_images.length,
-					coverImage: coverImage?.public_url || 'none',
-					firstImage: pkg.transfer_package_images[0]?.public_url,
-					selectedImage: imageUrl,
-				});
-			} else {
-				console.log(`Transfer package "${pkg.title}" has no images`);
-			}
-
-			return {
-				id: pkg.id,
-				title: pkg.title,
-				type: 'Transfer',
-				status: pkg.status?.toUpperCase() as 'DRAFT' | 'ACTIVE' | 'INACTIVE',
-				price: pkg.base_price || 0,
-				rating: 0,
-				reviews: 0,
-				bookings: 0,
-				views: 0,
-				image: imageUrl,
-				createdAt: new Date(pkg.created_at),
-			};
-		});
+		// Store transfer packages with full data for TransferPackageCard
+		const transferPackagesWithCardData = transferResult.data || [];
+		setTransferPackages(transferPackagesWithCardData);
 
 		// Transform multi-city packages
 		const multiCityPackages: Package[] = (multiCityResult.data || []).map((pkg: any) => {
@@ -276,18 +221,19 @@ export default function PackagesPage() {
 			};
 		});
 
-		// Combine all package types and sort by creation date
-		const allPackages = [...activityPackages, ...transferPackages, ...multiCityPackages]
+		// Combine non-transfer package types (transfer packages handled separately with custom card)
+		const allPackages = [...activityPackages, ...multiCityPackages]
 			.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
 			setPackages(allPackages);
 
-			// Update stats
-			const activeCount = allPackages.filter(p => p.status === 'PUBLISHED' || p.status === 'ACTIVE').length;
+			// Update stats (including transfer packages in count)
+			const activeCount = allPackages.filter(p => p.status === 'PUBLISHED' || p.status === 'ACTIVE').length + 
+				transferPackagesWithCardData.filter(p => p.status === 'published').length;
 			const totalRevenue = allPackages.reduce((sum, p) => sum + (p.bookings * p.price), 0);
 			
 			setStats({
-				total: allPackages.length,
+				total: allPackages.length + transferPackagesWithCardData.length,
 				active: activeCount,
 				revenue: totalRevenue,
 				avgRating: 4.8, // TODO: Calculate from reviews
@@ -677,6 +623,68 @@ export default function PackagesPage() {
 		}
 	};
 
+	// Transfer Package-specific handlers
+	const handleViewTransferPackage = (pkg: TransferPackageCardData) => {
+		router.push(`/operator/packages/create/transfer?id=${pkg.id}&view=true`);
+	};
+
+	const handleEditTransferPackage = (pkg: TransferPackageCardData) => {
+		router.push(`/operator/packages/create/transfer?id=${pkg.id}`);
+	};
+
+	const handleDuplicateTransferPackage = async (pkg: TransferPackageCardData) => {
+		toast.info('Duplicate feature coming soon!');
+		// TODO: Implement transfer package duplication
+	};
+
+	const handleDeleteTransferPackage = async (pkg: TransferPackageCardData) => {
+		if (!confirm(`Are you sure you want to delete "${pkg.title}"? This action cannot be undone.`)) {
+			return;
+		}
+
+		try {
+			toast.info('Deleting transfer package...');
+			
+			const { error } = await deleteTransferPackage(pkg.id);
+			
+			if (error) {
+				console.error('Error deleting transfer package:', error);
+				toast.error('Failed to delete transfer package');
+				return;
+			}
+
+			toast.success('Transfer package deleted successfully');
+			
+			// Remove from local state
+			setTransferPackages(prev => prev.filter(p => p.id !== pkg.id));
+			
+			// Update stats
+			setStats(prev => ({
+				...prev,
+				total: prev.total - 1,
+				active: pkg.status === 'published' ? prev.active - 1 : prev.active,
+			}));
+
+		} catch (error) {
+			console.error('Error deleting transfer package:', error);
+			toast.error('Failed to delete transfer package');
+		}
+	};
+
+	// Filter transfer packages
+	const filteredTransferPackages = useMemo(() => {
+		return transferPackages.filter(pkg => {
+			// Status filter
+			if (statusFilter === 'ALL') return true;
+			const pkgStatus = pkg.status?.toUpperCase();
+			if (statusFilter === 'ACTIVE') return pkgStatus === 'PUBLISHED';
+			return pkgStatus === statusFilter;
+		}).filter(pkg => {
+			// Search filter
+			return !searchQuery || pkg.title.toLowerCase().includes(searchQuery.toLowerCase());
+		});
+	}, [transferPackages, statusFilter, searchQuery]);
+
 	return (
 		<div className="min-h-screen bg-gradient-to-br from-slate-50 to-white p-2 sm:p-3">
 			{/* Header */}
@@ -867,10 +875,37 @@ export default function PackagesPage() {
 				</div>
 			)}
 
-			{/* Packages Grid */}
+			{/* Transfer Packages Section with New Card */}
+			{!loading && filteredTransferPackages.length > 0 && (
+				<div className="mb-8">
+					<h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+						<FaCar className="h-5 w-5 text-[#FF6B35]" />
+						Transfer Packages ({filteredTransferPackages.length})
+					</h2>
+					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+						{filteredTransferPackages.map((pkg) => (
+							<TransferPackageCard
+								key={pkg.id}
+								package={pkg}
+								onView={handleViewTransferPackage}
+								onEdit={handleEditTransferPackage}
+								onDuplicate={handleDuplicateTransferPackage}
+								onDelete={handleDeleteTransferPackage}
+							/>
+						))}
+					</div>
+				</div>
+			)}
+
+			{/* Other Packages Grid (Activity, Multi-City) */}
 			{!loading && filtered.length > 0 && (
-				<div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-4'}>
-					{filtered.map((pkg) => (
+				<div className="mb-8">
+					<h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+						<PackageIcon className="h-5 w-5 text-[#FF6B35]" />
+						Other Packages ({filtered.length})
+					</h2>
+					<div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-4'}>
+						{filtered.map((pkg) => (
 						<motion.div
 							key={pkg.id}
 							initial={{ opacity: 0, y: 20 }}
@@ -976,6 +1011,7 @@ export default function PackagesPage() {
 							</Card>
 						</motion.div>
 					))}
+					</div>
 				</div>
 			)}
 		</div>
