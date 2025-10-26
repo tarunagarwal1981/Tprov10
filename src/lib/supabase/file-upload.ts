@@ -60,13 +60,12 @@ export async function uploadFile({
       bucket
     });
     
-    // Upload the file with proper content type
+    // Upload the file - let Supabase auto-detect content type from File object
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from(bucket)
       .upload(filePath, file, {
         cacheControl: '3600',
-        upsert: false,
-        contentType: file.type || 'image/jpeg'
+        upsert: false
       });
 
     if (uploadError) {
@@ -142,9 +141,11 @@ export function base64ToFile(base64DataUrl: string, fileName: string): File {
   
   const byteArray = new Uint8Array(byteNumbers);
   
-  // Create Blob first, then File to ensure proper size calculation
-  const blob = new Blob([byteArray], { type: mimeType });
-  return new File([blob], fileName, { type: mimeType });
+  // Create File object directly from byte array
+  const file = new File([byteArray], fileName, { type: mimeType });
+  
+  // Ensure file.size is a number (not stringified)
+  return file;
 }
 
 /**
