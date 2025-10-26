@@ -304,8 +304,12 @@ export const TransferPackageForm: React.FC<TransferPackageFormProps> = ({
           </div>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit(handleSave)}>
+        {/* Form - Form submission is DISABLED to prevent auto-save on Enter key */}
+        {/* Only the "Publish" button should create/update packages */}
+        <form onSubmit={(e) => {
+          e.preventDefault(); // Prevent any form submission (including Enter key)
+          return false;
+        }}>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             {/* Tab Navigation */}
             <div className="mb-6">
@@ -362,8 +366,9 @@ export const TransferPackageForm: React.FC<TransferPackageFormProps> = ({
               </Button>
               
               <Button
-                type="submit"
+                type="button"
                 variant="outline"
+                onClick={handleSubmit(handleSave)}
                 disabled={isSubmitting}
                 className="package-button-fix package-animation-fix"
               >
