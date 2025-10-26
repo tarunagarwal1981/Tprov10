@@ -84,7 +84,7 @@ export const ReviewPublishActivityTab: React.FC<ReviewPublishActivityTabProps> =
   const formData = watch();
 
   const completionPercentage = useMemo(() => {
-    const sections = ["basic-info", "activity-details", "pricing", "pricing-options"];
+    const sections = ["basic-info", "pricing", "pricing-options"]; // activity-details merged into basic-info
     const completedSections = sections.filter((section) => !validation.errors.some((e) => e.tab === section));
     return Math.round((completedSections.length / sections.length) * 100);
   }, [validation.errors]);
@@ -150,8 +150,8 @@ export const ReviewPublishActivityTab: React.FC<ReviewPublishActivityTabProps> =
         <ReviewSection
           title="Activity Details"
           icon={<FaClock className="h-5 w-5 text-purple-600" />}
-          isComplete={isSectionComplete("activity-details")}
-          hasErrors={hasSectionErrors("activity-details")}
+          isComplete={isSectionComplete("basic-info")}
+          hasErrors={hasSectionErrors("basic-info")}
         >
           <div className="space-y-3">
             <SummaryItem label="Meeting Point" value={formData.activityDetails?.meetingPoint?.name || ""} isEmpty={!formData.activityDetails?.meetingPoint?.name} />

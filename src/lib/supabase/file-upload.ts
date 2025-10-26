@@ -51,12 +51,13 @@ export async function uploadFile({
     // Create the file path: userId/folder/filename
     const filePath = folder ? `${userId}/${folder}/${finalFileName}` : `${userId}/${finalFileName}`;
     
-    // Upload the file
+    // Upload the file with proper content type
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from(bucket)
       .upload(filePath, file, {
         cacheControl: '3600',
-        upsert: false
+        upsert: false,
+        contentType: file.type || 'image/jpeg'
       });
 
     if (uploadError) {
