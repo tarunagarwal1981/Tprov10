@@ -39,7 +39,7 @@ import { BasicInformationTab } from "./tabs/BasicInformationTab";
 // import { PackageVariantsTab } from "./tabs/PackageVariantsTab";
 // import { PoliciesRestrictionsTab } from "./tabs/PoliciesRestrictionsTab";
 // import { FAQTab } from "./tabs/FAQTab";
-import { PricingTab } from "./tabs/PricingTab";
+import { ActivityPricingOptionsTab } from "./tabs/ActivityPricingOptionsTab";
 import ReviewPublishActivityTab from "./tabs/ReviewPublishActivityTab";
 
 // Auto-save hook
@@ -394,7 +394,7 @@ export const ActivityPackageForm: React.FC<ActivityPackageFormProps> = ({
     // 'variants': <PackageVariantsTab />,
     // 'policies': <PoliciesRestrictionsTab />,
     // 'faq': <FAQTab />,
-    'pricing': <PricingTab />,
+    'pricing': <ActivityPricingOptionsTab />,
     'review': <ReviewPublishActivityTab validation={validation} onPreview={handlePreview} />,
   };
 

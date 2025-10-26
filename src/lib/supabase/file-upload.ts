@@ -51,35 +51,10 @@ export async function uploadFile({
     // Create the file path: userId/folder/filename
     const filePath = folder ? `${userId}/${folder}/${finalFileName}` : `${userId}/${finalFileName}`;
     
-    // Debug file info with type checking
-    console.log('📋 File upload details:', {
-      name: file.name,
-      size: file.size,
-      sizeType: typeof file.size,
-      type: file.type,
-      path: filePath,
-      bucket,
-      fileConstructor: file.constructor.name
-    });
-    
-    // Ensure file.size is a number (work around potential Supabase bug)
-    // Create a new File object with explicit size validation
-    const safeFile = new File([file], file.name, {
-      type: file.type,
-      lastModified: file.lastModified
-    });
-    
-    console.log('📋 Safe file created:', {
-      name: safeFile.name,
-      size: safeFile.size,
-      sizeType: typeof safeFile.size,
-      type: safeFile.type
-    });
-    
-    // Upload the file - let Supabase auto-detect content type from File object
+    // Upload the file (simple approach that was working in a156b71)
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from(bucket)
-      .upload(filePath, safeFile, {
+      .upload(filePath, file, {
         cacheControl: '3600',
         upsert: false
       });
@@ -157,11 +132,8 @@ export function base64ToFile(base64DataUrl: string, fileName: string): File {
   
   const byteArray = new Uint8Array(byteNumbers);
   
-  // Create File object directly from byte array
-  const file = new File([byteArray], fileName, { type: mimeType });
-  
-  // Ensure file.size is a number (not stringified)
-  return file;
+  // Create File object
+  return new File([byteArray], fileName, { type: mimeType });
 }
 
 /**
@@ -192,7 +164,7 @@ export async function uploadImageFiles(
   imageFiles: File[],
   userId: string,
   folder: string = 'activity-packages',
-  bucket: string = 'activity-packages-images'
+  bucket: string = 'activity-package-images'
 ): Promise<FileUploadResult[]> {
   // Validate file types
   const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
