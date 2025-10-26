@@ -122,7 +122,7 @@ export async function getPricingPackages(
   const supabase = createSupabaseBrowserClient();
   
   const { data, error } = await supabase
-    .from('activity_pricing_packages')
+    .from('activity_pricing_packages' as any)
     .select('*')
     .eq('package_id', packageId)
     .order('display_order', { ascending: true });
@@ -132,7 +132,7 @@ export async function getPricingPackages(
     throw error;
   }
 
-  return (data || []).map(rowToPricingPackage);
+  return ((data || []) as any[]).map(rowToPricingPackage);
 }
 
 /**
@@ -144,7 +144,7 @@ export async function getActivePricingPackages(
   const supabase = createSupabaseBrowserClient();
   
   const { data, error } = await supabase
-    .from('activity_pricing_packages')
+    .from('activity_pricing_packages' as any)
     .select('*')
     .eq('package_id', packageId)
     .eq('is_active', true)
@@ -170,7 +170,7 @@ export async function createPricingPackage(
   const row = pricingPackageToRow(pkg, packageId);
   
   const { data, error } = await supabase
-    .from('activity_pricing_packages')
+    .from('activity_pricing_packages' as any)
     .insert(row)
     .select()
     .single();
@@ -199,7 +199,7 @@ export async function updatePricingPackage(
   );
   
   const { data, error } = await supabase
-    .from('activity_pricing_packages')
+    .from('activity_pricing_packages' as any)
     .update(row)
     .eq('id', id)
     .select()
@@ -220,7 +220,7 @@ export async function deletePricingPackage(id: string): Promise<void> {
   const supabase = createSupabaseBrowserClient();
   
   const { error } = await supabase
-    .from('activity_pricing_packages')
+    .from('activity_pricing_packages' as any)
     .delete()
     .eq('id', id);
 
@@ -260,7 +260,7 @@ export async function savePricingPackages(
       // Create new
       const row = pricingPackageToRow(pkg, packageId);
       const { data, error } = await supabase
-        .from('activity_pricing_packages')
+        .from('activity_pricing_packages' as any)
         .insert(row)
         .select()
         .single();
@@ -292,7 +292,7 @@ export async function togglePricingPackageStatus(
   const supabase = createSupabaseBrowserClient();
   
   const { data, error } = await supabase
-    .from('activity_pricing_packages')
+    .from('activity_pricing_packages' as any)
     .update({ is_active: isActive })
     .eq('id', id)
     .select()
@@ -316,7 +316,7 @@ export async function togglePricingPackageFeatured(
   const supabase = createSupabaseBrowserClient();
   
   const { data, error } = await supabase
-    .from('activity_pricing_packages')
+    .from('activity_pricing_packages' as any)
     .update({ is_featured: isFeatured })
     .eq('id', id)
     .select()
@@ -340,7 +340,7 @@ export async function updatePricingPackagesOrder(
   
   for (const pkg of packages) {
     const { error } = await supabase
-      .from('activity_pricing_packages')
+      .from('activity_pricing_packages' as any)
       .update({ display_order: pkg.displayOrder })
       .eq('id', pkg.id);
     

@@ -30,6 +30,7 @@ import { FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescripti
 import { cn } from "@/lib/utils";
 import {
   ActivityPackageFormData,
+  ActivityPricingOptions,
   TicketOnlyPricingOption,
   TicketWithTransferPricingOption,
   VehicleType,
@@ -863,7 +864,7 @@ export const ActivityPricingOptionsTab: React.FC = () => {
   const [editingTicketOnly, setEditingTicketOnly] = useState<string | null>(null);
   const [editingTicketTransfer, setEditingTicketTransfer] = useState<string | null>(null);
 
-  const pricingOptions = watch('pricingOptions');
+  const pricingOptions = watch('pricingOptions') as ActivityPricingOptions | undefined;
   const currency = watch('pricing.currency') || 'USD';
 
   // Ticket Only handlers

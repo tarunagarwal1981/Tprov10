@@ -293,7 +293,7 @@ const PricingPackageCard: React.FC<PricingPackageCardProps> = ({
 
           {/* What's Included */}
           <div className="border-t pt-4">
-            <h4 className="text-sm font-semibold mb-2">What's Included</h4>
+            <h4 className="text-sm font-semibold mb-2">What&apos;s Included</h4>
             <div className="flex gap-2 mb-2">
               <Input
                 value={newIncludedItem}
@@ -444,7 +444,7 @@ const PricingPackageCard: React.FC<PricingPackageCardProps> = ({
       {/* Included Items */}
       {pkg.includedItems.length > 0 && (
         <div>
-          <h4 className="text-xs font-semibold mb-2 text-gray-700 dark:text-gray-300">What's Included:</h4>
+          <h4 className="text-xs font-semibold mb-2 text-gray-700 dark:text-gray-300">What&apos;s Included:</h4>
           <div className="space-y-1">
             {pkg.includedItems.slice(0, 3).map((item, i) => (
               <div key={i} className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
@@ -522,7 +522,7 @@ export const PricingTab: React.FC = () => {
         <CardContent>
           <p className="text-sm text-gray-600 dark:text-gray-400">
             Create flexible pricing packages with optional transfers. Each package is a complete template
-            (e.g., "Basic Experience", "Premium VIP") with customizable pricing and included items.
+            (e.g., &quot;Basic Experience&quot;, &quot;Premium VIP&quot;) with customizable pricing and included items.
           </p>
         </CardContent>
       </Card>
