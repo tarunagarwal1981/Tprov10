@@ -383,6 +383,152 @@ export function formDataToDatabase(
 }
 
 // ============================================================================
+// DATABASE TO FORM DATA CONVERTER
+// ============================================================================
+
+export function databaseToFormData(
+  packageData: TransferPackageWithRelations
+): TransferPackageFormData {
+  // TODO: Properly type all fields - for now using type assertion for quick implementation
+  // This converter needs careful field-by-field mapping to match FormData types exactly
+  const coverImage = packageData.images?.find(img => img.is_cover);
+  
+  return ({
+    basicInformation: {
+      title: packageData.title || '',
+      shortDescription: packageData.short_description || '',
+      fullDescription: packageData.full_description || '',
+      destination: {
+        name: packageData.destination_name || '',
+        address: packageData.destination_address || '',
+        city: packageData.destination_city || '',
+        country: packageData.destination_country || '',
+        coordinates: packageData.destination_coordinates,
+      },
+      duration: {
+        hours: packageData.estimated_duration_hours || 0,
+        minutes: packageData.estimated_duration_minutes || 0,
+      },
+      languagesSupported: (packageData.languages_supported || []) as any,
+      tags: (packageData.tags || []) as any,
+      featuredImage: coverImage ? {
+        id: coverImage.id,
+        fileName: coverImage.file_name || '',
+        fileSize: coverImage.file_size || 0,
+        mimeType: coverImage.mime_type || 'image/jpeg',
+        url: coverImage.public_url || '',
+        isCover: true,
+        order: 0,
+        uploadedAt: coverImage.created_at ? new Date(coverImage.created_at) : new Date(),
+      } : null,
+      imageGallery: (packageData.images || []).map((img, index) => ({
+        id: img.id,
+        fileName: img.file_name || '',
+        fileSize: img.file_size || 0,
+        mimeType: img.mime_type || 'image/jpeg',
+        url: img.public_url || '',
+        isCover: img.is_cover || false,
+        order: index,
+        uploadedAt: img.created_at ? new Date(img.created_at) : new Date(),
+      })),
+    },
+    transferDetails: {
+      transferType: packageData.transfer_type || 'ONE_WAY',
+      routeInfo: {
+        totalDistance: packageData.total_distance || 0,
+        distanceUnit: packageData.distance_unit || 'KM',
+        estimatedDuration: {
+          hours: packageData.estimated_duration_hours || 0,
+          minutes: packageData.estimated_duration_minutes || 0,
+        },
+        routePoints: packageData.route_points,
+      },
+      stops: ((packageData.stops || []) as any[]).map((stop: any) => ({
+        id: stop.id,
+        stopName: stop.stop_name || '',
+        stopAddress: stop.stop_address || '',
+        stopDuration: stop.stop_duration_minutes || 0,
+        stopOrder: stop.stop_order || 0,
+        isOptional: stop.is_optional || false,
+      })),
+      vehicles: ((packageData.vehicles || []) as any[]).map((vehicle: any, index: number) => ({
+        id: vehicle.id,
+        vehicleName: vehicle.name || '',
+        vehicleType: vehicle.vehicle_type || undefined,
+        maxCapacity: vehicle.passenger_capacity || 1,
+        vehicleImage: vehicle.vehicle_images && vehicle.vehicle_images[0] ? {
+          id: vehicle.vehicle_images[0].id || `temp-${Date.now()}`,
+          fileName: vehicle.vehicle_images[0].file_name || '',
+          fileSize: vehicle.vehicle_images[0].file_size || 0,
+          mimeType: vehicle.vehicle_images[0].mime_type || 'image/jpeg',
+          url: vehicle.vehicle_images[0].public_url || '',
+          isCover: false,
+          order: 0,
+          uploadedAt: vehicle.vehicle_images[0].created_at ? new Date(vehicle.vehicle_images[0].created_at) : new Date(),
+        } : null,
+        order: index + 1,
+      })),
+    },
+    driverService: {
+      meetAndGreet: packageData.meet_and_greet || false,
+      nameBoard: packageData.name_board || false,
+      driverUniform: packageData.driver_uniform || false,
+      flightTracking: packageData.flight_tracking || false,
+      luggageAssistance: packageData.luggage_assistance || false,
+      doorToDoorService: packageData.door_to_door_service || false,
+      contactDriverInAdvance: packageData.contact_driver_in_advance || false,
+      contactLeadTime: packageData.contact_lead_time || 0,
+      realTimeTracking: packageData.real_time_tracking || false,
+    },
+    pricingPolicies: {
+      additionalCharges: [], // Not stored in database currently
+      cancellationPolicy: {
+        type: packageData.cancellation_policy_type || 'MODERATE',
+        refundPercentage: packageData.cancellation_refund_percentage || 0,
+        cancellationDeadline: packageData.cancellation_deadline_hours || 24,
+      },
+      noShowPolicy: packageData.no_show_policy || '',
+      termsAndConditions: packageData.terms_and_conditions || '',
+      hourlyPricingOptions: ((packageData.hourly_pricing || []) as any[]).map((pricing: any) => ({
+        id: pricing.id,
+        hours: pricing.hours || 1,
+        vehicleType: pricing.vehicle_type || 'SEDAN',
+        vehicleName: pricing.vehicle_name || '',
+        maxPassengers: pricing.max_passengers || 4,
+        rateUSD: pricing.rate_usd || 0,
+        description: pricing.description || '',
+        features: pricing.features || [],
+        isActive: pricing.is_active !== false,
+        displayOrder: pricing.display_order || 0,
+      })),
+      pointToPointPricingOptions: ((packageData.point_to_point_pricing || []) as any[]).map((pricing: any) => ({
+        id: pricing.id,
+        fromLocation: pricing.from_location || '',
+        toLocation: pricing.to_location || '',
+        vehicleType: pricing.vehicle_type || 'SEDAN',
+        vehicleName: pricing.vehicle_name || '',
+        maxPassengers: pricing.max_passengers || 4,
+        costUSD: pricing.cost_usd || 0,
+        distance: pricing.distance || 0,
+        distanceUnit: pricing.distance_unit || 'KM',
+        estimatedDuration: pricing.estimated_duration_minutes || 0,
+        description: pricing.description || '',
+        features: pricing.features || [],
+        isActive: pricing.is_active !== false,
+        displayOrder: pricing.display_order || 0,
+      })),
+    },
+    availabilityBooking: {
+      availableDays: packageData.available_days || ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+      advanceBookingRequired: packageData.advance_booking_hours || 24,
+      maximumAdvanceBooking: packageData.maximum_advance_booking_days || 365,
+      instantConfirmation: packageData.instant_confirmation !== false,
+      specialInstructions: packageData.special_instructions || '',
+    },
+  }) as any as TransferPackageFormData; // Type assertion for quick implementation - TODO: fix types properly
+}
+
+// ============================================================================
 // CREATE TRANSFER PACKAGE
 // ============================================================================
 
@@ -489,9 +635,12 @@ export async function createTransferPackage(
       // Now insert vehicle images if any
       if (data.vehicleImages && data.vehicleImages.length > 0 && vehiclesData) {
         // Upload all vehicle images in parallel for better performance
-        const uploadPromises = data.vehicleImages.map(async (vehicleImageData) => {
+        const uploadPromises = data.vehicleImages.map(async (vehicleImageData, index) => {
           const vehicleId = vehiclesData[vehicleImageData.vehicleIndex]?.id;
-          if (!vehicleId) return null;
+          if (!vehicleId) {
+            console.log(`⚠️ Vehicle ${index}: No vehicle ID found`);
+            return null;
+          }
 
           let finalImage = vehicleImageData.image;
           
@@ -500,14 +649,20 @@ export async function createTransferPackage(
             const fileName = vehicleImageData.image.file_name || `vehicle_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
             const file = base64ToFile(vehicleImageData.image.storage_path, fileName);
             
+            console.log(`📤 Uploading vehicle image ${index + 1}: ${fileName} to ${TRANSFER_PACKAGES_BUCKET}/transfer-packages/vehicles/`);
+            
             const uploadResult = await uploadImageFiles([file], userId, 'transfer-packages/vehicles', TRANSFER_PACKAGES_BUCKET);
             
             if (uploadResult[0] && uploadResult[0].data) {
+              console.log(`✅ Vehicle image ${index + 1} uploaded:`, uploadResult[0].data.publicUrl);
               finalImage = {
                 ...vehicleImageData.image,
                 storage_path: uploadResult[0].data.path,
                 public_url: uploadResult[0].data.publicUrl,
               };
+            } else if (uploadResult[0] && uploadResult[0].error) {
+              console.error(`❌ Vehicle image ${index + 1} upload failed:`, uploadResult[0].error);
+              return null;
             }
           }
 
@@ -520,6 +675,8 @@ export async function createTransferPackage(
         // Wait for all uploads to complete
         const uploadedImages = await Promise.all(uploadPromises);
         const vehicleImagesWithIds = uploadedImages.filter(img => img !== null) as any[];
+        
+        console.log(`✅ Total vehicle images ready for database: ${vehicleImagesWithIds.length}`);
 
         if (vehicleImagesWithIds.length > 0) {
           const { data: vehicleImagesResult, error: vehicleImagesError } = await supabase

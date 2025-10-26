@@ -585,7 +585,7 @@ export const TransferPricingOptionsManager: React.FC<TransferPricingOptionsManag
 }) => {
   const [editingHourlyId, setEditingHourlyId] = useState<string | null>(null);
   const [editingP2PId, setEditingP2PId] = useState<string | null>(null);
-  
+
   // New hourly option (form always visible)
   const [newHourlyOption, setNewHourlyOption] = useState<Partial<HourlyPricingOption>>({
     hours: 1,
@@ -735,13 +735,13 @@ export const TransferPricingOptionsManager: React.FC<TransferPricingOptionsManag
         <TabsContent value="hourly" className="space-y-4 mt-6">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FaClock className="h-5 w-5 text-blue-600" />
+                  <CardTitle className="flex items-center gap-2">
+                    <FaClock className="h-5 w-5 text-blue-600" />
                 Hourly Rentals
-              </CardTitle>
-              <CardDescription className="mt-2">
-                Set pricing based on hourly rates. Ideal for chauffeur services and time-based transfers.
-              </CardDescription>
+                  </CardTitle>
+                  <CardDescription className="mt-2">
+                    Set pricing based on hourly rates. Ideal for chauffeur services and time-based transfers.
+                  </CardDescription>
             </CardHeader>
             <CardContent>
               {/* Form always visible */}
@@ -795,12 +795,12 @@ export const TransferPricingOptionsManager: React.FC<TransferPricingOptionsManag
                             {userVehicles.length > 0 ? (
                               userVehicles.map((vehicle, idx) => (
                                 <SelectItem key={idx} value={vehicle.vehicleName} className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700">
-                                  <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2">
                                     <FaCar className="h-4 w-4" />
                                     <span>{vehicle.vehicleName}</span>
                                     {vehicle.vehicleType && <Badge variant="outline" className="text-xs">{vehicle.vehicleType}</Badge>}
-                                  </div>
-                                </SelectItem>
+                                </div>
+                              </SelectItem>
                               ))
                             ) : (
                               <div className="p-4 text-sm text-gray-500 text-center">
@@ -860,13 +860,13 @@ export const TransferPricingOptionsManager: React.FC<TransferPricingOptionsManag
         <TabsContent value="point-to-point" className="space-y-4 mt-6">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FaMapMarkerAlt className="h-5 w-5 text-purple-600" />
+                  <CardTitle className="flex items-center gap-2">
+                    <FaMapMarkerAlt className="h-5 w-5 text-purple-600" />
                 One Way Transfers
-              </CardTitle>
-              <CardDescription className="mt-2">
-                Set fixed pricing for specific routes. Perfect for airport transfers and city-to-city trips.
-              </CardDescription>
+                  </CardTitle>
+                  <CardDescription className="mt-2">
+                    Set fixed pricing for specific routes. Perfect for airport transfers and city-to-city trips.
+                  </CardDescription>
             </CardHeader>
             <CardContent>
               {/* Form always visible */}
@@ -914,12 +914,12 @@ export const TransferPricingOptionsManager: React.FC<TransferPricingOptionsManag
                             {userVehicles.length > 0 ? (
                               userVehicles.map((vehicle, idx) => (
                                 <SelectItem key={idx} value={vehicle.vehicleName} className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700">
-                                  <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2">
                                     <FaCar className="h-4 w-4" />
                                     <span>{vehicle.vehicleName}</span>
                                     {vehicle.vehicleType && <Badge variant="outline" className="text-xs">{vehicle.vehicleType}</Badge>}
-                                  </div>
-                                </SelectItem>
+                                </div>
+                              </SelectItem>
                               ))
                             ) : (
                               <div className="p-4 text-sm text-gray-500 text-center">

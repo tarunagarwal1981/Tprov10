@@ -26,6 +26,7 @@ import {
   FaBaby,
   FaShieldAlt,
   FaFileAlt,
+  FaUsers,
 } from "react-icons/fa";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -379,11 +380,11 @@ const VehicleDetailRow: React.FC<{
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
-      className="p-6 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 space-y-4"
+      className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 space-y-3"
     >
-      <div className="flex items-center justify-between mb-4">
-        <h4 className="font-semibold text-lg flex items-center gap-2">
-          <FaCar className="h-5 w-5 text-blue-600" />
+      <div className="flex items-center justify-between mb-2">
+        <h4 className="font-semibold text-sm flex items-center gap-2">
+          <FaCar className="h-4 w-4 text-blue-600" />
           Vehicle {index + 1}
         </h4>
         <Button
@@ -391,43 +392,44 @@ const VehicleDetailRow: React.FC<{
           size="sm"
           variant="ghost"
           onClick={() => onRemove(vehicle.id)}
-          className="package-button-fix text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+          className="package-button-fix text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 h-7 w-7 p-0"
         >
-          <FaTrash className="h-4 w-4" />
+          <FaTrash className="h-3 w-3" />
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Compact row with Name, Type, and Capacity */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         {/* Vehicle Name */}
         <div>
-          <Label className="text-sm font-medium mb-2 block">
+          <Label className="text-xs font-medium mb-1 block">
             Vehicle Name *
           </Label>
           <Input
             value={localVehicle.vehicleName}
             onChange={(e) => handleFieldChange('vehicleName', e.target.value)}
             placeholder="e.g., Mercedes S-Class"
-            className="package-text-fix"
+            className="package-text-fix h-9 text-sm"
           />
         </div>
 
         {/* Vehicle Type */}
         <div>
-          <Label className="text-sm font-medium mb-2 block">
+          <Label className="text-xs font-medium mb-1 block">
             Vehicle Type
           </Label>
           <Select
             value={localVehicle.vehicleType || ''}
             onValueChange={(value) => handleFieldChange('vehicleType', value as VehicleType)}
           >
-            <SelectTrigger className="package-text-fix bg-white dark:bg-gray-800">
-              <SelectValue placeholder="Select vehicle type" />
+            <SelectTrigger className="package-text-fix bg-white dark:bg-gray-800 h-9 text-sm">
+              <SelectValue placeholder="Select type" />
             </SelectTrigger>
             <SelectContent className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
               {VEHICLE_TYPES.map((type) => (
-                <SelectItem key={type.value} value={type.value} className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700">
+                <SelectItem key={type.value} value={type.value} className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 text-sm">
                   <div className="flex items-center gap-2">
-                    <span>{type.icon}</span>
+                    <span className="text-sm">{type.icon}</span>
                     <span>{type.label}</span>
                   </div>
                 </SelectItem>
@@ -438,10 +440,10 @@ const VehicleDetailRow: React.FC<{
 
         {/* Vehicle Max Capacity */}
         <div>
-          <Label className="text-sm font-medium mb-2 block">
-            Vehicle Max Capacity *
+          <Label className="text-xs font-medium mb-1 block">
+            Max Capacity *
           </Label>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             <Button
               type="button"
               variant="outline"
@@ -452,7 +454,7 @@ const VehicleDetailRow: React.FC<{
                   handleFieldChange('maxCapacity', currentValue - 1);
                 }
               }}
-              className="package-button-fix"
+              className="package-button-fix h-9 w-9 p-0"
             >
               -
             </Button>
@@ -462,7 +464,7 @@ const VehicleDetailRow: React.FC<{
               max="50"
               value={localVehicle.maxCapacity}
               onChange={(e) => handleFieldChange('maxCapacity', parseInt(e.target.value) || 1)}
-              className="package-text-fix text-center"
+              className="package-text-fix text-center w-16 h-9 text-sm"
             />
             <Button
               type="button"
@@ -474,32 +476,37 @@ const VehicleDetailRow: React.FC<{
                   handleFieldChange('maxCapacity', currentValue + 1);
                 }
               }}
-              className="package-button-fix"
+              className="package-button-fix h-9 w-9 p-0"
             >
               +
             </Button>
+            <span className="text-xs text-gray-600 dark:text-gray-400 ml-1 whitespace-nowrap">
+              <FaUsers className="h-3 w-3 inline mr-1" />
+              pax
+            </span>
           </div>
         </div>
 
-        {/* Vehicle Image */}
-        <div className="md:col-span-2">
-          <Label className="text-sm font-medium mb-2 block">
-            Vehicle Image (Optional)
-          </Label>
-          <ImageUpload
-            images={localVehicle.vehicleImage ? [localVehicle.vehicleImage] : []}
-            onImagesChange={(images) => {
-              handleFieldChange('vehicleImage', images.length > 0 ? images[0] : null);
-            }}
-            maxImages={1}
-            allowMultiple={false}
-            showMetadata={false}
-            className="package-animation-fix"
-          />
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-            Upload an image specific to this vehicle
-          </p>
-        </div>
+      </div>
+
+      {/* Vehicle Image - separate row */}
+      <div>
+        <Label className="text-xs font-medium mb-1 block">
+          Vehicle Image (Optional)
+        </Label>
+        <ImageUpload
+          images={localVehicle.vehicleImage ? [localVehicle.vehicleImage] : []}
+          onImagesChange={(images) => {
+            handleFieldChange('vehicleImage', images.length > 0 ? images[0] : null);
+          }}
+          maxImages={1}
+          allowMultiple={false}
+          showMetadata={false}
+          className="package-animation-fix"
+        />
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          Upload an image specific to this vehicle
+        </p>
       </div>
     </motion.div>
   );
@@ -564,16 +571,16 @@ export const TransferDetailsTab: React.FC = () => {
   }, [watchedData.multiStopDetails?.stops, setValue]);
 
   return (
-    <div className="space-y-6 package-scroll-fix">
+    <div className="space-y-4 package-scroll-fix">
       {/* Title */}
       <Card className="package-selector-glass package-shadow-fix">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FaInfoCircle className="h-5 w-5 text-blue-600" />
+        <CardHeader className="pb-2 pt-3 px-4">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <FaInfoCircle className="h-4 w-4 text-blue-600" />
             Title
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pb-3 px-4">
           <FormField
             control={control}
             name="basicInformation.title"
@@ -597,10 +604,10 @@ export const TransferDetailsTab: React.FC = () => {
 
       {/* Description (Optional) */}
       <Card className="package-selector-glass package-shadow-fix">
-        <CardHeader>
-          <CardTitle>Description</CardTitle>
+        <CardHeader className="pb-2 pt-3 px-4">
+          <CardTitle className="text-base">Description</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pb-3 px-4">
           <FormField
             control={control}
             name="basicInformation.shortDescription"
@@ -626,10 +633,10 @@ export const TransferDetailsTab: React.FC = () => {
       {/* Transfer Details - Round Trip */}
       {watchedData.transferType === 'ROUND_TRIP' && (
         <Card className="package-selector-glass package-shadow-fix">
-          <CardHeader>
-            <CardTitle>Round Trip Transfer Details</CardTitle>
+          <CardHeader className="pb-2 pt-3 px-4">
+            <CardTitle className="text-base">Round Trip Transfer Details</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pb-3 px-4">
             <div className="space-y-6">
               {/* Same as One-Way */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -863,10 +870,10 @@ export const TransferDetailsTab: React.FC = () => {
 
       {watchedData.transferType === 'MULTI_STOP' && (
         <Card className="package-selector-glass package-shadow-fix">
-          <CardHeader>
-            <CardTitle>Multi-Stop Transfer Details</CardTitle>
+          <CardHeader className="pb-2 pt-3 px-4">
+            <CardTitle className="text-base">Multi-Stop Transfer Details</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pb-3 px-4">
             <div className="space-y-6">
               {/* Pickup and Dropoff */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -946,14 +953,14 @@ export const TransferDetailsTab: React.FC = () => {
 
       {/* Vehicle Details Section */}
       <Card className="package-selector-glass package-shadow-fix">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FaCar className="h-5 w-5 text-purple-600" />
+        <CardHeader className="pb-2 pt-3 px-4">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <FaCar className="h-4 w-4 text-purple-600" />
             Vehicle Details
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
+        <CardContent className="pb-3 px-4">
+          <div className="space-y-3">
             <AnimatePresence>
               {(watchedData.vehicles || []).map((vehicle, index) => (
                 <VehicleDetailRow
@@ -1014,13 +1021,13 @@ export const TransferDetailsTab: React.FC = () => {
 
       {/* Pricing Section */}
       <Card className="package-selector-glass package-shadow-fix">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FaDollarSign className="h-5 w-5 text-green-600" />
+        <CardHeader className="pb-2 pt-3 px-4">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <FaDollarSign className="h-4 w-4 text-green-600" />
             Pricing Options
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pb-3 px-4">
           <TransferPricingOptionsManager
             hourlyOptions={watch('pricingPolicies.hourlyPricingOptions') || []}
             pointToPointOptions={watch('pricingPolicies.pointToPointPricingOptions') || []}
@@ -1043,3 +1050,4 @@ export const TransferDetailsTab: React.FC = () => {
     </div>
   );
 };
+

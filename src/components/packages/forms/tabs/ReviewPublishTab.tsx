@@ -111,7 +111,6 @@ export const ReviewPublishTab: React.FC<ReviewPublishTabProps> = ({
   onPreview,
 }) => {
   const { watch } = useFormContext<TransferPackageFormData>();
-  const [isPublishing, setIsPublishing] = useState(false);
 
   const formData = watch();
 
@@ -347,7 +346,7 @@ export const ReviewPublishTab: React.FC<ReviewPublishTabProps> = ({
         </ReviewSection>
       </div>
 
-      {/* Action Buttons */}
+      {/* Action Buttons - Publish button moved to main form footer */}
       <div className="flex items-center justify-center gap-4 pt-6 border-t border-gray-200 dark:border-gray-700">
         <Button
           onClick={onPreview}
@@ -357,27 +356,12 @@ export const ReviewPublishTab: React.FC<ReviewPublishTabProps> = ({
           <FaEye className="h-4 w-4 mr-2" />
           Preview Package
         </Button>
-
-        <Button
-          disabled={!validation.isValid || isPublishing}
-          className={cn(
-            "package-button-fix package-animation-fix",
-            "bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700",
-            "shadow-lg hover:shadow-xl transform hover:scale-105"
-          )}
-        >
-          {isPublishing ? (
-            <>
-              <FaClock className="h-4 w-4 mr-2 animate-spin" />
-              Publishing...
-            </>
-          ) : (
-            <>
-              <FaCheckCircle className="h-4 w-4 mr-2" />
-              Publish Transfer Package
-            </>
-          )}
-        </Button>
+        
+        <div className="text-center px-6 py-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+          <p className="text-sm text-gray-700 dark:text-gray-300">
+            💡 Use the <strong className="text-blue-600 dark:text-blue-400">Publish Package</strong> button at the bottom of the page to publish.
+          </p>
+        </div>
       </div>
     </div>
   );
