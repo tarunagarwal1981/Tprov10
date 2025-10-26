@@ -60,15 +60,23 @@ const useFormValidation = (data: TransferPackageFormData): FormValidation => {
 
     // Description is now optional - no validation needed
 
-    // Destination validation - REMOVED (moved to transfer details)
-    // if (!data.basicInformation.destination.name.trim()) {
-    //   errors.push({
-    //     tab: 'basic-info',
-    //     field: 'destination',
-    //     message: 'Destination is required',
-    //     severity: 'error',
-    //   });
-    // }
+    // Destination validation - City and Country required
+    if (!data.basicInformation.destination.city?.trim()) {
+      errors.push({
+        tab: 'transfer-details',
+        field: 'destination.city',
+        message: 'Destination city is required',
+        severity: 'error',
+      });
+    }
+    if (!data.basicInformation.destination.country?.trim()) {
+      errors.push({
+        tab: 'transfer-details',
+        field: 'destination.country',
+        message: 'Destination country is required',
+        severity: 'error',
+      });
+    }
 
     // Transfer Details validation
     if (!data.transferDetails.transferType) {

@@ -33,7 +33,9 @@ import { cn } from "@/lib/utils";
 export interface TransferPackageCardData {
   id: string;
   title: string;
-  short_description?: string;
+  short_description?: string | null;
+  destination_city?: string | null;
+  destination_country?: string | null;
   status: 'draft' | 'published' | 'archived' | 'suspended';
   created_at: string;
   
@@ -299,9 +301,19 @@ export const TransferPackageCard: React.FC<TransferPackageCardProps> = ({
 
         {/* Card Content */}
         <CardContent className="p-4 flex-1 flex flex-col">
-          <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2 line-clamp-2">
+          <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-1 line-clamp-2">
             {pkg.title}
           </h3>
+
+          {/* Destination */}
+          {(pkg.destination_city || pkg.destination_country) && (
+            <div className="flex items-center gap-1 text-sm text-slate-600 dark:text-slate-400 mb-2">
+              <FiMapPin className="h-3 w-3" />
+              <span>
+                {[pkg.destination_city, pkg.destination_country].filter(Boolean).join(', ')}
+              </span>
+            </div>
+          )}
 
           {pkg.short_description && (
             <p className="text-sm text-slate-600 dark:text-slate-400 mb-3 line-clamp-2">
