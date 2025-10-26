@@ -246,7 +246,18 @@ export const ActivityPricingOptionsTab: React.FC = () => {
   const { watch, setValue } = useFormContext<ActivityPackageFormData>();
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  const pricingOptions = (watch('pricingOptions') || []) as SimplePricingOption[];
+  // Handle both old and new pricing format
+  const rawPricingOptions = watch('pricingOptions');
+  let pricingOptions: SimplePricingOption[] = [];
+  
+  // Convert old format to new format if needed
+  if (Array.isArray(rawPricingOptions)) {
+    pricingOptions = rawPricingOptions as SimplePricingOption[];
+  } else if (rawPricingOptions && typeof rawPricingOptions === 'object') {
+    // Old format with ticketOnlyOptions/ticketWithTransferOptions - ignore for now
+    pricingOptions = [];
+  }
+  
   const currency = watch('pricing.currency') || 'USD';
 
   const handleAddOption = useCallback(() => {

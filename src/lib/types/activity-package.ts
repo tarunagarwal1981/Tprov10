@@ -450,10 +450,7 @@ export const DEFAULT_FORM_DATA: ActivityPackageFormData = {
       seasonMultiplier: 1,
     },
   },
-  pricingOptions: {
-    ticketOnlyOptions: [],
-    ticketWithTransferOptions: [],
-  },
+  pricingOptions: [],
 };
 
 // ============================================================================

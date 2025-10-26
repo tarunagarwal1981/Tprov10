@@ -211,11 +211,12 @@ export const ActivityPackageForm: React.FC<ActivityPackageFormProps> = ({
       if (dbPackage && mode === 'edit' && packageId) {
         const formData = databaseToFormData(dbPackage);
         
-        // Load pricing packages
+        // Load pricing packages - ensure it's always an array
         try {
           const { getPricingPackages } = await import('@/lib/supabase/activity-pricing-simple');
           const pricingPackages = await getPricingPackages(packageId);
-          formData.pricingOptions = pricingPackages as any;
+          // Ensure pricingOptions is always an array
+          formData.pricingOptions = Array.isArray(pricingPackages) ? pricingPackages : [];
         } catch (error) {
           console.error('Error loading pricing packages:', error);
           formData.pricingOptions = [];
