@@ -51,19 +51,35 @@ export async function uploadFile({
     // Create the file path: userId/folder/filename
     const filePath = folder ? `${userId}/${folder}/${finalFileName}` : `${userId}/${finalFileName}`;
     
-    // Debug file info
+    // Debug file info with type checking
     console.log('📋 File upload details:', {
       name: file.name,
       size: file.size,
+      sizeType: typeof file.size,
       type: file.type,
       path: filePath,
-      bucket
+      bucket,
+      fileConstructor: file.constructor.name
+    });
+    
+    // Ensure file.size is a number (work around potential Supabase bug)
+    // Create a new File object with explicit size validation
+    const safeFile = new File([file], file.name, {
+      type: file.type,
+      lastModified: file.lastModified
+    });
+    
+    console.log('📋 Safe file created:', {
+      name: safeFile.name,
+      size: safeFile.size,
+      sizeType: typeof safeFile.size,
+      type: safeFile.type
     });
     
     // Upload the file - let Supabase auto-detect content type from File object
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from(bucket)
-      .upload(filePath, file, {
+      .upload(filePath, safeFile, {
         cacheControl: '3600',
         upsert: false
       });
