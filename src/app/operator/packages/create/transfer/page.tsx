@@ -73,7 +73,7 @@ export default function CreateTransferPackagePage() {
       // Check if we're editing an existing package or creating a new one
       if (packageId) {
         // Update existing package
-        const { data: packageResult, error: packageError } = await updateTransferPackage(packageId, dbData, user.id);
+        const { data: packageResult, error: packageError } = await updateTransferPackage(packageId, dbData);
         
         if (packageError) {
           console.error('Package update error:', packageError);
@@ -125,7 +125,7 @@ export default function CreateTransferPackagePage() {
       // Check if we're editing an existing package or creating a new one
       if (packageId) {
         // Update existing package
-        const result = await updateTransferPackage(packageId, dbData, user.id);
+        const result = await updateTransferPackage(packageId, dbData);
         packageResult = result.data;
         packageError = result.error;
         
