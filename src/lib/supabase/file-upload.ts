@@ -51,12 +51,15 @@ export async function uploadFile({
     // Create the file path: userId/folder/filename
     const filePath = folder ? `${userId}/${folder}/${finalFileName}` : `${userId}/${finalFileName}`;
     
-    // Upload the file (simple approach that was working in a156b71)
+    // Upload the file with explicit contentType (don't pass file_size in metadata - Supabase handles it)
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from(bucket)
       .upload(filePath, file, {
+        contentType: file.type,
         cacheControl: '3600',
         upsert: false
+        // IMPORTANT: Never pass file_size in metadata - Supabase determines this automatically
+        // Passing file_size causes "column file_size is of type bigint but expression is of type text" error
       });
 
     if (uploadError) {
