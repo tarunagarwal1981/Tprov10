@@ -630,6 +630,54 @@ export const TransferDetailsTab: React.FC = () => {
         </CardContent>
       </Card>
 
+      {/* Destination */}
+      <Card className="package-selector-glass package-shadow-fix">
+        <CardHeader className="pb-1 pt-2 px-3">
+          <CardTitle className="flex items-center gap-2 text-sm">
+            <FaMapMarkerAlt className="h-3 w-3 text-red-600" />
+            Destination *
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pb-2 px-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <FormField
+              control={control}
+              name="basicInformation.destination.city"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>City *</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      placeholder="e.g., Bali, Dubai, Bangkok"
+                      className="package-text-fix"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={control}
+              name="basicInformation.destination.country"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Country *</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      placeholder="e.g., Indonesia, UAE, Thailand"
+                      className="package-text-fix"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Transfer Details - Round Trip */}
       {watchedData.transferType === 'ROUND_TRIP' && (
         <Card className="package-selector-glass package-shadow-fix">

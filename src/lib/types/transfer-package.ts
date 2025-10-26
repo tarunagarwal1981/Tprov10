@@ -551,7 +551,7 @@ export const DEFAULT_TRANSFER_FORM_DATA: TransferPackageFormData = {
 // ============================================================================
 
 export const REQUIRED_FIELDS = {
-  basicInformation: ['title'],
+  basicInformation: ['title', 'destination'],
   transferDetails: ['transferType', 'pickupLocation', 'dropoffLocation', 'vehicles'],
   vehicleOptions: ['vehicles'],
   driverService: [],
