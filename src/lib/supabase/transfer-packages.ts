@@ -8,6 +8,12 @@ import { uploadImageFiles, base64ToFile } from './file-upload';
 import type { TransferPackageFormData } from '../types/transfer-package';
 
 // ============================================================================
+// CONSTANTS
+// ============================================================================
+
+const TRANSFER_PACKAGES_BUCKET = 'activity-packages-images'; // Using same bucket with different folder structure
+
+// ============================================================================
 // TYPES AND INTERFACES
 // ============================================================================
 
@@ -400,7 +406,7 @@ export async function createTransferPackage(
           return base64ToFile(img.storage_path!, fileName);
         });
         
-        const uploadResults = await uploadImageFiles(files, userId, 'transfer-packages');
+        const uploadResults = await uploadImageFiles(files, userId, 'transfer-packages', TRANSFER_PACKAGES_BUCKET);
         
         const newImageRecords = uploadResults.map((result, index) => {
           const base64Image = base64Images[index];
@@ -482,36 +488,38 @@ export async function createTransferPackage(
 
       // Now insert vehicle images if any
       if (data.vehicleImages && data.vehicleImages.length > 0 && vehiclesData) {
-        const vehicleImagesWithIds: any[] = [];
-
-        for (const vehicleImageData of data.vehicleImages) {
+        // Upload all vehicle images in parallel for better performance
+        const uploadPromises = data.vehicleImages.map(async (vehicleImageData) => {
           const vehicleId = vehiclesData[vehicleImageData.vehicleIndex]?.id;
-          if (vehicleId) {
-            // Handle base64 image upload if needed
-            let finalImage = vehicleImageData.image;
-            
-            if (vehicleImageData.image.storage_path?.startsWith('data:')) {
-              // Upload base64 image to storage
-              const fileName = vehicleImageData.image.file_name || `vehicle_${Date.now()}.jpg`;
-              const file = base64ToFile(vehicleImageData.image.storage_path, fileName);
-              
-              const uploadResult = await uploadImageFiles([file], userId, 'transfer-packages/vehicles');
-              
-              if (uploadResult[0] && uploadResult[0].data) {
-                finalImage = {
-                  ...vehicleImageData.image,
-                  storage_path: uploadResult[0].data.path,
-                  public_url: uploadResult[0].data.publicUrl,
-                };
-              }
-            }
+          if (!vehicleId) return null;
 
-            vehicleImagesWithIds.push({
-              ...finalImage,
-              vehicle_id: vehicleId,
-            });
+          let finalImage = vehicleImageData.image;
+          
+          if (vehicleImageData.image.storage_path?.startsWith('data:')) {
+            // Upload base64 image to storage
+            const fileName = vehicleImageData.image.file_name || `vehicle_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
+            const file = base64ToFile(vehicleImageData.image.storage_path, fileName);
+            
+            const uploadResult = await uploadImageFiles([file], userId, 'transfer-packages/vehicles', TRANSFER_PACKAGES_BUCKET);
+            
+            if (uploadResult[0] && uploadResult[0].data) {
+              finalImage = {
+                ...vehicleImageData.image,
+                storage_path: uploadResult[0].data.path,
+                public_url: uploadResult[0].data.publicUrl,
+              };
+            }
           }
-        }
+
+          return {
+            ...finalImage,
+            vehicle_id: vehicleId,
+          };
+        });
+
+        // Wait for all uploads to complete
+        const uploadedImages = await Promise.all(uploadPromises);
+        const vehicleImagesWithIds = uploadedImages.filter(img => img !== null) as any[];
 
         if (vehicleImagesWithIds.length > 0) {
           const { data: vehicleImagesResult, error: vehicleImagesError } = await supabase

@@ -163,7 +163,8 @@ export async function uploadMultipleFiles(
 export async function uploadImageFiles(
   imageFiles: File[],
   userId: string,
-  folder: string = 'activity-packages'
+  folder: string = 'activity-packages',
+  bucket: string = 'activity-packages-images'
 ): Promise<FileUploadResult[]> {
   // Validate file types
   const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
@@ -181,5 +182,5 @@ export async function uploadImageFiles(
     throw new Error('Some files exceed the 10MB size limit');
   }
 
-  return uploadMultipleFiles(sizeValidFiles, 'activity-packages-images', folder, userId);
+  return uploadMultipleFiles(sizeValidFiles, bucket, folder, userId);
 }
