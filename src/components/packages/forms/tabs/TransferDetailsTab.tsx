@@ -571,16 +571,16 @@ export const TransferDetailsTab: React.FC = () => {
   }, [watchedData.multiStopDetails?.stops, setValue]);
 
   return (
-    <div className="space-y-4 package-scroll-fix">
+    <div className="space-y-2 package-scroll-fix">
       {/* Title */}
       <Card className="package-selector-glass package-shadow-fix">
-        <CardHeader className="pb-2 pt-3 px-4">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <FaInfoCircle className="h-4 w-4 text-blue-600" />
+        <CardHeader className="pb-1 pt-2 px-3">
+          <CardTitle className="flex items-center gap-2 text-sm">
+            <FaInfoCircle className="h-3 w-3 text-blue-600" />
             Title
           </CardTitle>
         </CardHeader>
-        <CardContent className="pb-3 px-4">
+        <CardContent className="pb-2 px-3">
           <FormField
             control={control}
             name="basicInformation.title"
@@ -604,10 +604,10 @@ export const TransferDetailsTab: React.FC = () => {
 
       {/* Description (Optional) */}
       <Card className="package-selector-glass package-shadow-fix">
-        <CardHeader className="pb-2 pt-3 px-4">
-          <CardTitle className="text-base">Description</CardTitle>
+        <CardHeader className="pb-1 pt-2 px-3">
+          <CardTitle className="text-sm">Description</CardTitle>
         </CardHeader>
-        <CardContent className="pb-3 px-4">
+        <CardContent className="pb-2 px-3">
           <FormField
             control={control}
             name="basicInformation.shortDescription"
@@ -633,13 +633,13 @@ export const TransferDetailsTab: React.FC = () => {
       {/* Transfer Details - Round Trip */}
       {watchedData.transferType === 'ROUND_TRIP' && (
         <Card className="package-selector-glass package-shadow-fix">
-          <CardHeader className="pb-2 pt-3 px-4">
-            <CardTitle className="text-base">Round Trip Transfer Details</CardTitle>
+          <CardHeader className="pb-1 pt-2 px-3">
+            <CardTitle className="text-sm">Round Trip Transfer Details</CardTitle>
           </CardHeader>
-          <CardContent className="pb-3 px-4">
-            <div className="space-y-6">
+          <CardContent className="pb-2 px-3">
+            <div className="space-y-3">
               {/* Same as One-Way */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <FormField
                   control={control}
                   name="transferDetails.roundTripDetails.pickupLocation"
@@ -826,7 +826,7 @@ export const TransferDetailsTab: React.FC = () => {
               </div>
 
               {/* Return Details */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                   <FormLabel>Return Date</FormLabel>
                   <Input
@@ -870,13 +870,13 @@ export const TransferDetailsTab: React.FC = () => {
 
       {watchedData.transferType === 'MULTI_STOP' && (
         <Card className="package-selector-glass package-shadow-fix">
-          <CardHeader className="pb-2 pt-3 px-4">
-            <CardTitle className="text-base">Multi-Stop Transfer Details</CardTitle>
+          <CardHeader className="pb-1 pt-2 px-3">
+            <CardTitle className="text-sm">Multi-Stop Transfer Details</CardTitle>
           </CardHeader>
-          <CardContent className="pb-3 px-4">
-            <div className="space-y-6">
+          <CardContent className="pb-2 px-3">
+            <div className="space-y-3">
               {/* Pickup and Dropoff */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <FormField
                   control={control}
                   name="transferDetails.multiStopDetails.pickupLocation"
@@ -953,14 +953,14 @@ export const TransferDetailsTab: React.FC = () => {
 
       {/* Vehicle Details Section */}
       <Card className="package-selector-glass package-shadow-fix">
-        <CardHeader className="pb-2 pt-3 px-4">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <FaCar className="h-4 w-4 text-purple-600" />
+        <CardHeader className="pb-1 pt-2 px-3">
+          <CardTitle className="flex items-center gap-2 text-sm">
+            <FaCar className="h-3 w-3 text-purple-600" />
             Vehicle Details
           </CardTitle>
         </CardHeader>
-        <CardContent className="pb-3 px-4">
-          <div className="space-y-3">
+        <CardContent className="pb-2 px-3">
+          <div className="space-y-2">
             <AnimatePresence>
               {(watchedData.vehicles || []).map((vehicle, index) => (
                 <VehicleDetailRow
@@ -1013,7 +1013,7 @@ export const TransferDetailsTab: React.FC = () => {
                 <p className="text-gray-600 dark:text-gray-400">
                   No vehicles added yet. Click &quot;Add Vehicle&quot; to get started.
                 </p>
-              </div>
+            </div>
             )}
           </div>
         </CardContent>
@@ -1021,13 +1021,13 @@ export const TransferDetailsTab: React.FC = () => {
 
       {/* Pricing Section */}
       <Card className="package-selector-glass package-shadow-fix">
-        <CardHeader className="pb-2 pt-3 px-4">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <FaDollarSign className="h-4 w-4 text-green-600" />
+        <CardHeader className="pb-1 pt-2 px-3">
+          <CardTitle className="flex items-center gap-2 text-sm">
+            <FaDollarSign className="h-3 w-3 text-green-600" />
             Pricing Options
           </CardTitle>
         </CardHeader>
-        <CardContent className="pb-3 px-4">
+        <CardContent className="pb-2 px-3">
           <TransferPricingOptionsManager
             hourlyOptions={watch('pricingPolicies.hourlyPricingOptions') || []}
             pointToPointOptions={watch('pricingPolicies.pointToPointPricingOptions') || []}

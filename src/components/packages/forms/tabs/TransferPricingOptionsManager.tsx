@@ -106,9 +106,15 @@ const HourlyPricingCard: React.FC<HourlyPricingCardProps> = ({
                   id="rateUSD"
                   type="number"
                   min="0"
-                  step="0.01"
-                  value={editData.rateUSD}
-                  onChange={(e) => setEditData({ ...editData, rateUSD: parseFloat(e.target.value) || 0 })}
+                  step="1"
+                  value={editData.rateUSD === 0 ? '' : editData.rateUSD}
+                  onChange={(e) => setEditData({ ...editData, rateUSD: e.target.value === '' ? 0 : parseFloat(e.target.value) })}
+                  onBlur={(e) => {
+                    if (e.target.value === '') {
+                      setEditData({ ...editData, rateUSD: 0 });
+                    }
+                  }}
+                  placeholder="0"
                   className="package-text-fix pl-7"
                 />
               </div>
@@ -418,9 +424,15 @@ const PointToPointPricingCard: React.FC<PointToPointPricingCardProps> = ({
                   id="costUSD"
                   type="number"
                   min="0"
-                  step="0.01"
-                  value={editData.costUSD}
-                  onChange={(e) => setEditData({ ...editData, costUSD: parseFloat(e.target.value) || 0 })}
+                  step="1"
+                  value={editData.costUSD === 0 ? '' : editData.costUSD}
+                  onChange={(e) => setEditData({ ...editData, costUSD: e.target.value === '' ? 0 : parseFloat(e.target.value) })}
+                  onBlur={(e) => {
+                    if (e.target.value === '') {
+                      setEditData({ ...editData, costUSD: 0 });
+                    }
+                  }}
+                  placeholder="0"
                   className="package-text-fix pl-7"
                 />
               </div>
@@ -765,9 +777,15 @@ export const TransferPricingOptionsManager: React.FC<TransferPricingOptionsManag
                           <Input
                             type="number"
                             min="0"
-                            step="0.01"
-                            value={newHourlyOption.rateUSD}
-                            onChange={(e) => setNewHourlyOption({ ...newHourlyOption, rateUSD: parseFloat(e.target.value) || 0 })}
+                            step="1"
+                            value={newHourlyOption.rateUSD === 0 ? '' : newHourlyOption.rateUSD}
+                            onChange={(e) => setNewHourlyOption({ ...newHourlyOption, rateUSD: e.target.value === '' ? 0 : parseFloat(e.target.value) })}
+                            onBlur={(e) => {
+                              if (e.target.value === '') {
+                                setNewHourlyOption({ ...newHourlyOption, rateUSD: 0 });
+                              }
+                            }}
+                            placeholder="0"
                             className="package-text-fix pl-7"
                           />
                         </div>
@@ -946,9 +964,15 @@ export const TransferPricingOptionsManager: React.FC<TransferPricingOptionsManag
                           <Input
                             type="number"
                             min="0"
-                            step="0.01"
-                            value={newP2POption.costUSD}
-                            onChange={(e) => setNewP2POption({ ...newP2POption, costUSD: parseFloat(e.target.value) || 0 })}
+                            step="1"
+                            value={newP2POption.costUSD === 0 ? '' : newP2POption.costUSD}
+                            onChange={(e) => setNewP2POption({ ...newP2POption, costUSD: e.target.value === '' ? 0 : parseFloat(e.target.value) })}
+                            onBlur={(e) => {
+                              if (e.target.value === '') {
+                                setNewP2POption({ ...newP2POption, costUSD: 0 });
+                              }
+                            }}
+                            placeholder="0"
                             className="package-text-fix pl-7"
                           />
                         </div>

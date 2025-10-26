@@ -11,7 +11,7 @@ import type { TransferPackageFormData } from '../types/transfer-package';
 // CONSTANTS
 // ============================================================================
 
-const TRANSFER_PACKAGES_BUCKET = 'activity-packages-images'; // Using same bucket with different folder structure
+const TRANSFER_PACKAGES_BUCKET = 'activity-package-images'; // Using same bucket with different folder structure (FIXED: was 'activity-packages-images')
 
 // ============================================================================
 // TYPES AND INTERFACES
@@ -328,7 +328,7 @@ export function formDataToDatabase(
   }
 
   // Additional Services
-  const additional_services: Partial<TransferAdditionalService>[] = formData.driverService.additionalServices.map((service) => ({
+  const additional_services: Partial<TransferAdditionalService>[] = (formData.driverService.additionalServices || []).map((service) => ({
     name: service.name,
     description: service.description,
     price: service.price,
