@@ -864,8 +864,20 @@ export async function updateTransferPackage(
     // In production, you might want more sophisticated merge logic
 
     // Delete existing related data
+    // First get vehicle IDs to delete vehicle images
+    const { data: existingVehicles } = await supabase
+      .from('transfer_package_vehicles')
+      .select('id')
+      .eq('package_id', id);
+    
+    const vehicleIds = existingVehicles?.map(v => v.id) || [];
+    
     await Promise.all([
       supabase.from('transfer_package_images').delete().eq('package_id', id),
+      // Delete vehicle images first (has foreign key to vehicles)
+      vehicleIds.length > 0 
+        ? supabase.from('transfer_vehicle_images').delete().in('vehicle_id', vehicleIds)
+        : Promise.resolve(),
       supabase.from('transfer_package_vehicles').delete().eq('package_id', id),
       supabase.from('transfer_package_stops').delete().eq('package_id', id),
       supabase.from('transfer_additional_services').delete().eq('package_id', id),
@@ -877,15 +889,201 @@ export async function updateTransferPackage(
     const result: TransferPackageWithRelations = {
       ...packageData,
       images: [],
-      vehicles: [],
+      vehicles: [] as TransferPackageVehicleWithImages[],
       stops: [],
       additional_services: [],
       hourly_pricing: [],
       point_to_point_pricing: [],
     };
 
-    // Insert new data (similar to create logic)
-    // ... (implement similar to createTransferPackage)
+    // Get userId from package data
+    const userId = packageData.operator_id;
+
+    // Handle images - upload base64 images first
+    const finalImages: Partial<TransferPackageImage>[] = [];
+    
+    if (data.images && data.images.length > 0) {
+      const base64Images = data.images.filter(img => img.storage_path?.startsWith('data:'));
+      const alreadyUploadedImages = data.images.filter(img => !img.storage_path?.startsWith('data:'));
+      
+      if (base64Images.length > 0) {
+        const files = base64Images.map(img => {
+          const fileName = img.file_name || `image_${Date.now()}.jpg`;
+          return base64ToFile(img.storage_path!, fileName);
+        });
+        
+        const uploadResults = await uploadImageFiles(files, userId, 'transfer-packages', TRANSFER_PACKAGES_BUCKET);
+        
+        const newImageRecords = uploadResults.map((result, index) => {
+          const base64Image = base64Images[index];
+          return {
+            file_name: base64Image?.file_name || '',
+            file_size: base64Image?.file_size || 0,
+            mime_type: base64Image?.mime_type || 'image/jpeg',
+            storage_path: result.data?.path || '',
+            public_url: result.data?.publicUrl || '',
+            alt_text: base64Image?.alt_text || '',
+            is_cover: base64Image?.is_cover || false,
+            is_featured: base64Image?.is_featured || false,
+            display_order: base64Image?.display_order || 0,
+          };
+        });
+        
+        finalImages.push(...newImageRecords);
+      }
+      
+      finalImages.push(...alreadyUploadedImages);
+    }
+
+    // Insert images
+    if (finalImages.length > 0) {
+      const imagesWithPackageId = finalImages.map(img => ({
+        ...img,
+        package_id: id,
+      })) as any[];
+
+      const { data: imagesData, error: imagesError } = await supabase
+        .from('transfer_package_images')
+        .insert(imagesWithPackageId)
+        .select();
+
+      if (imagesError) throw imagesError;
+      result.images = imagesData || [];
+    }
+
+    // Insert vehicles
+    if (data.vehicles && data.vehicles.length > 0) {
+      const vehiclesWithPackageId = data.vehicles.map(vehicle => ({
+        ...vehicle,
+        package_id: id,
+      })) as any[];
+
+      const { data: vehiclesData, error: vehiclesError } = await supabase
+        .from('transfer_package_vehicles')
+        .insert(vehiclesWithPackageId)
+        .select();
+
+      if (vehiclesError) throw vehiclesError;
+      result.vehicles = (vehiclesData || []).map(vehicle => ({
+        ...vehicle,
+        vehicle_images: [],
+      }));
+
+      // Insert vehicle images
+      if (data.vehicleImages && data.vehicleImages.length > 0 && vehiclesData) {
+        const uploadPromises = data.vehicleImages.map(async (vehicleImageData, index) => {
+          const vehicleId = vehiclesData[vehicleImageData.vehicleIndex]?.id;
+          if (!vehicleId) return null;
+
+          let finalImage = vehicleImageData.image;
+          
+          if (vehicleImageData.image.storage_path?.startsWith('data:')) {
+            const fileName = vehicleImageData.image.file_name || `vehicle_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
+            const file = base64ToFile(vehicleImageData.image.storage_path, fileName);
+            
+            const uploadResult = await uploadImageFiles([file], userId, 'transfer-packages/vehicles', TRANSFER_PACKAGES_BUCKET);
+            
+            if (uploadResult[0] && uploadResult[0].data) {
+              finalImage = {
+                ...vehicleImageData.image,
+                storage_path: uploadResult[0].data.path,
+                public_url: uploadResult[0].data.publicUrl,
+              };
+            } else {
+              return null;
+            }
+          }
+
+          return {
+            ...finalImage,
+            vehicle_id: vehicleId,
+          };
+        });
+
+        const uploadedImages = await Promise.all(uploadPromises);
+        const vehicleImagesWithIds = uploadedImages.filter(img => img !== null) as any[];
+
+        if (vehicleImagesWithIds.length > 0) {
+          const { data: vehicleImagesResult, error: vehicleImagesError } = await supabase
+            .from('transfer_vehicle_images')
+            .insert(vehicleImagesWithIds)
+            .select();
+
+          if (!vehicleImagesError) {
+            result.vehicles = result.vehicles.map(vehicle => ({
+              ...vehicle,
+              vehicle_images: (vehicleImagesResult || []).filter(
+                (img: any) => img.vehicle_id === vehicle.id
+              ),
+            }));
+          }
+        }
+      }
+    }
+
+    // Insert stops
+    if (data.stops && data.stops.length > 0) {
+      const stopsWithPackageId = data.stops.map(stop => ({
+        ...stop,
+        package_id: id,
+      })) as any[];
+
+      const { data: stopsData, error: stopsError } = await supabase
+        .from('transfer_package_stops')
+        .insert(stopsWithPackageId)
+        .select();
+
+      if (stopsError) throw stopsError;
+      result.stops = stopsData || [];
+    }
+
+    // Insert additional services
+    if (data.additional_services && data.additional_services.length > 0) {
+      const servicesWithPackageId = data.additional_services.map(service => ({
+        ...service,
+        package_id: id,
+      })) as any[];
+
+      const { data: servicesData, error: servicesError } = await supabase
+        .from('transfer_additional_services')
+        .insert(servicesWithPackageId)
+        .select();
+
+      if (servicesError) throw servicesError;
+      result.additional_services = servicesData || [];
+    }
+
+    // Insert hourly pricing options
+    if (data.hourly_pricing && data.hourly_pricing.length > 0) {
+      const hourlyPricingWithPackageId = data.hourly_pricing.map(option => ({
+        ...option,
+        package_id: id,
+      })) as any[];
+
+      const { data: hourlyPricingData, error: hourlyPricingError } = await supabase
+        .from('transfer_hourly_pricing')
+        .insert(hourlyPricingWithPackageId)
+        .select();
+
+      if (hourlyPricingError) throw hourlyPricingError;
+      result.hourly_pricing = hourlyPricingData || [];
+    }
+
+    // Insert point-to-point pricing options
+    if (data.point_to_point_pricing && data.point_to_point_pricing.length > 0) {
+      const p2pPricingWithPackageId = data.point_to_point_pricing.map(option => ({
+        ...option,
+        package_id: id,
+      })) as any[];
+
+      const { data: p2pPricingData, error: p2pPricingError } = await supabase
+        .from('transfer_point_to_point_pricing')
+        .insert(p2pPricingWithPackageId)
+        .select();
+
+      if (p2pPricingError) throw p2pPricingError;
+      result.point_to_point_pricing = p2pPricingData || [];
+    }
 
     return { data: result, error: null };
   });
