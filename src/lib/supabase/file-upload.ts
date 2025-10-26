@@ -51,6 +51,15 @@ export async function uploadFile({
     // Create the file path: userId/folder/filename
     const filePath = folder ? `${userId}/${folder}/${finalFileName}` : `${userId}/${finalFileName}`;
     
+    // Debug file info
+    console.log('📋 File upload details:', {
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      path: filePath,
+      bucket
+    });
+    
     // Upload the file with proper content type
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from(bucket)
@@ -133,8 +142,9 @@ export function base64ToFile(base64DataUrl: string, fileName: string): File {
   
   const byteArray = new Uint8Array(byteNumbers);
   
-  // Create File object
-  return new File([byteArray], fileName, { type: mimeType });
+  // Create Blob first, then File to ensure proper size calculation
+  const blob = new Blob([byteArray], { type: mimeType });
+  return new File([blob], fileName, { type: mimeType });
 }
 
 /**
