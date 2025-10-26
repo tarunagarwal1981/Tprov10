@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { useFormContext } from "react-hook-form";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -245,6 +245,7 @@ const SimplePricingCard: React.FC<SimplePricingCardProps> = ({
 export const ActivityPricingOptionsTab: React.FC = () => {
   const { watch, setValue } = useFormContext<ActivityPackageFormData>();
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   // Handle both old and new pricing format
   const rawPricingOptions = watch('pricingOptions');
@@ -259,6 +260,24 @@ export const ActivityPricingOptionsTab: React.FC = () => {
   }
   
   const currency = watch('pricing.currency') || 'USD';
+
+  // Initialize with one empty option if no options exist
+  useEffect(() => {
+    if (!isInitialized && pricingOptions.length === 0) {
+      const firstOption: SimplePricingOption = {
+        id: Date.now().toString(),
+        activityName: '',
+        packageType: 'TICKET_ONLY',
+        adultPrice: 0,
+        childPrice: 0,
+        childMinAge: 3,
+        childMaxAge: 12,
+      };
+      setValue('pricingOptions', [firstOption], { shouldDirty: false });
+      setEditingId(firstOption.id);
+      setIsInitialized(true);
+    }
+  }, [isInitialized, pricingOptions.length, setValue]);
 
   const handleAddOption = useCallback(() => {
     const newOption: SimplePricingOption = {
@@ -304,14 +323,6 @@ export const ActivityPricingOptionsTab: React.FC = () => {
                 Add pricing options for your activity. Specify the activity name, package type, pricing, and child age range.
               </p>
             </div>
-            <Button
-              onClick={handleAddOption}
-              size="sm"
-              className="package-button-fix"
-            >
-              <FaPlus className="h-4 w-4 mr-2" />
-              Add Pricing Option
-            </Button>
           </div>
         </CardContent>
       </Card>
@@ -319,30 +330,32 @@ export const ActivityPricingOptionsTab: React.FC = () => {
       {/* Pricing Options List */}
       <div className="space-y-4">
         <AnimatePresence>
-          {pricingOptions.length === 0 ? (
-            <Card className="package-selector-glass package-shadow-fix">
-              <CardContent className="pt-6">
-                <div className="text-center py-8 text-gray-500">
-                  <FaTicketAlt className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                  <p className="mb-4">No pricing options yet. Click &quot;Add Pricing Option&quot; to create one.</p>
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            pricingOptions.map((option) => (
-              <SimplePricingCard
-                key={option.id}
-                option={option}
-                onUpdate={handleUpdateOption}
-                onRemove={handleRemoveOption}
-                isEditing={editingId === option.id}
-                onEdit={setEditingId}
-                onCancelEdit={() => setEditingId(null)}
-                currency={currency}
-              />
-            ))
-          )}
+          {pricingOptions.map((option) => (
+            <SimplePricingCard
+              key={option.id}
+              option={option}
+              onUpdate={handleUpdateOption}
+              onRemove={handleRemoveOption}
+              isEditing={editingId === option.id}
+              onEdit={setEditingId}
+              onCancelEdit={() => setEditingId(null)}
+              currency={currency}
+            />
+          ))}
         </AnimatePresence>
+
+        {/* Add Pricing Option Button - Below all pricing sections */}
+        <div className="flex justify-center pt-4">
+          <Button
+            onClick={handleAddOption}
+            variant="outline"
+            size="lg"
+            className="package-button-fix"
+          >
+            <FaPlus className="h-4 w-4 mr-2" />
+            Add Pricing Option
+          </Button>
+        </div>
       </div>
     </div>
   );
