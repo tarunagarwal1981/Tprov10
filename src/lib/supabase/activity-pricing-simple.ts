@@ -155,7 +155,7 @@ export async function getActivePricingPackages(
     throw error;
   }
 
-  return (data || []).map(rowToPricingPackage);
+  return ((data || []) as any[]).map(rowToPricingPackage);
 }
 
 /**
@@ -180,7 +180,7 @@ export async function createPricingPackage(
     throw error;
   }
 
-  return rowToPricingPackage(data);
+  return rowToPricingPackage(data as any);
 }
 
 /**
@@ -210,7 +210,7 @@ export async function updatePricingPackage(
     throw error;
   }
 
-  return rowToPricingPackage(data);
+  return rowToPricingPackage(data as any);
 }
 
 /**
@@ -270,7 +270,7 @@ export async function savePricingPackages(
         throw error;
       }
       
-      results.push(rowToPricingPackage(data));
+      results.push(rowToPricingPackage(data as any));
     }
   }
   
@@ -303,7 +303,7 @@ export async function togglePricingPackageStatus(
     throw error;
   }
 
-  return rowToPricingPackage(data);
+  return rowToPricingPackage(data as any);
 }
 
 /**
@@ -327,7 +327,7 @@ export async function togglePricingPackageFeatured(
     throw error;
   }
 
-  return rowToPricingPackage(data);
+  return rowToPricingPackage(data as any);
 }
 
 /**
