@@ -789,13 +789,15 @@ export async function updateActivityPackageImage(
  */
 export function formDataToDatabase(
   formData: ActivityPackageFormData,
-  operatorId: string
+  operatorId: string,
+  status: 'draft' | 'published' | 'inactive' = 'draft'
 ): CreateActivityPackageData {
   const packageData: ActivityPackageInsert = {
     operator_id: operatorId,
     title: formData.basicInformation.title || '',
     short_description: formData.basicInformation.shortDescription || '',
     full_description: formData.basicInformation.fullDescription || '',
+    status: status,
     destination_name: formData.basicInformation.destination?.name || '',
     destination_address: formData.basicInformation.destination?.address || '',
     destination_city: formData.basicInformation.destination?.city || '',
