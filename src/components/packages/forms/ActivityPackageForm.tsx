@@ -42,56 +42,6 @@ import { BasicInformationTab } from "./tabs/BasicInformationTab";
 import { ActivityPricingOptionsTab } from "./tabs/ActivityPricingOptionsTab";
 import ReviewPublishActivityTab from "./tabs/ReviewPublishActivityTab";
 
-// Auto-save hook
-const useAutoSave = (
-  data: ActivityPackageFormData,
-  onSave: (data: ActivityPackageFormData) => Promise<void>,
-  interval: number = 30000
-) => {
-  const [state, setState] = useState<AutoSaveState>({
-    isSaving: false,
-    lastSaved: null,
-    hasUnsavedChanges: false,
-    error: null,
-  });
-  const lastPayloadRef = useRef<string>("");
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-
-  const isSavingRef = useRef(false);
-
-  // Use a stable snapshot of form data to avoid effect thrash from new object identities
-  const serialized = useMemo(() => JSON.stringify(data), [data]);
-
-  useEffect(() => {
-    const current = serialized;
-
-    // Only update when the flag actually changes to avoid unnecessary renders
-    const nextHasUnsaved = current !== lastPayloadRef.current;
-    setState(prev => (prev.hasUnsavedChanges === nextHasUnsaved ? prev : { ...prev, hasUnsavedChanges: nextHasUnsaved }));
-
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(async () => {
-      if (isSavingRef.current) return;
-      if (current === lastPayloadRef.current) return;
-      isSavingRef.current = true;
-      setState(prev => (prev.isSaving ? prev : { ...prev, isSaving: true, error: null }));
-      try {
-        await onSave(data);
-        lastPayloadRef.current = current;
-        setState(prev => ({ ...prev, isSaving: false, lastSaved: new Date(), hasUnsavedChanges: false }));
-      } catch (error) {
-        setState(prev => ({ ...prev, isSaving: false, error: error instanceof Error ? error.message : 'Save failed' }));
-      }
-      isSavingRef.current = false;
-    }, interval);
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, [serialized, onSave, interval, data]);
-
-  return state;
-};
-
 // Validation hook
 const useFormValidation = (data: ActivityPackageFormData): FormValidation => {
   return useMemo(() => {
@@ -255,12 +205,6 @@ export const ActivityPackageForm: React.FC<ActivityPackageFormProps> = ({
   }, [dbPackage, mode, packageId, reset]);
 
   const validation = useFormValidation(formData);
-  // Auto-save disabled
-  // const autoSaveState = useAutoSave(formData, async (data) => {
-  //   if (onSave) {
-  //     await onSave(data);
-  //   }
-  // });
 
   // Tab configuration
   const tabs: TabInfo[] = [
@@ -405,50 +349,6 @@ export const ActivityPackageForm: React.FC<ActivityPackageFormProps> = ({
                 }
               </p>
             </div>
-            
-            {/* Auto-save status - DISABLED */}
-            {/* <div className="flex items-center gap-4">
-              <AnimatePresence>
-                {autoSaveState.isSaving && (
-                  <motion.div
-                    key="saving"
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
-                    className="flex items-center gap-2 text-sm text-blue-600"
-                  >
-                    <FaSpinner className="h-4 w-4 animate-spin" />
-                    Saving...
-                  </motion.div>
-                )}
-                
-                {autoSaveState.lastSaved && !autoSaveState.isSaving && (
-                  <motion.div
-                    key="saved"
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
-                    className="flex items-center gap-2 text-sm text-green-600"
-                  >
-                    <FaCheckCircle className="h-4 w-4" />
-                    All changes saved
-                  </motion.div>
-                )}
-                
-                {autoSaveState.error && (
-                  <motion.div
-                    key="auto-save-error"
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
-                    className="flex items-center gap-2 text-sm text-red-600"
-                  >
-                    <FaExclamationTriangle className="h-4 w-4" />
-                    {autoSaveState.error}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div> */}
             
             {/* Package error display */}
             <div className="flex items-center gap-4">
