@@ -332,28 +332,28 @@ export const ActivityPackageForm: React.FC<ActivityPackageFormProps> = ({
       let savedPackageId = packageId;
       
       if (mode === 'create') {
-        const result = await createPackage(data, 'draft');
-        success = result ? true : false;
-        // Note: createPackage should return the package ID
-        // If it returns an object, extract the ID
-        if (typeof result === 'object' && result && 'id' in result) {
-          savedPackageId = (result as any).id;
-        }
+        const newPackageId = await createPackage(data, 'draft');
+        success = newPackageId ? true : false;
+        savedPackageId = newPackageId || undefined; // ✅ Use the returned package ID
       } else if (mode === 'edit' && packageId) {
         success = await updatePackage(data, 'draft');
+        savedPackageId = packageId;
       }
       
       // Save pricing packages if they exist
       if (success && savedPackageId && data.pricingOptions && Array.isArray(data.pricingOptions)) {
         try {
+          console.log('💾 Saving pricing options for package:', savedPackageId);
           const { savePricingPackages, convertSimpleToPricingPackage } = await import('@/lib/supabase/activity-pricing-simple');
           // Convert simple pricing options to full format
           const fullPricingPackages = data.pricingOptions.map((opt: any, index: number) => 
             convertSimpleToPricingPackage(opt, index)
           );
+          console.log('💾 Converted pricing packages:', fullPricingPackages);
           await savePricingPackages(savedPackageId, fullPricingPackages);
+          console.log('✅ Pricing options saved successfully');
         } catch (pricingError) {
-          console.error('Error saving pricing packages:', pricingError);
+          console.error('❌ Error saving pricing packages:', pricingError);
           // Don't fail the entire save if pricing fails
         }
       }
@@ -383,26 +383,28 @@ export const ActivityPackageForm: React.FC<ActivityPackageFormProps> = ({
       let savedPackageId = packageId;
       
       if (mode === 'create') {
-        const result = await createPackage(data, 'published');
-        success = result ? true : false;
-        if (typeof result === 'object' && result && 'id' in result) {
-          savedPackageId = (result as any).id;
-        }
+        const newPackageId = await createPackage(data, 'published');
+        success = newPackageId ? true : false;
+        savedPackageId = newPackageId || undefined; // ✅ Use the returned package ID
       } else if (mode === 'edit' && packageId) {
         success = await updatePackage(data, 'published');
+        savedPackageId = packageId;
       }
       
       // Save pricing packages if they exist
       if (success && savedPackageId && data.pricingOptions && Array.isArray(data.pricingOptions)) {
         try {
+          console.log('💾 Saving pricing options for package:', savedPackageId);
           const { savePricingPackages, convertSimpleToPricingPackage } = await import('@/lib/supabase/activity-pricing-simple');
           // Convert simple pricing options to full format
           const fullPricingPackages = data.pricingOptions.map((opt: any, index: number) => 
             convertSimpleToPricingPackage(opt, index)
           );
+          console.log('💾 Converted pricing packages:', fullPricingPackages);
           await savePricingPackages(savedPackageId, fullPricingPackages);
+          console.log('✅ Pricing options saved successfully');
         } catch (pricingError) {
-          console.error('Error saving pricing packages:', pricingError);
+          console.error('❌ Error saving pricing packages:', pricingError);
         }
       }
       
