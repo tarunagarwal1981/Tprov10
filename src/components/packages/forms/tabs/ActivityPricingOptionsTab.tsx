@@ -122,8 +122,12 @@ const SimplePricingCard: React.FC<SimplePricingCardProps> = ({
                 type="number"
                 min="0"
                 step="0.01"
-                value={editData.adultPrice}
-                onChange={(e) => setEditData({ ...editData, adultPrice: parseFloat(e.target.value) || 0 })}
+                value={editData.adultPrice || ''}
+                onChange={(e) => {
+                  const value = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                  setEditData({ ...editData, adultPrice: isNaN(value) ? 0 : value });
+                }}
+                placeholder="0.00"
                 className="package-text-fix"
               />
             </div>
@@ -133,8 +137,12 @@ const SimplePricingCard: React.FC<SimplePricingCardProps> = ({
                 type="number"
                 min="0"
                 step="0.01"
-                value={editData.childPrice}
-                onChange={(e) => setEditData({ ...editData, childPrice: parseFloat(e.target.value) || 0 })}
+                value={editData.childPrice || ''}
+                onChange={(e) => {
+                  const value = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                  setEditData({ ...editData, childPrice: isNaN(value) ? 0 : value });
+                }}
+                placeholder="0.00"
                 className="package-text-fix"
               />
             </div>
@@ -147,8 +155,11 @@ const SimplePricingCard: React.FC<SimplePricingCardProps> = ({
               <Input
                 type="number"
                 min="0"
-                value={editData.childMinAge}
-                onChange={(e) => setEditData({ ...editData, childMinAge: parseInt(e.target.value) || 0 })}
+                value={editData.childMinAge || ''}
+                onChange={(e) => {
+                  const value = e.target.value === '' ? 0 : parseInt(e.target.value);
+                  setEditData({ ...editData, childMinAge: isNaN(value) ? 0 : value });
+                }}
                 placeholder="Min"
                 className="package-text-fix"
               />
@@ -156,8 +167,11 @@ const SimplePricingCard: React.FC<SimplePricingCardProps> = ({
               <Input
                 type="number"
                 min="0"
-                value={editData.childMaxAge}
-                onChange={(e) => setEditData({ ...editData, childMaxAge: parseInt(e.target.value) || 0 })}
+                value={editData.childMaxAge || ''}
+                onChange={(e) => {
+                  const value = e.target.value === '' ? 0 : parseInt(e.target.value);
+                  setEditData({ ...editData, childMaxAge: isNaN(value) ? 0 : value });
+                }}
                 placeholder="Max"
                 className="package-text-fix"
               />
