@@ -50,7 +50,7 @@ export interface UseActivityPackageReturn {
   };
   
   // Actions
-  createPackage: (data: ActivityPackageFormData, status?: 'draft' | 'published' | 'archived' | 'suspended') => Promise<boolean>;
+  createPackage: (data: ActivityPackageFormData, status?: 'draft' | 'published' | 'archived' | 'suspended') => Promise<string | null>;
   updatePackage: (data: ActivityPackageFormData, status?: 'draft' | 'published' | 'archived' | 'suspended') => Promise<boolean>;
   deletePackage: () => Promise<boolean>;
   loadPackage: (id: string) => Promise<boolean>;
@@ -104,10 +104,10 @@ export const useActivityPackage = (
   // CRUD OPERATIONS
   // ============================================================================
 
-  const createPackage = useCallback(async (data: ActivityPackageFormData, status: 'draft' | 'published' | 'archived' | 'suspended' = 'draft'): Promise<boolean> => {
+  const createPackage = useCallback(async (data: ActivityPackageFormData, status: 'draft' | 'published' | 'archived' | 'suspended' = 'draft'): Promise<string | null> => {
     if (!user) {
       setError('You must be logged in to create packages');
-      return false;
+      return null;
     }
 
     setSaving(true);
@@ -119,7 +119,7 @@ export const useActivityPackage = (
 
       if (createError) {
         handleError(createError);
-        return false;
+        return null;
       }
 
       if (newPackage) {
@@ -127,13 +127,13 @@ export const useActivityPackage = (
         // Don't redirect on save - stay on form to continue editing
         // router.push(`/operator/packages/${newPackage.id}`);
         toast.success('Activity package saved successfully!');
-        return true;
+        return newPackage.id; // ✅ Return the package ID
       }
 
-      return false;
+      return null;
     } catch (err) {
       handleError(err);
-      return false;
+      return null;
     } finally {
       setSaving(false);
     }
