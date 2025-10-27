@@ -81,9 +81,9 @@ const SimplePricingCard: React.FC<SimplePricingCardProps> = ({
         className="p-6 border-2 border-blue-500 rounded-lg bg-white dark:bg-gray-900"
       >
         <div className="space-y-4">
-          {/* Activity Name */}
+          {/* Tour Option */}
           <div>
-            <label className="text-sm font-medium">Activity Name *</label>
+            <label className="text-sm font-medium">Tour Option *</label>
             <Input
               value={editData.activityName}
               onChange={(e) => setEditData({ ...editData, activityName: e.target.value })}
@@ -320,7 +320,7 @@ export const ActivityPricingOptionsTab: React.FC = () => {
             <div className="flex-1">
               <h3 className="text-lg font-semibold mb-2">Activity Pricing</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Add pricing options for your activity. Specify the activity name, package type, pricing, and child age range.
+                Add pricing options for your activity. Specify the tour option, package type, pricing, and child age range.
               </p>
             </div>
           </div>

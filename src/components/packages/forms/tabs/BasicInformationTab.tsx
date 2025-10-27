@@ -521,12 +521,12 @@ export const BasicInformationTab: React.FC = () => {
 
   return (
     <div className="space-y-2 package-scroll-fix">
-      {/* Package Title */}
+      {/* Activity Name */}
       <Card className="package-selector-glass package-shadow-fix">
         <CardHeader className="pb-1 pt-2 px-3">
           <CardTitle className="flex items-center gap-2 text-sm">
             <FaInfoCircle className="h-3 w-3 text-blue-600" />
-            Package Title
+            Activity Name
           </CardTitle>
         </CardHeader>
         <CardContent className="pb-2 px-3">
@@ -535,18 +535,18 @@ export const BasicInformationTab: React.FC = () => {
             name="basicInformation.title"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Package Title *</FormLabel>
+                <FormLabel>Activity Name *</FormLabel>
                 <FormControl>
                   <Input
                     {...field}
-                    placeholder="Enter your activity package title"
+                    placeholder="Enter your activity name"
                     maxLength={100}
                     showCharacterCount
                     className="package-text-fix"
                   />
                 </FormControl>
                 <FormDescription>
-                  A clear, descriptive title that captures the essence of your activity
+                  A clear, descriptive name that captures the essence of your activity
                 </FormDescription>
                 <FormMessage />
               </FormItem>

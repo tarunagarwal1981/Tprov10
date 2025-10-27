@@ -47,12 +47,9 @@ export const createSupabaseBrowserClient = (): SupabaseClientType => {
     console.debug('[Supabase][init] Creating client for URL:', supabaseUrl);
   }
   
-  // Create client with proper cookie storage configuration
+  // Create client with proper auth configuration
+  // Note: cookies are handled automatically by @supabase/ssr
   return createBrowserClient<Database>(supabaseUrl, supabaseAnonKey, {
-    cookies: {
-      // Use the default cookie-based session management from @supabase/ssr
-      // This ensures proper session persistence across page reloads
-    },
     auth: {
       // Store session in localStorage for persistence (not sessionStorage)
       storage: typeof window !== 'undefined' ? window.localStorage : undefined,
