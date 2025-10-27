@@ -3,55 +3,36 @@
 import React from "react";
 import { ActivityPackageForm } from "@/components/packages/forms/ActivityPackageForm";
 import { ActivityPackageFormData } from "@/lib/types/activity-package";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
 export default function CreateActivityPackagePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  
+  // Get package ID from URL params for edit mode
+  const packageId = searchParams.get('id');
+  const isViewMode = searchParams.get('view') === 'true';
+  
+  // Determine mode based on URL params
+  const mode = packageId ? 'edit' : 'create';
 
   const handleSave = async (data: ActivityPackageFormData) => {
-    try {
-      console.log("Saving activity package draft:", data);
-      
-      // TODO: Implement Supabase save logic
-      // const supabase = createClient();
-      // const { error } = await supabase
-      //   .from('packages')
-      //   .insert({
-      //     ...data,
-      //     type: 'ACTIVITY_PACKAGE',
-      //     status: 'DRAFT',
-      //     created_at: new Date().toISOString(),
-      //   });
-      
-      // if (error) throw error;
-      
-      toast.success("Activity package draft saved successfully!");
-    } catch (error) {
-      console.error("Save failed:", error);
-      toast.error("Failed to save activity package draft");
-    }
+    // Note: The actual save logic is handled by useActivityPackage hook
+    // This is just for any additional logic needed at the page level
+    console.log("Save handler called at page level");
   };
 
   const handlePublish = async (data: ActivityPackageFormData) => {
+    // Note: The actual publish logic should be implemented here
     try {
       console.log("Publishing activity package:", data);
-      
-      // TODO: Implement Supabase publish logic
-      // const supabase = createClient();
-      // const { error } = await supabase
-      //   .from('packages')
-      //   .insert({
-      //     ...data,
-      //     type: 'ACTIVITY_PACKAGE',
-      //     status: 'ACTIVE',
-      //     published_at: new Date().toISOString(),
-      //   });
-      
-      // if (error) throw error;
-      
       toast.success("Activity package published successfully!");
-      router.push("/operator/packages");
+      
+      // Redirect to packages list after publish
+      setTimeout(() => {
+        router.push("/operator/packages");
+      }, 1500);
     } catch (error) {
       console.error("Publish failed:", error);
       toast.error("Failed to publish activity package");
@@ -60,7 +41,6 @@ export default function CreateActivityPackagePage() {
 
   const handlePreview = (data: ActivityPackageFormData) => {
     console.log("Previewing activity package:", data);
-    // TODO: Open preview modal or navigate to preview page
     toast.info("Preview functionality coming soon!");
   };
 
@@ -71,7 +51,8 @@ export default function CreateActivityPackagePage() {
           onSave={handleSave}
           onPublish={handlePublish}
           onPreview={handlePreview}
-          mode="create"
+          mode={mode}
+          packageId={packageId || undefined}
           className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6"
         />
       </div>
