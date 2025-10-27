@@ -300,43 +300,28 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       if (data.user) {
         // Load user profile from database to get the correct role
         console.log('🔍 Loading user profile from database...');
+        console.log('📡 User ID:', data.user.id);
         
         try {
-          console.log('📡 [CLIENT] Loading user profile via Netlify Function...');
-          console.log('📡 User ID:', data.user.id);
+          // Use direct Supabase query (RLS policies handle security)
+          const { data: userProfile, error: profileError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', data.user.id)
+            .single();
           
-          // Fetch user profile from Netlify Function (bypasses browser blocking)
-          const response = await fetch('/.netlify/functions/user-profile', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              userId: data.user.id,
-              accessToken: data.session.access_token,
-            }),
-          });
-          
-          console.log('📡 [CLIENT] Function response status:', response.status);
-          
-          if (!response.ok) {
-            const errorData = await response.json();
-            console.error('❌ [CLIENT] Function error:', errorData);
-            
-            // Show user-friendly error
+          if (profileError) {
+            console.error('❌ Profile query error:', profileError);
             setError({
               type: 'login_error',
-              message: errorData.error || 'Failed to load user profile. Please try again.',
+              message: 'Failed to load user profile. Please try again.',
               timestamp: new Date()
             });
             return false;
           }
           
-          const { profile: userProfile } = await response.json();
-          console.log('✅ [CLIENT] Profile loaded from Function:', userProfile);
-          
           if (!userProfile) {
-            console.error('❌ [CLIENT] No profile returned from Function');
+            console.error('❌ No profile returned');
             setError({
               type: 'login_error',
               message: 'User profile not found. Please contact support.',
@@ -344,6 +329,8 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
             });
             return false;
           }
+          
+          console.log('✅ Profile loaded from Supabase:', userProfile);
 
           if (userProfile) {
             // Parse the JSON profile field
