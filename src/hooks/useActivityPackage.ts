@@ -137,7 +137,7 @@ export const useActivityPackage = (
     } finally {
       setSaving(false);
     }
-  }, [user, router, handleError]);
+  }, [user, handleError]);
 
   const updatePackage = useCallback(async (data: ActivityPackageFormData): Promise<boolean> => {
     if (!user || !packageId) {
