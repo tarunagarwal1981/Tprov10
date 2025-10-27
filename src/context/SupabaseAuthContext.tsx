@@ -5,9 +5,10 @@
 
 'use client';
 
-import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import type { User, UserRole, UserProfile } from '@/lib/types';
+import { toast } from 'sonner';
 
 // ============================================================================
 // TYPES AND INTERFACES
@@ -54,6 +55,16 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [error, setError] = useState<AuthError | null>(null);
 
   const supabase = createSupabaseBrowserClient();
+  
+  // Session management timers
+  const lastActivityTime = useRef<number>(Date.now());
+  const inactivityTimer = useRef<NodeJS.Timeout | null>(null);
+  const warningTimer = useRef<NodeJS.Timeout | null>(null);
+  const warningShown = useRef<boolean>(false);
+  
+  // Session configuration
+  const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 minutes
+  const WARNING_TIME = 5 * 60 * 1000; // 5 minutes before timeout
 
   // Simple initialization with proper error handling
   useEffect(() => {
@@ -63,21 +74,17 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         
         console.log('🔄 Initializing authentication...');
         
-        // First, try to refresh the session if there's a stored refresh token
-        const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
-        
-        if (refreshError) {
-          console.log('[Auth] Refresh failed:', refreshError.message);
-          // Clear any invalid session data
-          await supabase.auth.signOut();
-        }
-        
-        // Get the current session (either refreshed or existing)
+        // Get the current session without forcing a refresh
+        // This allows the user to login fresh without interference
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
         if (sessionError) {
           console.error('[Auth] Session error:', sessionError);
-          throw sessionError;
+          // Don't throw - just log and continue with no session
+          console.log('[Auth] Continuing without session');
+          setIsInitialized(true);
+          setLoading('idle');
+          return;
         }
         
         console.log('[Auth] getSession() ->', session ? 'session found' : 'no session');
@@ -189,13 +196,9 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         setLoading('idle');
       } catch (err) {
         console.error('❌ Auth init error:', err);
-        setError({
-          type: 'init_error',
-          message: 'Failed to initialize authentication. Please log in again.',
-          timestamp: new Date()
-        });
-        // Clear any invalid session data
-        await supabase.auth.signOut();
+        // Don't set error here - just continue without session
+        // This allows fresh login attempts without interference
+        console.log('[Auth] Init error, continuing without session');
         setUser(null);
         setProfile(null);
         setIsInitialized(true);
@@ -210,9 +213,13 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       console.log('[Auth] Auth state changed:', event, session ? 'session exists' : 'no session');
       
       if (event === 'SIGNED_OUT') {
-        // Only clear user state, don't show error during normal logout
+        // Clear user state on sign out
         setUser(null);
         setProfile(null);
+        // If we're not already on the login page, redirect there
+        if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+          window.location.href = '/login';
+        }
       } else if (event === 'TOKEN_REFRESHED' && session?.user) {
           // Token was refreshed successfully, reload user profile
           try {
@@ -663,13 +670,145 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   };
 
+  // ============================================================================
+  // SESSION MANAGEMENT FUNCTIONS
+  // ============================================================================
+
+  const clearSessionTimers = useCallback(() => {
+    if (inactivityTimer.current) {
+      clearTimeout(inactivityTimer.current);
+      inactivityTimer.current = null;
+    }
+    if (warningTimer.current) {
+      clearTimeout(warningTimer.current);
+      warningTimer.current = null;
+    }
+    toast.dismiss('session-warning');
+  }, []);
+
+  const showSessionWarning = useCallback(() => {
+    if (warningShown.current) return;
+    
+    warningShown.current = true;
+    const minutesLeft = Math.floor(WARNING_TIME / 60000);
+    
+    toast.warning(`Your session will expire in ${minutesLeft} minutes due to inactivity.`, {
+      duration: Infinity,
+      id: 'session-warning',
+      action: {
+        label: 'Stay Logged In',
+        onClick: () => {
+          extendSession();
+        },
+      },
+    });
+    
+    console.log(`⚠️ Session warning: ${minutesLeft} minutes remaining`);
+  }, [WARNING_TIME]);
+
+  const autoLogoutFromInactivity = useCallback(async () => {
+    console.log('🚪 Auto-logout due to inactivity');
+    clearSessionTimers();
+    
+    toast.info('You have been logged out due to inactivity.', {
+      duration: 5000,
+    });
+    
+    await logout();
+    
+    if (typeof window !== 'undefined') {
+      window.location.href = '/login?reason=inactivity';
+    }
+  }, [clearSessionTimers]);
+
+  const extendSession = useCallback(() => {
+    if (!user) return;
+    
+    console.log('🔄 Session extended - resetting inactivity timer');
+    
+    toast.dismiss('session-warning');
+    warningShown.current = false;
+    lastActivityTime.current = Date.now();
+    
+    clearSessionTimers();
+    
+    // Set warning timer
+    warningTimer.current = setTimeout(() => {
+      showSessionWarning();
+    }, INACTIVITY_TIMEOUT - WARNING_TIME);
+    
+    // Set logout timer
+    inactivityTimer.current = setTimeout(() => {
+      autoLogoutFromInactivity();
+    }, INACTIVITY_TIMEOUT);
+  }, [user, INACTIVITY_TIMEOUT, WARNING_TIME, showSessionWarning, autoLogoutFromInactivity, clearSessionTimers]);
+
+  const trackActivity = useCallback(() => {
+    if (!user) return;
+    
+    const now = Date.now();
+    const timeSinceLastActivity = now - lastActivityTime.current;
+    
+    // Only reset if more than 1 minute has passed
+    if (timeSinceLastActivity > 60000) {
+      extendSession();
+    }
+  }, [user, extendSession]);
+
+  // ============================================================================
+  // SESSION MANAGEMENT EFFECT
+  // ============================================================================
+
+  useEffect(() => {
+    if (!user || !isInitialized) {
+      clearSessionTimers();
+      return;
+    }
+
+    console.log('🔐 Session manager initialized');
+    console.log(`⏱️  Inactivity timeout: ${INACTIVITY_TIMEOUT / 60000} minutes`);
+
+    // Initialize timers
+    extendSession();
+
+    // Activity events to track
+    const activityEvents = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click'];
+
+    activityEvents.forEach((event) => {
+      window.addEventListener(event, trackActivity, { passive: true });
+    });
+
+    return () => {
+      clearSessionTimers();
+      activityEvents.forEach((event) => {
+        window.removeEventListener(event, trackActivity);
+      });
+    };
+  }, [user, isInitialized, trackActivity, extendSession, clearSessionTimers, INACTIVITY_TIMEOUT]);
+
+  // ============================================================================
+  // LOGOUT FUNCTION
+  // ============================================================================
+
   const logout = async (): Promise<void> => {
     try {
       setLoading('authenticating');
+      console.log('🚪 Logging out user...');
+      
+      // Clear session timers
+      clearSessionTimers();
+      
+      // Sign out from Supabase (this clears the auth session)
       await supabase.auth.signOut();
+      
+      // Clear local state
       setUser(null);
       setProfile(null);
+      setError(null);
+      
+      console.log('✅ Logout successful');
     } catch (err) {
+      console.error('❌ Logout error:', err);
       setError({
         type: 'logout_error',
         message: 'Logout failed',
