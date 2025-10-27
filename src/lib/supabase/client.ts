@@ -46,7 +46,23 @@ export const createSupabaseBrowserClient = (): SupabaseClientType => {
   if (process.env.NODE_ENV === 'development') {
     console.debug('[Supabase][init] Creating client for URL:', supabaseUrl);
   }
-  return createBrowserClient<Database>(supabaseUrl, supabaseAnonKey);
+  
+  // Create client with proper auth configuration
+  // Note: cookies are handled automatically by @supabase/ssr
+  return createBrowserClient<Database>(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      // Store session in localStorage for persistence (not sessionStorage)
+      storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+      // Auto-refresh tokens before they expire
+      autoRefreshToken: true,
+      // Persist session across browser restarts
+      persistSession: true,
+      // Detect session from URL (for OAuth callbacks)
+      detectSessionInUrl: true,
+      // Flow type for PKCE (more secure)
+      flowType: 'pkce',
+    },
+  });
 };
 
 /**

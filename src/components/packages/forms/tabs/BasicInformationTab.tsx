@@ -17,6 +17,12 @@ import {
   FaCrop,
   FaInfoCircle,
   FaDollarSign,
+  FaCopy,
+  FaCalendarAlt,
+  FaUsers,
+  FaList,
+  FaCheck,
+  FaTimes,
 } from "react-icons/fa";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -33,6 +39,8 @@ import {
   // Language,
   // Tag,
   ImageInfo,
+  DayOfWeek,
+  TimeSlot,
 } from "@/lib/types/activity-package";
 import { ImageUpload } from "@/components/packages/ImageUpload";
 
@@ -72,6 +80,17 @@ import { ImageUpload } from "@/components/packages/ImageUpload";
 //   { value: 'DIFFICULT', label: 'Difficult', description: 'High fitness level required' },
 // ];
 
+// Day options
+const DAY_OPTIONS: { value: DayOfWeek; label: string; short: string }[] = [
+  { value: 'MON', label: 'Monday', short: 'Mon' },
+  { value: 'TUE', label: 'Tuesday', short: 'Tue' },
+  { value: 'WED', label: 'Wednesday', short: 'Wed' },
+  { value: 'THU', label: 'Thursday', short: 'Thu' },
+  { value: 'FRI', label: 'Friday', short: 'Fri' },
+  { value: 'SAT', label: 'Saturday', short: 'Sat' },
+  { value: 'SUN', label: 'Sunday', short: 'Sun' },
+];
+
 // Helper function to process uploaded files
 const processUploadedFiles = (files: File[]): Promise<ImageInfo[]> => {
   return Promise.all(
@@ -97,11 +116,291 @@ const processUploadedFiles = (files: File[]): Promise<ImageInfo[]> => {
   );
 };
 
+// List builder component
+const ListBuilder: React.FC<{
+  items: string[];
+  onAdd: (item: string) => void;
+  onRemove: (index: number) => void;
+  onUpdate: (index: number, item: string) => void;
+  placeholder: string;
+  title: string;
+  icon: React.ReactNode;
+}> = ({ items, onAdd, onRemove, onUpdate, placeholder, title, icon }) => {
+  const [newItem, setNewItem] = useState('');
+
+  const handleAdd = useCallback(() => {
+    if (newItem.trim()) {
+      onAdd(newItem.trim());
+      setNewItem('');
+    }
+  }, [newItem, onAdd]);
+
+  const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAdd();
+    }
+  }, [handleAdd]);
+
+  return (
+    <Card className="package-selector-glass package-shadow-fix">
+      <CardHeader className="pb-1 pt-2 px-3">
+        <CardTitle className="flex items-center gap-2 text-sm">
+          {icon}
+          {title}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="pb-2 px-3">
+        <div className="space-y-4">
+          {/* Add new item */}
+          <div className="flex gap-2">
+            <Input
+              value={newItem}
+              onChange={(e) => setNewItem(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder={placeholder}
+              className="package-text-fix"
+            />
+            <Button
+              onClick={handleAdd}
+              disabled={!newItem.trim()}
+              className="package-button-fix"
+            >
+              <FaPlus className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* Items list */}
+          <div className="space-y-2">
+            <AnimatePresence>
+              {items.map((item, index) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-800 rounded-md"
+                >
+                  <FaCheck className="h-4 w-4 text-green-600 flex-shrink-0" />
+                  <span className="flex-1 text-sm">{item}</span>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => onRemove(index)}
+                    className="package-button-fix"
+                  >
+                    <FaTrash className="h-3 w-3" />
+                  </Button>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+
+          {items.length === 0 && (
+            <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
+              No items added yet
+            </p>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+// Time slot component
+const TimeSlotCard: React.FC<{
+  timeSlot: TimeSlot;
+  onUpdate: (timeSlot: TimeSlot) => void;
+  onRemove: (id: string) => void;
+  onClone: (timeSlot: TimeSlot) => void;
+}> = ({ timeSlot, onUpdate, onRemove, onClone }) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editData, setEditData] = useState(timeSlot);
+
+  const handleSave = useCallback(() => {
+    onUpdate(editData);
+    setIsEditing(false);
+  }, [editData, onUpdate]);
+
+  const handleCancel = useCallback(() => {
+    setEditData(timeSlot);
+    setIsEditing(false);
+  }, [timeSlot]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900"
+    >
+      {isEditing ? (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium">Start Time</label>
+              <Input
+                type="time"
+                value={editData.startTime}
+                onChange={(e) => setEditData({ ...editData, startTime: e.target.value })}
+                className="package-text-fix"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">End Time</label>
+              <Input
+                type="time"
+                value={editData.endTime}
+                onChange={(e) => setEditData({ ...editData, endTime: e.target.value })}
+                className="package-text-fix"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium">Capacity</label>
+            <Input
+              type="number"
+              min="1"
+              value={editData.capacity}
+              onChange={(e) => setEditData({ ...editData, capacity: parseInt(e.target.value) || 1 })}
+              className="package-text-fix"
+            />
+          </div>
+
+          <div>
+            <label className="text-sm font-medium mb-2 block">Operating Days</label>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const allDays = DAY_OPTIONS.map(d => d.value);
+                  const isAllSelected = allDays.every(day => editData.days.includes(day));
+                  
+                  if (isAllSelected) {
+                    // Deselect all
+                    setEditData({ ...editData, days: [] });
+                  } else {
+                    // Select all
+                    setEditData({ ...editData, days: allDays });
+                  }
+                }}
+                className="package-button-fix text-xs bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+              >
+                {(() => {
+                  const allDays = DAY_OPTIONS.map(d => d.value);
+                  const isAllSelected = allDays.every(day => editData.days.includes(day));
+                  return isAllSelected ? 'Deselect All' : 'Select All';
+                })()}
+              </Button>
+              {DAY_OPTIONS.map((day) => (
+                <Badge
+                  key={day.value}
+                  variant={editData.days.includes(day.value) ? "default" : "outline"}
+                  className="cursor-pointer package-button-fix"
+                  onClick={() => {
+                    const newDays = editData.days.includes(day.value)
+                      ? editData.days.filter(d => d !== day.value)
+                      : [...editData.days, day.value];
+                    setEditData({ ...editData, days: newDays });
+                  }}
+                >
+                  {day.short}
+                </Badge>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex gap-2">
+            <Button onClick={handleSave} size="sm" className="package-button-fix">
+              <FaCheck className="h-3 w-3 mr-1" />
+              Save
+            </Button>
+            <Button onClick={handleCancel} size="sm" variant="outline" className="package-button-fix">
+              <FaTimes className="h-3 w-3 mr-1" />
+              Cancel
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <FaClock className="h-4 w-4 text-blue-600" />
+              <span className="font-medium">
+                {timeSlot.startTime} - {timeSlot.endTime}
+              </span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setIsEditing(true)}
+                className="package-button-fix"
+              >
+                <FaEdit className="h-3 w-3" />
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => onClone(timeSlot)}
+                className="package-button-fix"
+              >
+                <FaCopy className="h-3 w-3" />
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => onRemove(timeSlot.id)}
+                className="package-button-fix text-red-600 hover:text-red-700"
+              >
+                <FaTrash className="h-3 w-3" />
+              </Button>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+            <div className="flex items-center gap-1">
+              <FaUsers className="h-3 w-3" />
+              <span>Capacity: {timeSlot.capacity}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <FaCalendarAlt className="h-3 w-3" />
+              <span>{timeSlot.days.length} days</span>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-1">
+            {timeSlot.days.map((day) => {
+              const dayInfo = DAY_OPTIONS.find(d => d.value === day);
+              return (
+                <Badge key={day} variant="secondary" className="text-xs">
+                  {dayInfo?.short}
+                </Badge>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </motion.div>
+  );
+};
+
 export const BasicInformationTab: React.FC = () => {
   const { control, watch, setValue } = useFormContext<ActivityPackageFormData>();
   const [locationSearch, setLocationSearch] = useState('');
+  const [newTimeSlot, setNewTimeSlot] = useState<Partial<TimeSlot>>({
+    startTime: '09:00',
+    endTime: '17:00',
+    capacity: 10,
+    isActive: true,
+    days: [],
+  });
 
   const watchedData = watch('basicInformation');
+  const watchedActivityData = watch('activityDetails');
 
   const handleLocationSelect = useCallback((location: any) => {
     setValue('basicInformation.destination', {
@@ -160,34 +459,94 @@ export const BasicInformationTab: React.FC = () => {
     setValue('basicInformation.imageGallery', images);
   }, [setValue]);
 
+  // Activity Details handlers
+  const handleAddTimeSlot = useCallback(() => {
+    if (newTimeSlot.startTime && newTimeSlot.endTime && newTimeSlot.days?.length) {
+      const timeSlot: TimeSlot = {
+        id: Date.now().toString(),
+        startTime: newTimeSlot.startTime!,
+        endTime: newTimeSlot.endTime!,
+        capacity: newTimeSlot.capacity || 10,
+        isActive: true,
+        days: newTimeSlot.days!,
+      };
+
+      const currentSlots = watchedActivityData.operationalHours.timeSlots || [];
+      setValue('activityDetails.operationalHours.timeSlots', [...currentSlots, timeSlot]);
+      
+      // Reset form
+      setNewTimeSlot({
+        startTime: '09:00',
+        endTime: '17:00',
+        capacity: 10,
+        isActive: true,
+        days: [],
+      });
+    }
+  }, [newTimeSlot, watchedActivityData.operationalHours.timeSlots, setValue]);
+
+  const handleUpdateTimeSlot = useCallback((updatedSlot: TimeSlot) => {
+    const currentSlots = watchedActivityData.operationalHours.timeSlots || [];
+    const updatedSlots = currentSlots.map(slot => 
+      slot.id === updatedSlot.id ? updatedSlot : slot
+    );
+    setValue('activityDetails.operationalHours.timeSlots', updatedSlots);
+  }, [watchedActivityData.operationalHours.timeSlots, setValue]);
+
+  const handleRemoveTimeSlot = useCallback((id: string) => {
+    const currentSlots = watchedActivityData.operationalHours.timeSlots || [];
+    const updatedSlots = currentSlots.filter(slot => slot.id !== id);
+    setValue('activityDetails.operationalHours.timeSlots', updatedSlots);
+  }, [watchedActivityData.operationalHours.timeSlots, setValue]);
+
+  const handleCloneTimeSlot = useCallback((timeSlot: TimeSlot) => {
+    const clonedSlot: TimeSlot = {
+      ...timeSlot,
+      id: Date.now().toString(),
+    };
+    const currentSlots = watchedActivityData.operationalHours.timeSlots || [];
+    setValue('activityDetails.operationalHours.timeSlots', [...currentSlots, clonedSlot]);
+  }, [watchedActivityData.operationalHours.timeSlots, setValue]);
+
+  const handleAddToList = useCallback((listName: 'whatToBring' | 'whatsIncluded' | 'whatsNotIncluded', item: string) => {
+    const currentList = watchedActivityData[listName] || [];
+    setValue(`activityDetails.${listName}`, [...currentList, item]);
+  }, [watchedActivityData, setValue]);
+
+  const handleRemoveFromList = useCallback((listName: 'whatToBring' | 'whatsIncluded' | 'whatsNotIncluded', index: number) => {
+    const currentList = watchedActivityData[listName] || [];
+    const updatedList = currentList.filter((_, i) => i !== index);
+    setValue(`activityDetails.${listName}`, updatedList);
+  }, [watchedActivityData, setValue]);
+
   return (
-    <div className="space-y-6 package-scroll-fix">
-      {/* Package Title */}
+    <div className="space-y-2 package-scroll-fix">
+      {/* Activity Name */}
       <Card className="package-selector-glass package-shadow-fix">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FaInfoCircle className="h-5 w-5 text-blue-600" />
-            Package Title
+        <CardHeader className="pb-1 pt-2 px-3">
+          <CardTitle className="flex items-center gap-2 text-sm">
+            <FaInfoCircle className="h-3 w-3 text-blue-600" />
+            Activity Name
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pb-2 px-3">
           <FormField
             control={control}
             name="basicInformation.title"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Package Title *</FormLabel>
+                <FormLabel>Activity Name *</FormLabel>
                 <FormControl>
                   <Input
                     {...field}
-                    placeholder="Enter your activity package title"
+                    placeholder="Enter your activity name"
                     maxLength={100}
                     showCharacterCount
                     className="package-text-fix"
                   />
                 </FormControl>
                 <FormDescription>
-                  A clear, descriptive title that captures the essence of your activity
+                  A clear, descriptive name that captures the essence of your activity
                 </FormDescription>
                 <FormMessage />
               </FormItem>
@@ -198,10 +557,10 @@ export const BasicInformationTab: React.FC = () => {
 
       {/* Descriptions */}
       <Card className="package-selector-glass package-shadow-fix">
-        <CardHeader>
-          <CardTitle>Descriptions</CardTitle>
+        <CardHeader className="pb-1 pt-2 px-3">
+          <CardTitle className="text-sm">Descriptions</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="pb-2 px-3 space-y-4">
           <FormField
             control={control}
             name="basicInformation.shortDescription"
@@ -250,230 +609,46 @@ export const BasicInformationTab: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Destination & Duration */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="package-selector-glass package-shadow-fix">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FaMapMarkerAlt className="h-5 w-5 text-green-600" />
-              Destination
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <FormField
-              control={control}
-              name="basicInformation.destination"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Location *</FormLabel>
-                  <FormControl>
-                    <div className="space-y-2">
-                      <Input
-                        value={field.value?.name || ''}
-                        onChange={(e) => {
-                          const newValue = e.target.value;
-                          setLocationSearch(newValue);
-                          // Update the form field with the typed value
-                          field.onChange({
-                            name: newValue,
-                            address: field.value?.address || '',
-                            coordinates: field.value?.coordinates || { latitude: 0, longitude: 0 },
-                            city: field.value?.city || '',
-                            country: field.value?.country || '',
-                          });
-                        }}
-                        placeholder="Enter destination name..."
-                        className="package-text-fix"
-                      />
-                      {field.value?.name && field.value?.address && (
-                        <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md">
-                          <p className="font-medium">{field.value.name}</p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
-                            {field.value.address}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </CardContent>
-        </Card>
-
-        <Card className="package-selector-glass package-shadow-fix">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FaClock className="h-5 w-5 text-purple-600" />
-              Duration
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={control}
-                name="basicInformation.duration.hours"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Hours</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        type="number"
-                        min="0"
-                        max="24"
-                        className="package-text-fix"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={control}
-                name="basicInformation.duration.minutes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Minutes</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        type="number"
-                        min="0"
-                        max="59"
-                        className="package-text-fix"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Difficulty & Languages (commented out) */}
-      {/**
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        ... difficulty and languages UI ...
-      </div>
-      **/}
-
-      {/* Tags (commented out) */}
-      {/**
+      {/* Destination */}
       <Card className="package-selector-glass package-shadow-fix">
-        ... tags UI ...
-      </Card>
-      **/}
-
-
-      {/* Pricing */}
-      <Card className="package-selector-glass package-shadow-fix">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FaDollarSign className="h-5 w-5 text-green-600" />
-            Pricing
+        <CardHeader className="pb-1 pt-2 px-3">
+          <CardTitle className="flex items-center gap-2 text-sm">
+            <FaMapMarkerAlt className="h-3 w-3 text-red-600" />
+            Destination *
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <CardContent className="pb-2 px-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <FormField
               control={control}
-              name="pricing.basePrice"
+              name="basicInformation.destination.city"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Base Price *</FormLabel>
+                  <FormLabel>City *</FormLabel>
                   <FormControl>
                     <Input
                       {...field}
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      placeholder="0.00"
+                      placeholder="e.g., Bali, Dubai, Bangkok"
                       className="package-text-fix"
                     />
                   </FormControl>
-                  <FormDescription>
-                    The base price for this activity package
-                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
             />
-
             <FormField
               control={control}
-              name="pricing.currency"
+              name="basicInformation.destination.country"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Currency *</FormLabel>
-                  <FormControl>
-                    <select
-                      value={field.value}
-                      onChange={(e) => field.onChange(e.target.value)}
-                      className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring package-text-fix"
-                    >
-                      <option value="USD">USD - US Dollar</option>
-                      <option value="EUR">EUR - Euro</option>
-                      <option value="GBP">GBP - British Pound</option>
-                      <option value="JPY">JPY - Japanese Yen</option>
-                      <option value="CAD">CAD - Canadian Dollar</option>
-                      <option value="AUD">AUD - Australian Dollar</option>
-                      <option value="CHF">CHF - Swiss Franc</option>
-                      <option value="CNY">CNY - Chinese Yuan</option>
-                    </select>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={control}
-              name="pricing.priceType"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Price Type *</FormLabel>
-                  <FormControl>
-                    <select
-                      value={field.value}
-                      onChange={(e) => field.onChange(e.target.value)}
-                      className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring package-text-fix"
-                    >
-                      <option value="PERSON">Per Person</option>
-                      <option value="GROUP">Per Group</option>
-                    </select>
-                  </FormControl>
-                  <FormDescription>
-                    How the price is calculated
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={control}
-              name="pricing.infantPrice"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Infant Price (Optional)</FormLabel>
+                  <FormLabel>Country *</FormLabel>
                   <FormControl>
                     <Input
                       {...field}
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      placeholder="0.00"
+                      placeholder="e.g., Indonesia, UAE, Thailand"
                       className="package-text-fix"
                     />
                   </FormControl>
-                  <FormDescription>
-                    Special price for infants (0-2 years)
-                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -484,13 +659,13 @@ export const BasicInformationTab: React.FC = () => {
 
       {/* Images */}
       <Card className="package-selector-glass package-shadow-fix">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FaImage className="h-5 w-5 text-pink-600" />
+        <CardHeader className="pb-1 pt-2 px-3">
+          <CardTitle className="flex items-center gap-2 text-sm">
+            <FaImage className="h-3 w-3 text-pink-600" />
             Images
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pb-2 px-3">
           <div className="space-y-6">
             {/* Featured Image */}
             <div>
@@ -536,6 +711,264 @@ export const BasicInformationTab: React.FC = () => {
               />
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Operating Hours */}
+      <Card className="package-selector-glass package-shadow-fix">
+        <CardHeader className="pb-1 pt-2 px-3">
+          <CardTitle className="flex items-center gap-2 text-sm">
+            <FaClock className="h-3 w-3 text-blue-600" />
+            Operating Hours
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pb-2 px-3">
+          <div className="space-y-6">
+            {/* Add Time Slot */}
+            <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800">
+              <h4 className="font-medium mb-4">Add Time Slot</h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div>
+                  <label className="text-sm font-medium">Start Time</label>
+                  <Input
+                    type="time"
+                    value={newTimeSlot.startTime}
+                    onChange={(e) => setNewTimeSlot({ ...newTimeSlot, startTime: e.target.value })}
+                    className="package-text-fix"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">End Time</label>
+                  <Input
+                    type="time"
+                    value={newTimeSlot.endTime}
+                    onChange={(e) => setNewTimeSlot({ ...newTimeSlot, endTime: e.target.value })}
+                    className="package-text-fix"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Capacity</label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={newTimeSlot.capacity}
+                    onChange={(e) => setNewTimeSlot({ ...newTimeSlot, capacity: parseInt(e.target.value) || 1 })}
+                    className="package-text-fix"
+                  />
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <label className="text-sm font-medium mb-2 block">Select Days</label>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const allDays = DAY_OPTIONS.map(d => d.value);
+                      const currentDays = newTimeSlot.days || [];
+                      const isAllSelected = allDays.every(day => currentDays.includes(day));
+                      
+                      if (isAllSelected) {
+                        // Deselect all
+                        setNewTimeSlot({ ...newTimeSlot, days: [] });
+                      } else {
+                        // Select all
+                        setNewTimeSlot({ ...newTimeSlot, days: allDays });
+                      }
+                    }}
+                    className="package-button-fix text-xs bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                  >
+                    {(() => {
+                      const allDays = DAY_OPTIONS.map(d => d.value);
+                      const currentDays = newTimeSlot.days || [];
+                      const isAllSelected = allDays.every(day => currentDays.includes(day));
+                      return isAllSelected ? 'Deselect All' : 'Select All';
+                    })()}
+                  </Button>
+                  {DAY_OPTIONS.map((day) => (
+                    <Badge
+                      key={day.value}
+                      variant={newTimeSlot.days?.includes(day.value) ? "default" : "outline"}
+                      className="cursor-pointer package-button-fix"
+                      onClick={() => {
+                        const currentDays = newTimeSlot.days || [];
+                        const newDays = currentDays.includes(day.value)
+                          ? currentDays.filter(d => d !== day.value)
+                          : [...currentDays, day.value];
+                        setNewTimeSlot({ ...newTimeSlot, days: newDays });
+                      }}
+                    >
+                      {day.label}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+
+              <Button
+                onClick={handleAddTimeSlot}
+                disabled={!newTimeSlot.startTime || !newTimeSlot.endTime || !newTimeSlot.days?.length}
+                className="package-button-fix"
+              >
+                <FaPlus className="h-4 w-4 mr-2" />
+                Add Time Slot
+              </Button>
+            </div>
+
+            {/* Time Slots List */}
+            <div>
+              <h4 className="font-medium mb-4">Time Slots</h4>
+              <div className="space-y-3">
+                <AnimatePresence>
+                  {(watchedActivityData.operationalHours.timeSlots || []).map((timeSlot) => (
+                    <TimeSlotCard
+                      key={timeSlot.id}
+                      timeSlot={timeSlot}
+                      onUpdate={handleUpdateTimeSlot}
+                      onRemove={handleRemoveTimeSlot}
+                      onClone={handleCloneTimeSlot}
+                    />
+                  ))}
+                </AnimatePresence>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Meeting Point */}
+      <Card className="package-selector-glass package-shadow-fix">
+        <CardHeader className="pb-1 pt-2 px-3">
+          <CardTitle className="flex items-center gap-2 text-sm">
+            <FaMapMarkerAlt className="h-3 w-3 text-green-600" />
+            Meeting Point
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pb-2 px-3">
+          <div className="space-y-4">
+            <FormField
+              control={control}
+              name="activityDetails.meetingPoint.name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Meeting Point Name *</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      placeholder="e.g., Central Park Main Entrance"
+                      className="package-text-fix"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={control}
+              name="activityDetails.meetingPoint.address"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Address *</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      placeholder="Full address of the meeting point"
+                      className="package-text-fix"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={control}
+              name="activityDetails.meetingPoint.instructions"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Instructions</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      {...field}
+                      placeholder="Special instructions for finding the meeting point"
+                      rows={3}
+                      className="package-text-fix"
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Help customers easily find the meeting point
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* What's Included */}
+      <ListBuilder
+        items={watchedActivityData.whatsIncluded || []}
+        onAdd={(item) => handleAddToList('whatsIncluded', item)}
+        onRemove={(index) => handleRemoveFromList('whatsIncluded', index)}
+        onUpdate={() => {}} // Not implemented for simplicity
+        placeholder="Add what's included (e.g., Professional guide, Equipment)"
+        title="What's Included"
+        icon={<FaCheck className="h-3 w-3 text-green-600" />}
+      />
+
+      {/* What's Not Included */}
+      <ListBuilder
+        items={watchedActivityData.whatsNotIncluded || []}
+        onAdd={(item) => handleAddToList('whatsNotIncluded', item)}
+        onRemove={(index) => handleRemoveFromList('whatsNotIncluded', index)}
+        onUpdate={() => {}} // Not implemented for simplicity
+        placeholder="Add what's not included (e.g., Meals, Transportation)"
+        title="What's Not Included"
+        icon={<FaTimes className="h-3 w-3 text-red-600" />}
+      />
+
+      {/* What to Bring */}
+      <ListBuilder
+        items={watchedActivityData.whatToBring || []}
+        onAdd={(item) => handleAddToList('whatToBring', item)}
+        onRemove={(index) => handleRemoveFromList('whatToBring', index)}
+        onUpdate={() => {}} // Not implemented for simplicity
+        placeholder="Add what to bring (e.g., Comfortable shoes, Water bottle)"
+        title="What to Bring"
+        icon={<FaList className="h-3 w-3 text-blue-600" />}
+      />
+
+      {/* Important Information */}
+      <Card className="package-selector-glass package-shadow-fix">
+        <CardHeader className="pb-1 pt-2 px-3">
+          <CardTitle className="text-sm">Important Information</CardTitle>
+        </CardHeader>
+        <CardContent className="pb-2 px-3">
+          <FormField
+            control={control}
+            name="activityDetails.importantInformation"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Important Information</FormLabel>
+                <FormControl>
+                  <Textarea
+                    {...field}
+                    placeholder="Any important information customers should know (max 1000 characters)"
+                    maxLength={1000}
+                    rows={6}
+                    className="package-text-fix"
+                  />
+                </FormControl>
+                <FormDescription>
+                  Safety information, restrictions, or special requirements
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </CardContent>
       </Card>
     </div>

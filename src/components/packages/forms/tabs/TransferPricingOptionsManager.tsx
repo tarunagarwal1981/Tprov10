@@ -106,9 +106,15 @@ const HourlyPricingCard: React.FC<HourlyPricingCardProps> = ({
                   id="rateUSD"
                   type="number"
                   min="0"
-                  step="0.01"
-                  value={editData.rateUSD}
-                  onChange={(e) => setEditData({ ...editData, rateUSD: parseFloat(e.target.value) || 0 })}
+                  step="1"
+                  value={editData.rateUSD === 0 ? '' : editData.rateUSD}
+                  onChange={(e) => setEditData({ ...editData, rateUSD: e.target.value === '' ? 0 : parseFloat(e.target.value) })}
+                  onBlur={(e) => {
+                    if (e.target.value === '') {
+                      setEditData({ ...editData, rateUSD: 0 });
+                    }
+                  }}
+                  placeholder="0"
                   className="package-text-fix pl-7"
                 />
               </div>
@@ -314,7 +320,7 @@ const PointToPointPricingCard: React.FC<PointToPointPricingCardProps> = ({
       >
         <div className="space-y-4">
           <div className="flex items-center justify-between mb-4">
-            <h4 className="text-lg font-semibold">Edit Point-to-Point Pricing Option</h4>
+            <h4 className="text-lg font-semibold">Edit One Way Transfer Option</h4>
             <Badge variant={editData.isActive ? "default" : "secondary"}>
               {editData.isActive ? "Active" : "Inactive"}
             </Badge>
@@ -418,9 +424,15 @@ const PointToPointPricingCard: React.FC<PointToPointPricingCardProps> = ({
                   id="costUSD"
                   type="number"
                   min="0"
-                  step="0.01"
-                  value={editData.costUSD}
-                  onChange={(e) => setEditData({ ...editData, costUSD: parseFloat(e.target.value) || 0 })}
+                  step="1"
+                  value={editData.costUSD === 0 ? '' : editData.costUSD}
+                  onChange={(e) => setEditData({ ...editData, costUSD: e.target.value === '' ? 0 : parseFloat(e.target.value) })}
+                  onBlur={(e) => {
+                    if (e.target.value === '') {
+                      setEditData({ ...editData, costUSD: 0 });
+                    }
+                  }}
+                  placeholder="0"
                   className="package-text-fix pl-7"
                 />
               </div>
@@ -573,6 +585,7 @@ interface TransferPricingOptionsManagerProps {
   pointToPointOptions: PointToPointPricingOption[];
   onUpdateHourly: (options: HourlyPricingOption[]) => void;
   onUpdatePointToPoint: (options: PointToPointPricingOption[]) => void;
+  userVehicles?: Array<{ vehicleName: string; vehicleType?: VehicleType; maxCapacity: number }>;
 }
 
 export const TransferPricingOptionsManager: React.FC<TransferPricingOptionsManagerProps> = ({
@@ -580,18 +593,17 @@ export const TransferPricingOptionsManager: React.FC<TransferPricingOptionsManag
   pointToPointOptions,
   onUpdateHourly,
   onUpdatePointToPoint,
+  userVehicles = [],
 }) => {
   const [editingHourlyId, setEditingHourlyId] = useState<string | null>(null);
   const [editingP2PId, setEditingP2PId] = useState<string | null>(null);
-  const [showHourlyForm, setShowHourlyForm] = useState(false);
-  const [showP2PForm, setShowP2PForm] = useState(false);
 
-  // New hourly option
+  // New hourly option (form always visible)
   const [newHourlyOption, setNewHourlyOption] = useState<Partial<HourlyPricingOption>>({
     hours: 1,
-    vehicleType: 'SEDAN',
-    vehicleName: '',
-    maxPassengers: 4,
+    vehicleType: userVehicles[0]?.vehicleType || 'SEDAN',
+    vehicleName: userVehicles[0]?.vehicleName || undefined, // Use undefined instead of empty string
+    maxPassengers: userVehicles[0]?.maxCapacity || 4,
     rateUSD: 0,
     description: '',
     features: [],
@@ -599,13 +611,13 @@ export const TransferPricingOptionsManager: React.FC<TransferPricingOptionsManag
     displayOrder: 0,
   });
 
-  // New P2P option
+  // New P2P option (form always visible)
   const [newP2POption, setNewP2POption] = useState<Partial<PointToPointPricingOption>>({
     fromLocation: '',
     toLocation: '',
-    vehicleType: 'SEDAN',
-    vehicleName: '',
-    maxPassengers: 4,
+    vehicleType: userVehicles[0]?.vehicleType || 'SEDAN',
+    vehicleName: userVehicles[0]?.vehicleName || undefined, // Use undefined instead of empty string
+    maxPassengers: userVehicles[0]?.maxCapacity || 4,
     costUSD: 0,
     distanceUnit: 'KM',
     description: '',
@@ -631,20 +643,20 @@ export const TransferPricingOptionsManager: React.FC<TransferPricingOptionsManag
       };
 
       onUpdateHourly([...hourlyOptions, option]);
+      // Reset form for next entry
       setNewHourlyOption({
         hours: 1,
-        vehicleType: 'SEDAN',
-        vehicleName: '',
-        maxPassengers: 4,
+        vehicleType: userVehicles[0]?.vehicleType || 'SEDAN',
+        vehicleName: userVehicles[0]?.vehicleName || undefined, // Use undefined instead of empty string
+        maxPassengers: userVehicles[0]?.maxCapacity || 4,
         rateUSD: 0,
         description: '',
         features: [],
         isActive: true,
         displayOrder: 0,
       });
-      setShowHourlyForm(false);
     }
-  }, [newHourlyOption, hourlyOptions, onUpdateHourly]);
+  }, [newHourlyOption, hourlyOptions, onUpdateHourly, userVehicles]);
 
   const handleUpdateHourly = useCallback((updatedOption: HourlyPricingOption) => {
     const updated = hourlyOptions.map(opt =>
@@ -683,12 +695,13 @@ export const TransferPricingOptionsManager: React.FC<TransferPricingOptionsManag
       };
 
       onUpdatePointToPoint([...pointToPointOptions, option]);
+      // Reset form for next entry
       setNewP2POption({
         fromLocation: '',
         toLocation: '',
-        vehicleType: 'SEDAN',
-        vehicleName: '',
-        maxPassengers: 4,
+        vehicleType: userVehicles[0]?.vehicleType || 'SEDAN',
+        vehicleName: userVehicles[0]?.vehicleName || undefined, // Use undefined instead of empty string
+        maxPassengers: userVehicles[0]?.maxCapacity || 4,
         costUSD: 0,
         distanceUnit: 'KM',
         description: '',
@@ -696,9 +709,8 @@ export const TransferPricingOptionsManager: React.FC<TransferPricingOptionsManag
         isActive: true,
         displayOrder: 0,
       });
-      setShowP2PForm(false);
     }
-  }, [newP2POption, pointToPointOptions, onUpdatePointToPoint]);
+  }, [newP2POption, pointToPointOptions, onUpdatePointToPoint, userVehicles]);
 
   const handleUpdateP2P = useCallback((updatedOption: PointToPointPricingOption) => {
     const updated = pointToPointOptions.map(opt =>
@@ -714,14 +726,20 @@ export const TransferPricingOptionsManager: React.FC<TransferPricingOptionsManag
   return (
     <div className="space-y-6">
       <Tabs defaultValue="hourly" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="hourly" className="flex items-center gap-2">
+        <TabsList className="grid w-full grid-cols-2 bg-gray-200 dark:bg-gray-700 p-1">
+          <TabsTrigger 
+            value="hourly" 
+            className="flex items-center gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800"
+          >
             <FaClock className="h-4 w-4" />
-            Hourly Pricing ({hourlyOptions.length})
+            Hourly Rentals ({hourlyOptions.length})
           </TabsTrigger>
-          <TabsTrigger value="point-to-point" className="flex items-center gap-2">
+          <TabsTrigger 
+            value="point-to-point" 
+            className="flex items-center gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800"
+          >
             <FaMapMarkerAlt className="h-4 w-4" />
-            Point-to-Point ({pointToPointOptions.length})
+            One Way Transfers ({pointToPointOptions.length})
           </TabsTrigger>
         </TabsList>
 
@@ -729,35 +747,18 @@ export const TransferPricingOptionsManager: React.FC<TransferPricingOptionsManag
         <TabsContent value="hourly" className="space-y-4 mt-6">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
                   <CardTitle className="flex items-center gap-2">
                     <FaClock className="h-5 w-5 text-blue-600" />
-                    Hourly Pricing Options
+                Hourly Rentals
                   </CardTitle>
                   <CardDescription className="mt-2">
                     Set pricing based on hourly rates. Ideal for chauffeur services and time-based transfers.
                   </CardDescription>
-                </div>
-                <Button
-                  onClick={() => setShowHourlyForm(!showHourlyForm)}
-                  className="package-button-fix"
-                >
-                  <FaPlus className="h-4 w-4 mr-2" />
-                  Add Option
-                </Button>
-              </div>
             </CardHeader>
             <CardContent>
-              <AnimatePresence>
-                {showHourlyForm && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="mb-6 p-6 border-2 border-dashed border-blue-300 rounded-lg bg-blue-50 dark:bg-blue-950"
-                  >
-                    <h4 className="text-lg font-semibold mb-4">New Hourly Pricing Option</h4>
+              {/* Form always visible */}
+              <div className="mb-6 p-6 border-2 border-dashed border-blue-300 rounded-lg bg-blue-50 dark:bg-blue-950">
+                <h4 className="text-lg font-semibold mb-4">New Hourly Rental</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <Label>Hours</Label>
@@ -776,42 +777,56 @@ export const TransferPricingOptionsManager: React.FC<TransferPricingOptionsManag
                           <Input
                             type="number"
                             min="0"
-                            step="0.01"
-                            value={newHourlyOption.rateUSD}
-                            onChange={(e) => setNewHourlyOption({ ...newHourlyOption, rateUSD: parseFloat(e.target.value) || 0 })}
+                            step="1"
+                            value={newHourlyOption.rateUSD === 0 ? '' : newHourlyOption.rateUSD}
+                            onChange={(e) => setNewHourlyOption({ ...newHourlyOption, rateUSD: e.target.value === '' ? 0 : parseFloat(e.target.value) })}
+                            onBlur={(e) => {
+                              if (e.target.value === '') {
+                                setNewHourlyOption({ ...newHourlyOption, rateUSD: 0 });
+                              }
+                            }}
+                            placeholder="0"
                             className="package-text-fix pl-7"
                           />
                         </div>
                       </div>
                       <div>
-                        <Label>Vehicle Type</Label>
+                        <Label>Vehicle (from Vehicle Details)</Label>
                         <Select
-                          value={newHourlyOption.vehicleType}
-                          onValueChange={(value: VehicleType) => setNewHourlyOption({ ...newHourlyOption, vehicleType: value })}
+                          value={newHourlyOption.vehicleName}
+                          onValueChange={(value) => {
+                            const selectedVehicle = userVehicles.find(v => v.vehicleName === value);
+                            if (selectedVehicle) {
+                              setNewHourlyOption({
+                                ...newHourlyOption,
+                                vehicleName: selectedVehicle.vehicleName,
+                                vehicleType: selectedVehicle.vehicleType,
+                                maxPassengers: selectedVehicle.maxCapacity
+                              });
+                            }
+                          }}
                         >
-                          <SelectTrigger className="package-text-fix">
-                            <SelectValue />
+                          <SelectTrigger className="package-text-fix bg-white dark:bg-gray-800">
+                            <SelectValue placeholder={userVehicles.length > 0 ? "Select a vehicle" : "Add vehicles first"} />
                           </SelectTrigger>
-                          <SelectContent className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 z-50">
-                            {VEHICLE_TYPES.map((type) => (
-                              <SelectItem key={type.value} value={type.value}>
+                          <SelectContent className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                            {userVehicles.length > 0 ? (
+                              userVehicles.map((vehicle, idx) => (
+                                <SelectItem key={idx} value={vehicle.vehicleName} className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700">
                                 <div className="flex items-center gap-2">
-                                  <span>{type.icon}</span>
-                                  <span>{type.label}</span>
+                                    <FaCar className="h-4 w-4" />
+                                    <span>{vehicle.vehicleName}</span>
+                                    {vehicle.vehicleType && <Badge variant="outline" className="text-xs">{vehicle.vehicleType}</Badge>}
                                 </div>
                               </SelectItem>
-                            ))}
+                              ))
+                            ) : (
+                              <div className="p-4 text-sm text-gray-500 text-center">
+                                No vehicles added yet. Add vehicles in the Vehicle Details section above.
+                              </div>
+                            )}
                           </SelectContent>
                         </Select>
-                      </div>
-                      <div>
-                        <Label>Vehicle Name</Label>
-                        <Input
-                          value={newHourlyOption.vehicleName}
-                          onChange={(e) => setNewHourlyOption({ ...newHourlyOption, vehicleName: e.target.value })}
-                          placeholder="e.g., Mercedes-Benz S-Class"
-                          className="package-text-fix"
-                        />
                       </div>
                       <div>
                         <Label>Max Passengers</Label>
@@ -826,23 +841,18 @@ export const TransferPricingOptionsManager: React.FC<TransferPricingOptionsManag
                     </div>
                     <div className="flex gap-2 mt-4">
                       <Button onClick={handleAddHourly} className="package-button-fix">
-                        <FaCheckCircle className="h-4 w-4 mr-2" />
-                        Add Option
-                      </Button>
-                      <Button onClick={() => setShowHourlyForm(false)} variant="outline" className="package-button-fix">
-                        Cancel
+                        <FaPlus className="h-4 w-4 mr-2" />
+                        Add Vehicle
                       </Button>
                     </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                  </div>
 
-              <div className="space-y-3">
+              <div className="space-y-3 mt-6">
                 {hourlyOptions.length === 0 ? (
-                  <div className="text-center py-12 text-gray-500">
+                  <div className="text-center py-8 text-gray-500">
                     <FaClock className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                    <p className="text-lg font-medium">No hourly pricing options yet</p>
-                    <p className="text-sm">Click &quot;Add Option&quot; to create your first hourly pricing option</p>
+                    <p className="text-lg font-medium">No hourly rentals added yet</p>
+                    <p className="text-sm">Fill the form above and click &quot;Add Vehicle&quot; to add your first option</p>
                   </div>
                 ) : (
                   <AnimatePresence>
@@ -868,35 +878,18 @@ export const TransferPricingOptionsManager: React.FC<TransferPricingOptionsManag
         <TabsContent value="point-to-point" className="space-y-4 mt-6">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
                   <CardTitle className="flex items-center gap-2">
                     <FaMapMarkerAlt className="h-5 w-5 text-purple-600" />
-                    Point-to-Point Pricing Options
+                One Way Transfers
                   </CardTitle>
                   <CardDescription className="mt-2">
                     Set fixed pricing for specific routes. Perfect for airport transfers and city-to-city trips.
                   </CardDescription>
-                </div>
-                <Button
-                  onClick={() => setShowP2PForm(!showP2PForm)}
-                  className="package-button-fix"
-                >
-                  <FaPlus className="h-4 w-4 mr-2" />
-                  Add Route
-                </Button>
-              </div>
             </CardHeader>
             <CardContent>
-              <AnimatePresence>
-                {showP2PForm && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="mb-6 p-6 border-2 border-dashed border-purple-300 rounded-lg bg-purple-50 dark:bg-purple-950"
-                  >
-                    <h4 className="text-lg font-semibold mb-4">New Point-to-Point Route</h4>
+              {/* Form always visible */}
+              <div className="mb-6 p-6 border-2 border-dashed border-purple-300 rounded-lg bg-purple-50 dark:bg-purple-950">
+                <h4 className="text-lg font-semibold mb-4">New One Way Transfer</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <Label>From Location *</Label>
@@ -917,34 +910,42 @@ export const TransferPricingOptionsManager: React.FC<TransferPricingOptionsManag
                         />
                       </div>
                       <div>
-                        <Label>Vehicle Type</Label>
+                        <Label>Vehicle (from Vehicle Details)</Label>
                         <Select
-                          value={newP2POption.vehicleType}
-                          onValueChange={(value: VehicleType) => setNewP2POption({ ...newP2POption, vehicleType: value })}
+                          value={newP2POption.vehicleName}
+                          onValueChange={(value) => {
+                            const selectedVehicle = userVehicles.find(v => v.vehicleName === value);
+                            if (selectedVehicle) {
+                              setNewP2POption({
+                                ...newP2POption,
+                                vehicleName: selectedVehicle.vehicleName,
+                                vehicleType: selectedVehicle.vehicleType,
+                                maxPassengers: selectedVehicle.maxCapacity
+                              });
+                            }
+                          }}
                         >
-                          <SelectTrigger className="package-text-fix">
-                            <SelectValue />
+                          <SelectTrigger className="package-text-fix bg-white dark:bg-gray-800">
+                            <SelectValue placeholder={userVehicles.length > 0 ? "Select a vehicle" : "Add vehicles first"} />
                           </SelectTrigger>
-                          <SelectContent className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 z-50">
-                            {VEHICLE_TYPES.map((type) => (
-                              <SelectItem key={type.value} value={type.value}>
+                          <SelectContent className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                            {userVehicles.length > 0 ? (
+                              userVehicles.map((vehicle, idx) => (
+                                <SelectItem key={idx} value={vehicle.vehicleName} className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700">
                                 <div className="flex items-center gap-2">
-                                  <span>{type.icon}</span>
-                                  <span>{type.label}</span>
+                                    <FaCar className="h-4 w-4" />
+                                    <span>{vehicle.vehicleName}</span>
+                                    {vehicle.vehicleType && <Badge variant="outline" className="text-xs">{vehicle.vehicleType}</Badge>}
                                 </div>
                               </SelectItem>
-                            ))}
+                              ))
+                            ) : (
+                              <div className="p-4 text-sm text-gray-500 text-center">
+                                No vehicles added yet. Add vehicles in the Vehicle Details section above.
+                              </div>
+                            )}
                           </SelectContent>
                         </Select>
-                      </div>
-                      <div>
-                        <Label>Vehicle Name *</Label>
-                        <Input
-                          value={newP2POption.vehicleName}
-                          onChange={(e) => setNewP2POption({ ...newP2POption, vehicleName: e.target.value })}
-                          placeholder="e.g., Toyota Camry"
-                          className="package-text-fix"
-                        />
                       </div>
                       <div>
                         <Label>Max Passengers</Label>
@@ -963,9 +964,15 @@ export const TransferPricingOptionsManager: React.FC<TransferPricingOptionsManag
                           <Input
                             type="number"
                             min="0"
-                            step="0.01"
-                            value={newP2POption.costUSD}
-                            onChange={(e) => setNewP2POption({ ...newP2POption, costUSD: parseFloat(e.target.value) || 0 })}
+                            step="1"
+                            value={newP2POption.costUSD === 0 ? '' : newP2POption.costUSD}
+                            onChange={(e) => setNewP2POption({ ...newP2POption, costUSD: e.target.value === '' ? 0 : parseFloat(e.target.value) })}
+                            onBlur={(e) => {
+                              if (e.target.value === '') {
+                                setNewP2POption({ ...newP2POption, costUSD: 0 });
+                              }
+                            }}
+                            placeholder="0"
                             className="package-text-fix pl-7"
                           />
                         </div>
@@ -973,23 +980,18 @@ export const TransferPricingOptionsManager: React.FC<TransferPricingOptionsManag
                     </div>
                     <div className="flex gap-2 mt-4">
                       <Button onClick={handleAddP2P} className="package-button-fix">
-                        <FaCheckCircle className="h-4 w-4 mr-2" />
-                        Add Route
-                      </Button>
-                      <Button onClick={() => setShowP2PForm(false)} variant="outline" className="package-button-fix">
-                        Cancel
+                        <FaPlus className="h-4 w-4 mr-2" />
+                        Add Vehicle
                       </Button>
                     </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                  </div>
 
-              <div className="space-y-3">
+              <div className="space-y-3 mt-6">
                 {pointToPointOptions.length === 0 ? (
-                  <div className="text-center py-12 text-gray-500">
+                  <div className="text-center py-8 text-gray-500">
                     <FaMapMarkerAlt className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                    <p className="text-lg font-medium">No point-to-point routes yet</p>
-                    <p className="text-sm">Click &quot;Add Route&quot; to create your first route pricing option</p>
+                    <p className="text-lg font-medium">No one way transfers added yet</p>
+                    <p className="text-sm">Fill the form above and click &quot;Add Vehicle&quot; to add your first route</p>
                   </div>
                 ) : (
                   <AnimatePresence>

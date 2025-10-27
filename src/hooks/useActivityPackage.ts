@@ -5,6 +5,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import {
   createActivityPackage,
   getActivityPackage,
@@ -49,8 +50,8 @@ export interface UseActivityPackageReturn {
   };
   
   // Actions
-  createPackage: (data: ActivityPackageFormData) => Promise<boolean>;
-  updatePackage: (data: ActivityPackageFormData) => Promise<boolean>;
+  createPackage: (data: ActivityPackageFormData, status?: 'draft' | 'published' | 'archived' | 'suspended') => Promise<string | null>;
+  updatePackage: (data: ActivityPackageFormData, status?: 'draft' | 'published' | 'archived' | 'suspended') => Promise<boolean>;
   deletePackage: () => Promise<boolean>;
   loadPackage: (id: string) => Promise<boolean>;
   loadPackages: (options?: ActivityPackageListOptions) => Promise<boolean>;
@@ -103,40 +104,42 @@ export const useActivityPackage = (
   // CRUD OPERATIONS
   // ============================================================================
 
-  const createPackage = useCallback(async (data: ActivityPackageFormData): Promise<boolean> => {
+  const createPackage = useCallback(async (data: ActivityPackageFormData, status: 'draft' | 'published' | 'archived' | 'suspended' = 'draft'): Promise<string | null> => {
     if (!user) {
       setError('You must be logged in to create packages');
-      return false;
+      return null;
     }
 
     setSaving(true);
     setError(null);
 
     try {
-      const dbData = formDataToDatabase(data, user.id);
+      const dbData = formDataToDatabase(data, user.id, status);
       const { data: newPackage, error: createError } = await createActivityPackage(dbData, user.id);
 
       if (createError) {
         handleError(createError);
-        return false;
+        return null;
       }
 
       if (newPackage) {
         setActivityPackage(newPackage);
-        router.push(`/operator/packages/${newPackage.id}`);
-        return true;
+        // Don't redirect on save - stay on form to continue editing
+        // router.push(`/operator/packages/${newPackage.id}`);
+        toast.success('Activity package saved successfully!');
+        return newPackage.id; // ✅ Return the package ID
       }
 
-      return false;
+      return null;
     } catch (err) {
       handleError(err);
-      return false;
+      return null;
     } finally {
       setSaving(false);
     }
-  }, [user, router, handleError]);
+  }, [user, handleError]);
 
-  const updatePackage = useCallback(async (data: ActivityPackageFormData): Promise<boolean> => {
+  const updatePackage = useCallback(async (data: ActivityPackageFormData, status: 'draft' | 'published' | 'archived' | 'suspended' = 'draft'): Promise<boolean> => {
     if (!user || !packageId) {
       setError('Missing user or package ID');
       return false;
@@ -146,7 +149,7 @@ export const useActivityPackage = (
     setError(null);
 
     try {
-      const dbData = formDataToDatabase(data, user.id);
+      const dbData = formDataToDatabase(data, user.id, status);
       const { data: updatedPackage, error: updateError } = await updateActivityPackage(packageId, dbData);
 
       if (updateError) {
@@ -156,6 +159,7 @@ export const useActivityPackage = (
 
       if (updatedPackage) {
         setActivityPackage(updatedPackage);
+        toast.success('Activity package updated successfully!');
         return true;
       }
 
