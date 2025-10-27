@@ -674,7 +674,7 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
   // SESSION MANAGEMENT FUNCTIONS
   // ============================================================================
 
-  const clearSessionTimers = useCallback(() => {
+  const clearSessionTimers = () => {
     if (inactivityTimer.current) {
       clearTimeout(inactivityTimer.current);
       inactivityTimer.current = null;
@@ -684,9 +684,9 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       warningTimer.current = null;
     }
     toast.dismiss('session-warning');
-  }, []);
+  };
 
-  const showSessionWarning = useCallback(() => {
+  const showSessionWarning = () => {
     if (warningShown.current) return;
     
     warningShown.current = true;
@@ -704,9 +704,9 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
     });
     
     console.log(`⚠️ Session warning: ${minutesLeft} minutes remaining`);
-  }, [WARNING_TIME]);
+  };
 
-  const autoLogoutFromInactivity = useCallback(async () => {
+  const autoLogoutFromInactivity = async () => {
     console.log('🚪 Auto-logout due to inactivity');
     clearSessionTimers();
     
@@ -714,14 +714,19 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       duration: 5000,
     });
     
-    await logout();
+    // Don't call logout here to avoid circular dependency
+    // Just clear state and redirect
+    await supabase.auth.signOut();
+    setUser(null);
+    setProfile(null);
+    setError(null);
     
     if (typeof window !== 'undefined') {
       window.location.href = '/login?reason=inactivity';
     }
-  }, [clearSessionTimers]);
+  };
 
-  const extendSession = useCallback(() => {
+  const extendSession = () => {
     if (!user) return;
     
     console.log('🔄 Session extended - resetting inactivity timer');
@@ -741,9 +746,9 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
     inactivityTimer.current = setTimeout(() => {
       autoLogoutFromInactivity();
     }, INACTIVITY_TIMEOUT);
-  }, [user, INACTIVITY_TIMEOUT, WARNING_TIME, showSessionWarning, autoLogoutFromInactivity, clearSessionTimers]);
+  };
 
-  const trackActivity = useCallback(() => {
+  const trackActivity = () => {
     if (!user) return;
     
     const now = Date.now();
@@ -753,7 +758,7 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
     if (timeSinceLastActivity > 60000) {
       extendSession();
     }
-  }, [user, extendSession]);
+  };
 
   // ============================================================================
   // SESSION MANAGEMENT EFFECT
@@ -784,7 +789,8 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         window.removeEventListener(event, trackActivity);
       });
     };
-  }, [user, isInitialized, trackActivity, extendSession, clearSessionTimers, INACTIVITY_TIMEOUT]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, isInitialized]);
 
   // ============================================================================
   // LOGOUT FUNCTION
