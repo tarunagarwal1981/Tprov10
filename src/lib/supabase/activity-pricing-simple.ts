@@ -351,3 +351,86 @@ export async function updatePricingPackagesOrder(
   }
 }
 
+// ============================================================================
+// CONVERSION FUNCTIONS FOR SIMPLE FORMAT
+// ============================================================================
+
+/**
+ * Convert simple pricing option from form to full ActivityPricingPackage
+ * Used when saving form data to database
+ */
+export function convertSimpleToPricingPackage(
+  simple: {
+    id: string;
+    activityName: string;
+    packageType: 'TICKET_ONLY' | 'PRIVATE_TRANSFER' | 'SHARED_TRANSFER';
+    adultPrice: number;
+    childPrice: number;
+    childMinAge: number;
+    childMaxAge: number;
+  },
+  displayOrder: number = 0
+): ActivityPricingPackage {
+  const transferIncluded = simple.packageType !== 'TICKET_ONLY';
+  const transferType = simple.packageType === 'PRIVATE_TRANSFER' ? 'PRIVATE' : 
+                      simple.packageType === 'SHARED_TRANSFER' ? 'SHARED' : undefined;
+  
+  return {
+    id: simple.id,
+    packageName: simple.activityName,
+    description: undefined,
+    adultPrice: simple.adultPrice,
+    childPrice: simple.childPrice,
+    childMinAge: simple.childMinAge,
+    childMaxAge: simple.childMaxAge,
+    infantPrice: 0,
+    infantMaxAge: 2,
+    transferIncluded,
+    transferType,
+    transferPriceAdult: 0,
+    transferPriceChild: 0,
+    transferPriceInfant: 0,
+    pickupLocation: '',
+    pickupInstructions: '',
+    dropoffLocation: '',
+    dropoffInstructions: '',
+    includedItems: [],
+    excludedItems: [],
+    isActive: true,
+    isFeatured: false,
+    displayOrder,
+  };
+}
+
+/**
+ * Convert ActivityPricingPackage to simple format for form
+ * Used when loading database data into form
+ */
+export function convertPricingPackageToSimple(
+  pkg: ActivityPricingPackage
+): {
+  id: string;
+  activityName: string;
+  packageType: 'TICKET_ONLY' | 'PRIVATE_TRANSFER' | 'SHARED_TRANSFER';
+  adultPrice: number;
+  childPrice: number;
+  childMinAge: number;
+  childMaxAge: number;
+} {
+  let packageType: 'TICKET_ONLY' | 'PRIVATE_TRANSFER' | 'SHARED_TRANSFER' = 'TICKET_ONLY';
+  
+  if (pkg.transferIncluded) {
+    packageType = pkg.transferType === 'PRIVATE' ? 'PRIVATE_TRANSFER' : 'SHARED_TRANSFER';
+  }
+  
+  return {
+    id: pkg.id,
+    activityName: pkg.packageName,
+    packageType,
+    adultPrice: pkg.adultPrice,
+    childPrice: pkg.childPrice,
+    childMinAge: pkg.childMinAge,
+    childMaxAge: pkg.childMaxAge,
+  };
+}
+

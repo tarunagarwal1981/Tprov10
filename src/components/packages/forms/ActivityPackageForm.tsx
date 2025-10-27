@@ -232,12 +232,16 @@ export const ActivityPackageForm: React.FC<ActivityPackageFormProps> = ({
       if (dbPackage && mode === 'edit' && packageId) {
         const formData = databaseToFormData(dbPackage);
         
-        // Load pricing packages - ensure it's always an array
+        // Load pricing packages and convert to simple format
         try {
-          const { getPricingPackages } = await import('@/lib/supabase/activity-pricing-simple');
+          const { getPricingPackages, convertPricingPackageToSimple } = await import('@/lib/supabase/activity-pricing-simple');
           const pricingPackages = await getPricingPackages(packageId);
-          // Ensure pricingOptions is always an array
-          formData.pricingOptions = Array.isArray(pricingPackages) ? pricingPackages : [];
+          // Convert database format to simple format for form
+          formData.pricingOptions = Array.isArray(pricingPackages) 
+            ? pricingPackages.map(convertPricingPackageToSimple)
+            : [];
+          
+          console.log('✅ Loaded pricing options:', formData.pricingOptions);
         } catch (error) {
           console.error('Error loading pricing packages:', error);
           formData.pricingOptions = [];
@@ -328,7 +332,7 @@ export const ActivityPackageForm: React.FC<ActivityPackageFormProps> = ({
       let savedPackageId = packageId;
       
       if (mode === 'create') {
-        const result = await createPackage(data);
+        const result = await createPackage(data, 'draft');
         success = result ? true : false;
         // Note: createPackage should return the package ID
         // If it returns an object, extract the ID
@@ -336,14 +340,18 @@ export const ActivityPackageForm: React.FC<ActivityPackageFormProps> = ({
           savedPackageId = (result as any).id;
         }
       } else if (mode === 'edit' && packageId) {
-        success = await updatePackage(data);
+        success = await updatePackage(data, 'draft');
       }
       
       // Save pricing packages if they exist
       if (success && savedPackageId && data.pricingOptions && Array.isArray(data.pricingOptions)) {
         try {
-          const { savePricingPackages } = await import('@/lib/supabase/activity-pricing-simple');
-          await savePricingPackages(savedPackageId, data.pricingOptions);
+          const { savePricingPackages, convertSimpleToPricingPackage } = await import('@/lib/supabase/activity-pricing-simple');
+          // Convert simple pricing options to full format
+          const fullPricingPackages = data.pricingOptions.map((opt: any, index: number) => 
+            convertSimpleToPricingPackage(opt, index)
+          );
+          await savePricingPackages(savedPackageId, fullPricingPackages);
         } catch (pricingError) {
           console.error('Error saving pricing packages:', pricingError);
           // Don't fail the entire save if pricing fails
@@ -370,25 +378,29 @@ export const ActivityPackageForm: React.FC<ActivityPackageFormProps> = ({
     clearError();
     
     try {
-      // First save the package
+      // Save the package with published status
       let success = false;
       let savedPackageId = packageId;
       
       if (mode === 'create') {
-        const result = await createPackage(data);
+        const result = await createPackage(data, 'published');
         success = result ? true : false;
         if (typeof result === 'object' && result && 'id' in result) {
           savedPackageId = (result as any).id;
         }
       } else if (mode === 'edit' && packageId) {
-        success = await updatePackage(data);
+        success = await updatePackage(data, 'published');
       }
       
       // Save pricing packages if they exist
       if (success && savedPackageId && data.pricingOptions && Array.isArray(data.pricingOptions)) {
         try {
-          const { savePricingPackages } = await import('@/lib/supabase/activity-pricing-simple');
-          await savePricingPackages(savedPackageId, data.pricingOptions);
+          const { savePricingPackages, convertSimpleToPricingPackage } = await import('@/lib/supabase/activity-pricing-simple');
+          // Convert simple pricing options to full format
+          const fullPricingPackages = data.pricingOptions.map((opt: any, index: number) => 
+            convertSimpleToPricingPackage(opt, index)
+          );
+          await savePricingPackages(savedPackageId, fullPricingPackages);
         } catch (pricingError) {
           console.error('Error saving pricing packages:', pricingError);
         }
