@@ -5,6 +5,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import {
   createActivityPackage,
   getActivityPackage,
@@ -123,7 +124,9 @@ export const useActivityPackage = (
 
       if (newPackage) {
         setActivityPackage(newPackage);
-        router.push(`/operator/packages/${newPackage.id}`);
+        // Don't redirect on save - stay on form to continue editing
+        // router.push(`/operator/packages/${newPackage.id}`);
+        toast.success('Activity package saved successfully!');
         return true;
       }
 
@@ -156,6 +159,7 @@ export const useActivityPackage = (
 
       if (updatedPackage) {
         setActivityPackage(updatedPackage);
+        toast.success('Activity package updated successfully!');
         return true;
       }
 
