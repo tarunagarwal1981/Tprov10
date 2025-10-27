@@ -52,3 +52,4 @@ WHERE event_object_schema = 'storage'
 -- Solution: Remove the trigger completely since it's redundant and broken
 -- ============================================================================
 
+

@@ -304,7 +304,7 @@ export const ActivityPricingOptionsTab: React.FC = () => {
       childMaxAge: 12,
     };
 
-    setValue('pricingOptions', [...pricingOptions, newOption], { shouldDirty: true });
+    setValue('pricingOptions', [...pricingOptions, newOption], { shouldDirty: false });
     setEditingId(newOption.id);
   }, [pricingOptions, setValue]);
 
@@ -312,13 +312,13 @@ export const ActivityPricingOptionsTab: React.FC = () => {
     const updated = pricingOptions.map(opt =>
       opt.id === updatedOption.id ? updatedOption : opt
     );
-    setValue('pricingOptions', updated, { shouldDirty: true });
+    setValue('pricingOptions', updated, { shouldDirty: false });
   }, [pricingOptions, setValue]);
 
   const handleRemoveOption = useCallback((id: string) => {
     if (confirm('Are you sure you want to delete this pricing option?')) {
       const updated = pricingOptions.filter(opt => opt.id !== id);
-      setValue('pricingOptions', updated, { shouldDirty: true });
+      setValue('pricingOptions', updated, { shouldDirty: false });
     }
   }, [pricingOptions, setValue]);
 
