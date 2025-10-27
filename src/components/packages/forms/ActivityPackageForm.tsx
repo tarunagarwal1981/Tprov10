@@ -35,62 +35,12 @@ import { databaseToFormData } from "@/lib/supabase/activity-packages";
 
 // Import tab components
 import { BasicInformationTab } from "./tabs/BasicInformationTab";
-import { ActivityDetailsTab } from "./tabs/ActivityDetailsTab";
+// import { ActivityDetailsTab } from "./tabs/ActivityDetailsTab"; // Moved into BasicInformationTab
 // import { PackageVariantsTab } from "./tabs/PackageVariantsTab";
 // import { PoliciesRestrictionsTab } from "./tabs/PoliciesRestrictionsTab";
 // import { FAQTab } from "./tabs/FAQTab";
-import { PricingTab } from "./tabs/PricingTab";
+import { ActivityPricingOptionsTab } from "./tabs/ActivityPricingOptionsTab";
 import ReviewPublishActivityTab from "./tabs/ReviewPublishActivityTab";
-
-// Auto-save hook
-const useAutoSave = (
-  data: ActivityPackageFormData,
-  onSave: (data: ActivityPackageFormData) => Promise<void>,
-  interval: number = 30000
-) => {
-  const [state, setState] = useState<AutoSaveState>({
-    isSaving: false,
-    lastSaved: null,
-    hasUnsavedChanges: false,
-    error: null,
-  });
-  const lastPayloadRef = useRef<string>("");
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-
-  const isSavingRef = useRef(false);
-
-  // Use a stable snapshot of form data to avoid effect thrash from new object identities
-  const serialized = useMemo(() => JSON.stringify(data), [data]);
-
-  useEffect(() => {
-    const current = serialized;
-
-    // Only update when the flag actually changes to avoid unnecessary renders
-    const nextHasUnsaved = current !== lastPayloadRef.current;
-    setState(prev => (prev.hasUnsavedChanges === nextHasUnsaved ? prev : { ...prev, hasUnsavedChanges: nextHasUnsaved }));
-
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(async () => {
-      if (isSavingRef.current) return;
-      if (current === lastPayloadRef.current) return;
-      isSavingRef.current = true;
-      setState(prev => (prev.isSaving ? prev : { ...prev, isSaving: true, error: null }));
-      try {
-        await onSave(data);
-        lastPayloadRef.current = current;
-        setState(prev => ({ ...prev, isSaving: false, lastSaved: new Date(), hasUnsavedChanges: false }));
-      } catch (error) {
-        setState(prev => ({ ...prev, isSaving: false, error: error instanceof Error ? error.message : 'Save failed' }));
-      }
-      isSavingRef.current = false;
-    }, interval);
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, [serialized, onSave, interval, data]);
-
-  return state;
-};
 
 // Validation hook
 const useFormValidation = (data: ActivityPackageFormData): FormValidation => {
@@ -117,41 +67,62 @@ const useFormValidation = (data: ActivityPackageFormData): FormValidation => {
       });
     }
 
-    if (!data.basicInformation.destination.name.trim()) {
+    // Destination validation - check city and country (the actual fields in the form)
+    if (!data.basicInformation.destination.city?.trim() || !data.basicInformation.destination.country?.trim()) {
       errors.push({
         tab: 'basic-info',
         field: 'destination',
-        message: 'Destination is required',
+        message: 'Destination city and country are required',
         severity: 'error',
       });
     }
 
-    // Activity Details validation
+    // Activity Details validation (now in basic-info tab)
+    // Note: Time slots and meeting point are now optional for draft packages
+    // They'll be validated only on publish
     if (data.activityDetails.operationalHours.timeSlots.length === 0) {
-      errors.push({
-        tab: 'activity-details',
+      warnings.push({
+        tab: 'basic-info',
         field: 'timeSlots',
-        message: 'At least one time slot is required',
-        severity: 'error',
+        message: 'Add at least one time slot for your activity',
       });
     }
 
     if (!data.activityDetails.meetingPoint.name.trim()) {
-      errors.push({
-        tab: 'activity-details',
+      warnings.push({
+        tab: 'basic-info',
         field: 'meetingPoint',
-        message: 'Meeting point is required',
-        severity: 'error',
+        message: 'Add a meeting point for better customer experience',
       });
     }
 
-    // Pricing validation
-    if (data.pricing.basePrice <= 0) {
+    // Pricing validation - check pricingOptions (new simplified pricing system)
+    if (!data.pricingOptions || (Array.isArray(data.pricingOptions) && data.pricingOptions.length === 0)) {
       errors.push({
         tab: 'pricing',
-        field: 'basePrice',
-        message: 'Base price must be greater than 0',
+        field: 'pricingOptions',
+        message: 'At least one pricing option is required',
         severity: 'error',
+      });
+    } else if (Array.isArray(data.pricingOptions)) {
+      // Validate each pricing option
+      data.pricingOptions.forEach((option: any, index: number) => {
+        if (!option.activityName?.trim()) {
+          errors.push({
+            tab: 'pricing',
+            field: `pricingOptions[${index}].activityName`,
+            message: `Pricing option ${index + 1}: Tour option name is required`,
+            severity: 'error',
+          });
+        }
+        if (!option.adultPrice || option.adultPrice <= 0) {
+          errors.push({
+            tab: 'pricing',
+            field: `pricingOptions[${index}].adultPrice`,
+            message: `Pricing option ${index + 1}: Adult price must be greater than 0`,
+            severity: 'error',
+          });
+        }
       });
     }
 
@@ -207,19 +178,33 @@ export const ActivityPackageForm: React.FC<ActivityPackageFormProps> = ({
 
   // Update form when database package loads
   React.useEffect(() => {
-    if (dbPackage && mode === 'edit') {
-      const formData = databaseToFormData(dbPackage);
-      reset(formData);
-    }
-  }, [dbPackage, mode, reset]);
+    const loadPackageData = async () => {
+      if (dbPackage && mode === 'edit' && packageId) {
+        const formData = databaseToFormData(dbPackage);
+        
+        // Load pricing packages and convert to simple format
+        try {
+          const { getPricingPackages, convertPricingPackageToSimple } = await import('@/lib/supabase/activity-pricing-simple');
+          const pricingPackages = await getPricingPackages(packageId);
+          // Convert database format to simple format for form
+          formData.pricingOptions = Array.isArray(pricingPackages) 
+            ? pricingPackages.map(convertPricingPackageToSimple)
+            : [];
+          
+          console.log('✅ Loaded pricing options:', formData.pricingOptions);
+        } catch (error) {
+          console.error('Error loading pricing packages:', error);
+          formData.pricingOptions = [];
+        }
+        
+        reset(formData);
+      }
+    };
+    
+    loadPackageData();
+  }, [dbPackage, mode, packageId, reset]);
 
   const validation = useFormValidation(formData);
-  // Auto-save disabled
-  // const autoSaveState = useAutoSave(formData, async (data) => {
-  //   if (onSave) {
-  //     await onSave(data);
-  //   }
-  // });
 
   // Tab configuration
   const tabs: TabInfo[] = [
@@ -231,14 +216,15 @@ export const ActivityPackageForm: React.FC<ActivityPackageFormProps> = ({
       isComplete: !validation.errors.some(e => e.tab === 'basic-info'),
       hasErrors: validation.errors.some(e => e.tab === 'basic-info'),
     },
-    {
-      id: 'activity-details',
-      label: 'Activity Details',
-      icon: <FaClock className="h-4 w-4" />,
-      badge: validation.errors.filter(e => e.tab === 'activity-details').length,
-      isComplete: !validation.errors.some(e => e.tab === 'activity-details'),
-      hasErrors: validation.errors.some(e => e.tab === 'activity-details'),
-    },
+    // Activity Details tab has been merged into Basic Info tab
+    // {
+    //   id: 'activity-details',
+    //   label: 'Activity Details',
+    //   icon: <FaClock className="h-4 w-4" />,
+    //   badge: validation.errors.filter(e => e.tab === 'activity-details').length,
+    //   isComplete: !validation.errors.some(e => e.tab === 'activity-details'),
+    //   hasErrors: validation.errors.some(e => e.tab === 'activity-details'),
+    // },
     // {
     //   id: 'variants',
     //   label: 'Variants',
@@ -286,15 +272,8 @@ export const ActivityPackageForm: React.FC<ActivityPackageFormProps> = ({
     clearError();
     
     try {
-      let success = false;
-      
-      if (mode === 'create') {
-        success = await createPackage(data);
-      } else if (mode === 'edit' && packageId) {
-        success = await updatePackage(data);
-      }
-      
-      if (success && onSave) {
+      // Delegate to parent handler
+      if (onSave) {
         await onSave(data);
       }
     } catch (error) {
@@ -314,16 +293,8 @@ export const ActivityPackageForm: React.FC<ActivityPackageFormProps> = ({
     clearError();
     
     try {
-      // First save the package
-      let success = false;
-      
-      if (mode === 'create') {
-        success = await createPackage(data);
-      } else if (mode === 'edit' && packageId) {
-        success = await updatePackage(data);
-      }
-      
-      if (success && onPublish) {
+      // Delegate to parent handler
+      if (onPublish) {
         await onPublish(data);
       }
     } catch (error) {
@@ -341,12 +312,11 @@ export const ActivityPackageForm: React.FC<ActivityPackageFormProps> = ({
   };
 
   const tabContent = {
-    'basic-info': <BasicInformationTab />,
-    'activity-details': <ActivityDetailsTab />,
+    'basic-info': <BasicInformationTab />, // All activity details merged into this tab
     // 'variants': <PackageVariantsTab />,
     // 'policies': <PoliciesRestrictionsTab />,
     // 'faq': <FAQTab />,
-    'pricing': <PricingTab />,
+    'pricing': <ActivityPricingOptionsTab />,
     'review': <ReviewPublishActivityTab validation={validation} onPreview={handlePreview} />,
   };
 
@@ -379,50 +349,6 @@ export const ActivityPackageForm: React.FC<ActivityPackageFormProps> = ({
                 }
               </p>
             </div>
-            
-            {/* Auto-save status - DISABLED */}
-            {/* <div className="flex items-center gap-4">
-              <AnimatePresence>
-                {autoSaveState.isSaving && (
-                  <motion.div
-                    key="saving"
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
-                    className="flex items-center gap-2 text-sm text-blue-600"
-                  >
-                    <FaSpinner className="h-4 w-4 animate-spin" />
-                    Saving...
-                  </motion.div>
-                )}
-                
-                {autoSaveState.lastSaved && !autoSaveState.isSaving && (
-                  <motion.div
-                    key="saved"
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
-                    className="flex items-center gap-2 text-sm text-green-600"
-                  >
-                    <FaCheckCircle className="h-4 w-4" />
-                    All changes saved
-                  </motion.div>
-                )}
-                
-                {autoSaveState.error && (
-                  <motion.div
-                    key="auto-save-error"
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
-                    className="flex items-center gap-2 text-sm text-red-600"
-                  >
-                    <FaExclamationTriangle className="h-4 w-4" />
-                    {autoSaveState.error}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div> */}
             
             {/* Package error display */}
             <div className="flex items-center gap-4">

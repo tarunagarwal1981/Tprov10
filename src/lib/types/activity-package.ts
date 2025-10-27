@@ -292,7 +292,7 @@ export interface ActivityPackageFormData {
   policiesRestrictions: PoliciesRestrictions;
   faq: FAQSection;
   pricing: PricingInfo;
-  pricingOptions?: ActivityPricingOptions;
+  pricingOptions?: ActivityPricingOptions | any[]; // Can be old format or new simplified array
 }
 
 export interface FormValidation {
@@ -450,10 +450,7 @@ export const DEFAULT_FORM_DATA: ActivityPackageFormData = {
       seasonMultiplier: 1,
     },
   },
-  pricingOptions: {
-    ticketOnlyOptions: [],
-    ticketWithTransferOptions: [],
-  },
+  pricingOptions: [],
 };
 
 // ============================================================================

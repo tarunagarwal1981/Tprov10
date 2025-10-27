@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { FaEye, FaCheckCircle, FaExclamationTriangle, FaInfoCircle, FaClock, FaLayerGroup, FaShieldAlt, FaDollarSign } from "react-icons/fa";
-import { ActivityPackageFormData, FormValidation } from "@/lib/types/activity-package";
+import { ActivityPackageFormData, ActivityPricingOptions, FormValidation } from "@/lib/types/activity-package";
 
 interface ReviewPublishActivityTabProps {
   validation: FormValidation;
@@ -82,9 +82,10 @@ export const ReviewPublishActivityTab: React.FC<ReviewPublishActivityTabProps> =
   const [isPublishing, setIsPublishing] = useState(false);
 
   const formData = watch();
+  const pricingOptions = formData.pricingOptions as ActivityPricingOptions | undefined;
 
   const completionPercentage = useMemo(() => {
-    const sections = ["basic-info", "activity-details", "pricing", "pricing-options"];
+    const sections = ["basic-info", "pricing", "pricing-options"]; // activity-details merged into basic-info
     const completedSections = sections.filter((section) => !validation.errors.some((e) => e.tab === section));
     return Math.round((completedSections.length / sections.length) * 100);
   }, [validation.errors]);
@@ -150,8 +151,8 @@ export const ReviewPublishActivityTab: React.FC<ReviewPublishActivityTabProps> =
         <ReviewSection
           title="Activity Details"
           icon={<FaClock className="h-5 w-5 text-purple-600" />}
-          isComplete={isSectionComplete("activity-details")}
-          hasErrors={hasSectionErrors("activity-details")}
+          isComplete={isSectionComplete("basic-info")}
+          hasErrors={hasSectionErrors("basic-info")}
         >
           <div className="space-y-3">
             <SummaryItem label="Meeting Point" value={formData.activityDetails?.meetingPoint?.name || ""} isEmpty={!formData.activityDetails?.meetingPoint?.name} />
@@ -180,13 +181,13 @@ export const ReviewPublishActivityTab: React.FC<ReviewPublishActivityTabProps> =
           <div className="space-y-3">
             <SummaryItem 
               label="Ticket Only Options" 
-              value={`${formData.pricingOptions?.ticketOnlyOptions?.length || 0} options`}
-              isEmpty={(formData.pricingOptions?.ticketOnlyOptions?.length || 0) === 0}
+              value={`${pricingOptions?.ticketOnlyOptions?.length || 0} options`}
+              isEmpty={(pricingOptions?.ticketOnlyOptions?.length || 0) === 0}
             />
             <SummaryItem 
               label="Ticket with Transfer Options" 
-              value={`${formData.pricingOptions?.ticketWithTransferOptions?.length || 0} options`}
-              isEmpty={(formData.pricingOptions?.ticketWithTransferOptions?.length || 0) === 0}
+              value={`${pricingOptions?.ticketWithTransferOptions?.length || 0} options`}
+              isEmpty={(pricingOptions?.ticketWithTransferOptions?.length || 0) === 0}
             />
           </div>
         </ReviewSection>

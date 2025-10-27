@@ -550,7 +550,7 @@ export function Header({
   
   const handleLogout = async () => {
     await logout();
-    router.push('/');
+    router.push('/login');
   };
   
   const isCompact = variant === 'compact';

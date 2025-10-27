@@ -71,6 +71,16 @@ export interface TransferDetails {
   roundTripDetails?: RoundTripTransferDetails;
   multiStopDetails?: MultiStopTransferDetails;
   routeInfo: RouteInfo;
+  vehicles: VehicleDetail[];
+}
+
+export interface VehicleDetail {
+  id: string;
+  vehicleName: string;
+  vehicleType?: VehicleType;
+  maxCapacity: number;
+  vehicleImage?: ImageInfo | null;
+  order: number;
 }
 
 export interface OneWayTransferDetails {
@@ -494,6 +504,7 @@ export const DEFAULT_TRANSFER_FORM_DATA: TransferPackageFormData = {
       estimatedDuration: { hours: 1, minutes: 0 },
       routePoints: [],
     },
+    vehicles: [],
   },
   vehicleOptions: {
     vehicles: [],
@@ -540,8 +551,8 @@ export const DEFAULT_TRANSFER_FORM_DATA: TransferPackageFormData = {
 // ============================================================================
 
 export const REQUIRED_FIELDS = {
-  basicInformation: ['title', 'shortDescription', 'destination'],
-  transferDetails: ['transferType', 'pickupLocation', 'dropoffLocation'],
+  basicInformation: ['title', 'destination'],
+  transferDetails: ['transferType', 'pickupLocation', 'dropoffLocation', 'vehicles'],
   vehicleOptions: ['vehicles'],
   driverService: [],
   pricingPolicies: ['cancellationPolicy'],

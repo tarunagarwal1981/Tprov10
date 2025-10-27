@@ -39,55 +39,8 @@ import { PricingPoliciesTab } from "./tabs/PricingPoliciesTab";
 import { AvailabilityBookingTab } from "./tabs/AvailabilityBookingTab";
 import { ReviewPublishTab } from "./tabs/ReviewPublishTab";
 
-// Auto-save hook
-const useAutoSave = (
-  data: TransferPackageFormData,
-  onSave: (data: TransferPackageFormData) => Promise<void>,
-  interval: number = 30000
-) => {
-  const [state, setState] = useState<AutoSaveState>({
-    isSaving: false,
-    lastSaved: null,
-    hasUnsavedChanges: false,
-    error: null,
-  });
-  const lastPayloadRef = useRef<string>("");
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-
-  const isSavingRef = useRef(false);
-
-  // Use a stable snapshot of form data to avoid effect thrash from new object identities
-  const serialized = useMemo(() => JSON.stringify(data), [data]);
-
-  useEffect(() => {
-    const current = serialized;
-
-    // Only update when the flag actually changes to avoid unnecessary renders
-    const nextHasUnsaved = current !== lastPayloadRef.current;
-    setState(prev => (prev.hasUnsavedChanges === nextHasUnsaved ? prev : { ...prev, hasUnsavedChanges: nextHasUnsaved }));
-
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(async () => {
-      if (isSavingRef.current) return;
-      if (current === lastPayloadRef.current) return;
-      isSavingRef.current = true;
-      setState(prev => (prev.isSaving ? prev : { ...prev, isSaving: true, error: null }));
-      try {
-        await onSave(data);
-        lastPayloadRef.current = current;
-        setState(prev => ({ ...prev, isSaving: false, lastSaved: new Date(), hasUnsavedChanges: false }));
-      } catch (error) {
-        setState(prev => ({ ...prev, isSaving: false, error: error instanceof Error ? error.message : 'Save failed' }));
-      }
-      isSavingRef.current = false;
-    }, interval);
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, [serialized, onSave, interval, data]);
-
-  return state;
-};
+// Auto-save is intentionally DISABLED to prevent creating duplicate packages
+// Only "Publish" button should create a new package in the database
 
 // Validation hook
 const useFormValidation = (data: TransferPackageFormData): FormValidation => {
@@ -100,29 +53,30 @@ const useFormValidation = (data: TransferPackageFormData): FormValidation => {
       errors.push({
         tab: 'transfer-details',
         field: 'title',
-        message: 'Package title is required',
+        message: 'Title is required',
         severity: 'error',
       });
     }
 
-    if (!data.basicInformation.shortDescription.trim()) {
+    // Description is now optional - no validation needed
+
+    // Destination validation - City and Country required
+    if (!data.basicInformation.destination.city?.trim()) {
       errors.push({
         tab: 'transfer-details',
-        field: 'shortDescription',
-        message: 'Short description is required',
+        field: 'destination.city',
+        message: 'Destination city is required',
         severity: 'error',
       });
     }
-
-    // Destination validation - REMOVED (moved to transfer details)
-    // if (!data.basicInformation.destination.name.trim()) {
-    //   errors.push({
-    //     tab: 'basic-info',
-    //     field: 'destination',
-    //     message: 'Destination is required',
-    //     severity: 'error',
-    //   });
-    // }
+    if (!data.basicInformation.destination.country?.trim()) {
+      errors.push({
+        tab: 'transfer-details',
+        field: 'destination.country',
+        message: 'Destination country is required',
+        severity: 'error',
+      });
+    }
 
     // Transfer Details validation
     if (!data.transferDetails.transferType) {
@@ -165,12 +119,27 @@ const useFormValidation = (data: TransferPackageFormData): FormValidation => {
     //   });
     // }
 
+    // Pricing validation - NOT REQUIRED
+    // Pricing (hourly and point-to-point) is optional
+    // No validation needed for pricing policies, cancellation, etc.
+
     // Warnings
     if (data.basicInformation.imageGallery.length === 0) {
       warnings.push({
         tab: 'transfer-details',
         field: 'imageGallery',
         message: 'Adding images will improve your transfer package visibility',
+      });
+    }
+
+    // Pricing warning (optional)
+    const hasPricing = (data.pricingPolicies.hourlyPricingOptions || []).length > 0 || 
+                       (data.pricingPolicies.pointToPointPricingOptions || []).length > 0;
+    if (!hasPricing) {
+      warnings.push({
+        tab: 'transfer-details',
+        field: 'pricing',
+        message: 'Adding pricing options will help customers understand your rates',
       });
     }
 
@@ -213,12 +182,6 @@ export const TransferPackageForm: React.FC<TransferPackageFormProps> = ({
   const formData = watch();
 
   const validation = useFormValidation(formData);
-  // Auto-save disabled
-  // const autoSaveState = useAutoSave(formData, async (data) => {
-  //   if (onSave) {
-  //     await onSave(data);
-  //   }
-  // });
 
   // Tab configuration
   const tabs: TabInfo[] = [
@@ -254,14 +217,15 @@ export const TransferPackageForm: React.FC<TransferPackageFormProps> = ({
     //   isComplete: !validation.errors.some(e => e.tab === 'driver-service'),
     //   hasErrors: validation.errors.some(e => e.tab === 'driver-service'),
     // },
-    {
-      id: 'pricing-policies',
-      label: 'Pricing & Policies',
-      icon: <FaDollarSign className="h-4 w-4" />,
-      badge: validation.errors.filter(e => e.tab === 'pricing-policies').length,
-      isComplete: !validation.errors.some(e => e.tab === 'pricing-policies'),
-      hasErrors: validation.errors.some(e => e.tab === 'pricing-policies'),
-    },
+    // Pricing is now in Transfer Details tab, not a separate tab
+    // {
+    //   id: 'pricing-policies',
+    //   label: 'Pricing & Policies',
+    //   icon: <FaDollarSign className="h-4 w-4" />,
+    //   badge: validation.errors.filter(e => e.tab === 'pricing-policies').length,
+    //   isComplete: !validation.errors.some(e => e.tab === 'pricing-policies'),
+    //   hasErrors: validation.errors.some(e => e.tab === 'pricing-policies'),
+    // },
     // {
     //   id: 'availability-booking',
     //   label: 'Availability',
@@ -323,7 +287,7 @@ export const TransferPackageForm: React.FC<TransferPackageFormProps> = ({
     'transfer-details': <TransferDetailsTab />,
     // 'vehicle-options': <VehicleOptionsTab />,
     // 'driver-service': <DriverServiceTab />,
-    'pricing-policies': <PricingPoliciesTab />,
+    // 'pricing-policies': <PricingPoliciesTab />, // Now in Transfer Details tab
     // 'availability-booking': <AvailabilityBookingTab />,
     'review': <ReviewPublishTab validation={validation} onPreview={handlePreview} />,
   };
@@ -345,52 +309,15 @@ export const TransferPackageForm: React.FC<TransferPackageFormProps> = ({
                 }
               </p>
             </div>
-            
-            {/* Auto-save status - DISABLED */}
-            {/* <div className="flex items-center gap-4">
-              <AnimatePresence>
-                {autoSaveState.isSaving && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
-                    className="flex items-center gap-2 text-sm text-blue-600"
-                  >
-                    <FaSpinner className="h-4 w-4 animate-spin" />
-                    Saving...
-                  </motion.div>
-                )}
-                
-                {autoSaveState.lastSaved && !autoSaveState.isSaving && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
-                    className="flex items-center gap-2 text-sm text-green-600"
-                  >
-                    <FaCheckCircle className="h-4 w-4" />
-                    All changes saved
-                  </motion.div>
-                )}
-                
-                {autoSaveState.error && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
-                    className="flex items-center gap-2 text-sm text-red-600"
-                  >
-                    <FaExclamationTriangle className="h-4 w-4" />
-                    {autoSaveState.error}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div> */}
           </div>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit(handleSave)}>
+        {/* Form - Form submission is DISABLED to prevent auto-save on Enter key */}
+        {/* Only the "Publish" button should create/update packages */}
+        <form onSubmit={(e) => {
+          e.preventDefault(); // Prevent any form submission (including Enter key)
+          return false;
+        }}>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             {/* Tab Navigation */}
             <div className="mb-6">
@@ -447,8 +374,9 @@ export const TransferPackageForm: React.FC<TransferPackageFormProps> = ({
               </Button>
               
               <Button
-                type="submit"
+                type="button"
                 variant="outline"
+                onClick={handleSubmit(handleSave)}
                 disabled={isSubmitting}
                 className="package-button-fix package-animation-fix"
               >

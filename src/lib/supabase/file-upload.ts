@@ -51,10 +51,15 @@ export async function uploadFile({
     // Create the file path: userId/folder/filename
     const filePath = folder ? `${userId}/${folder}/${finalFileName}` : `${userId}/${finalFileName}`;
     
-    // Upload the file
+    // Convert File to Blob to work around Supabase file_size bug
+    // Supabase has a bug where it converts file.size to string internally
+    const blob = new Blob([file], { type: file.type || 'image/jpeg' });
+    
+    // Upload the blob (this bypasses Supabase's buggy File handling)
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from(bucket)
-      .upload(filePath, file, {
+      .upload(filePath, blob, {
+        contentType: file.type || 'image/jpeg',
         cacheControl: '3600',
         upsert: false
       });
@@ -163,7 +168,8 @@ export async function uploadMultipleFiles(
 export async function uploadImageFiles(
   imageFiles: File[],
   userId: string,
-  folder: string = 'activity-packages'
+  folder: string = 'activity-packages',
+  bucket: string = 'activity-package-images'
 ): Promise<FileUploadResult[]> {
   // Validate file types
   const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
@@ -181,5 +187,5 @@ export async function uploadImageFiles(
     throw new Error('Some files exceed the 10MB size limit');
   }
 
-  return uploadMultipleFiles(sizeValidFiles, 'activity-packages-images', folder, userId);
+  return uploadMultipleFiles(sizeValidFiles, bucket, folder, userId);
 }
