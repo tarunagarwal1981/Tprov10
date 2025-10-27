@@ -59,7 +59,7 @@ export default function CreateActivityPackagePage() {
           throw packageError;
         }
         
-        savedPackageId = packageResult?.id;
+        savedPackageId = packageResult?.id || null;
         console.log('✅ Package saved:', packageResult);
         toast.success("Activity package draft saved successfully!");
       }
@@ -128,7 +128,7 @@ export default function CreateActivityPackagePage() {
           throw packageError;
         }
         
-        savedPackageId = packageResult?.id;
+        savedPackageId = packageResult?.id || null;
         console.log('✅ Package published:', packageResult);
         toast.success("Activity package published successfully!");
       }
