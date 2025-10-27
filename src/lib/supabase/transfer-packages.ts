@@ -662,6 +662,11 @@ export async function createTransferPackage(
               };
             } else if (uploadResult[0] && uploadResult[0].error) {
               console.error(`❌ Vehicle image ${index + 1} upload failed:`, uploadResult[0].error);
+              console.error(`❌ Full error details:`, JSON.stringify(uploadResult[0].error, null, 2));
+              // Continue anyway - vehicle images are optional
+              return null;
+            } else {
+              console.error(`❌ Vehicle image ${index + 1} upload failed: No data or error returned`);
               return null;
             }
           }
@@ -989,7 +994,12 @@ export async function updateTransferPackage(
                 storage_path: uploadResult[0].data.path,
                 public_url: uploadResult[0].data.publicUrl,
               };
+            } else if (uploadResult[0] && uploadResult[0].error) {
+              console.error(`❌ UPDATE: Vehicle image ${index + 1} upload failed:`, uploadResult[0].error);
+              console.error(`❌ UPDATE: Full error details:`, JSON.stringify(uploadResult[0].error, null, 2));
+              return null;
             } else {
+              console.error(`❌ UPDATE: Vehicle image ${index + 1} upload failed: No data or error returned`);
               return null;
             }
           }
@@ -1157,8 +1167,13 @@ export async function listTransferPackagesWithCardData(
     // Get all package IDs
     const packageIds = packages.map(p => p.id);
 
-    // Fetch all related data in parallel
-    const [vehiclesResult, hourlyPricingResult, p2pPricingResult] = await Promise.all([
+    // Fetch all related data in parallel (including package images for card carousel)
+    const [packageImagesResult, vehiclesResult, hourlyPricingResult, p2pPricingResult] = await Promise.all([
+      supabase
+        .from('transfer_package_images')
+        .select('package_id, public_url, alt_text, display_order')
+        .in('package_id', packageIds)
+        .order('display_order'),
       supabase
         .from('transfer_package_vehicles')
         .select('*')
@@ -1189,10 +1204,19 @@ export async function listTransferPackagesWithCardData(
     }
 
     // Group data by package_id
+    const packageImagesByPackage: { [key: string]: any[] } = {};
     const vehiclesByPackage: { [key: string]: any[] } = {};
     const vehicleImagesMap: { [key: string]: any[] } = {};
     const hourlyPricingByPackage: { [key: string]: any[] } = {};
     const p2pPricingByPackage: { [key: string]: any[] } = {};
+
+    // Group package images
+    (packageImagesResult.data || []).forEach(img => {
+      if (!packageImagesByPackage[img.package_id]) {
+        packageImagesByPackage[img.package_id] = [];
+      }
+      packageImagesByPackage[img.package_id]!.push(img);
+    });
 
     // Group vehicles
     (vehiclesResult.data || []).forEach(vehicle => {
@@ -1235,7 +1259,7 @@ export async function listTransferPackagesWithCardData(
 
       return {
         ...pkg,
-        images: [], // Not needed for card view
+        images: packageImagesByPackage[pkg.id] || [], // Package images for card carousel
         vehicles: pkgVehicles,
         stops: [], // Not needed for card view
         additional_services: [], // Not needed for card view

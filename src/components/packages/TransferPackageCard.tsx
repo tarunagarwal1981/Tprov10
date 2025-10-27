@@ -39,6 +39,12 @@ export interface TransferPackageCardData {
   status: 'draft' | 'published' | 'archived' | 'suspended';
   created_at: string;
   
+  // Package images (from transfer_package_images table)
+  images?: Array<{
+    public_url: string | null;
+    alt_text?: string | null;
+  }>;
+  
   // Vehicle data
   vehicles: Array<{
     id: string;
@@ -79,19 +85,41 @@ export const TransferPackageCard: React.FC<TransferPackageCardProps> = ({
   onDuplicate,
   onDelete,
 }) => {
-  // Collect all vehicle images
-  const vehicleImages = pkg.vehicles
-    .filter(v => v.vehicle_images && v.vehicle_images.length > 0)
-    .flatMap(v => 
-      v.vehicle_images
-        .filter(img => img.public_url) // Filter out null URLs
-        .map(img => ({
-          url: img.public_url!,
-          alt: img.alt_text || v.name,
-          vehicleName: v.name
-        }))
-    )
-    .slice(0, 5); // Limit to 5 images for performance
+  // Collect images: First package images, then vehicle images
+  const allImages = React.useMemo(() => {
+    const images: Array<{ url: string; alt: string; vehicleName?: string }> = [];
+    
+    // Add package-level images first (from transfer_package_images table)
+    if (pkg.images && pkg.images.length > 0) {
+      pkg.images
+        .filter(img => img.public_url)
+        .forEach(img => {
+          images.push({
+            url: img.public_url!,
+            alt: img.alt_text || pkg.title,
+          });
+        });
+    }
+    
+    // Then add vehicle images (from transfer_vehicle_images table)
+    pkg.vehicles
+      .filter(v => v.vehicle_images && v.vehicle_images.length > 0)
+      .forEach(v => {
+        v.vehicle_images
+          .filter(img => img.public_url)
+          .forEach(img => {
+            images.push({
+              url: img.public_url!,
+              alt: img.alt_text || v.name,
+              vehicleName: v.name
+            });
+          });
+      });
+    
+    return images.slice(0, 5); // Limit to 5 images for performance
+  }, [pkg.images, pkg.vehicles, pkg.title]);
+  
+  const vehicleImages = allImages; // Keep same variable name for compatibility
 
   // Carousel state
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
