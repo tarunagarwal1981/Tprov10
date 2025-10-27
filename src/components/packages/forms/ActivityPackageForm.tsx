@@ -117,41 +117,62 @@ const useFormValidation = (data: ActivityPackageFormData): FormValidation => {
       });
     }
 
-    if (!data.basicInformation.destination.name.trim()) {
+    // Destination validation - check city and country (the actual fields in the form)
+    if (!data.basicInformation.destination.city?.trim() || !data.basicInformation.destination.country?.trim()) {
       errors.push({
         tab: 'basic-info',
         field: 'destination',
-        message: 'Destination is required',
+        message: 'Destination city and country are required',
         severity: 'error',
       });
     }
 
     // Activity Details validation (now in basic-info tab)
+    // Note: Time slots and meeting point are now optional for draft packages
+    // They'll be validated only on publish
     if (data.activityDetails.operationalHours.timeSlots.length === 0) {
-      errors.push({
+      warnings.push({
         tab: 'basic-info',
         field: 'timeSlots',
-        message: 'At least one time slot is required',
-        severity: 'error',
+        message: 'Add at least one time slot for your activity',
       });
     }
 
     if (!data.activityDetails.meetingPoint.name.trim()) {
-      errors.push({
+      warnings.push({
         tab: 'basic-info',
         field: 'meetingPoint',
-        message: 'Meeting point is required',
-        severity: 'error',
+        message: 'Add a meeting point for better customer experience',
       });
     }
 
-    // Pricing validation
-    if (data.pricing.basePrice <= 0) {
+    // Pricing validation - check pricingOptions (new simplified pricing system)
+    if (!data.pricingOptions || (Array.isArray(data.pricingOptions) && data.pricingOptions.length === 0)) {
       errors.push({
         tab: 'pricing',
-        field: 'basePrice',
-        message: 'Base price must be greater than 0',
+        field: 'pricingOptions',
+        message: 'At least one pricing option is required',
         severity: 'error',
+      });
+    } else if (Array.isArray(data.pricingOptions)) {
+      // Validate each pricing option
+      data.pricingOptions.forEach((option: any, index: number) => {
+        if (!option.activityName?.trim()) {
+          errors.push({
+            tab: 'pricing',
+            field: `pricingOptions[${index}].activityName`,
+            message: `Pricing option ${index + 1}: Tour option name is required`,
+            severity: 'error',
+          });
+        }
+        if (!option.adultPrice || option.adultPrice <= 0) {
+          errors.push({
+            tab: 'pricing',
+            field: `pricingOptions[${index}].adultPrice`,
+            message: `Pricing option ${index + 1}: Adult price must be greater than 0`,
+            severity: 'error',
+          });
+        }
       });
     }
 
