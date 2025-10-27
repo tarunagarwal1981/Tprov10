@@ -170,11 +170,21 @@ export default function PackagesPage() {
 			const coverImage = pkg.activity_package_images?.find((img: any) => img.is_cover);
 			const imageUrl = coverImage?.public_url || pkg.activity_package_images?.[0]?.public_url || '';
 
+			// Map database status to display status
+			let displayStatus: 'DRAFT' | 'ACTIVE' | 'INACTIVE' = 'DRAFT';
+			if (pkg.status === 'published') {
+				displayStatus = 'ACTIVE';
+			} else if (pkg.status === 'draft') {
+				displayStatus = 'DRAFT';
+			} else if (pkg.status === 'archived' || pkg.status === 'suspended') {
+				displayStatus = 'INACTIVE';
+			}
+
 			return {
 				id: pkg.id,
 				title: pkg.title,
 				type: 'Activity',
-				status: pkg.status?.toUpperCase() as 'DRAFT' | 'ACTIVE' | 'INACTIVE',
+				status: displayStatus,
 				price: pkg.base_price || 0,
 				rating: 0,
 				reviews: 0,
@@ -282,13 +292,15 @@ export default function PackagesPage() {
 		const upperStatus = status?.toUpperCase();
 		switch (upperStatus) {
 			case 'PUBLISHED':
+			case 'ACTIVE':
 				return 'Active';
 			case 'DRAFT':
 				return 'Draft';
 			case 'ARCHIVED':
 				return 'Archived';
 			case 'SUSPENDED':
-				return 'Suspended';
+			case 'INACTIVE':
+				return 'Inactive';
 			default:
 				return status;
 		}
