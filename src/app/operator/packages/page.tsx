@@ -182,17 +182,17 @@ export default function PackagesPage() {
 					displayStatus = 'ARCHIVED';
 				}
 
-				// Fetch pricing options to calculate min/max price
-				const { data: pricingOptions } = await supabase
-					.from('activity_pricing_packages')
-					.select('adult_price')
-					.eq('activity_package_id', pkg.id);
+			// Fetch pricing options to calculate min/max price
+			const { data: pricingOptions } = await supabase
+				.from('activity_pricing_packages' as any)
+				.select('adult_price')
+				.eq('package_id', pkg.id);
 
 				let minPrice = pkg.base_price || 0;
 				let maxPrice = pkg.base_price || 0;
 
-				if (pricingOptions && pricingOptions.length > 0) {
-					const prices = pricingOptions.map(opt => opt.adult_price).filter(p => p > 0);
+				if (pricingOptions && Array.isArray(pricingOptions) && pricingOptions.length > 0) {
+					const prices = (pricingOptions as any[]).map((opt: any) => opt.adult_price).filter((p: number) => p > 0);
 					if (prices.length > 0) {
 						minPrice = Math.min(...prices);
 						maxPrice = Math.max(...prices);
@@ -458,156 +458,10 @@ export default function PackagesPage() {
 				}
 			}
 
-			toast.success('Package duplicated successfully');
-			
-			// Refresh the packages list
-			const fetchPackages = async () => {
-				const supabase = createClient();
-				const { data: { user } } = await supabase.auth.getUser();
-				
-				if (!user) return;
-
-				const [activityResult, transferResult, multiCityResult] = await Promise.all([
-					supabase
-						.from('activity_packages')
-						.select(`
-							id,
-							title,
-							short_description,
-							status,
-							base_price,
-							currency,
-							destination_city,
-							destination_country,
-							created_at,
-							published_at,
-							activity_package_images (
-								id,
-								public_url,
-								is_cover
-							)
-						`)
-						.eq('operator_id', user.id)
-						.order('created_at', { ascending: false }),
-					supabase
-						.from('transfer_packages' as any)
-						.select(`
-							id,
-							title,
-							short_description,
-							status,
-							base_price,
-							currency,
-							destination_city,
-							destination_country,
-							created_at,
-							published_at,
-							transfer_package_images (
-								id,
-								public_url,
-								is_cover
-							)
-						`)
-						.eq('operator_id', user.id)
-						.order('created_at', { ascending: false }),
-					supabase
-						.from('multi_city_packages' as any)
-						.select(`
-							id,
-							title,
-							short_description,
-							status,
-							base_price,
-							currency,
-							destination_region,
-							total_cities,
-							total_nights,
-							created_at,
-							published_at,
-							multi_city_package_images (
-								id,
-								public_url,
-								is_cover
-							)
-						`)
-						.eq('operator_id', user.id)
-						.order('created_at', { ascending: false })
-				]);
-
-				const activityPackages: Package[] = (activityResult.data || []).map((pkg: any) => {
-					const coverImage = pkg.activity_package_images?.find((img: any) => img.is_cover);
-					const imageUrl = coverImage?.public_url || pkg.activity_package_images?.[0]?.public_url || '';
-
-					return {
-						id: pkg.id,
-						title: pkg.title,
-						type: 'Activity',
-						status: pkg.status?.toUpperCase() as 'DRAFT' | 'ACTIVE' | 'INACTIVE',
-						price: pkg.base_price || 0,
-						rating: 0,
-						reviews: 0,
-						bookings: 0,
-						views: 0,
-						image: imageUrl,
-						createdAt: new Date(pkg.created_at),
-					};
-				});
-
-				const transferPackages: Package[] = (transferResult.data || []).map((pkg: any) => {
-					const coverImage = pkg.transfer_package_images?.find((img: any) => img.is_cover);
-					const imageUrl = coverImage?.public_url || pkg.transfer_package_images?.[0]?.public_url || '';
-
-					return {
-						id: pkg.id,
-						title: pkg.title,
-						type: 'Transfer',
-						status: pkg.status?.toUpperCase() as 'DRAFT' | 'ACTIVE' | 'INACTIVE',
-						price: pkg.base_price || 0,
-						rating: 0,
-						reviews: 0,
-						bookings: 0,
-						views: 0,
-						image: imageUrl,
-						createdAt: new Date(pkg.created_at),
-					};
-				});
-
-				const multiCityPackages: Package[] = (multiCityResult.data || []).map((pkg: any) => {
-					const coverImage = pkg.multi_city_package_images?.find((img: any) => img.is_cover);
-					const imageUrl = coverImage?.public_url || pkg.multi_city_package_images?.[0]?.public_url || '';
-
-					return {
-						id: pkg.id,
-						title: pkg.title,
-						type: 'Multi-City',
-						status: pkg.status?.toUpperCase() as 'DRAFT' | 'ACTIVE' | 'INACTIVE',
-						price: pkg.base_price || 0,
-						rating: 0,
-						reviews: 0,
-						bookings: 0,
-						views: 0,
-						image: imageUrl,
-						createdAt: new Date(pkg.created_at),
-					};
-				});
-
-				const allPackages = [...activityPackages, ...transferPackages, ...multiCityPackages]
-					.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-
-				setPackages(allPackages);
-
-				const activeCount = allPackages.filter(p => p.status === 'PUBLISHED' || p.status === 'ACTIVE').length;
-				const totalRevenue = allPackages.reduce((sum, p) => sum + (p.bookings * p.price), 0);
-				
-				setStats({
-					total: allPackages.length,
-					active: activeCount,
-					revenue: totalRevenue,
-					avgRating: 4.8,
-				});
-			};
-
-			await fetchPackages();
+		toast.success('Package duplicated successfully');
+		
+		// Reload the page to refresh the packages
+		window.location.reload();
 
 		} catch (error) {
 			console.error('Error duplicating package:', error);
@@ -663,12 +517,12 @@ export default function PackagesPage() {
 			// Remove from local state
 			setPackages(prev => prev.filter(p => p.id !== pkg.id));
 			
-			// Update stats
-			setStats(prev => ({
-				...prev,
-				total: prev.total - 1,
-				active: pkg.status === 'PUBLISHED' || pkg.status === 'ACTIVE' ? prev.active - 1 : prev.active,
-			}));
+		// Update stats
+		setStats(prev => ({
+			...prev,
+			total: prev.total - 1,
+			active: pkg.status === 'PUBLISHED' ? prev.active - 1 : prev.active,
+		}));
 
 		} catch (error) {
 			console.error('Error deleting package:', error);
@@ -730,7 +584,7 @@ export default function PackagesPage() {
 			// Status filter
 			if (statusFilter === 'ALL') return true;
 			const pkgStatus = pkg.status?.toUpperCase();
-			if (statusFilter === 'ACTIVE') return pkgStatus === 'PUBLISHED';
+			if (statusFilter === 'PUBLISHED') return pkgStatus === 'PUBLISHED';
 			return pkgStatus === statusFilter;
 		}).filter(pkg => {
 			// Search filter
