@@ -24,9 +24,10 @@ export default function CreateActivityPackagePage() {
   };
 
   const handlePublish = async (data: ActivityPackageFormData) => {
-    // Note: The actual publish logic should be implemented here
+    // Note: The actual publish logic is handled by the form's handlePublish
+    // This is just for post-publish actions
     try {
-      console.log("Publishing activity package:", data);
+      console.log("✅ Package published, redirecting...");
       toast.success("Activity package published successfully!");
       
       // Redirect to packages list after publish
