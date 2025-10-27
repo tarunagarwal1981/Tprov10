@@ -297,6 +297,56 @@ export async function updateActivityPackage(
   const supabase = createSupabaseBrowserClient();
   
   return withErrorHandling(async () => {
+    // Get the operator ID from the package
+    const { data: existingPackage } = await supabase
+      .from('activity_packages')
+      .select('operator_id')
+      .eq('id', id)
+      .single();
+    
+    const userId = existingPackage?.operator_id || '';
+
+    // Process images first - upload any base64 images to storage
+    const finalImages: ActivityPackageImageInsert[] = [];
+    
+    if (data.images && data.images.length > 0) {
+      // Separate base64 images from already uploaded images
+      const base64Images = data.images.filter(img => img.storage_path?.startsWith('data:'));
+      const alreadyUploadedImages = data.images.filter(img => !img.storage_path?.startsWith('data:'));
+      
+      if (base64Images.length > 0) {
+        // Convert base64 to files and upload
+        const files = base64Images.map(img => {
+          const fileName = img.file_name || `image_${Date.now()}.jpg`;
+          return base64ToFile(img.storage_path!, fileName);
+        });
+        
+        const uploadResults = await uploadImageFiles(files, userId, 'activity-packages-images');
+        
+        // Create image records with proper storage paths
+        const newImageRecords = uploadResults.map((result, index) => {
+          const base64Image = base64Images[index];
+          return {
+            package_id: id,
+            file_name: base64Image?.file_name || '',
+            file_size: base64Image?.file_size || 0,
+            mime_type: base64Image?.mime_type || 'image/jpeg',
+            storage_path: result.data?.path || '',
+            public_url: result.data?.publicUrl || '',
+            alt_text: base64Image?.alt_text || '',
+            is_cover: base64Image?.is_cover || false,
+            is_featured: base64Image?.is_featured || false,
+            display_order: base64Image?.display_order || 0,
+          };
+        });
+        
+        finalImages.push(...newImageRecords);
+      }
+      
+      // Add already uploaded images with package_id
+      finalImages.push(...alreadyUploadedImages.map(img => ({ ...img, package_id: id })));
+    }
+
     // Update the main package
     const { data: packageData, error: packageError } = await supabase
       .from('activity_packages')
@@ -322,31 +372,24 @@ export async function updateActivityPackage(
     };
 
     // Update related data if provided
-    if (data.images) {
+    if (finalImages.length > 0) {
       // Delete existing images and insert new ones
       await supabase
         .from('activity_package_images')
         .delete()
         .eq('package_id', id);
 
-      if (data.images.length > 0) {
-        const imagesWithPackageId = data.images.map(img => ({
-          ...img,
-          package_id: id,
-        }));
+      const { data: imagesData, error: imagesError } = await supabase
+        .from('activity_package_images')
+        .insert(finalImages)
+        .select();
 
-        const { data: imagesData, error: imagesError } = await supabase
-          .from('activity_package_images')
-          .insert(imagesWithPackageId)
-          .select();
-
-        if (imagesError) {
-          throw imagesError;
-        }
-        result.images = imagesData || [];
+      if (imagesError) {
+        throw imagesError;
       }
-    } else {
-      // Keep existing images
+      result.images = imagesData || [];
+    } else if (!data.images) {
+      // Keep existing images only if no images were provided in the update
       const { data: imagesData } = await supabase
         .from('activity_package_images')
         .select('*')

@@ -14,11 +14,14 @@ export default function CreateActivityPackagePage() {
   const [loading, setLoading] = useState(false);
   
   // Get package ID from URL params for edit mode
-  const packageId = searchParams.get('id');
+  const urlPackageId = searchParams.get('id');
   const isViewMode = searchParams.get('view') === 'true';
   
-  // Determine mode based on URL params
-  const mode = packageId ? 'edit' : 'create';
+  // Track the current package ID (from URL or newly created)
+  const [currentPackageId, setCurrentPackageId] = useState<string | null>(urlPackageId);
+  
+  // Determine mode based on package ID
+  const mode = currentPackageId ? 'edit' : 'create';
 
   const handleSave = async (data: ActivityPackageFormData) => {
     try {
@@ -36,12 +39,12 @@ export default function CreateActivityPackagePage() {
       // Transform form data to database format with draft status
       const dbData = formDataToDatabase(data, user.id, 'draft');
       
-      let savedPackageId = packageId;
+      let savedPackageId = currentPackageId;
       
       // Check if we're editing an existing package or creating a new one
-      if (packageId) {
+      if (currentPackageId) {
         // Update existing package
-        const { data: packageResult, error: packageError } = await updateActivityPackage(packageId, dbData);
+        const { data: packageResult, error: packageError } = await updateActivityPackage(currentPackageId, dbData);
         
         if (packageError) {
           console.error('Package update error:', packageError);
@@ -60,6 +63,15 @@ export default function CreateActivityPackagePage() {
         }
         
         savedPackageId = packageResult?.id || null;
+        
+        // Update the current package ID so subsequent saves update instead of create
+        if (savedPackageId) {
+          setCurrentPackageId(savedPackageId);
+          // Update URL to reflect the new package ID (without navigation)
+          const newUrl = `/operator/packages/create/activity?id=${savedPackageId}`;
+          window.history.replaceState({}, '', newUrl);
+        }
+        
         console.log('✅ Package saved:', packageResult);
         toast.success("Activity package draft saved successfully!");
       }
@@ -105,12 +117,12 @@ export default function CreateActivityPackagePage() {
       // Transform form data to database format with published status
       const dbData = formDataToDatabase(data, user.id, 'published');
       
-      let savedPackageId = packageId;
+      let savedPackageId = currentPackageId;
       
       // Check if we're editing an existing package or creating a new one
-      if (packageId) {
+      if (currentPackageId) {
         // Update existing package
-        const { data: packageResult, error: packageError } = await updateActivityPackage(packageId, dbData);
+        const { data: packageResult, error: packageError } = await updateActivityPackage(currentPackageId, dbData);
         
         if (packageError) {
           console.error('Package update error:', packageError);
@@ -129,6 +141,12 @@ export default function CreateActivityPackagePage() {
         }
         
         savedPackageId = packageResult?.id || null;
+        
+        // Update the current package ID
+        if (savedPackageId) {
+          setCurrentPackageId(savedPackageId);
+        }
+        
         console.log('✅ Package published:', packageResult);
         toast.success("Activity package published successfully!");
       }
@@ -174,7 +192,7 @@ export default function CreateActivityPackagePage() {
           onPublish={handlePublish}
           onPreview={handlePreview}
           mode={mode}
-          packageId={packageId || undefined}
+          packageId={currentPackageId || undefined}
           className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6"
         />
       </div>
