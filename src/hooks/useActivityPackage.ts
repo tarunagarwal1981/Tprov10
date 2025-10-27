@@ -50,8 +50,8 @@ export interface UseActivityPackageReturn {
   };
   
   // Actions
-  createPackage: (data: ActivityPackageFormData, status?: 'draft' | 'published' | 'inactive') => Promise<boolean>;
-  updatePackage: (data: ActivityPackageFormData, status?: 'draft' | 'published' | 'inactive') => Promise<boolean>;
+  createPackage: (data: ActivityPackageFormData, status?: 'draft' | 'published' | 'archived' | 'suspended') => Promise<boolean>;
+  updatePackage: (data: ActivityPackageFormData, status?: 'draft' | 'published' | 'archived' | 'suspended') => Promise<boolean>;
   deletePackage: () => Promise<boolean>;
   loadPackage: (id: string) => Promise<boolean>;
   loadPackages: (options?: ActivityPackageListOptions) => Promise<boolean>;
@@ -104,7 +104,7 @@ export const useActivityPackage = (
   // CRUD OPERATIONS
   // ============================================================================
 
-  const createPackage = useCallback(async (data: ActivityPackageFormData, status: 'draft' | 'published' | 'inactive' = 'draft'): Promise<boolean> => {
+  const createPackage = useCallback(async (data: ActivityPackageFormData, status: 'draft' | 'published' | 'archived' | 'suspended' = 'draft'): Promise<boolean> => {
     if (!user) {
       setError('You must be logged in to create packages');
       return false;
@@ -139,7 +139,7 @@ export const useActivityPackage = (
     }
   }, [user, handleError]);
 
-  const updatePackage = useCallback(async (data: ActivityPackageFormData, status: 'draft' | 'published' | 'inactive' = 'draft'): Promise<boolean> => {
+  const updatePackage = useCallback(async (data: ActivityPackageFormData, status: 'draft' | 'published' | 'archived' | 'suspended' = 'draft'): Promise<boolean> => {
     if (!user || !packageId) {
       setError('Missing user or package ID');
       return false;

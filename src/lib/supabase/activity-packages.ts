@@ -790,7 +790,7 @@ export async function updateActivityPackageImage(
 export function formDataToDatabase(
   formData: ActivityPackageFormData,
   operatorId: string,
-  status: 'draft' | 'published' | 'inactive' = 'draft'
+  status: 'draft' | 'published' | 'archived' | 'suspended' = 'draft'
 ): CreateActivityPackageData {
   const packageData: ActivityPackageInsert = {
     operator_id: operatorId,
