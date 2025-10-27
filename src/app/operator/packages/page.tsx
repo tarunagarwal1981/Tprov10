@@ -41,8 +41,9 @@ interface Package {
 	id: string;
 	title: string;
 	type: string;
-	status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED' | 'SUSPENDED' | 'ACTIVE' | 'INACTIVE';
+	status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED' | 'SUSPENDED';
 	price: number;
+	maxPrice?: number;
 	rating: number;
 	reviews: number;
 	bookings: number;
@@ -166,24 +167,78 @@ export default function PackagesPage() {
 		}
 
 		// Transform activity packages
-		const activityPackages: Package[] = (activityResult.data || []).map((pkg: any) => {
-			const coverImage = pkg.activity_package_images?.find((img: any) => img.is_cover);
-			const imageUrl = coverImage?.public_url || pkg.activity_package_images?.[0]?.public_url || '';
+		const activityPackages: Package[] = await Promise.all(
+			(activityResult.data || []).map(async (pkg: any) => {
+				const coverImage = pkg.activity_package_images?.find((img: any) => img.is_cover);
+				const imageUrl = coverImage?.public_url || pkg.activity_package_images?.[0]?.public_url || '';
+
+				// Map database status to display status
+				let displayStatus: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED' = 'DRAFT';
+				if (pkg.status === 'published') {
+					displayStatus = 'PUBLISHED';
+				} else if (pkg.status === 'draft') {
+					displayStatus = 'DRAFT';
+				} else if (pkg.status === 'archived' || pkg.status === 'suspended') {
+					displayStatus = 'ARCHIVED';
+				}
+
+				// Fetch pricing options to calculate min/max price
+				const { data: pricingOptions } = await supabase
+					.from('activity_pricing_packages')
+					.select('adult_price')
+					.eq('activity_package_id', pkg.id);
+
+				let minPrice = pkg.base_price || 0;
+				let maxPrice = pkg.base_price || 0;
+
+				if (pricingOptions && pricingOptions.length > 0) {
+					const prices = pricingOptions.map(opt => opt.adult_price).filter(p => p > 0);
+					if (prices.length > 0) {
+						minPrice = Math.min(...prices);
+						maxPrice = Math.max(...prices);
+					}
+				}
+
+				return {
+					id: pkg.id,
+					title: pkg.title,
+					type: 'Activity',
+					status: displayStatus,
+					price: minPrice,
+					maxPrice: maxPrice,
+					rating: 0,
+					reviews: 0,
+					bookings: 0,
+					views: 0,
+					image: imageUrl,
+					createdAt: new Date(pkg.created_at),
+				};
+			})
+		);
+
+		// Store transfer packages with full data for TransferPackageCard
+		const transferPackagesWithCardData = transferResult.data || [];
+		setTransferPackages(transferPackagesWithCardData);
+
+		// Transform multi-city packages
+		const multiCityPackages: Package[] = (multiCityResult.data || []).map((pkg: any) => {
+			const coverImage = pkg.multi_city_package_images?.find((img: any) => img.is_cover);
+			const imageUrl = coverImage?.public_url || pkg.multi_city_package_images?.[0]?.public_url || '';
 
 			// Map database status to display status
-			let displayStatus: 'DRAFT' | 'ACTIVE' | 'INACTIVE' = 'DRAFT';
+			let displayStatus: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED' = 'DRAFT';
 			if (pkg.status === 'published') {
-				displayStatus = 'ACTIVE';
+				displayStatus = 'PUBLISHED';
 			} else if (pkg.status === 'draft') {
 				displayStatus = 'DRAFT';
 			} else if (pkg.status === 'archived' || pkg.status === 'suspended') {
-				displayStatus = 'INACTIVE';
+				displayStatus = 'ARCHIVED';
 			}
 
 			return {
 				id: pkg.id,
 				title: pkg.title,
-				type: 'Activity',
+				type: 'Multi-City',
 				status: displayStatus,
 				price: pkg.base_price || 0,
 				rating: 0,
@@ -195,50 +250,14 @@ export default function PackagesPage() {
 			};
 		});
 
-		// Store transfer packages with full data for TransferPackageCard
-		const transferPackagesWithCardData = transferResult.data || [];
-		setTransferPackages(transferPackagesWithCardData);
-
-		// Transform multi-city packages
-		const multiCityPackages: Package[] = (multiCityResult.data || []).map((pkg: any) => {
-			const coverImage = pkg.multi_city_package_images?.find((img: any) => img.is_cover);
-			const imageUrl = coverImage?.public_url || pkg.multi_city_package_images?.[0]?.public_url || '';
-
-			// Debug logging for image data
-			if (pkg.multi_city_package_images && pkg.multi_city_package_images.length > 0) {
-				console.log(`Multi-City package "${pkg.title}" images:`, {
-					totalImages: pkg.multi_city_package_images.length,
-					coverImage: coverImage?.public_url || 'none',
-					firstImage: pkg.multi_city_package_images[0]?.public_url,
-					selectedImage: imageUrl,
-				});
-			} else {
-				console.log(`Multi-City package "${pkg.title}" has no images`);
-			}
-
-			return {
-				id: pkg.id,
-				title: pkg.title,
-				type: 'Multi-City',
-				status: pkg.status?.toUpperCase() as 'DRAFT' | 'ACTIVE' | 'INACTIVE',
-				price: pkg.base_price || 0,
-				rating: 0,
-				reviews: 0,
-				bookings: 0,
-				views: 0,
-				image: imageUrl,
-				createdAt: new Date(pkg.created_at),
-			};
-		});
-
-		// Combine non-transfer package types (transfer packages handled separately with custom card)
+		// Store packages separately by type for organized display
 		const allPackages = [...activityPackages, ...multiCityPackages]
 			.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
 			setPackages(allPackages);
 
 			// Update stats (including transfer packages in count)
-			const activeCount = allPackages.filter(p => p.status === 'PUBLISHED' || p.status === 'ACTIVE').length + 
+			const activeCount = allPackages.filter(p => p.status === 'PUBLISHED').length + 
 				transferPackagesWithCardData.filter(p => p.status === 'published').length;
 			const totalRevenue = allPackages.reduce((sum, p) => sum + (p.bookings * p.price), 0);
 			
@@ -260,12 +279,38 @@ export default function PackagesPage() {
 		fetchPackages();
 	}, []);
 
-	const filtered = useMemo(() => {
+	// Separate packages by type for organized display
+	const filteredActivityPackages = useMemo(() => {
 		return packages
+			.filter(p => p.type === 'Activity')
 			.filter(p => {
 				if (statusFilter === 'ALL') return true;
 				const pkgStatus = p.status?.toUpperCase();
-				if (statusFilter === 'ACTIVE') return pkgStatus === 'PUBLISHED' || pkgStatus === 'ACTIVE';
+				if (statusFilter === 'PUBLISHED') return pkgStatus === 'PUBLISHED';
+				return pkgStatus === statusFilter;
+			})
+			.filter(p => !searchQuery || p.title.toLowerCase().includes(searchQuery.toLowerCase()));
+	}, [packages, statusFilter, searchQuery]);
+
+	const filteredMultiCityPackages = useMemo(() => {
+		return packages
+			.filter(p => p.type === 'Multi-City')
+			.filter(p => {
+				if (statusFilter === 'ALL') return true;
+				const pkgStatus = p.status?.toUpperCase();
+				if (statusFilter === 'PUBLISHED') return pkgStatus === 'PUBLISHED';
+				return pkgStatus === statusFilter;
+			})
+			.filter(p => !searchQuery || p.title.toLowerCase().includes(searchQuery.toLowerCase()));
+	}, [packages, statusFilter, searchQuery]);
+
+	const filteredOtherPackages = useMemo(() => {
+		return packages
+			.filter(p => p.type !== 'Activity' && p.type !== 'Multi-City')
+			.filter(p => {
+				if (statusFilter === 'ALL') return true;
+				const pkgStatus = p.status?.toUpperCase();
+				if (statusFilter === 'PUBLISHED') return pkgStatus === 'PUBLISHED';
 				return pkgStatus === statusFilter;
 			})
 			.filter(p => !searchQuery || p.title.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -274,12 +319,10 @@ export default function PackagesPage() {
 	const getStatusColor = (status: string) => {
 		const upperStatus = status?.toUpperCase();
 		switch (upperStatus) {
-			case 'ACTIVE':
 			case 'PUBLISHED':
 				return 'bg-green-100 text-green-700 border-green-200';
 			case 'DRAFT':
 				return 'bg-yellow-100 text-yellow-700 border-yellow-200';
-			case 'INACTIVE':
 			case 'ARCHIVED':
 			case 'SUSPENDED':
 				return 'bg-gray-100 text-gray-700 border-gray-200';
@@ -292,15 +335,13 @@ export default function PackagesPage() {
 		const upperStatus = status?.toUpperCase();
 		switch (upperStatus) {
 			case 'PUBLISHED':
-			case 'ACTIVE':
-				return 'Active';
+				return 'Published';
 			case 'DRAFT':
 				return 'Draft';
 			case 'ARCHIVED':
 				return 'Archived';
 			case 'SUSPENDED':
-			case 'INACTIVE':
-				return 'Inactive';
+				return 'Suspended';
 			default:
 				return status;
 		}
@@ -730,7 +771,7 @@ export default function PackagesPage() {
 						<CardContent className="p-3">
 							<div className="flex items-center justify-between">
 								<div>
-									<p className="text-xs font-medium text-slate-600 mb-1">Active Packages</p>
+									<p className="text-xs font-medium text-slate-600 mb-1">Published Packages</p>
 									<p className="text-2xl font-bold text-slate-900">
 										<AnimatedNumber value={stats.active} />
 									</p>
@@ -798,17 +839,17 @@ export default function PackagesPage() {
 
 						{/* Right Controls */}
 						<div className="flex items-center gap-1.5 w-full lg:w-auto justify-end">
-							{/* Status Filter */}
-							<select
-								value={statusFilter}
-								onChange={(e) => setStatusFilter(e.target.value)}
-								className="px-3 py-1.5 border border-slate-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-900 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
-							>
-								<option value="ALL">All Status</option>
-								<option value="ACTIVE">Active</option>
-								<option value="DRAFT">Draft</option>
-								<option value="INACTIVE">Inactive</option>
-							</select>
+						{/* Status Filter */}
+						<select
+							value={statusFilter}
+							onChange={(e) => setStatusFilter(e.target.value)}
+							className="px-3 py-1.5 border border-slate-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-900 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+						>
+							<option value="ALL">All Status</option>
+							<option value="PUBLISHED">Published</option>
+							<option value="DRAFT">Draft</option>
+							<option value="ARCHIVED">Archived</option>
+						</select>
 
 							{/* View Toggle */}
 							<div className="flex items-center border border-slate-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-900">
@@ -875,17 +916,21 @@ export default function PackagesPage() {
 				</div>
 			)}
 
-			{/* No Results State */}
-			{!loading && packages.length > 0 && filtered.length === 0 && (
-				<div className="text-center py-12">
-					<SearchIcon className="w-16 h-16 mx-auto text-slate-300 mb-4" />
-					<h3 className="text-xl font-semibold text-slate-900 mb-2">No packages found</h3>
-					<p className="text-sm text-slate-600 mb-6">Try adjusting your search or filters</p>
-					<Button variant="outline" onClick={() => { setSearchQuery(''); setStatusFilter('ALL'); }}>
-						Clear Filters
-					</Button>
-				</div>
-			)}
+		{/* No Results State */}
+		{!loading && packages.length > 0 && 
+		 filteredTransferPackages.length === 0 && 
+		 filteredActivityPackages.length === 0 && 
+		 filteredMultiCityPackages.length === 0 && 
+		 filteredOtherPackages.length === 0 && (
+			<div className="text-center py-12">
+				<SearchIcon className="w-16 h-16 mx-auto text-slate-300 mb-4" />
+				<h3 className="text-xl font-semibold text-slate-900 mb-2">No packages found</h3>
+				<p className="text-sm text-slate-600 mb-6">Try adjusting your search or filters</p>
+				<Button variant="outline" onClick={() => { setSearchQuery(''); setStatusFilter('ALL'); }}>
+					Clear Filters
+				</Button>
+			</div>
+		)}
 
 			{/* Transfer Packages Section with New Card */}
 			{!loading && filteredTransferPackages.length > 0 && (
@@ -909,15 +954,15 @@ export default function PackagesPage() {
 				</div>
 			)}
 
-			{/* Other Packages Grid (Activity, Multi-City) */}
-			{!loading && filtered.length > 0 && (
-				<div className="mb-8">
-					<h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
-						<PackageIcon className="h-5 w-5 text-[#FF6B35]" />
-						Other Packages ({filtered.length})
-					</h2>
-					<div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-4'}>
-						{filtered.map((pkg) => (
+		{/* Activity Packages Section */}
+		{!loading && filteredActivityPackages.length > 0 && (
+			<div className="mb-8">
+				<h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+					<PackageIcon className="h-5 w-5 text-[#FF6B35]" />
+					Activity Packages ({filteredActivityPackages.length})
+				</h2>
+				<div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-4'}>
+					{filteredActivityPackages.map((pkg) => (
 						<motion.div
 							key={pkg.id}
 							initial={{ opacity: 0, y: 20 }}
@@ -961,16 +1006,20 @@ export default function PackagesPage() {
 									<h3 className="text-lg font-bold text-slate-900 mb-2 line-clamp-2">{pkg.title}</h3>
 									<p className="text-sm text-slate-600 mb-3">{pkg.type}</p>
 									
-									<div className="flex items-center justify-between mb-4">
-										<div className="flex items-center gap-1">
-											<Star className="w-4 h-4 text-amber-500 fill-amber-500" />
-											<span className="text-sm font-medium">{pkg.rating.toFixed(1)}</span>
-											<span className="text-xs text-slate-500">({pkg.reviews})</span>
-										</div>
-										<div className="text-lg font-bold text-[#FF6B35]">
-											${pkg.price.toFixed(2)}
-										</div>
+								<div className="flex items-center justify-between mb-4">
+									<div className="flex items-center gap-1">
+										<Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+										<span className="text-sm font-medium">{pkg.rating.toFixed(1)}</span>
+										<span className="text-xs text-slate-500">({pkg.reviews})</span>
 									</div>
+									<div className="text-lg font-bold text-[#FF6B35]">
+										{pkg.maxPrice && pkg.maxPrice > pkg.price ? (
+											<span className="text-sm">From ${pkg.price.toFixed(2)} - ${pkg.maxPrice.toFixed(2)}</span>
+										) : (
+											<span>${pkg.price.toFixed(2)}</span>
+										)}
+									</div>
+								</div>
 
 									<div className="flex items-center justify-between pt-3 border-t border-slate-200">
 										<div className="flex items-center gap-4 text-xs text-slate-600">
@@ -1026,6 +1075,250 @@ export default function PackagesPage() {
 					</div>
 				</div>
 			)}
+
+		{/* Multi-City Packages Section */}
+		{!loading && filteredMultiCityPackages.length > 0 && (
+			<div className="mb-8">
+				<h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+					<PackageIcon className="h-5 w-5 text-[#FF6B35]" />
+					Multi-City Packages ({filteredMultiCityPackages.length})
+				</h2>
+				<div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-4'}>
+					{filteredMultiCityPackages.map((pkg) => (
+					<motion.div
+						key={pkg.id}
+						initial={{ opacity: 0, y: 20 }}
+						animate={{ opacity: 1, y: 0 }}
+						transition={{ duration: 0.3 }}
+					>
+						<Card className="bg-white/80 dark:bg-zinc-900/70 backdrop-blur-sm border-slate-200/60 shadow-lg hover:shadow-xl transition-all overflow-hidden">
+							{/* Package Image */}
+							<div className="relative h-48 w-full bg-gradient-to-br from-slate-100 to-slate-200">
+								{pkg.image ? (
+									<Image 
+										src={pkg.image} 
+										alt={pkg.title}
+										fill
+										className="object-cover"
+										onError={(e) => {
+											// Hide the image and show placeholder instead
+											e.currentTarget.style.display = 'none';
+											const placeholder = e.currentTarget.parentElement?.querySelector('.image-placeholder') as HTMLElement;
+											if (placeholder) placeholder.style.display = 'flex';
+										}}
+									/>
+								) : null}
+								
+								{/* Placeholder when no image */}
+								<div 
+									className={`image-placeholder absolute inset-0 flex flex-col items-center justify-center text-slate-400 ${pkg.image ? 'hidden' : 'flex'}`}
+								>
+									<PackageIcon className="w-12 h-12 mb-2 opacity-50" />
+									<span className="text-sm font-medium">No Image</span>
+								</div>
+								
+								<div className="absolute top-2 right-2">
+									<Badge className={getStatusColor(pkg.status)}>
+										{getStatusLabel(pkg.status)}
+									</Badge>
+								</div>
+							</div>
+							
+							<CardContent className="p-4">
+								<h3 className="text-lg font-bold text-slate-900 mb-2 line-clamp-2">{pkg.title}</h3>
+								<p className="text-sm text-slate-600 mb-3">{pkg.type}</p>
+								
+							<div className="flex items-center justify-between mb-4">
+								<div className="flex items-center gap-1">
+									<Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+									<span className="text-sm font-medium">{pkg.rating.toFixed(1)}</span>
+									<span className="text-xs text-slate-500">({pkg.reviews})</span>
+								</div>
+								<div className="text-lg font-bold text-[#FF6B35]">
+									{pkg.maxPrice && pkg.maxPrice > pkg.price ? (
+										<span className="text-sm">From ${pkg.price.toFixed(2)} - ${pkg.maxPrice.toFixed(2)}</span>
+									) : (
+										<span>${pkg.price.toFixed(2)}</span>
+									)}
+								</div>
+							</div>
+
+								<div className="flex items-center justify-between pt-3 border-t border-slate-200">
+									<div className="flex items-center gap-4 text-xs text-slate-600">
+										<span className="flex items-center gap-1">
+											<Eye className="w-3 h-3" />
+											{pkg.views}
+										</span>
+										<span>{pkg.bookings} bookings</span>
+									</div>
+
+									<DropdownMenu>
+										<DropdownMenuTrigger asChild>
+											<Button variant="ghost" size="sm" className="hover:bg-slate-100">
+												<MoreVertical className="w-4 h-4" />
+											</Button>
+										</DropdownMenuTrigger>
+										<DropdownMenuContent align="end" className="bg-white border border-slate-200 shadow-lg">
+											<DropdownMenuItem 
+												className="cursor-pointer hover:bg-slate-50 text-slate-700"
+												onClick={() => handleViewPackage(pkg)}
+											>
+												<Eye className="w-4 h-4 mr-2" />
+												View
+											</DropdownMenuItem>
+											<DropdownMenuItem 
+												className="cursor-pointer hover:bg-slate-50 text-slate-700"
+												onClick={() => handleEditPackage(pkg)}
+											>
+												<Edit className="w-4 h-4 mr-2" />
+												Edit
+											</DropdownMenuItem>
+											<DropdownMenuItem 
+												className="cursor-pointer hover:bg-slate-50 text-slate-700"
+												onClick={() => handleDuplicatePackage(pkg)}
+											>
+												<Copy className="w-4 h-4 mr-2" />
+												Duplicate
+											</DropdownMenuItem>
+											<DropdownMenuItem 
+												className="cursor-pointer hover:bg-red-50 text-red-600"
+												onClick={() => handleDeletePackage(pkg)}
+											>
+												<Trash className="w-4 h-4 mr-2" />
+												Delete
+											</DropdownMenuItem>
+										</DropdownMenuContent>
+									</DropdownMenu>
+								</div>
+							</CardContent>
+						</Card>
+					</motion.div>
+				))}
+				</div>
+			</div>
+		)}
+
+		{/* Other Package Types Section (for future package types) */}
+		{!loading && filteredOtherPackages.length > 0 && (
+			<div className="mb-8">
+				<h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+					<PackageIcon className="h-5 w-5 text-[#FF6B35]" />
+					Other Packages ({filteredOtherPackages.length})
+				</h2>
+				<div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-4'}>
+					{filteredOtherPackages.map((pkg) => (
+					<motion.div
+						key={pkg.id}
+						initial={{ opacity: 0, y: 20 }}
+						animate={{ opacity: 1, y: 0 }}
+						transition={{ duration: 0.3 }}
+					>
+						<Card className="bg-white/80 dark:bg-zinc-900/70 backdrop-blur-sm border-slate-200/60 shadow-lg hover:shadow-xl transition-all overflow-hidden">
+							{/* Package Image */}
+							<div className="relative h-48 w-full bg-gradient-to-br from-slate-100 to-slate-200">
+								{pkg.image ? (
+									<Image 
+										src={pkg.image} 
+										alt={pkg.title}
+										fill
+										className="object-cover"
+										onError={(e) => {
+											// Hide the image and show placeholder instead
+											e.currentTarget.style.display = 'none';
+											const placeholder = e.currentTarget.parentElement?.querySelector('.image-placeholder') as HTMLElement;
+											if (placeholder) placeholder.style.display = 'flex';
+										}}
+									/>
+								) : null}
+								
+								{/* Placeholder when no image */}
+								<div 
+									className={`image-placeholder absolute inset-0 flex flex-col items-center justify-center text-slate-400 ${pkg.image ? 'hidden' : 'flex'}`}
+								>
+									<PackageIcon className="w-12 h-12 mb-2 opacity-50" />
+									<span className="text-sm font-medium">No Image</span>
+								</div>
+								
+								<div className="absolute top-2 right-2">
+									<Badge className={getStatusColor(pkg.status)}>
+										{getStatusLabel(pkg.status)}
+									</Badge>
+								</div>
+							</div>
+							
+							<CardContent className="p-4">
+								<h3 className="text-lg font-bold text-slate-900 mb-2 line-clamp-2">{pkg.title}</h3>
+								<p className="text-sm text-slate-600 mb-3">{pkg.type}</p>
+								
+							<div className="flex items-center justify-between mb-4">
+								<div className="flex items-center gap-1">
+									<Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+									<span className="text-sm font-medium">{pkg.rating.toFixed(1)}</span>
+									<span className="text-xs text-slate-500">({pkg.reviews})</span>
+								</div>
+								<div className="text-lg font-bold text-[#FF6B35]">
+									{pkg.maxPrice && pkg.maxPrice > pkg.price ? (
+										<span className="text-sm">From ${pkg.price.toFixed(2)} - ${pkg.maxPrice.toFixed(2)}</span>
+									) : (
+										<span>${pkg.price.toFixed(2)}</span>
+									)}
+								</div>
+							</div>
+
+								<div className="flex items-center justify-between pt-3 border-t border-slate-200">
+									<div className="flex items-center gap-4 text-xs text-slate-600">
+										<span className="flex items-center gap-1">
+											<Eye className="w-3 h-3" />
+											{pkg.views}
+										</span>
+										<span>{pkg.bookings} bookings</span>
+									</div>
+
+									<DropdownMenu>
+										<DropdownMenuTrigger asChild>
+											<Button variant="ghost" size="sm" className="hover:bg-slate-100">
+												<MoreVertical className="w-4 h-4" />
+											</Button>
+										</DropdownMenuTrigger>
+										<DropdownMenuContent align="end" className="bg-white border border-slate-200 shadow-lg">
+											<DropdownMenuItem 
+												className="cursor-pointer hover:bg-slate-50 text-slate-700"
+												onClick={() => handleViewPackage(pkg)}
+											>
+												<Eye className="w-4 h-4 mr-2" />
+												View
+											</DropdownMenuItem>
+											<DropdownMenuItem 
+												className="cursor-pointer hover:bg-slate-50 text-slate-700"
+												onClick={() => handleEditPackage(pkg)}
+											>
+												<Edit className="w-4 h-4 mr-2" />
+												Edit
+											</DropdownMenuItem>
+											<DropdownMenuItem 
+												className="cursor-pointer hover:bg-slate-50 text-slate-700"
+												onClick={() => handleDuplicatePackage(pkg)}
+											>
+												<Copy className="w-4 h-4 mr-2" />
+												Duplicate
+											</DropdownMenuItem>
+											<DropdownMenuItem 
+												className="cursor-pointer hover:bg-red-50 text-red-600"
+												onClick={() => handleDeletePackage(pkg)}
+											>
+												<Trash className="w-4 h-4 mr-2" />
+												Delete
+											</DropdownMenuItem>
+										</DropdownMenuContent>
+									</DropdownMenu>
+								</div>
+							</CardContent>
+						</Card>
+					</motion.div>
+				))}
+				</div>
+			</div>
+		)}
 		</div>
 	);
 }
