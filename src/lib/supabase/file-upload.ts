@@ -51,15 +51,17 @@ export async function uploadFile({
     // Create the file path: userId/folder/filename
     const filePath = folder ? `${userId}/${folder}/${finalFileName}` : `${userId}/${finalFileName}`;
     
-    // Upload the file with explicit contentType (don't pass file_size in metadata - Supabase handles it)
+    // Convert File to Blob to work around Supabase file_size bug
+    // Supabase has a bug where it converts file.size to string internally
+    const blob = new Blob([file], { type: file.type || 'image/jpeg' });
+    
+    // Upload the blob (this bypasses Supabase's buggy File handling)
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from(bucket)
-      .upload(filePath, file, {
-        contentType: file.type,
+      .upload(filePath, blob, {
+        contentType: file.type || 'image/jpeg',
         cacheControl: '3600',
         upsert: false
-        // IMPORTANT: Never pass file_size in metadata - Supabase determines this automatically
-        // Passing file_size causes "column file_size is of type bigint but expression is of type text" error
       });
 
     if (uploadError) {
