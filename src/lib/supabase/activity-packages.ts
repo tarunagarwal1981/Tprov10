@@ -427,15 +427,15 @@ export async function updateActivityPackage(
         .delete()
         .eq('package_id', id);
 
-      const { data: imagesData, error: imagesError } = await supabase
-        .from('activity_package_images')
+        const { data: imagesData, error: imagesError } = await supabase
+          .from('activity_package_images')
         .insert(finalImages)
-        .select();
+          .select();
 
-      if (imagesError) {
+        if (imagesError) {
         console.error('❌ [updateActivityPackage] Error inserting images', imagesError);
-        throw imagesError;
-      }
+          throw imagesError;
+        }
       
       console.log('✅ [updateActivityPackage] Images saved to database', {
         savedCount: imagesData?.length || 0,
@@ -447,7 +447,7 @@ export async function updateActivityPackage(
         }))
       });
       
-      result.images = imagesData || [];
+        result.images = imagesData || [];
     } else if (!data.images) {
       // Keep existing images only if no images were provided in the update
       const { data: imagesData } = await supabase
