@@ -806,20 +806,20 @@ export default function PackagesPage() {
 				</div>
 			)}
 
-			{/* Empty State */}
-			{!loading && packages.length === 0 && (
-				<div className="text-center py-12">
-					<PackageIcon className="w-16 h-16 mx-auto text-slate-300 mb-4" />
-					<h3 className="text-xl font-semibold text-slate-900 mb-2">No packages yet</h3>
-					<p className="text-sm text-slate-600 mb-6">Create your first package to get started</p>
-					<Link href="/operator/packages/create">
-						<Button className="bg-gradient-to-r from-[#FF6B35] to-[#FF4B8C] hover:from-[#E05A2A] hover:to-[#E04080]">
-							<Plus className="w-4 h-4 mr-2" />
-							Create Your First Package
-						</Button>
-					</Link>
-				</div>
-			)}
+		{/* Empty State */}
+		{!loading && packages.length === 0 && transferPackages.length === 0 && activityPackages.length === 0 && (
+			<div className="text-center py-12">
+				<PackageIcon className="w-16 h-16 mx-auto text-slate-300 mb-4" />
+				<h3 className="text-xl font-semibold text-slate-900 mb-2">No packages yet</h3>
+				<p className="text-sm text-slate-600 mb-6">Create your first package to get started</p>
+				<Link href="/operator/packages/create">
+					<Button className="bg-gradient-to-r from-[#FF6B35] to-[#FF4B8C] hover:from-[#E05A2A] hover:to-[#E04080]">
+						<Plus className="w-4 h-4 mr-2" />
+						Create Your First Package
+					</Button>
+				</Link>
+			</div>
+		)}
 
 		{/* No Results State */}
 		{!loading && packages.length > 0 && 
