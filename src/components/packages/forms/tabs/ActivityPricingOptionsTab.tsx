@@ -181,11 +181,11 @@ const SimplePricingCard: React.FC<SimplePricingCardProps> = ({
 
           {/* Action Buttons */}
           <div className="flex gap-2 pt-4 border-t">
-            <Button onClick={handleSave} className="package-button-fix">
+            <Button type="button" onClick={handleSave} className="package-button-fix">
               <FaCheck className="h-4 w-4 mr-2" />
               Save
             </Button>
-            <Button onClick={handleCancel} variant="outline" className="package-button-fix">
+            <Button type="button" onClick={handleCancel} variant="outline" className="package-button-fix">
               <FaTimes className="h-4 w-4 mr-2" />
               Cancel
             </Button>
@@ -217,6 +217,7 @@ const SimplePricingCard: React.FC<SimplePricingCardProps> = ({
 
           <div className="flex items-center gap-2">
             <Button
+              type="button"
               size="sm"
               variant="ghost"
               onClick={() => onEdit(option.id)}
@@ -225,6 +226,7 @@ const SimplePricingCard: React.FC<SimplePricingCardProps> = ({
               <FaEdit className="h-3 w-3" />
             </Button>
             <Button
+              type="button"
               size="sm"
               variant="ghost"
               onClick={() => onRemove(option.id)}
@@ -361,6 +363,7 @@ export const ActivityPricingOptionsTab: React.FC = () => {
         {/* Add Pricing Option Button - Below all pricing sections */}
         <div className="flex justify-center pt-4">
           <Button
+            type="button"
             onClick={handleAddOption}
             variant="outline"
             size="lg"
