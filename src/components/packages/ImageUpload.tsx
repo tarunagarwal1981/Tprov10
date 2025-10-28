@@ -670,56 +670,6 @@ const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
 
 export default ImageUpload;
 
-          state.isDragOver && !disabled
-
-            ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
-
-            : "border-gray-300 dark:border-gray-600",
-
-          disabled && "opacity-50 cursor-not-allowed"
-
-        )}
-
-        onDragOver={handleDragOver}
-
-        onDragLeave={handleDragLeave}
-
-        onDrop={handleDrop}
-
-      >
-
-        <CardContent className="p-6">
-
-          <div className="text-center">
-
-            <FaUpload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-
-            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
-
-              Upload Images
-
-            </h3>
-
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-
-              Drag and drop images here, or click to browse
-
-            </p>
-
-            <div className="flex flex-col sm:flex-row gap-2 justify-center">
-
-              <Button
-
-                type="button"
-
-                variant="outline"
-
-                onClick={handleBrowseClick}
-
-                disabled={disabled || state.isUploading}
-
-                className="package-button-fix"
-
               >
 
                 <FaImage className="h-4 w-4 mr-2" />
