@@ -87,18 +87,14 @@ export default function CreateActivityPackagePage() {
         toast.success("Activity package draft saved successfully!");
       }
       
-      // Save pricing packages if they exist
+      // Save pricing packages with vehicles if they exist
       if (savedPackageId && data.pricingOptions && Array.isArray(data.pricingOptions)) {
         try {
           console.log('💾 Saving pricing options for package:', savedPackageId);
-          const { savePricingPackages, convertSimpleToPricingPackage } = await import('@/lib/supabase/activity-pricing-simple');
-          // Convert simple pricing options to full format
-          const fullPricingPackages = data.pricingOptions.map((opt: any, index: number) => 
-            convertSimpleToPricingPackage(opt, index)
-          );
-          console.log('💾 Converted pricing packages:', fullPricingPackages);
-          await savePricingPackages(savedPackageId, fullPricingPackages);
-          console.log('✅ Pricing options saved successfully');
+          const { savePricingPackagesWithVehicles } = await import('@/lib/supabase/activity-pricing-simple');
+          // Save pricing packages and their associated vehicles
+          await savePricingPackagesWithVehicles(savedPackageId, data.pricingOptions);
+          console.log('✅ Pricing options and vehicles saved successfully');
         } catch (pricingError) {
           console.error('❌ Error saving pricing packages:', pricingError);
           // Don't fail the entire save if pricing fails
@@ -173,17 +169,14 @@ export default function CreateActivityPackagePage() {
         toast.success("Activity package published successfully!");
       }
       
-      // Save pricing packages if they exist
+      // Save pricing packages with vehicles if they exist
       if (savedPackageId && data.pricingOptions && Array.isArray(data.pricingOptions)) {
         try {
           console.log('💾 Saving pricing options for package:', savedPackageId);
-          const { savePricingPackages, convertSimpleToPricingPackage } = await import('@/lib/supabase/activity-pricing-simple');
-          // Convert simple pricing options to full format
-          const fullPricingPackages = data.pricingOptions.map((opt: any, index: number) => 
-            convertSimpleToPricingPackage(opt, index)
-          );
-          await savePricingPackages(savedPackageId, fullPricingPackages);
-          console.log('✅ Pricing options saved successfully');
+          const { savePricingPackagesWithVehicles } = await import('@/lib/supabase/activity-pricing-simple');
+          // Save pricing packages and their associated vehicles
+          await savePricingPackagesWithVehicles(savedPackageId, data.pricingOptions);
+          console.log('✅ Pricing options and vehicles saved successfully');
         } catch (pricingError) {
           console.error('❌ Error saving pricing packages:', pricingError);
         }

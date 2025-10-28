@@ -10,6 +10,7 @@ import {
   FaEdit,
   FaCheck,
   FaTimes,
+  FaCar,
 } from "react-icons/fa";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -26,6 +27,36 @@ const PACKAGE_TYPE_OPTIONS = [
   { value: 'SHARED_TRANSFER', label: 'Shared Transfer' },
 ];
 
+// Standard vehicle types
+const VEHICLE_TYPES = [
+  'Sedan',
+  'SUV',
+  'Van',
+  'Mini Bus',
+  'Bus',
+  'Luxury Sedan',
+  'Luxury SUV',
+  'Others'
+];
+
+// Vehicle categories
+const VEHICLE_CATEGORIES = [
+  'Economy',
+  'Standard',
+  'Premium',
+  'Luxury',
+  'Group Transport'
+];
+
+// Vehicle interface for private transfers
+export interface PackageVehicle {
+  id: string;
+  vehicleType: string; // Standard type or custom when "Others" selected
+  maxCapacity: number;
+  vehicleCategory: string;
+  description?: string;
+}
+
 // Simple pricing option interface
 interface SimplePricingOption {
   id: string;
@@ -35,6 +66,7 @@ interface SimplePricingOption {
   childPrice: number;
   childMinAge: number;
   childMaxAge: number;
+  vehicles?: PackageVehicle[]; // Only for PRIVATE_TRANSFER
 }
 
 // ============================================================================
@@ -179,6 +211,163 @@ const SimplePricingCard: React.FC<SimplePricingCardProps> = ({
             </div>
           </div>
 
+          {/* Vehicles Section - Only for PRIVATE_TRANSFER */}
+          {editData.packageType === 'PRIVATE_TRANSFER' && (
+            <div className="space-y-4 pt-4 border-t">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <FaCar className="h-4 w-4 text-blue-600" />
+                  <label className="text-sm font-semibold">Vehicles</label>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    const newVehicle: PackageVehicle = {
+                      id: `vehicle-${Date.now()}`,
+                      vehicleType: 'Sedan',
+                      maxCapacity: 4,
+                      vehicleCategory: 'Standard',
+                      description: '',
+                    };
+                    setEditData({
+                      ...editData,
+                      vehicles: [...(editData.vehicles || []), newVehicle],
+                    });
+                  }}
+                  className="package-button-fix"
+                >
+                  <FaPlus className="h-3 w-3 mr-1" />
+                  Add Vehicle
+                </Button>
+              </div>
+
+              {/* Vehicle List */}
+              {editData.vehicles && editData.vehicles.length > 0 ? (
+                <div className="space-y-3">
+                  {editData.vehicles.map((vehicle, vIndex) => (
+                    <div key={vehicle.id} className="p-4 border rounded-lg bg-gray-50 dark:bg-gray-800 space-y-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Vehicle {vIndex + 1}
+                        </span>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setEditData({
+                              ...editData,
+                              vehicles: editData.vehicles?.filter((v) => v.id !== vehicle.id),
+                            });
+                          }}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <FaTrash className="h-3 w-3" />
+                        </Button>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {/* Vehicle Type */}
+                        <div>
+                          <label className="text-xs font-medium">Vehicle Type *</label>
+                          <Select
+                            value={vehicle.vehicleType}
+                            onValueChange={(value) => {
+                              const updatedVehicles = editData.vehicles?.map((v) =>
+                                v.id === vehicle.id ? { ...v, vehicleType: value } : v
+                              );
+                              setEditData({ ...editData, vehicles: updatedVehicles });
+                            }}
+                          >
+                            <SelectTrigger className="package-text-fix">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {VEHICLE_TYPES.map((type) => (
+                                <SelectItem key={type} value={type}>
+                                  {type}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {/* Max Capacity */}
+                        <div>
+                          <label className="text-xs font-medium">Max Capacity *</label>
+                          <Input
+                            type="number"
+                            min="1"
+                            value={vehicle.maxCapacity}
+                            onChange={(e) => {
+                              const value = parseInt(e.target.value) || 1;
+                              const updatedVehicles = editData.vehicles?.map((v) =>
+                                v.id === vehicle.id ? { ...v, maxCapacity: value } : v
+                              );
+                              setEditData({ ...editData, vehicles: updatedVehicles });
+                            }}
+                            placeholder="e.g., 4"
+                            className="package-text-fix"
+                          />
+                        </div>
+
+                        {/* Vehicle Category */}
+                        <div>
+                          <label className="text-xs font-medium">Category *</label>
+                          <Select
+                            value={vehicle.vehicleCategory}
+                            onValueChange={(value) => {
+                              const updatedVehicles = editData.vehicles?.map((v) =>
+                                v.id === vehicle.id ? { ...v, vehicleCategory: value } : v
+                              );
+                              setEditData({ ...editData, vehicles: updatedVehicles });
+                            }}
+                          >
+                            <SelectTrigger className="package-text-fix">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {VEHICLE_CATEGORIES.map((cat) => (
+                                <SelectItem key={cat} value={cat}>
+                                  {cat}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {/* Custom Vehicle Type (if "Others" selected) */}
+                        {vehicle.vehicleType === 'Others' && (
+                          <div>
+                            <label className="text-xs font-medium">Custom Vehicle Type *</label>
+                            <Input
+                              type="text"
+                              value={vehicle.description || ''}
+                              onChange={(e) => {
+                                const updatedVehicles = editData.vehicles?.map((v) =>
+                                  v.id === vehicle.id ? { ...v, description: e.target.value } : v
+                                );
+                                setEditData({ ...editData, vehicles: updatedVehicles });
+                              }}
+                              placeholder="Enter custom vehicle type"
+                              className="package-text-fix"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-4 text-sm text-gray-500">
+                  No vehicles added. Click "Add Vehicle" to add a vehicle.
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Action Buttons */}
           <div className="flex gap-2 pt-4 border-t">
             <Button type="button" onClick={handleSave} className="package-button-fix">
@@ -248,6 +437,35 @@ const SimplePricingCard: React.FC<SimplePricingCardProps> = ({
             <p className="text-lg font-bold text-blue-600">{currency}{option.childPrice.toFixed(2)}</p>
           </div>
         </div>
+
+        {/* Vehicles Summary - Only for PRIVATE_TRANSFER */}
+        {option.packageType === 'PRIVATE_TRANSFER' && option.vehicles && option.vehicles.length > 0 && (
+          <div className="mt-3 pt-3 border-t">
+            <div className="flex items-center gap-2 mb-2">
+              <FaCar className="h-3 w-3 text-blue-600" />
+              <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">Available Vehicles ({option.vehicles.length})</p>
+            </div>
+            <div className="space-y-2">
+              {option.vehicles.map((vehicle, idx) => (
+                <div key={vehicle.id} className="text-xs p-2 bg-gray-100 dark:bg-gray-700 rounded">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <span className="font-medium">
+                        {vehicle.vehicleType === 'Others' && vehicle.description
+                          ? vehicle.description
+                          : vehicle.vehicleType}
+                      </span>
+                      <span className="text-gray-500 dark:text-gray-400 ml-2">({vehicle.vehicleCategory})</span>
+                    </div>
+                    <span className="text-gray-600 dark:text-gray-400">
+                      Max {vehicle.maxCapacity} pax
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </motion.div>
   );
