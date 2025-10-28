@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useMemo } from "react";
 import { useFormContext } from "react-hook-form";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -263,17 +263,18 @@ export const ActivityPricingOptionsTab: React.FC = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Handle both old and new pricing format
+  // Handle both old and new pricing format - wrapped in useMemo to stabilize dependency
   const rawPricingOptions = watch('pricingOptions');
-  let pricingOptions: SimplePricingOption[] = [];
-  
-  // Convert old format to new format if needed
-  if (Array.isArray(rawPricingOptions)) {
-    pricingOptions = rawPricingOptions as SimplePricingOption[];
-  } else if (rawPricingOptions && typeof rawPricingOptions === 'object') {
-    // Old format with ticketOnlyOptions/ticketWithTransferOptions - ignore for now
-    pricingOptions = [];
-  }
+  const pricingOptions: SimplePricingOption[] = useMemo(() => {
+    // Convert old format to new format if needed
+    if (Array.isArray(rawPricingOptions)) {
+      return rawPricingOptions as SimplePricingOption[];
+    } else if (rawPricingOptions && typeof rawPricingOptions === 'object') {
+      // Old format with ticketOnlyOptions/ticketWithTransferOptions - ignore for now
+      return [];
+    }
+    return [];
+  }, [rawPricingOptions]);
   
   const currency = watch('pricing.currency') || 'USD';
 
