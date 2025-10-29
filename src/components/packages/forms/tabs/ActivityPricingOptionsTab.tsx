@@ -362,7 +362,7 @@ const SimplePricingCard: React.FC<SimplePricingCardProps> = ({
                 </div>
               ) : (
                 <div className="text-center py-4 text-sm text-gray-500">
-                  No vehicles added. Click "Add Vehicle" to add a vehicle.
+                  No vehicles added. Click &quot;Add Vehicle&quot; to add a vehicle.
                 </div>
               )}
             </div>
