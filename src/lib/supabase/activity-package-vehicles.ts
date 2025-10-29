@@ -197,6 +197,7 @@ export async function saveVehiclesForPricingPackage(
   // Process each vehicle
   for (let i = 0; i < vehicles.length; i++) {
     const vehicle = vehicles[i];
+    if (!vehicle) continue; // Skip if vehicle is undefined
     // Determine if this is an update or create based on whether ID exists in database
     const isUpdate = vehicle.id && !vehicle.id.startsWith('vehicle-') && existingIds.has(vehicle.id);
     
