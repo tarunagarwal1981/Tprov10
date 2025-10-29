@@ -16,6 +16,7 @@ interface VehicleRow {
   vehicle_type: string;
   max_capacity: number;
   vehicle_category: string;
+  price: number;
   description: string | null;
   display_order: number;
   created_at: string;
@@ -35,6 +36,7 @@ function rowToVehicle(row: VehicleRow): PackageVehicle {
     vehicleType: row.vehicle_type,
     maxCapacity: row.max_capacity,
     vehicleCategory: row.vehicle_category,
+    price: row.price,
     description: row.description || undefined,
   };
 }
@@ -52,6 +54,7 @@ function vehicleToRow(
     vehicle_type: vehicle.vehicleType,
     max_capacity: vehicle.maxCapacity,
     vehicle_category: vehicle.vehicleCategory,
+    price: vehicle.price || 0,
     description: vehicle.description || null,
     display_order: displayOrder,
   };

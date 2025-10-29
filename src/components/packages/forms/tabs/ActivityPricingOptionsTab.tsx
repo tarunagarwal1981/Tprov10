@@ -54,6 +54,7 @@ export interface PackageVehicle {
   vehicleType: string; // Standard type or custom when "Others" selected
   maxCapacity: number;
   vehicleCategory: string;
+  price: number; // Price for this vehicle option
   description?: string;
 }
 
@@ -129,9 +130,21 @@ const SimplePricingCard: React.FC<SimplePricingCardProps> = ({
             <label className="text-sm font-medium">Package Type *</label>
             <Select
               value={editData.packageType}
-              onValueChange={(value: SimplePricingOption['packageType']) => 
-                setEditData({ ...editData, packageType: value })
-              }
+              onValueChange={(value: SimplePricingOption['packageType']) => {
+                const newData = { ...editData, packageType: value };
+                // Initialize with one vehicle when PRIVATE_TRANSFER is selected
+                if (value === 'PRIVATE_TRANSFER' && (!newData.vehicles || newData.vehicles.length === 0)) {
+                  newData.vehicles = [{
+                    id: `vehicle-${Date.now()}`,
+                    vehicleType: 'Sedan',
+                    maxCapacity: 4,
+                    vehicleCategory: 'Standard',
+                    price: 0,
+                    description: '',
+                  }];
+                }
+                setEditData(newData);
+              }}
             >
               <SelectTrigger className="package-text-fix">
                 <SelectValue placeholder="Select package type" />
@@ -229,6 +242,7 @@ const SimplePricingCard: React.FC<SimplePricingCardProps> = ({
                       vehicleType: 'Sedan',
                       maxCapacity: 4,
                       vehicleCategory: 'Standard',
+                      price: 0,
                       description: '',
                     };
                     setEditData({
@@ -268,7 +282,7 @@ const SimplePricingCard: React.FC<SimplePricingCardProps> = ({
                         </Button>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
                         {/* Vehicle Type */}
                         <div>
                           <label className="text-xs font-medium">Vehicle Type *</label>
@@ -338,25 +352,45 @@ const SimplePricingCard: React.FC<SimplePricingCardProps> = ({
                           </Select>
                         </div>
 
-                        {/* Custom Vehicle Type (if "Others" selected) */}
-                        {vehicle.vehicleType === 'Others' && (
-                          <div>
-                            <label className="text-xs font-medium">Custom Vehicle Type *</label>
-                            <Input
-                              type="text"
-                              value={vehicle.description || ''}
-                              onChange={(e) => {
-                                const updatedVehicles = editData.vehicles?.map((v) =>
-                                  v.id === vehicle.id ? { ...v, description: e.target.value } : v
-                                );
-                                setEditData({ ...editData, vehicles: updatedVehicles });
-                              }}
-                              placeholder="Enter custom vehicle type"
-                              className="package-text-fix"
-                            />
-                          </div>
-                        )}
+                        {/* Price */}
+                        <div>
+                          <label className="text-xs font-medium">Price ({currency}) *</label>
+                          <Input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={vehicle.price || ''}
+                            onChange={(e) => {
+                              const value = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                              const updatedVehicles = editData.vehicles?.map((v) =>
+                                v.id === vehicle.id ? { ...v, price: isNaN(value) ? 0 : value } : v
+                              );
+                              setEditData({ ...editData, vehicles: updatedVehicles });
+                            }}
+                            placeholder="0.00"
+                            className="package-text-fix"
+                          />
+                        </div>
                       </div>
+
+                      {/* Custom Vehicle Type (if "Others" selected) - Full width row */}
+                      {vehicle.vehicleType === 'Others' && (
+                        <div className="mt-3">
+                          <label className="text-xs font-medium">Custom Vehicle Type *</label>
+                          <Input
+                            type="text"
+                            value={vehicle.description || ''}
+                            onChange={(e) => {
+                              const updatedVehicles = editData.vehicles?.map((v) =>
+                                v.id === vehicle.id ? { ...v, description: e.target.value } : v
+                              );
+                              setEditData({ ...editData, vehicles: updatedVehicles });
+                            }}
+                            placeholder="Enter custom vehicle type"
+                            className="package-text-fix"
+                          />
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -448,17 +482,18 @@ const SimplePricingCard: React.FC<SimplePricingCardProps> = ({
             <div className="space-y-2">
               {option.vehicles.map((vehicle, idx) => (
                 <div key={vehicle.id} className="text-xs p-2 bg-gray-100 dark:bg-gray-700 rounded">
-                  <div className="flex justify-between items-start">
-                    <div>
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-2">
                       <span className="font-medium">
                         {vehicle.vehicleType === 'Others' && vehicle.description
                           ? vehicle.description
                           : vehicle.vehicleType}
                       </span>
-                      <span className="text-gray-500 dark:text-gray-400 ml-2">({vehicle.vehicleCategory})</span>
+                      <span className="text-gray-500 dark:text-gray-400">({vehicle.vehicleCategory})</span>
+                      <span className="text-gray-600 dark:text-gray-400">• Max {vehicle.maxCapacity} pax</span>
                     </div>
-                    <span className="text-gray-600 dark:text-gray-400">
-                      Max {vehicle.maxCapacity} pax
+                    <span className="font-bold text-green-600">
+                      {currency}{(vehicle.price || 0).toFixed(2)}
                     </span>
                   </div>
                 </div>
