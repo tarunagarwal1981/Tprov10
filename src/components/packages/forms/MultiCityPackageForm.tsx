@@ -96,26 +96,75 @@ type Policies = {
   terms?: string;
 };
 
+type PricingPackageType = 'STANDARD' | 'GROUP';
+
+type StandardPricingPackage = {
+  id: string;
+  packageName: string;
+  description?: string;
+  adultPrice: number;
+  childPrice: number;
+  childMinAge: number;
+  childMaxAge: number;
+  infantPrice: number;
+  infantMaxAge: number;
+  includedItems: string[];
+  excludedItems: string[];
+  isFeatured: boolean;
+};
+
+type GroupPricingTier = {
+  id: string;
+  groupName: string;
+  minCapacity: number;
+  maxCapacity: number;
+  price: number;
+  vehicleType?: string;
+  accommodationNotes?: string;
+  description?: string;
+};
+
+type GroupPricingPackage = {
+  id: string;
+  packageName: string;
+  description?: string;
+  groups: GroupPricingTier[];
+  includedItems: string[];
+  excludedItems: string[];
+  isFeatured: boolean;
+};
+
+type PricingData = {
+  pricingType: PricingPackageType;
+  standardPackages: StandardPricingPackage[];
+  groupPackages: GroupPricingPackage[];
+  departures: DepartureDate[];
+  validityStart?: string;
+  validityEnd?: string;
+  seasonalNotes?: string;
+};
+
 export type MultiCityPackageFormData = {
   basic: {
     title: string;
     shortDescription: string;
     destinationRegion?: string;
+    packageValidityDate?: string;
     imageGallery: string[];
   };
   cities: CityStop[];
   includeIntercityTransport: boolean;
   connections: Connection[];
-  days: DayPlan[]; // computed from cities.nights but user-editable
+  days: DayPlan[];
   inclusions: InclusionItem[];
   exclusions: ExclusionItem[];
   addOns: AddOn[];
-  pricing: PricingDates;
+  pricing: PricingData;
   policies: Policies;
 };
 
 const DEFAULT_DATA: MultiCityPackageFormData = {
-  basic: { title: "", shortDescription: "", destinationRegion: "", imageGallery: [] },
+  basic: { title: "", shortDescription: "", destinationRegion: "", packageValidityDate: "", imageGallery: [] },
   cities: [],
   includeIntercityTransport: false,
   connections: [],
@@ -123,7 +172,15 @@ const DEFAULT_DATA: MultiCityPackageFormData = {
   inclusions: [],
   exclusions: [],
   addOns: [],
-  pricing: { mode: "FIXED", fixedPrice: 0, departures: [] },
+  pricing: { 
+    pricingType: "STANDARD",
+    standardPackages: [],
+    groupPackages: [],
+    departures: [],
+    validityStart: "",
+    validityEnd: "",
+    seasonalNotes: ""
+  },
   policies: { cancellation: [], insuranceRequirement: "OPTIONAL" },
 };
 
@@ -142,17 +199,18 @@ const useFormValidation = (data: MultiCityPackageFormData): FormValidation => {
     if (!data.basic.title.trim()) errors.push({ tab: "basic", field: "title", message: "Title is required", severity: "error" });
     if (!data.basic.shortDescription.trim()) errors.push({ tab: "basic", field: "shortDescription", message: "Short description is required", severity: "error" });
 
-    if (data.cities.length === 0) errors.push({ tab: "destinations", field: "cities", message: "Add at least one city", severity: "error" });
-    if (data.cities.some(c => c.nights <= 0)) errors.push({ tab: "destinations", field: "nights", message: "Each city must have at least 1 night", severity: "error" });
-
-    if (data.includeIntercityTransport && data.cities.length > 1) {
-      const expected = data.cities.length - 1;
-      if ((data.connections || []).length < expected) warnings.push({ tab: "transport", field: "connections", message: "Some connections are missing details" });
-    }
+    if (data.cities.length === 0) errors.push({ tab: "basic", field: "cities", message: "Add at least one city", severity: "error" });
+    if (data.cities.some(c => c.nights <= 0)) errors.push({ tab: "basic", field: "nights", message: "Each city must have at least 1 night", severity: "error" });
 
     if (data.days.length === 0) warnings.push({ tab: "itinerary", field: "days", message: "No days generated yet" });
 
-    if (data.pricing.mode === "FIXED" && !(data.pricing.fixedPrice && data.pricing.fixedPrice > 0)) errors.push({ tab: "pricing", field: "fixedPrice", message: "Enter a fixed price", severity: "error" });
+    // Pricing validation
+    if (data.pricing.pricingType === "STANDARD" && data.pricing.standardPackages.length === 0) {
+      errors.push({ tab: "pricing", field: "standardPackages", message: "Add at least one standard pricing package", severity: "error" });
+    }
+    if (data.pricing.pricingType === "GROUP" && data.pricing.groupPackages.length === 0) {
+      errors.push({ tab: "pricing", field: "groupPackages", message: "Add at least one group pricing package", severity: "error" });
+    }
 
     return { isValid: errors.length === 0, errors, warnings };
   }, [data]);
@@ -255,9 +313,21 @@ const BasicInformationTab: React.FC = () => {
             <label className="text-sm font-medium">Short Description</label>
             <Textarea {...register("basic.shortDescription")} placeholder="A curated journey across multiple cities with handpicked experiences." />
           </div>
-          <div>
-            <label className="text-sm font-medium">Destination Region</label>
-            <Input {...register("basic.destinationRegion")} placeholder="Europe, Southeast Asia, etc." />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium">Destination Region</label>
+              <Input {...register("basic.destinationRegion")} placeholder="Europe, Southeast Asia, etc." />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Package Validity Date</label>
+              <Input 
+                type="date" 
+                {...register("basic.packageValidityDate")} 
+                placeholder="Last date for bookings"
+                className="package-text-fix"
+              />
+              <p className="text-xs text-gray-500 mt-1">Last date this package is valid for bookings</p>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -817,56 +887,457 @@ const InclusionsExclusionsTab: React.FC = () => {
 };
 
 const PricingDatesTab: React.FC = () => {
-  const { watch, setValue } = useFormContext<MultiCityPackageFormData>();
+  const { watch, setValue, control } = useFormContext<MultiCityPackageFormData>();
   const pricing = watch("pricing");
   const [dep, setDep] = useState({ date: "", seats: 0, price: 0, cutoff: "" });
+  
+  const [newStandardPkg, setNewStandardPkg] = useState({
+    packageName: "",
+    description: "",
+    adultPrice: 0,
+    childPrice: 0,
+    childMinAge: 3,
+    childMaxAge: 12,
+    infantPrice: 0,
+    infantMaxAge: 2,
+  });
+
+  const [newGroupPkg, setNewGroupPkg] = useState({
+    packageName: "",
+    description: "",
+  });
+
+  const [newGroupTier, setNewGroupTier] = useState({
+    groupName: "",
+    minCapacity: 1,
+    maxCapacity: 4,
+    price: 0,
+    vehicleType: "",
+  });
+
+  const addStandardPackage = () => {
+    if (!newStandardPkg.packageName.trim()) return;
+    const pkg: StandardPricingPackage = {
+      id: generateId(),
+      ...newStandardPkg,
+      includedItems: [],
+      excludedItems: [],
+      isFeatured: false,
+    };
+    setValue("pricing.standardPackages", [...pricing.standardPackages, pkg]);
+    setNewStandardPkg({
+      packageName: "",
+      description: "",
+      adultPrice: 0,
+      childPrice: 0,
+      childMinAge: 3,
+      childMaxAge: 12,
+      infantPrice: 0,
+      infantMaxAge: 2,
+    });
+  };
+
+  const addGroupPackage = () => {
+    if (!newGroupPkg.packageName.trim()) return;
+    const pkg: GroupPricingPackage = {
+      id: generateId(),
+      ...newGroupPkg,
+      groups: [],
+      includedItems: [],
+      excludedItems: [],
+      isFeatured: false,
+    };
+    setValue("pricing.groupPackages", [...pricing.groupPackages, pkg]);
+    setNewGroupPkg({ packageName: "", description: "" });
+  };
+
+  const addGroupTier = (packageIndex: number) => {
+    if (!newGroupTier.groupName.trim()) return;
+    const packages = [...pricing.groupPackages];
+    const pkg = packages[packageIndex];
+    if (!pkg) return;
+    
+    const tier: GroupPricingTier = {
+      id: generateId(),
+      ...newGroupTier,
+      accommodationNotes: "",
+      description: "",
+    };
+    pkg.groups.push(tier);
+    setValue("pricing.groupPackages", packages);
+    setNewGroupTier({
+      groupName: "",
+      minCapacity: 1,
+      maxCapacity: 4,
+      price: 0,
+      vehicleType: "",
+    });
+  };
+
   return (
     <div className="space-y-6">
+      {/* Pricing Type Selector */}
       <Card className="package-selector-glass package-shadow-fix">
-        <CardHeader><CardTitle>Package Pricing Options</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Pricing Model</CardTitle></CardHeader>
         <CardContent className="space-y-3">
-          <div className="flex flex-wrap gap-3 text-sm">
-            {(["FIXED", "PER_PERSON", "GROUP_TIERED"] as PricingMode[]).map(m => (
-              <label key={m} className="flex items-center gap-2">
-                <input type="radio" name="pricing-mode" checked={pricing.mode === m} onChange={() => setValue("pricing.mode", m)} /> {m.replace("_"," ")}
-              </label>
-            ))}
+          <div className="flex gap-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="pricing-type"
+                checked={pricing.pricingType === "STANDARD"}
+                onChange={() => setValue("pricing.pricingType", "STANDARD")}
+                className="w-4 h-4"
+              />
+              <div>
+                <div className="font-medium">Standard Pricing</div>
+                <div className="text-xs text-gray-500">Per person pricing with age categories (Adult/Child/Infant)</div>
+              </div>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="pricing-type"
+                checked={pricing.pricingType === "GROUP"}
+                onChange={() => setValue("pricing.pricingType", "GROUP")}
+                className="w-4 h-4"
+              />
+              <div>
+                <div className="font-medium">Group Pricing</div>
+                <div className="text-xs text-gray-500">Capacity-based pricing with group size tiers</div>
+              </div>
+            </label>
           </div>
-          {pricing.mode === "FIXED" && (
-            <div>
-              <label className="text-sm font-medium">Fixed Price</label>
-              <Input type="number" defaultValue={pricing.fixedPrice} onChange={(e) => setValue("pricing.fixedPrice", Number(e.target.value || 0))} />
-            </div>
-          )}
-          {pricing.mode === "PER_PERSON" && (
-            <div>
-              <label className="text-sm font-medium">Per Person Price</label>
-              <Input type="number" defaultValue={pricing.perPersonPrice} onChange={(e) => setValue("pricing.perPersonPrice", Number(e.target.value || 0))} />
-            </div>
-          )}
-          {pricing.mode === "GROUP_TIERED" && (
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="text-sm font-medium">Min Group Size</label>
-                <Input type="number" defaultValue={pricing.groupMin} onChange={(e) => setValue("pricing.groupMin", Number(e.target.value || 0))} />
-              </div>
-              <div>
-                <label className="text-sm font-medium">Max Group Size</label>
-                <Input type="number" defaultValue={pricing.groupMax} onChange={(e) => setValue("pricing.groupMax", Number(e.target.value || 0))} />
-              </div>
-            </div>
-          )}
         </CardContent>
       </Card>
 
+      {/* Standard Pricing Packages */}
+      {pricing.pricingType === "STANDARD" && (
+        <Card className="package-selector-glass package-shadow-fix">
+          <CardHeader>
+            <CardTitle>Standard Pricing Packages</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Add New Package Form */}
+            <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+              <h4 className="font-medium mb-3">Add New Package</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="lg:col-span-2">
+                  <label className="text-xs font-medium mb-1 block">Package Name *</label>
+                  <Input
+                    placeholder="e.g., Basic, Premium, VIP"
+                    value={newStandardPkg.packageName}
+                    onChange={(e) => setNewStandardPkg(s => ({ ...s, packageName: e.target.value }))}
+                    className="package-text-fix"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium mb-1 block">Adult Price *</label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={newStandardPkg.adultPrice}
+                    onChange={(e) => setNewStandardPkg(s => ({ ...s, adultPrice: Number(e.target.value || 0) }))}
+                    className="package-text-fix"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium mb-1 block">Child Price</label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={newStandardPkg.childPrice}
+                    onChange={(e) => setNewStandardPkg(s => ({ ...s, childPrice: Number(e.target.value || 0) }))}
+                    className="package-text-fix"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium mb-1 block">Child Min Age</label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={newStandardPkg.childMinAge}
+                    onChange={(e) => setNewStandardPkg(s => ({ ...s, childMinAge: Number(e.target.value || 0) }))}
+                    className="package-text-fix"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium mb-1 block">Child Max Age</label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={newStandardPkg.childMaxAge}
+                    onChange={(e) => setNewStandardPkg(s => ({ ...s, childMaxAge: Number(e.target.value || 0) }))}
+                    className="package-text-fix"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium mb-1 block">Infant Price</label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={newStandardPkg.infantPrice}
+                    onChange={(e) => setNewStandardPkg(s => ({ ...s, infantPrice: Number(e.target.value || 0) }))}
+                    className="package-text-fix"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium mb-1 block">Infant Max Age</label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={newStandardPkg.infantMaxAge}
+                    onChange={(e) => setNewStandardPkg(s => ({ ...s, infantMaxAge: Number(e.target.value || 0) }))}
+                    className="package-text-fix"
+                  />
+                </div>
+              </div>
+              <div className="mt-3">
+                <Button type="button" onClick={addStandardPackage} className="package-button-fix">
+                  <FaPlus className="mr-2" /> Add Package
+                </Button>
+              </div>
+            </div>
+
+            {/* Existing Packages */}
+            <div className="space-y-3">
+              {pricing.standardPackages.map((pkg, idx) => (
+                <div key={pkg.id} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-semibold">{pkg.packageName}</h4>
+                      {pkg.isFeatured && <Badge variant="default">Featured</Badge>}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const packages = [...pricing.standardPackages];
+                          packages[idx]!.isFeatured = !packages[idx]!.isFeatured;
+                          setValue("pricing.standardPackages", packages);
+                        }}
+                      >
+                        {pkg.isFeatured ? "Unfeature" : "Feature"}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => {
+                          const packages = pricing.standardPackages.filter((_, i) => i !== idx);
+                          setValue("pricing.standardPackages", packages);
+                        }}
+                      >
+                        <FaTrash />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                    <div>
+                      <span className="text-gray-500">Adult:</span> ${pkg.adultPrice}
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Child ({pkg.childMinAge}-{pkg.childMaxAge}y):</span> ${pkg.childPrice}
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Infant (0-{pkg.infantMaxAge}y):</span> ${pkg.infantPrice}
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {pricing.standardPackages.length === 0 && (
+                <p className="text-sm text-gray-500 text-center py-4">No packages added yet</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Group Pricing Packages */}
+      {pricing.pricingType === "GROUP" && (
+        <Card className="package-selector-glass package-shadow-fix">
+          <CardHeader>
+            <CardTitle>Group Pricing Packages</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Add New Package Form */}
+            <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+              <h4 className="font-medium mb-3">Add New Package</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium mb-1 block">Package Name *</label>
+                  <Input
+                    placeholder="e.g., Basic, Premium, VIP"
+                    value={newGroupPkg.packageName}
+                    onChange={(e) => setNewGroupPkg(s => ({ ...s, packageName: e.target.value }))}
+                    className="package-text-fix"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium mb-1 block">Description</label>
+                  <Input
+                    placeholder="Optional description"
+                    value={newGroupPkg.description}
+                    onChange={(e) => setNewGroupPkg(s => ({ ...s, description: e.target.value }))}
+                    className="package-text-fix"
+                  />
+                </div>
+              </div>
+              <div className="mt-3">
+                <Button type="button" onClick={addGroupPackage} className="package-button-fix">
+                  <FaPlus className="mr-2" /> Add Package
+                </Button>
+              </div>
+            </div>
+
+            {/* Existing Packages */}
+            <div className="space-y-4">
+              {pricing.groupPackages.map((pkg, pkgIdx) => (
+                <div key={pkg.id} className="p-4 border-2 border-gray-300 dark:border-gray-600 rounded-lg">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-semibold text-lg">{pkg.packageName}</h4>
+                      {pkg.isFeatured && <Badge variant="default">Featured</Badge>}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const packages = [...pricing.groupPackages];
+                          packages[pkgIdx]!.isFeatured = !packages[pkgIdx]!.isFeatured;
+                          setValue("pricing.groupPackages", packages);
+                        }}
+                      >
+                        {pkg.isFeatured ? "Unfeature" : "Feature"}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => {
+                          const packages = pricing.groupPackages.filter((_, i) => i !== pkgIdx);
+                          setValue("pricing.groupPackages", packages);
+                        }}
+                      >
+                        <FaTrash />
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Add Group Tier Form */}
+                  <div className="p-3 bg-gray-50 dark:bg-gray-800/30 rounded mb-3">
+                    <h5 className="text-sm font-medium mb-2">Add Group Size Tier</h5>
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                      <div>
+                        <label className="text-xs mb-1 block">Tier Name *</label>
+                        <Input
+                          placeholder="Small Group"
+                          value={newGroupTier.groupName}
+                          onChange={(e) => setNewGroupTier(s => ({ ...s, groupName: e.target.value }))}
+                          className="package-text-fix text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs mb-1 block">Min Cap.</label>
+                        <Input
+                          type="number"
+                          min={1}
+                          value={newGroupTier.minCapacity}
+                          onChange={(e) => setNewGroupTier(s => ({ ...s, minCapacity: Number(e.target.value || 1) }))}
+                          className="package-text-fix text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs mb-1 block">Max Cap.</label>
+                        <Input
+                          type="number"
+                          min={1}
+                          value={newGroupTier.maxCapacity}
+                          onChange={(e) => setNewGroupTier(s => ({ ...s, maxCapacity: Number(e.target.value || 1) }))}
+                          className="package-text-fix text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs mb-1 block">Price *</label>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={newGroupTier.price}
+                          onChange={(e) => setNewGroupTier(s => ({ ...s, price: Number(e.target.value || 0) }))}
+                          className="package-text-fix text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs mb-1 block">Vehicle</label>
+                        <Input
+                          placeholder="Optional"
+                          value={newGroupTier.vehicleType}
+                          onChange={(e) => setNewGroupTier(s => ({ ...s, vehicleType: e.target.value }))}
+                          className="package-text-fix text-sm"
+                        />
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => addGroupTier(pkgIdx)}
+                      className="package-button-fix mt-2"
+                    >
+                      <FaPlus className="mr-1" /> Add Tier
+                    </Button>
+                  </div>
+
+                  {/* Existing Tiers */}
+                  <div className="space-y-2">
+                    {pkg.groups.map((tier, tierIdx) => (
+                      <div key={tier.id} className="flex items-center justify-between p-3 bg-white dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-700">
+                        <div className="flex items-center gap-4 text-sm">
+                          <span className="font-medium">{tier.groupName}</span>
+                          <span className="text-gray-500">{tier.minCapacity}-{tier.maxCapacity} people</span>
+                          <span className="font-semibold text-green-600">${tier.price}</span>
+                          {tier.vehicleType && <span className="text-xs text-gray-500">• {tier.vehicleType}</span>}
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            const packages = [...pricing.groupPackages];
+                            packages[pkgIdx]!.groups.splice(tierIdx, 1);
+                            setValue("pricing.groupPackages", packages);
+                          }}
+                        >
+                          <FaTrash className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
+                    {pkg.groups.length === 0 && (
+                      <p className="text-xs text-gray-500 text-center py-2">No tiers added yet</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {pricing.groupPackages.length === 0 && (
+                <p className="text-sm text-gray-500 text-center py-4">No packages added yet</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Departure Dates */}
       <Card className="package-selector-glass package-shadow-fix">
-        <CardHeader><CardTitle>Available Dates</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Departure Dates</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
-            <Input type="date" value={dep.date} onChange={(e) => setDep(s => ({ ...s, date: e.target.value }))} />
-            <Input type="number" placeholder="Seats" value={dep.seats} onChange={(e) => setDep(s => ({ ...s, seats: Number(e.target.value || 0) }))} />
-            <Input type="number" placeholder="Price" value={dep.price} onChange={(e) => setDep(s => ({ ...s, price: Number(e.target.value || 0) }))} />
-            <Input type="date" value={dep.cutoff} onChange={(e) => setDep(s => ({ ...s, cutoff: e.target.value }))} />
+            <Input type="date" value={dep.date} onChange={(e) => setDep(s => ({ ...s, date: e.target.value }))} placeholder="Date" />
+            <Input type="number" placeholder="Available Seats" value={dep.seats} onChange={(e) => setDep(s => ({ ...s, seats: Number(e.target.value || 0) }))} />
+            <Input type="number" placeholder="Price (optional)" value={dep.price} onChange={(e) => setDep(s => ({ ...s, price: Number(e.target.value || 0) }))} />
+            <Input type="date" value={dep.cutoff} onChange={(e) => setDep(s => ({ ...s, cutoff: e.target.value }))} placeholder="Cutoff Date" />
           </div>
           <Button type="button" onClick={() => {
             if (!dep.date) return;
@@ -879,7 +1350,8 @@ const PricingDatesTab: React.FC = () => {
             {pricing.departures.map((d, i) => (
               <div key={d.id} className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 rounded px-3 py-2">
                 <div className="text-sm">
-                  <span className="font-medium">{d.date}</span> • Seats: {d.availableSeats ?? "-"} • ${Number(d.price || 0).toFixed(2)}
+                  <span className="font-medium">{d.date}</span> • Seats: {d.availableSeats ?? "-"}
+                  {d.price ? <span> • ${Number(d.price).toFixed(2)}</span> : null}
                   {d.cutoffDate ? <span className="text-xs text-gray-500"> • Cutoff: {d.cutoffDate}</span> : null}
                 </div>
                 <Button variant="destructive" size="icon" onClick={() => {
@@ -887,24 +1359,25 @@ const PricingDatesTab: React.FC = () => {
                 }}><FaTrash /></Button>
               </div>
             ))}
+            {pricing.departures.length === 0 && (
+              <p className="text-sm text-gray-500 text-center py-2">No departure dates added</p>
+            )}
           </div>
         </CardContent>
       </Card>
 
+      {/* Seasonal Notes */}
       <Card className="package-selector-glass package-shadow-fix">
-        <CardHeader><CardTitle>Validity & Seasonal Variations</CardTitle></CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <CardHeader><CardTitle>Seasonal Information</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
           <div>
-            <label className="text-sm font-medium">Validity Start</label>
-            <Input type="date" defaultValue={pricing.validityStart} onChange={(e) => setValue("pricing.validityStart", e.target.value)} />
-          </div>
-          <div>
-            <label className="text-sm font-medium">Validity End</label>
-            <Input type="date" defaultValue={pricing.validityEnd} onChange={(e) => setValue("pricing.validityEnd", e.target.value)} />
-          </div>
-          <div className="md:col-span-3">
-            <label className="text-sm font-medium">Seasonal Pricing Notes</label>
-            <Textarea defaultValue={pricing.seasonalNotes} onChange={(e) => setValue("pricing.seasonalNotes", e.target.value)} />
+            <label className="text-sm font-medium mb-1 block">Seasonal Pricing Notes</label>
+            <Textarea 
+              defaultValue={pricing.seasonalNotes} 
+              onChange={(e) => setValue("pricing.seasonalNotes", e.target.value)}
+              placeholder="Add any seasonal pricing variations or notes..."
+              rows={3}
+            />
           </div>
         </CardContent>
       </Card>
@@ -925,8 +1398,19 @@ const ReviewPublishTab: React.FC<{ onPreview?: () => void }> = ({ onPreview }) =
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
           <div><span className="font-medium">Title:</span> {data.basic.title || "—"}</div>
+          <div><span className="font-medium">Region:</span> {data.basic.destinationRegion || "—"}</div>
           <div><span className="font-medium">Cities:</span> {data.cities.length} • <span className="font-medium">Nights:</span> {totalNights}</div>
-          <div><span className="font-medium">Pricing Mode:</span> {data.pricing.mode}</div>
+          <div><span className="font-medium">Pricing Type:</span> {data.pricing.pricingType === "STANDARD" ? "Standard (Per Person)" : "Group (Capacity-based)"}</div>
+          {data.pricing.pricingType === "STANDARD" && (
+            <div><span className="font-medium">Pricing Packages:</span> {data.pricing.standardPackages.length}</div>
+          )}
+          {data.pricing.pricingType === "GROUP" && (
+            <div><span className="font-medium">Pricing Packages:</span> {data.pricing.groupPackages.length}</div>
+          )}
+          <div><span className="font-medium">Departure Dates:</span> {data.pricing.departures.length}</div>
+          {data.basic.packageValidityDate && (
+            <div><span className="font-medium">Valid Until:</span> {data.basic.packageValidityDate}</div>
+          )}
         </CardContent>
       </Card>
 
@@ -935,10 +1419,11 @@ const ReviewPublishTab: React.FC<{ onPreview?: () => void }> = ({ onPreview }) =
         <CardContent>
           <div className="w-full overflow-x-auto">
             <div className="flex items-center gap-4 min-w-max p-2">
-              {data.days.map((_, i) => (
+              {data.days.map((day, i) => (
                 <div key={i} className="flex flex-col items-center">
-                  <div className="w-8 h-8 rounded-full bg-green-600 text-white flex items-center justify-center text-xs">{i + 1}</div>
-                  <div className="w-16 h-1 bg-green-200" />
+                  <div className="w-10 h-10 rounded-full bg-green-600 text-white flex items-center justify-center text-sm font-semibold">{i + 1}</div>
+                  <div className="text-xs text-gray-500 mt-1">{day.cityName}</div>
+                  {i < data.days.length - 1 && <div className="w-16 h-1 bg-green-200" />}
                 </div>
               ))}
             </div>
