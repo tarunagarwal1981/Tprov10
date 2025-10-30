@@ -44,7 +44,7 @@ export default function MultiCityHotelPackagePage() {
         status: 'draft' as const,
       };
       
-      const { data: packageResult, error: packageError } = await supabase
+      const { data: packageResult, error: packageError } = await (supabase as any)
         .from('multi_city_hotel_packages')
         .insert(packageData)
         .select()
@@ -98,7 +98,7 @@ export default function MultiCityHotelPackagePage() {
         published_at: new Date().toISOString(),
       };
       
-      const { data: packageResult, error: packageError } = await supabase
+      const { data: packageResult, error: packageError } = await (supabase as any)
         .from('multi_city_hotel_packages')
         .insert(packageData)
         .select()
@@ -214,7 +214,7 @@ export default function MultiCityHotelPackagePage() {
           city_order: index + 1,
         }));
         
-        const { error: citiesError } = await supabase
+        const { error: citiesError } = await (supabase as any)
           .from('multi_city_hotel_package_cities')
           .insert(citiesData);
         
@@ -232,7 +232,7 @@ export default function MultiCityHotelPackagePage() {
           display_order: index + 1,
         }));
         
-        const { error: inclusionsError } = await supabase
+        const { error: inclusionsError } = await (supabase as any)
           .from('multi_city_hotel_package_inclusions')
           .insert(inclusionsData);
         
@@ -249,7 +249,7 @@ export default function MultiCityHotelPackagePage() {
           display_order: index + 1,
         }));
         
-        const { error: exclusionsError } = await supabase
+        const { error: exclusionsError } = await (supabase as any)
           .from('multi_city_hotel_package_exclusions')
           .insert(exclusionsData);
         
@@ -269,7 +269,7 @@ export default function MultiCityHotelPackagePage() {
           display_order: index + 1,
         }));
         
-        const { error: addonsError } = await supabase
+        const { error: addonsError } = await (supabase as any)
           .from('multi_city_hotel_package_addons')
           .insert(addonsData);
         
@@ -286,7 +286,7 @@ export default function MultiCityHotelPackagePage() {
           refund_percent: tier.refundPercent,
         }));
         
-        const { error: cancellationError } = await supabase
+        const { error: cancellationError } = await (supabase as any)
           .from('multi_city_hotel_package_cancellation_tiers')
           .insert(cancellationData);
         
