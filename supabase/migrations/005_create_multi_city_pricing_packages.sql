@@ -1,6 +1,6 @@
 -- ============================================================================
 -- MULTI-CITY PACKAGE PRICING STRUCTURE
--- Two pricing models: Standard (per person) and Group (capacity-based)
+-- Two pricing models: Standard (per person) and Group (per person + vehicles)
 -- ============================================================================
 
 -- ============================================================================
@@ -14,8 +14,10 @@ EXCEPTION
 END $$;
 
 -- ============================================================================
--- 2. CREATE PRICING PACKAGES TABLE
+-- 2. CREATE MAIN PRICING TABLE
 -- ============================================================================
+-- This table stores ONE pricing configuration per package
+-- Either STANDARD (per person only) OR GROUP (per person + vehicles)
 
 CREATE TABLE IF NOT EXISTS multi_city_pricing_packages (
   -- Primary fields
@@ -25,89 +27,50 @@ CREATE TABLE IF NOT EXISTS multi_city_pricing_packages (
   -- Pricing Type
   pricing_type multi_city_pricing_type NOT NULL DEFAULT 'STANDARD',
   
-  -- Package Template Details
-  package_name VARCHAR(100) NOT NULL, -- e.g., "Basic", "Premium", "VIP"
-  description TEXT,
-  
   -- ========================================
-  -- STANDARD PRICING (Per Person)
-  -- Only used when pricing_type = 'STANDARD'
+  -- PER PERSON PRICING (Used by both types)
   -- ========================================
   
   -- Adult Pricing
-  adult_price DECIMAL(10, 2) CHECK (adult_price IS NULL OR adult_price >= 0),
+  adult_price DECIMAL(10, 2) NOT NULL CHECK (adult_price >= 0),
   
   -- Child Pricing
-  child_price DECIMAL(10, 2) CHECK (child_price IS NULL OR child_price >= 0),
-  child_min_age INTEGER CHECK (child_min_age IS NULL OR child_min_age >= 0),
-  child_max_age INTEGER CHECK (child_max_age IS NULL OR child_max_age > child_min_age),
+  child_price DECIMAL(10, 2) NOT NULL CHECK (child_price >= 0),
+  child_min_age INTEGER NOT NULL DEFAULT 3 CHECK (child_min_age >= 0),
+  child_max_age INTEGER NOT NULL DEFAULT 12 CHECK (child_max_age > child_min_age),
   
   -- Infant Pricing
-  infant_price DECIMAL(10, 2) CHECK (infant_price IS NULL OR infant_price >= 0),
-  infant_max_age INTEGER CHECK (infant_max_age IS NULL OR infant_max_age >= 0),
-  
-  -- ========================================
-  -- WHAT'S INCLUDED/EXCLUDED
-  -- ========================================
-  
-  included_items TEXT[], -- Array of what's included with this package
-  excluded_items TEXT[], -- Array of what's NOT included
-  
-  -- ========================================
-  -- STATUS AND DISPLAY
-  -- ========================================
-  
-  is_active BOOLEAN DEFAULT true,
-  is_featured BOOLEAN DEFAULT false, -- Highlight as "Most Popular", "Best Value", etc.
-  display_order INTEGER DEFAULT 0,
+  infant_price DECIMAL(10, 2) DEFAULT 0 CHECK (infant_price >= 0),
+  infant_max_age INTEGER DEFAULT 2 CHECK (infant_max_age >= 0),
   
   -- ========================================
   -- METADATA
   -- ========================================
   
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
-  
-  -- ========================================
-  -- CONSTRAINTS
-  -- ========================================
-  
-  -- For STANDARD pricing, adult_price must be set
-  CONSTRAINT standard_pricing_requires_adult_price 
-    CHECK (pricing_type != 'STANDARD' OR adult_price IS NOT NULL),
-  
-  -- For STANDARD pricing, child age ranges must be valid
-  CONSTRAINT standard_pricing_child_ages 
-    CHECK (
-      pricing_type != 'STANDARD' 
-      OR child_price IS NULL 
-      OR (child_min_age IS NOT NULL AND child_max_age IS NOT NULL)
-    )
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- ============================================================================
--- 3. CREATE GROUP PRICING TIERS TABLE
+-- 3. CREATE VEHICLES TABLE (for GROUP pricing type)
 -- ============================================================================
+-- Similar to activity_package_vehicles
+-- Only used when pricing_type = 'GROUP'
 
-CREATE TABLE IF NOT EXISTS multi_city_pricing_groups (
+CREATE TABLE IF NOT EXISTS multi_city_pricing_vehicles (
   -- Primary fields
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   pricing_package_id UUID NOT NULL REFERENCES multi_city_pricing_packages(id) ON DELETE CASCADE,
   
-  -- Group Size Details
-  group_name VARCHAR(100) NOT NULL, -- e.g., "Small Group", "Large Group"
-  min_capacity INTEGER NOT NULL CHECK (min_capacity > 0),
-  max_capacity INTEGER NOT NULL CHECK (max_capacity >= min_capacity),
+  -- Vehicle Information
+  vehicle_type VARCHAR(100) NOT NULL, -- e.g., "Sedan", "SUV", "Van", "Minibus"
+  max_capacity INTEGER NOT NULL CHECK (max_capacity > 0),
   
   -- Pricing
-  price DECIMAL(10, 2) NOT NULL CHECK (price >= 0), -- Total price for the group
+  price DECIMAL(10, 2) NOT NULL CHECK (price >= 0), -- Total price for this vehicle
   
-  -- Optional Details
-  vehicle_type VARCHAR(100), -- e.g., "Minivan", "Coach Bus"
-  accommodation_notes TEXT,
+  -- Additional details
   description TEXT,
-  
-  -- Display
   display_order INTEGER DEFAULT 0,
   
   -- Metadata
@@ -144,36 +107,38 @@ COMMENT ON COLUMN multi_city_packages.per_person_price IS
 CREATE INDEX IF NOT EXISTS idx_multi_city_pricing_packages_package_id 
   ON multi_city_pricing_packages(package_id);
 
-CREATE INDEX IF NOT EXISTS idx_multi_city_pricing_packages_active 
-  ON multi_city_pricing_packages(package_id, is_active) 
-  WHERE is_active = true;
-
-CREATE INDEX IF NOT EXISTS idx_multi_city_pricing_packages_featured 
-  ON multi_city_pricing_packages(package_id, is_featured) 
-  WHERE is_featured = true;
-
-CREATE INDEX IF NOT EXISTS idx_multi_city_pricing_packages_display_order 
-  ON multi_city_pricing_packages(package_id, display_order);
-
 CREATE INDEX IF NOT EXISTS idx_multi_city_pricing_packages_type 
   ON multi_city_pricing_packages(package_id, pricing_type);
 
--- Group pricing indexes
-CREATE INDEX IF NOT EXISTS idx_multi_city_pricing_groups_pricing_package_id 
-  ON multi_city_pricing_groups(pricing_package_id);
+-- Vehicles indexes
+CREATE INDEX IF NOT EXISTS idx_multi_city_pricing_vehicles_pricing_package_id 
+  ON multi_city_pricing_vehicles(pricing_package_id);
 
-CREATE INDEX IF NOT EXISTS idx_multi_city_pricing_groups_display_order 
-  ON multi_city_pricing_groups(pricing_package_id, display_order);
+CREATE INDEX IF NOT EXISTS idx_multi_city_pricing_vehicles_display_order 
+  ON multi_city_pricing_vehicles(pricing_package_id, display_order);
 
-CREATE INDEX IF NOT EXISTS idx_multi_city_pricing_groups_capacity 
-  ON multi_city_pricing_groups(min_capacity, max_capacity);
+CREATE INDEX IF NOT EXISTS idx_multi_city_pricing_vehicles_capacity 
+  ON multi_city_pricing_vehicles(max_capacity);
 
 -- ============================================================================
 -- 6. ENABLE ROW LEVEL SECURITY
 -- ============================================================================
 
 ALTER TABLE multi_city_pricing_packages ENABLE ROW LEVEL SECURITY;
-ALTER TABLE multi_city_pricing_groups ENABLE ROW LEVEL SECURITY;
+ALTER TABLE multi_city_pricing_vehicles ENABLE ROW LEVEL SECURITY;
+
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Operators can view their own pricing packages" ON multi_city_pricing_packages;
+DROP POLICY IF EXISTS "Operators can create pricing packages" ON multi_city_pricing_packages;
+DROP POLICY IF EXISTS "Operators can update their own pricing packages" ON multi_city_pricing_packages;
+DROP POLICY IF EXISTS "Operators can delete their own pricing packages" ON multi_city_pricing_packages;
+DROP POLICY IF EXISTS "Public can view pricing packages for published tours" ON multi_city_pricing_packages;
+
+DROP POLICY IF EXISTS "Operators can view their own pricing vehicles" ON multi_city_pricing_vehicles;
+DROP POLICY IF EXISTS "Operators can create pricing vehicles" ON multi_city_pricing_vehicles;
+DROP POLICY IF EXISTS "Operators can update their own pricing vehicles" ON multi_city_pricing_vehicles;
+DROP POLICY IF EXISTS "Operators can delete their own pricing vehicles" ON multi_city_pricing_vehicles;
+DROP POLICY IF EXISTS "Public can view vehicles for published tours" ON multi_city_pricing_vehicles;
 
 -- Pricing packages policies
 CREATE POLICY "Operators can view their own pricing packages"
@@ -208,18 +173,17 @@ CREATE POLICY "Operators can delete their own pricing packages"
     )
   );
 
-CREATE POLICY "Public can view active pricing packages"
+CREATE POLICY "Public can view pricing packages for published tours"
   ON multi_city_pricing_packages FOR SELECT
   USING (
-    is_active = true 
-    AND package_id IN (
+    package_id IN (
       SELECT id FROM multi_city_packages WHERE status = 'published'
     )
   );
 
--- Group pricing policies
-CREATE POLICY "Operators can view their own pricing groups"
-  ON multi_city_pricing_groups FOR SELECT
+-- Vehicles policies
+CREATE POLICY "Operators can view their own pricing vehicles"
+  ON multi_city_pricing_vehicles FOR SELECT
   USING (
     pricing_package_id IN (
       SELECT id FROM multi_city_pricing_packages 
@@ -229,8 +193,8 @@ CREATE POLICY "Operators can view their own pricing groups"
     )
   );
 
-CREATE POLICY "Operators can create pricing groups"
-  ON multi_city_pricing_groups FOR INSERT
+CREATE POLICY "Operators can create pricing vehicles"
+  ON multi_city_pricing_vehicles FOR INSERT
   WITH CHECK (
     pricing_package_id IN (
       SELECT id FROM multi_city_pricing_packages 
@@ -240,8 +204,8 @@ CREATE POLICY "Operators can create pricing groups"
     )
   );
 
-CREATE POLICY "Operators can update their own pricing groups"
-  ON multi_city_pricing_groups FOR UPDATE
+CREATE POLICY "Operators can update their own pricing vehicles"
+  ON multi_city_pricing_vehicles FOR UPDATE
   USING (
     pricing_package_id IN (
       SELECT id FROM multi_city_pricing_packages 
@@ -251,8 +215,8 @@ CREATE POLICY "Operators can update their own pricing groups"
     )
   );
 
-CREATE POLICY "Operators can delete their own pricing groups"
-  ON multi_city_pricing_groups FOR DELETE
+CREATE POLICY "Operators can delete their own pricing vehicles"
+  ON multi_city_pricing_vehicles FOR DELETE
   USING (
     pricing_package_id IN (
       SELECT id FROM multi_city_pricing_packages 
@@ -262,13 +226,12 @@ CREATE POLICY "Operators can delete their own pricing groups"
     )
   );
 
-CREATE POLICY "Public can view active pricing groups"
-  ON multi_city_pricing_groups FOR SELECT
+CREATE POLICY "Public can view vehicles for published tours"
+  ON multi_city_pricing_vehicles FOR SELECT
   USING (
     pricing_package_id IN (
       SELECT id FROM multi_city_pricing_packages 
-      WHERE is_active = true 
-      AND package_id IN (
+      WHERE package_id IN (
         SELECT id FROM multi_city_packages WHERE status = 'published'
       )
     )
@@ -277,6 +240,10 @@ CREATE POLICY "Public can view active pricing groups"
 -- ============================================================================
 -- 7. CREATE TRIGGERS
 -- ============================================================================
+
+-- Drop existing triggers if they exist
+DROP TRIGGER IF EXISTS trigger_update_multi_city_pricing_packages_updated_at ON multi_city_pricing_packages;
+DROP TRIGGER IF EXISTS trigger_update_multi_city_pricing_vehicles_updated_at ON multi_city_pricing_vehicles;
 
 -- Update timestamp for pricing packages
 CREATE OR REPLACE FUNCTION update_multi_city_pricing_packages_updated_at()
@@ -292,8 +259,8 @@ CREATE TRIGGER trigger_update_multi_city_pricing_packages_updated_at
   FOR EACH ROW
   EXECUTE FUNCTION update_multi_city_pricing_packages_updated_at();
 
--- Update timestamp for pricing groups
-CREATE OR REPLACE FUNCTION update_multi_city_pricing_groups_updated_at()
+-- Update timestamp for pricing vehicles
+CREATE OR REPLACE FUNCTION update_multi_city_pricing_vehicles_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
   NEW.updated_at = NOW();
@@ -301,29 +268,29 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER trigger_update_multi_city_pricing_groups_updated_at
-  BEFORE UPDATE ON multi_city_pricing_groups
+CREATE TRIGGER trigger_update_multi_city_pricing_vehicles_updated_at
+  BEFORE UPDATE ON multi_city_pricing_vehicles
   FOR EACH ROW
-  EXECUTE FUNCTION update_multi_city_pricing_groups_updated_at();
+  EXECUTE FUNCTION update_multi_city_pricing_vehicles_updated_at();
 
 -- ============================================================================
 -- 8. COMMENTS FOR DOCUMENTATION
 -- ============================================================================
 
 COMMENT ON TABLE multi_city_pricing_packages IS 
-  'Pricing packages for multi-city tours. Supports two types: STANDARD (per person) and GROUP (capacity-based).';
+  'Main pricing configuration for multi-city tours. ONE record per package. Stores per-person pricing for both STANDARD and GROUP types.';
 
 COMMENT ON COLUMN multi_city_pricing_packages.pricing_type IS 
-  'Type of pricing: STANDARD (per person with age categories) or GROUP (capacity-based tiers)';
+  'Type of pricing: STANDARD (per person only) or GROUP (per person + vehicle options)';
 
-COMMENT ON COLUMN multi_city_pricing_packages.package_name IS 
-  'Name of the pricing tier (e.g., Basic, Premium, VIP)';
+COMMENT ON COLUMN multi_city_pricing_packages.adult_price IS 
+  'Per person price for adults. Required for both STANDARD and GROUP types.';
 
-COMMENT ON TABLE multi_city_pricing_groups IS 
-  'Group size tiers for GROUP pricing type. Each tier defines a capacity range and total price.';
+COMMENT ON TABLE multi_city_pricing_vehicles IS 
+  'Vehicle options for GROUP pricing type. Similar to activity_package_vehicles. Each vehicle has capacity and total price.';
 
-COMMENT ON COLUMN multi_city_pricing_groups.price IS 
-  'Total price for the entire group (not per person)';
+COMMENT ON COLUMN multi_city_pricing_vehicles.price IS 
+  'Total price for this vehicle (not per person)';
 
 -- ============================================================================
 -- SUCCESS MESSAGE
@@ -333,8 +300,8 @@ DO $$
 BEGIN
   RAISE NOTICE '✅ Multi-city pricing packages schema created successfully!';
   RAISE NOTICE 'Changes:';
-  RAISE NOTICE '  - Created multi_city_pricing_packages table';
-  RAISE NOTICE '  - Created multi_city_pricing_groups table';
+  RAISE NOTICE '  - Created multi_city_pricing_packages table (ONE record per package)';
+  RAISE NOTICE '  - Created multi_city_pricing_vehicles table (vehicle options for GROUP pricing)';
   RAISE NOTICE '  - Added package_validity_date to multi_city_packages';
   RAISE NOTICE '  - Added RLS policies for both tables';
   RAISE NOTICE '  - Created indexes for performance';

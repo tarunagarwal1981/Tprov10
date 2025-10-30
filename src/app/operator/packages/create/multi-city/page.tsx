@@ -22,16 +22,8 @@ export default function MultiCityPackagePage() {
         throw new Error('User not authenticated');
       }
 
-      // Calculate base price from pricing packages
-      let basePrice = 0;
-      if (data.pricing.pricingType === 'STANDARD' && data.pricing.standardPackages.length > 0) {
-        basePrice = data.pricing.standardPackages[0]?.adultPrice || 0;
-      } else if (data.pricing.pricingType === 'GROUP' && data.pricing.groupPackages.length > 0) {
-        const firstPackage = data.pricing.groupPackages[0];
-        if (firstPackage && firstPackage.groups.length > 0) {
-          basePrice = firstPackage.groups[0]?.price || 0;
-        }
-      }
+      // Base price is the adult per-person price
+      const basePrice = data.pricing.adultPrice || 0;
 
       // Transform and insert main package
       const packageData = {
@@ -87,16 +79,8 @@ export default function MultiCityPackagePage() {
         throw new Error('User not authenticated');
       }
 
-      // Calculate base price from pricing packages
-      let basePrice = 0;
-      if (data.pricing.pricingType === 'STANDARD' && data.pricing.standardPackages.length > 0) {
-        basePrice = data.pricing.standardPackages[0]?.adultPrice || 0;
-      } else if (data.pricing.pricingType === 'GROUP' && data.pricing.groupPackages.length > 0) {
-        const firstPackage = data.pricing.groupPackages[0];
-        if (firstPackage && firstPackage.groups.length > 0) {
-          basePrice = firstPackage.groups[0]?.price || 0;
-        }
-      }
+      // Base price is the adult per-person price
+      const basePrice = data.pricing.adultPrice || 0;
 
       // Transform and insert main package
       const packageData = {
@@ -135,81 +119,46 @@ export default function MultiCityPackagePage() {
 
       const packageId = packageResult.id;
 
-      // Insert pricing packages
-      if (data.pricing.pricingType === 'STANDARD' && data.pricing.standardPackages.length > 0) {
-        const pricingPackagesData = data.pricing.standardPackages.map((pkg, index) => ({
-          package_id: packageId,
-          pricing_type: 'STANDARD' as const,
-          package_name: pkg.packageName,
-          description: pkg.description || null,
-          adult_price: pkg.adultPrice,
-          child_price: pkg.childPrice,
-          child_min_age: pkg.childMinAge,
-          child_max_age: pkg.childMaxAge,
-          infant_price: pkg.infantPrice,
-          infant_max_age: pkg.infantMaxAge,
-          included_items: pkg.includedItems || [],
-          excluded_items: pkg.excludedItems || [],
-          is_active: true,
-          is_featured: pkg.isFeatured,
+      // Insert pricing configuration
+      const pricingData = {
+        package_id: packageId,
+        pricing_type: data.pricing.pricingType,
+        adult_price: data.pricing.adultPrice,
+        child_price: data.pricing.childPrice,
+        child_min_age: data.pricing.childMinAge,
+        child_max_age: data.pricing.childMaxAge,
+        infant_price: data.pricing.infantPrice,
+        infant_max_age: data.pricing.infantMaxAge,
+      };
+      
+      const { data: pricingResult, error: pricingError } = await (supabase as any)
+        .from('multi_city_pricing_packages')
+        .insert(pricingData)
+        .select()
+        .single();
+      
+      if (pricingError) {
+        console.error('Pricing insert error:', pricingError);
+        throw pricingError;
+      }
+
+      // Insert vehicles for GROUP pricing type
+      if (data.pricing.pricingType === 'GROUP' && data.pricing.vehicles && data.pricing.vehicles.length > 0) {
+        const vehiclesData = data.pricing.vehicles.map((vehicle, index) => ({
+          pricing_package_id: pricingResult.id,
+          vehicle_type: vehicle.vehicleType,
+          max_capacity: vehicle.maxCapacity,
+          price: vehicle.price,
+          description: vehicle.description || null,
           display_order: index + 1,
         }));
         
-        const { error: pricingError } = await (supabase as any)
-          .from('multi_city_pricing_packages')
-          .insert(pricingPackagesData);
+        const { error: vehiclesError } = await (supabase as any)
+          .from('multi_city_pricing_vehicles')
+          .insert(vehiclesData);
         
-        if (pricingError) {
-          console.error('Pricing packages insert error:', pricingError);
-        }
-      } else if (data.pricing.pricingType === 'GROUP' && data.pricing.groupPackages.length > 0) {
-        // Insert group pricing packages
-        for (const [pkgIndex, pkg] of data.pricing.groupPackages.entries()) {
-          const pricingPackageData = {
-            package_id: packageId,
-            pricing_type: 'GROUP' as const,
-            package_name: pkg.packageName,
-            description: pkg.description || null,
-            included_items: pkg.includedItems || [],
-            excluded_items: pkg.excludedItems || [],
-            is_active: true,
-            is_featured: pkg.isFeatured,
-            display_order: pkgIndex + 1,
-          };
-          
-          const { data: pricingResult, error: pricingError } = await (supabase as any)
-            .from('multi_city_pricing_packages')
-            .insert(pricingPackageData)
-            .select()
-            .single();
-          
-          if (pricingError) {
-            console.error('Group pricing package insert error:', pricingError);
-            continue;
-          }
-
-          // Insert group tiers for this package
-          if (pkg.groups && pkg.groups.length > 0) {
-            const groupTiersData = pkg.groups.map((tier, tierIndex) => ({
-              pricing_package_id: pricingResult.id,
-              group_name: tier.groupName,
-              min_capacity: tier.minCapacity,
-              max_capacity: tier.maxCapacity,
-              price: tier.price,
-              vehicle_type: tier.vehicleType || null,
-              accommodation_notes: tier.accommodationNotes || null,
-              description: tier.description || null,
-              display_order: tierIndex + 1,
-            }));
-            
-            const { error: tiersError } = await (supabase as any)
-              .from('multi_city_pricing_groups')
-              .insert(groupTiersData);
-            
-            if (tiersError) {
-              console.error('Group tiers insert error:', tiersError);
-            }
-          }
+        if (vehiclesError) {
+          console.error('Vehicles insert error:', vehiclesError);
         }
       }
 
