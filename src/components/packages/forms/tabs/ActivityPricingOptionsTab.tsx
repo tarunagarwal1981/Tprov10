@@ -159,76 +159,68 @@ const SimplePricingCard: React.FC<SimplePricingCardProps> = ({
             </Select>
           </div>
 
-          {/* Ticket Pricing Section */}
-          <div className="space-y-4 pt-4 border-t">
-            <div className="flex items-center gap-2">
-              <FaTicketAlt className="h-4 w-4 text-green-600" />
-              <label className="text-sm font-semibold">Ticket Pricing (Per Person)</label>
-            </div>
-
-            {/* Pricing */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium">Adult Price ({currency}) *</label>
-                <Input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={editData.adultPrice || ''}
-                  onChange={(e) => {
-                    const value = e.target.value === '' ? 0 : parseFloat(e.target.value);
-                    setEditData({ ...editData, adultPrice: isNaN(value) ? 0 : value });
-                  }}
-                  placeholder="0.00"
-                  className="package-text-fix"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium">Child Price ({currency}) *</label>
-                <Input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={editData.childPrice || ''}
-                  onChange={(e) => {
-                    const value = e.target.value === '' ? 0 : parseFloat(e.target.value);
-                    setEditData({ ...editData, childPrice: isNaN(value) ? 0 : value });
-                  }}
-                  placeholder="0.00"
-                  className="package-text-fix"
-                />
-              </div>
-            </div>
-
-            {/* Child Age Range */}
+          {/* Pricing */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-medium">Child Age Range *</label>
-              <div className="flex gap-2 items-center">
-                <Input
-                  type="number"
-                  min="0"
-                  value={editData.childMinAge || ''}
-                  onChange={(e) => {
-                    const value = e.target.value === '' ? 0 : parseInt(e.target.value);
-                    setEditData({ ...editData, childMinAge: isNaN(value) ? 0 : value });
-                  }}
-                  placeholder="Min"
-                  className="package-text-fix"
-                />
-                <span className="text-sm">to</span>
-                <Input
-                  type="number"
-                  min="0"
-                  value={editData.childMaxAge || ''}
-                  onChange={(e) => {
-                    const value = e.target.value === '' ? 0 : parseInt(e.target.value);
-                    setEditData({ ...editData, childMaxAge: isNaN(value) ? 0 : value });
-                  }}
-                  placeholder="Max"
-                  className="package-text-fix"
-                />
-                <span className="text-sm text-gray-500">years</span>
-              </div>
+              <label className="text-sm font-medium">Adult Price ({currency}) *</label>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                value={editData.adultPrice || ''}
+                onChange={(e) => {
+                  const value = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                  setEditData({ ...editData, adultPrice: isNaN(value) ? 0 : value });
+                }}
+                placeholder="0.00"
+                className="package-text-fix"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Child Price ({currency}) *</label>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                value={editData.childPrice || ''}
+                onChange={(e) => {
+                  const value = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                  setEditData({ ...editData, childPrice: isNaN(value) ? 0 : value });
+                }}
+                placeholder="0.00"
+                className="package-text-fix"
+              />
+            </div>
+          </div>
+
+          {/* Child Age Range */}
+          <div>
+            <label className="text-sm font-medium">Child Age Range *</label>
+            <div className="flex gap-2 items-center">
+              <Input
+                type="number"
+                min="0"
+                value={editData.childMinAge || ''}
+                onChange={(e) => {
+                  const value = e.target.value === '' ? 0 : parseInt(e.target.value);
+                  setEditData({ ...editData, childMinAge: isNaN(value) ? 0 : value });
+                }}
+                placeholder="Min"
+                className="package-text-fix"
+              />
+              <span className="text-sm">to</span>
+              <Input
+                type="number"
+                min="0"
+                value={editData.childMaxAge || ''}
+                onChange={(e) => {
+                  const value = e.target.value === '' ? 0 : parseInt(e.target.value);
+                  setEditData({ ...editData, childMaxAge: isNaN(value) ? 0 : value });
+                }}
+                placeholder="Max"
+                className="package-text-fix"
+              />
+              <span className="text-sm text-gray-500">years</span>
             </div>
           </div>
 

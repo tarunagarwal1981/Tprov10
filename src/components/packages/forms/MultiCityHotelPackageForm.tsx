@@ -1,648 +1,203 @@
 "use client";
 
 import React, { useMemo, useRef, useState } from "react";
-import { FormProvider, useFieldArray, useForm, useFormContext } from "react-hook-form";
+import { useForm, FormProvider, useFieldArray, useFormContext } from "react-hook-form";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { FaPlus, FaTrash, FaArrowUp, FaArrowDown, FaClock, FaCheckCircle, FaEye, FaInfoCircle, FaDollarSign, FaSpinner, FaCopy } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
-import { FaBed, FaConciergeBell, FaCheckCircle, FaDollarSign, FaEye, FaInfoCircle, FaMapMarkerAlt, FaPlane, FaPlus, FaShieldAlt, FaSpinner, FaStar } from "react-icons/fa";
-import { Button as UIButton } from "@/components/ui/button";
 
-// Reuse base data from MultiCity form with hotel additions
-type HotelAmenity = "Wi-Fi" | "Pool" | "Gym" | "Spa" | "Restaurant" | "Room Service" | "Parking" | "Airport Shuttle" | "Business Center";
-type RoomAmenity = "Balcony" | "Minibar" | "Air Conditioning" | "TV" | "Coffee Maker" | "Safe" | "Bathtub";
+// Minimal UI shadcn-compatible components from project
+// If any of the above imports don't exist in your project, replace with existing primitives.
 
-type RoomOption = {
+// TYPES
+type TransportType = "FLIGHT" | "TRAIN" | "BUS" | "CAR";
+type TransportClass = "ECONOMY" | "BUSINESS" | "FIRST" | "STANDARD";
+
+type Flight = {
+  id: string;
+  departureCity: string;
+  departureTime: string;
+  arrivalCity: string;
+  arrivalTime: string;
+  airline: string;
+  flightNumber: string;
+};
+
+type DayPlan = {
+  cityId: string;
+  cityName?: string;
+  description?: string;
+  photoUrl?: string;
+  hasFlights?: boolean;
+  flights?: Flight[];
+};
+
+type CityStop = {
   id: string;
   name: string;
-  bed: "King" | "Queen" | "Twin" | "Double" | "Single";
-  maxAdults: number;
-  maxChildren: number;
-  sizeSqm?: number;
-  amenities: RoomAmenity[];
-  images: string[];
-  pricePerNight?: number;
-  extraBedAvailable?: boolean;
-  extraBedPrice?: number;
-  view?: "City" | "Sea" | "Garden" | "Mountain" | "Pool";
+  country?: string;
+  nights: number;
+  highlights: string[];
+  activitiesIncluded: string[];
+  expanded?: boolean;
 };
 
-type CityHotel = {
-  hotelName: string;
-  rating: number; // 1-5
-  location: string;
-  distanceKm?: number;
-  images: string[];
-  amenities: HotelAmenity[];
+type Connection = {
+  fromCityId: string;
+  toCityId: string;
+  transportType: TransportType;
+  transportClass: TransportClass;
+  provider?: string;
+  durationHours?: number;
+  durationMinutes?: number;
+  layoverNotes?: string;
+};
+
+type InclusionCategory = "Transport" | "Activities" | "Meals" | "Guide Services" | "Entry Fees" | "Insurance";
+
+type InclusionItem = { id: string; category: InclusionCategory; text: string };
+type ExclusionItem = { id: string; text: string };
+type AddOn = { id: string; name: string; description?: string; price?: number };
+
+type PricingMode = "FIXED" | "PER_PERSON" | "GROUP_TIERED";
+
+type DepartureDate = { id: string; date: string; availableSeats?: number; price?: number; cutoffDate?: string };
+
+type PricingDates = {
+  mode: PricingMode;
+  fixedPrice?: number;
+  perPersonPrice?: number;
+  groupMin?: number;
+  groupMax?: number;
+  departures: DepartureDate[];
+  validityStart?: string;
+  validityEnd?: string;
+  seasonalNotes?: string;
+};
+
+type CancellationTier = { id: string; daysBefore: number; refundPercent: number };
+
+type Policies = {
+  cancellation: CancellationTier[];
+  depositPercent?: number;
+  balanceDueDays?: number;
+  paymentMethods?: string[];
+  visaRequirements?: string;
+  insuranceRequirement?: "REQUIRED" | "OPTIONAL" | "NA";
+  healthRequirements?: string;
+  terms?: string;
+};
+
+type PricingPackageType = 'STANDARD' | 'GROUP';
+
+type Vehicle = {
+  id: string;
+  vehicleType: string;
+  maxCapacity: number;
+  price: number;
   description?: string;
-  rooms: RoomOption[];
-  mealPlan: "ROOM_ONLY" | "BB" | "HB" | "FB" | "AI";
-  breakfastType?: "Buffet" | "Continental" | "À la carte";
-  restaurantOptions?: string;
-  dietary: Array<"Vegetarian" | "Vegan" | "Gluten-Free" | "Halal" | "Kosher" | "Allergies">;
 };
 
-type CityWithHotel = {
-  cityId: string; // link to MultiCity city id
-  category: "BUDGET" | "STANDARD" | "DELUXE" | "LUXURY" | "PREMIUM";
-  hotels: CityHotel[]; // allow comparison / alternatives
-  selectedIndex?: number; // which hotel chosen
+type PricingData = {
+  pricingType: PricingPackageType;
+  // Per person pricing (used by both STANDARD and GROUP)
+  adultPrice: number;
+  childPrice: number;
+  childMinAge: number;
+  childMaxAge: number;
+  infantPrice: number;
+  infantMaxAge: number;
+  // Vehicle options (only for GROUP type)
+  vehicles: Vehicle[];
 };
 
-type EnhancedDay = {
-  accommodationHotelName?: string;
-  checkIn?: string;
-  checkOut?: string;
-  mealPlanForDay?: string;
-  facilitiesUsage?: string; // text/time ranges
-};
-
-type EnhancedPricing = {
-  basePrice?: number;
-  hotelCostsByCity: Array<{ cityId: string; total: number }>;
-  mealPlanCosts?: number;
-  roomUpgradeCosts?: number;
-  singleSupplement?: number;
-  childPricing?: Array<{ label: string; rule: string; price: number }>;
-  totalPrice?: number;
-};
-
-export type MultiCityHotelFormData = {
+export type MultiCityPackageFormData = {
   basic: {
     title: string;
     shortDescription: string;
     destinationRegion?: string;
+    packageValidityDate?: string;
     imageGallery: string[];
   };
-  cities: Array<{ id: string; name: string; country?: string; nights: number; highlights?: string[] }>;
-  includeIntercityTransport: boolean;
-  hotels: CityWithHotel[];
-  daysExtra: Record<number, EnhancedDay>;
-  inclusions: Array<{ id: string; category: string; text: string }>;
-  exclusions: Array<{ id: string; text: string }>;
-  pricingExtra: EnhancedPricing;
-  policies: {
-    cancellation: Array<{ id: string; daysBefore: number; refundPercent: number }>;
-    depositPercent?: number;
-    balanceDueDays?: number;
-    paymentMethods?: string[];
-    visaRequirements?: string;
-    insuranceRequirement?: "REQUIRED" | "OPTIONAL" | "NA";
-    healthRequirements?: string;
-    terms?: string;
-  };
+  cities: CityStop[];
+  connections: Connection[];
+  days: DayPlan[];
+  inclusions: InclusionItem[];
+  exclusions: ExclusionItem[];
+  addOns: AddOn[];
+  pricing: PricingData;
+  policies: Policies;
 };
 
-const DEFAULT_DATA: MultiCityHotelFormData = {
-  basic: { title: "", shortDescription: "", destinationRegion: "", imageGallery: [] },
+const DEFAULT_DATA: MultiCityPackageFormData = {
+  basic: { title: "", shortDescription: "", destinationRegion: "", packageValidityDate: "", imageGallery: [] },
   cities: [],
-  includeIntercityTransport: false,
-  hotels: [],
-  daysExtra: {},
+  connections: [],
+  days: [],
   inclusions: [],
   exclusions: [],
-  pricingExtra: { hotelCostsByCity: [] },
+  addOns: [],
+  pricing: { 
+    pricingType: "STANDARD",
+    adultPrice: 0,
+    childPrice: 0,
+    childMinAge: 3,
+    childMaxAge: 12,
+    infantPrice: 0,
+    infantMaxAge: 2,
+    vehicles: []
+  },
   policies: { cancellation: [], insuranceRequirement: "OPTIONAL" },
 };
 
+// HELPERS
 const generateId = () => Math.random().toString(36).slice(2, 9);
 
-// Basic Info Tab
-const BasicInformationTab: React.FC = () => {
-  const { register } = useFormContext<MultiCityHotelFormData>();
-  return (
-    <div className="space-y-4">
-      <Card className="package-selector-glass package-shadow-fix">
-        <CardHeader>
-          <CardTitle>Basic Information</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <label className="text-sm font-medium">Title</label>
-            <Input {...register("basic.title")} placeholder="Grand Multi-City + Hotels" />
-          </div>
-          <div>
-            <label className="text-sm font-medium">Short Description</label>
-            <Textarea {...register("basic.shortDescription")} placeholder="Curated multi-city itinerary with handpicked stays." />
-          </div>
-          <div>
-            <label className="text-sm font-medium">Destination Region</label>
-            <Input {...register("basic.destinationRegion")} placeholder="Europe, Southeast Asia, etc." />
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-};
-
-// Destinations Tab (with city management)
-const DestinationsTab: React.FC = () => {
-  const { control, setValue, watch } = useFormContext<MultiCityHotelFormData>();
-  const { fields, append, remove, move } = useFieldArray({ control, name: "cities" });
-  const [open, setOpen] = useState(false);
-  const [newCity, setNewCity] = useState({ name: "", country: "", nights: 2 });
-
-  const addCity = () => {
-    if (!newCity.name.trim()) return;
-    append({ id: generateId(), name: newCity.name.trim(), country: newCity.country, nights: newCity.nights, highlights: [] });
-    setOpen(false);
-    setNewCity({ name: "", country: "", nights: 2 });
-  };
-
-  const cities = watch("cities");
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Destinations</h3>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <UIButton className="package-button-fix"><FaPlus className="mr-2" /> Add City</UIButton>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add City</DialogTitle>
-              <DialogDescription>Search or type the city and set nights.</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-3">
-              <Input placeholder="City name" value={newCity.name} onChange={(e) => setNewCity(s => ({ ...s, name: e.target.value }))} />
-              <Input placeholder="Country (optional)" value={newCity.country} onChange={(e) => setNewCity(s => ({ ...s, country: e.target.value }))} />
-              <Input type="number" min={1} value={newCity.nights} onChange={(e) => setNewCity(s => ({ ...s, nights: Number(e.target.value || 1) }))} />
-              <div className="flex justify-end"><UIButton onClick={addCity}>Add</UIButton></div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      <div className="space-y-3">
-        {fields.map((field, idx) => (
-          <Card key={field.id} className="package-selector-glass package-shadow-fix">
-            <CardHeader className="flex flex-row items-center justify-between gap-2">
-              <CardTitle className="flex items-center gap-2">
-                <Badge variant="outline">{idx + 1}</Badge>
-                <span>{field.name}</span>
-                {(field as any).country && <span className="text-xs text-gray-500">{(field as any).country}</span>}
-              </CardTitle>
-              <div className="flex items-center gap-2">
-                <UIButton variant="ghost" size="icon" onClick={() => move(idx, Math.max(0, idx - 1))}>↑</UIButton>
-                <UIButton variant="ghost" size="icon" onClick={() => move(idx, Math.min(fields.length - 1, idx + 1))}>↓</UIButton>
-                <UIButton variant="destructive" size="icon" onClick={() => remove(idx)}>✕</UIButton>
-              </div>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div>
-                <label className="text-sm font-medium">Nights</label>
-                <Input type="number" min={1} defaultValue={(field as any).nights} onChange={(e) => { const cities = [...(watch("cities") as any[])]; cities[idx].nights = Number(e.target.value || 1); setValue("cities", cities as any); }} />
-              </div>
-              <div className="md:col-span-2">
-                <label className="text-sm font-medium">Highlights</label>
-                <CityHighlightsEditor index={idx} />
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-        {fields.length === 0 && (
-          <p className="text-sm text-gray-500">No cities added yet. Click &quot;Add City&quot; to begin.</p>
-        )}
-      </div>
-    </div>
-  );
-};
-
-const CityHighlightsEditor: React.FC<{ index: number }> = ({ index }) => {
-  const { control } = useFormContext<MultiCityHotelFormData>();
-  // Cast name to any to accommodate nested dynamic array path
-  const { fields, append, remove } = useFieldArray({ control: control as any, name: `cities.${index}.highlights` as any });
-  const [value, setValue] = useState("");
-  return (
-    <div className="space-y-2">
-      <div className="flex gap-2">
-        <Input value={value} onChange={(e) => setValue(e.target.value)} placeholder="e.g., Old Town" />
-        <UIButton type="button" onClick={() => { if (value.trim()) { append(value.trim() as any); setValue(""); } }}>Add</UIButton>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {fields.map((f, i) => (
-          <Badge key={f.id} variant="secondary" className="flex items-center gap-2">
-            <span>{(f as unknown as string) || "Item"}</span>
-            <button type="button" onClick={() => remove(i)} aria-label="remove" className="text-xs">×</button>
-          </Badge>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-// Accommodation Details Tab
-const AccommodationTab: React.FC = () => {
-  const { watch, setValue, control } = useFormContext<MultiCityHotelFormData>();
-  const cities = watch("cities");
-  const { fields, append, remove } = useFieldArray({ control, name: "hotels" });
-
-  const ensureCityRows = React.useCallback(() => {
-    const list = fields as any[];
-    const next = cities.map((c) => {
-      const existing = list.find((h) => h.cityId === c.id);
-      return existing || { id: generateId(), cityId: c.id, category: "STANDARD", hotels: [] };
-    });
-    setValue("hotels", next as any);
-  }, [fields, cities, setValue]);
-
-  React.useEffect(() => { ensureCityRows(); }, [ensureCityRows]);
-
-  const CATEGORIES: Array<{ value: CityWithHotel["category"]; label: string; priceLevel: string }> = [
-    { value: "BUDGET", label: "Budget", priceLevel: "$" },
-    { value: "STANDARD", label: "Standard", priceLevel: "$" },
-    { value: "DELUXE", label: "Deluxe", priceLevel: "$$" },
-    { value: "LUXURY", label: "Luxury", priceLevel: "$$" },
-    { value: "PREMIUM", label: "Premium", priceLevel: "$$$" },
-  ];
-
-  return (
-    <div className="space-y-4">
-      {fields.map((row, idx) => {
-        const city = cities.find((c) => c.id === (row as any).cityId);
-        return (
-          <Card key={row.id} className="package-selector-glass package-shadow-fix">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FaMapMarkerAlt /> {city?.name || "City"}
-                <span className="text-xs text-gray-500">• {city?.nights || 0} nights</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <div className="text-sm font-medium mb-2">Hotel Category</div>
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-                  {CATEGORIES.map((cat) => (
-                    <button
-                      key={cat.value}
-                      type="button"
-                      onClick={() => setValue(`hotels.${idx}.category`, cat.value)}
-                      className={cn(
-                        "border rounded-lg p-3 text-left hover:bg-gray-50 dark:hover:bg-gray-800",
-                        (row as any).category === cat.value ? "border-indigo-500 ring-1 ring-indigo-200" : "border-gray-200"
-                      )}
-                    >
-                      <div className="font-semibold flex items-center gap-2">
-                        <FaBed /> {cat.label}
-                      </div>
-                      <div className="text-xs text-gray-500">{cat.priceLevel} category</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <CityHotelList cityIndex={idx} />
-            </CardContent>
-          </Card>
-        );
-      })}
-      {fields.length === 0 && <p className="text-sm text-gray-500">Add cities in the core Multi-City form to configure hotels.</p>}
-    </div>
-  );
-};
-
-const HOTEL_AMENITIES: HotelAmenity[] = ["Wi-Fi","Pool","Gym","Spa","Restaurant","Room Service","Parking","Airport Shuttle","Business Center"];
-const ROOM_AMENITIES: RoomAmenity[] = ["Balcony","Minibar","Air Conditioning","TV","Coffee Maker","Safe","Bathtub"];
-
-const CityHotelList: React.FC<{ cityIndex: number }> = ({ cityIndex }) => {
-  const { watch, setValue, control } = useFormContext<MultiCityHotelFormData>();
-  const { fields, append, remove } = useFieldArray({ control, name: `hotels.${cityIndex}.hotels` as const });
-  const selectedIndex = (watch(`hotels.${cityIndex}.selectedIndex`) as number | undefined) ?? 0;
-
-  const addHotel = () => append({
-    hotelName: "",
-    rating: 4,
-    location: "",
-    distanceKm: 0,
-    images: [],
-    amenities: [],
-    description: "",
-    rooms: [],
-    mealPlan: "BB",
-    breakfastType: "Buffet",
-    restaurantOptions: "",
-    dietary: [],
-  } as any);
-
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="font-medium">Hotel Selection</div>
-        <Button type="button" onClick={addHotel}><FaPlus className="mr-2" /> Add Hotel</Button>
-      </div>
-
-      {fields.map((f, i) => (
-        <Card key={f.id} className={cn("border-2", selectedIndex === i ? "border-indigo-500" : "border-transparent")}> 
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <button type="button" className="rounded bg-indigo-50 px-2 py-1 text-xs" onClick={() => setValue(`hotels.${cityIndex}.selectedIndex`, i)}>Select</button>
-              <Input defaultValue={(f as any).hotelName} placeholder="Hotel Name" onChange={(e) => setValue(`hotels.${cityIndex}.hotels.${i}.hotelName`, e.target.value)} />
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
-              <div>
-                <div className="text-xs text-gray-500 mb-1">Rating</div>
-                <Select defaultValue={String((f as any).rating || 4)} onValueChange={(v) => setValue(`hotels.${cityIndex}.hotels.${i}.rating`, Number(v))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {[1,2,3,4,5].map(n => <SelectItem key={n} value={String(n)}>{n} <FaStar className="inline" /></SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <div className="text-xs text-gray-500 mb-1">Location</div>
-                <Input placeholder="Map pin/address" defaultValue={(f as any).location} onChange={(e) => setValue(`hotels.${cityIndex}.hotels.${i}.location`, e.target.value)} />
-              </div>
-              <div>
-                <div className="text-xs text-gray-500 mb-1">Distance from Center (km)</div>
-                <Input type="number" min={0} defaultValue={(f as any).distanceKm} onChange={(e) => setValue(`hotels.${cityIndex}.hotels.${i}.distanceKm`, Number(e.target.value || 0))} />
-              </div>
-              <div>
-                <div className="text-xs text-gray-500 mb-1">Meal Plan</div>
-                <Select defaultValue={(f as any).mealPlan || "BB"} onValueChange={(v) => setValue(`hotels.${cityIndex}.hotels.${i}.mealPlan`, v as any)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ROOM_ONLY">Room Only</SelectItem>
-                    <SelectItem value="BB">Bed & Breakfast</SelectItem>
-                    <SelectItem value="HB">Half Board</SelectItem>
-                    <SelectItem value="FB">Full Board</SelectItem>
-                    <SelectItem value="AI">All Inclusive</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-              <div>
-                <div className="text-xs text-gray-500 mb-1">Breakfast Type</div>
-                <Select defaultValue={(f as any).breakfastType || "Buffet"} onValueChange={(v) => setValue(`hotels.${cityIndex}.hotels.${i}.breakfastType`, v as any)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {["Buffet","Continental","À la carte"].map(x => <SelectItem key={x} value={x}>{x}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="md:col-span-2">
-                <div className="text-xs text-gray-500 mb-1">Restaurant Options</div>
-                <Input defaultValue={(f as any).restaurantOptions} onChange={(e) => setValue(`hotels.${cityIndex}.hotels.${i}.restaurantOptions`, e.target.value)} />
-              </div>
-            </div>
-
-            <div>
-              <div className="text-xs text-gray-500 mb-1">Dietary Accommodations</div>
-              <div className="flex flex-wrap gap-2">
-                {["Vegetarian","Vegan","Gluten-Free","Halal","Kosher","Allergies"].map(opt => {
-                  const selected = ((f as any).dietary || []).includes(opt);
-                  return (
-                    <Button key={opt} type="button" variant={selected ? "default" : "outline"} onClick={() => {
-                      const set = new Set<string>(((f as any).dietary || []));
-                      if (set.has(opt)) set.delete(opt); else set.add(opt);
-                      setValue(`hotels.${cityIndex}.hotels.${i}.dietary`, Array.from(set) as any);
-                    }} className="h-8 px-3 text-xs">
-                      {opt}
-                    </Button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div>
-              <div className="text-sm font-medium mb-1">Hotel Amenities</div>
-              <div className="flex flex-wrap gap-2">
-                {HOTEL_AMENITIES.map(a => {
-                  const selected = ((f as any).amenities || []).includes(a);
-                  return (
-                    <Button key={a} type="button" variant={selected ? "default" : "outline"} onClick={() => {
-                      const set = new Set<string>(((f as any).amenities || []));
-                      if (set.has(a)) set.delete(a); else set.add(a);
-                      setValue(`hotels.${cityIndex}.hotels.${i}.amenities`, Array.from(set) as any);
-                    }} className="h-8 px-3 text-xs">
-                      {a}
-                    </Button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <div className="text-sm font-medium">Room Options</div>
-              <RoomOptions cityIndex={cityIndex} hotelIndex={i} />
-            </div>
-
-            <div>
-              <div className="text-sm font-medium">Hotel Description</div>
-              <Textarea defaultValue={(f as any).description} onChange={(e) => setValue(`hotels.${cityIndex}.hotels.${i}.description`, e.target.value)} />
-            </div>
-
-            <div className="flex items-center justify-end">
-              <Button type="button" variant="destructive" onClick={() => remove(i)}>Remove Hotel</Button>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-      {fields.length === 0 && (
-        <p className="text-sm text-gray-500">No hotels added yet. Click &quot;Add Hotel&quot; to begin.</p>
-      )}
-    </div>
-  );
-};
-
-const RoomOptions: React.FC<{ cityIndex: number; hotelIndex: number }> = ({ cityIndex, hotelIndex }) => {
-  const { control, setValue, watch } = useFormContext<MultiCityHotelFormData>();
-  const { fields, append, remove } = useFieldArray({ control, name: `hotels.${cityIndex}.hotels.${hotelIndex}.rooms` as const });
-  const addRoom = () => append({ id: generateId(), name: "", bed: "King", maxAdults: 2, maxChildren: 0, amenities: [], images: [], pricePerNight: 0 } as any);
-  return (
-    <div className="space-y-2">
-      <Button type="button" variant="outline" onClick={addRoom}><FaPlus className="mr-2" /> Add Room Type</Button>
-      <div className="space-y-2">
-        {fields.map((f, i) => (
-          <div key={f.id} className="grid grid-cols-1 md:grid-cols-6 gap-2 bg-gray-50 dark:bg-gray-800 rounded p-2">
-            <Input placeholder="Room Name" defaultValue={(f as any).name} onChange={(e) => setValue(`hotels.${cityIndex}.hotels.${hotelIndex}.rooms.${i}.name`, e.target.value)} />
-            <Select defaultValue={(f as any).bed || "King"} onValueChange={(v) => setValue(`hotels.${cityIndex}.hotels.${hotelIndex}.rooms.${i}.bed`, v as any)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {["King","Queen","Twin","Double","Single"].map(x => <SelectItem key={x} value={x}>{x}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Input type="number" placeholder="Max Adults" defaultValue={(f as any).maxAdults} onChange={(e) => setValue(`hotels.${cityIndex}.hotels.${hotelIndex}.rooms.${i}.maxAdults`, Number(e.target.value || 0))} />
-            <Input type="number" placeholder="Max Children" defaultValue={(f as any).maxChildren} onChange={(e) => setValue(`hotels.${cityIndex}.hotels.${hotelIndex}.rooms.${i}.maxChildren`, Number(e.target.value || 0))} />
-            <Input type="number" placeholder="Room Size (sqm)" defaultValue={(f as any).sizeSqm} onChange={(e) => setValue(`hotels.${cityIndex}.hotels.${hotelIndex}.rooms.${i}.sizeSqm`, Number(e.target.value || 0))} />
-            <Input type="number" placeholder="Price/Night" defaultValue={(f as any).pricePerNight} onChange={(e) => setValue(`hotels.${cityIndex}.hotels.${hotelIndex}.rooms.${i}.pricePerNight`, Number(e.target.value || 0))} />
-            <div className="md:col-span-6">
-              <div className="text-xs text-gray-500 mb-1">Room Amenities</div>
-              <div className="flex flex-wrap gap-2">
-                {ROOM_AMENITIES.map(a => {
-                  const selected = (((f as any).amenities || []) as string[]).includes(a);
-                  return (
-                    <Button key={a} type="button" variant={selected ? "default" : "outline"} onClick={() => {
-                      const set = new Set<string>(((f as any).amenities || []));
-                      if (set.has(a)) set.delete(a); else set.add(a);
-                      setValue(`hotels.${cityIndex}.hotels.${hotelIndex}.rooms.${i}.amenities`, Array.from(set) as any);
-                    }} className="h-8 px-3 text-xs">
-                      {a}
-                    </Button>
-                  );
-                })}
-              </div>
-            </div>
-            <div className="md:col-span-6 grid grid-cols-1 md:grid-cols-4 gap-2">
-              <div className="flex items-center gap-2">
-                <span className="text-sm">Extra Bed</span>
-                <Switch onCheckedChange={(v) => setValue(`hotels.${cityIndex}.hotels.${hotelIndex}.rooms.${i}.extraBedAvailable`, Boolean(v))} />
-                <Input type="number" placeholder="Extra Bed Price" onChange={(e) => setValue(`hotels.${cityIndex}.hotels.${hotelIndex}.rooms.${i}.extraBedPrice`, Number(e.target.value || 0))} />
-              </div>
-              <Select onValueChange={(v) => setValue(`hotels.${cityIndex}.hotels.${hotelIndex}.rooms.${i}.view`, v as any)}>
-                <SelectTrigger><SelectValue placeholder="Room View" /></SelectTrigger>
-                <SelectContent>
-                  {["City","Sea","Garden","Mountain","Pool"].map(x => <SelectItem key={x} value={x}>{x} View</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="md:col-span-6 flex items-center justify-end">
-              <Button type="button" variant="destructive" onClick={() => remove(i)}>Remove Room</Button>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-// Enhanced Itinerary Tab additions
-const EnhancedItineraryTab: React.FC = () => {
-  const { watch, setValue } = useFormContext<MultiCityHotelFormData>();
-  const daysExtra = watch("daysExtra");
-  const dayKeys = Object.keys(daysExtra).map(n => Number(n)).sort((a,b) => a-b);
-  const addDayMeta = () => {
-    const last: number = dayKeys.length > 0 ? (dayKeys[dayKeys.length - 1] as number) : 0;
-    const idx = last + 1;
-    const next = { ...daysExtra, [idx]: {} };
-    setValue("daysExtra", next);
-  };
-  return (
-    <div className="space-y-3">
-      <Button type="button" variant="outline" onClick={addDayMeta}><FaPlus className="mr-2" /> Add Day Meta</Button>
-      {dayKeys.map((i) => (
-        <Card key={i} className="package-selector-glass package-shadow-fix">
-          <CardHeader><CardTitle>Day {i}</CardTitle></CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
-            <Input placeholder="Accommodation for the night" defaultValue={daysExtra[i]?.accommodationHotelName} onChange={(e) => setValue(`daysExtra.${i}.accommodationHotelName` as any, e.target.value)} />
-            <Input type="time" placeholder="Check-in" defaultValue={daysExtra[i]?.checkIn} onChange={(e) => setValue(`daysExtra.${i}.checkIn` as any, e.target.value)} />
-            <Input type="time" placeholder="Check-out" defaultValue={daysExtra[i]?.checkOut} onChange={(e) => setValue(`daysExtra.${i}.checkOut` as any, e.target.value)} />
-            <Input placeholder="Meal plan for the day" defaultValue={daysExtra[i]?.mealPlanForDay} onChange={(e) => setValue(`daysExtra.${i}.mealPlanForDay` as any, e.target.value)} />
-            <div className="lg:col-span-4">
-              <Textarea placeholder="Hotel facilities usage time / notes" defaultValue={daysExtra[i]?.facilitiesUsage} onChange={(e) => setValue(`daysExtra.${i}.facilitiesUsage` as any, e.target.value)} />
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-      {dayKeys.length === 0 && <p className="text-sm text-gray-500">No day metadata; add to specify accommodation and timings.</p>}
-    </div>
-  );
-};
-
-// Enhanced Pricing Tab
-const EnhancedPricingTab: React.FC = () => {
-  const { watch, setValue } = useFormContext<MultiCityHotelFormData>();
-  const p = watch("pricingExtra");
-  const [child, setChild] = useState({ label: "Child 6-11", rule: "No bed", price: 0 });
-  return (
-    <div className="space-y-6">
-      <Card className="package-selector-glass package-shadow-fix">
-        <CardHeader><CardTitle>Base & Hotel Costs</CardTitle></CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div>
-            <div className="text-sm font-medium">Base Package Price</div>
-            <Input type="number" defaultValue={p.basePrice} onChange={(e) => setValue("pricingExtra.basePrice", Number(e.target.value || 0))} />
-          </div>
-          <div>
-            <div className="text-sm font-medium">Meal Plan Costs</div>
-            <Input type="number" defaultValue={p.mealPlanCosts} onChange={(e) => setValue("pricingExtra.mealPlanCosts", Number(e.target.value || 0))} />
-          </div>
-          <div>
-            <div className="text-sm font-medium">Room Upgrade Costs</div>
-            <Input type="number" defaultValue={p.roomUpgradeCosts} onChange={(e) => setValue("pricingExtra.roomUpgradeCosts", Number(e.target.value || 0))} />
-          </div>
-          <div>
-            <div className="text-sm font-medium">Single Supplement</div>
-            <Input type="number" defaultValue={p.singleSupplement} onChange={(e) => setValue("pricingExtra.singleSupplement", Number(e.target.value || 0))} />
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="package-selector-glass package-shadow-fix">
-        <CardHeader><CardTitle>Hotel Costs by City</CardTitle></CardHeader>
-        <CardContent className="space-y-2">
-          <Button type="button" variant="outline" onClick={() => setValue("pricingExtra.hotelCostsByCity", [...(p.hotelCostsByCity || []), { cityId: generateId(), total: 0 }])}><FaPlus className="mr-2" /> Add City Cost</Button>
-          <div className="space-y-2">
-              {(p.hotelCostsByCity || []).map((row, i) => (
-              <div key={i} className="grid grid-cols-2 gap-2 bg-gray-50 dark:bg-gray-800 rounded p-2">
-                <Input placeholder="City Id or Name" defaultValue={row.cityId} onChange={(e) => { const n = [...(p.hotelCostsByCity || [])]; (n[i] as any).cityId = e.target.value; setValue("pricingExtra.hotelCostsByCity" as any, n as any); }} />
-                <Input type="number" placeholder="Total" defaultValue={row.total} onChange={(e) => { const n = [...(p.hotelCostsByCity || [])]; (n[i] as any).total = Number(e.target.value || 0); setValue("pricingExtra.hotelCostsByCity" as any, n as any); }} />
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="package-selector-glass package-shadow-fix">
-        <CardHeader><CardTitle>Child Pricing</CardTitle></CardHeader>
-        <CardContent className="space-y-2">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-            <Input placeholder="Label (e.g., 6-11)" value={child.label} onChange={(e) => setChild(s => ({ ...s, label: e.target.value }))} />
-            <Input placeholder="Rule (e.g., No bed)" value={child.rule} onChange={(e) => setChild(s => ({ ...s, rule: e.target.value }))} />
-            <Input type="number" placeholder="Price" value={child.price} onChange={(e) => setChild(s => ({ ...s, price: Number(e.target.value || 0) }))} />
-          </div>
-          <Button type="button" onClick={() => setValue("pricingExtra.childPricing", [ ...(p.childPricing || []), { ...child } ])}><FaPlus className="mr-2" /> Add Child Rule</Button>
-          <div className="space-y-1 text-sm">
-            {(p.childPricing || []).map((c, i) => (
-              <div key={i} className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 rounded px-3 py-2">
-                <div>{c.label} • {c.rule} • ${Number(c.price).toFixed(2)}</div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="package-selector-glass package-shadow-fix">
-        <CardHeader><CardTitle>Total Package Price</CardTitle></CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-2">
-          <Input type="number" placeholder="Calculated Total" defaultValue={p.totalPrice} onChange={(e) => setValue("pricingExtra.totalPrice", Number(e.target.value || 0))} />
-        </CardContent>
-      </Card>
-    </div>
-  );
-};
-
-// Auto-save + validation (lightweight)
+// Form validation + autosave (aligned with other package forms)
 type FormIssue = { tab: string; field: string; message: string; severity?: "error" | "warning" };
-const useFormValidation = (data: MultiCityHotelFormData) => {
+type FormValidation = { isValid: boolean; errors: FormIssue[]; warnings: FormIssue[] };
+
+const useFormValidation = (data: MultiCityPackageFormData): FormValidation => {
   return useMemo(() => {
     const errors: FormIssue[] = [];
+    const warnings: FormIssue[] = [];
+
     if (!data.basic.title.trim()) errors.push({ tab: "basic", field: "title", message: "Title is required", severity: "error" });
     if (!data.basic.shortDescription.trim()) errors.push({ tab: "basic", field: "shortDescription", message: "Short description is required", severity: "error" });
-    if (data.cities.length === 0) errors.push({ tab: "destinations", field: "cities", message: "Add at least one city", severity: "error" });
-    return { isValid: errors.length === 0, errors };
+
+    if (data.cities.length === 0) errors.push({ tab: "basic", field: "cities", message: "Add at least one city", severity: "error" });
+    if (data.cities.some(c => c.nights <= 0)) errors.push({ tab: "basic", field: "nights", message: "Each city must have at least 1 night", severity: "error" });
+
+    if (data.days.length === 0) warnings.push({ tab: "itinerary", field: "days", message: "No days generated yet" });
+
+    // Pricing validation
+    if (data.pricing.adultPrice <= 0) {
+      errors.push({ tab: "pricing", field: "adultPrice", message: "Adult price is required", severity: "error" });
+    }
+    if (data.pricing.pricingType === "GROUP" && data.pricing.vehicles.length === 0) {
+      errors.push({ tab: "pricing", field: "vehicles", message: "Add at least one vehicle option for group pricing", severity: "error" });
+    }
+
+    return { isValid: errors.length === 0, errors, warnings };
   }, [data]);
 };
 
 type AutoSaveState = { isSaving: boolean; lastSaved: Date | null; hasUnsavedChanges: boolean; error: string | null };
-const useAutoSave = (data: MultiCityHotelFormData, onSave?: (d: MultiCityHotelFormData) => Promise<void> | void, interval = 30000) => {
+const useAutoSave = (data: MultiCityPackageFormData, onSave?: (d: MultiCityPackageFormData) => Promise<void> | void, interval = 30000) => {
   const [state, setState] = useState<AutoSaveState>({ isSaving: false, lastSaved: null, hasUnsavedChanges: false, error: null });
   const lastPayloadRef = useRef<string>("");
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const isSavingRef = useRef(false);
   const serialized = useMemo(() => JSON.stringify(data), [data]);
+
   React.useEffect(() => {
     const current = serialized;
     const nextUnsaved = current !== lastPayloadRef.current;
@@ -665,59 +220,989 @@ const useAutoSave = (data: MultiCityHotelFormData, onSave?: (d: MultiCityHotelFo
     }, interval);
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
   }, [serialized, onSave, interval, data]);
+
   return state;
 };
 
-// Main Form
-export default function MultiCityHotelPackageForm({ className }: { className?: string }) {
-  const form = useForm<MultiCityHotelFormData>({ defaultValues: DEFAULT_DATA });
-  const { handleSubmit, watch } = form;
-  const data = watch();
-  const [activeTab, setActiveTab] = useState("basic");
-  const validation = useFormValidation(data);
-  const [saving, setSaving] = useState(false);
-  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+// SUB-COMPONENTS
+const BasicInformationTab: React.FC = () => {
+  const { register, control, setValue, watch } = useFormContext<MultiCityPackageFormData>();
+  const { fields, append, remove, move } = useFieldArray({ control, name: "cities" });
 
-  const onSave = async (d: MultiCityHotelFormData) => {
-    setSaving(true);
-    try {
-      setLastSaved(new Date());
-    } finally {
-      setSaving(false);
+  const addCity = () => {
+    append({ id: generateId(), name: "", country: "", nights: 2, highlights: [], activitiesIncluded: [], expanded: true });
+  };
+
+  // Keep days in sync when cities change
+  const cities = watch("cities");
+  const days = watch("days");
+  
+  React.useEffect(() => {
+    // Auto-generate days based on cities and nights
+    if (!cities || cities.length === 0) return;
+    
+    const newDays: DayPlan[] = [];
+    cities.forEach((city) => {
+      const nights = city.nights || 1;
+      for (let i = 0; i < nights; i++) {
+        newDays.push({
+          cityId: city.id,
+          cityName: city.name,
+          description: "",
+          photoUrl: "",
+          hasFlights: false,
+          flights: [],
+        });
+      }
+    });
+    
+    // Only update if the structure changed
+    if (JSON.stringify(newDays.map(d => ({ cityId: d.cityId, cityName: d.cityName }))) !== 
+        JSON.stringify(days.map((d: DayPlan) => ({ cityId: d.cityId, cityName: d.cityName })))) {
+      setValue("days", newDays);
+    }
+  }, [cities, setValue]);
+
+  // Initialize with one empty city by default
+  React.useEffect(() => {
+    if (fields.length === 0) {
+      addCity();
+    }
+  }, []);
+
+  return (
+    <div className="space-y-4">
+      <Card className="package-selector-glass package-shadow-fix">
+        <CardHeader>
+          <CardTitle>Basic Information</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <label className="text-sm font-medium">Title</label>
+            <Input {...register("basic.title")} placeholder="Grand Europe Multi-City Adventure" />
+          </div>
+          <div>
+            <label className="text-sm font-medium">Short Description</label>
+            <Textarea {...register("basic.shortDescription")} placeholder="A curated journey across multiple cities with handpicked experiences." />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium">Destination Region</label>
+              <Input {...register("basic.destinationRegion")} placeholder="Europe, Southeast Asia, etc." />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Package Validity Date</label>
+              <Input 
+                type="date" 
+                {...register("basic.packageValidityDate")} 
+                placeholder="Last date for bookings"
+                className="package-text-fix"
+              />
+              <p className="text-xs text-gray-500 mt-1">Last date this package is valid for bookings</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* City Stops Section */}
+      <Card className="package-selector-glass package-shadow-fix">
+        <CardHeader>
+          <CardTitle>City Stops</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* City Rows */}
+          <div className="space-y-3">
+            {fields.map((field, idx) => (
+              <div key={field.id} className="space-y-3 p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+                {/* Basic City Info Row */}
+                <div className="flex items-start gap-3">
+                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-r from-[#FF6B35] to-[#FF4B8C] text-white font-semibold flex-shrink-0 mt-6">
+                    {idx + 1}
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 flex-1">
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">City Name *</label>
+                      <Input 
+                        placeholder="e.g. Paris, Rome, Tokyo" 
+                        defaultValue={field.name}
+                        onChange={(e) => setValue(`cities.${idx}.name`, e.target.value)}
+                        className="package-text-fix"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">Country</label>
+                      <Input 
+                        placeholder="e.g. France, Italy, Japan" 
+                        defaultValue={field.country}
+                        onChange={(e) => setValue(`cities.${idx}.country`, e.target.value)}
+                        className="package-text-fix"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">Nights *</label>
+                      <Input 
+                        type="number" 
+                        min={1} 
+                        defaultValue={field.nights}
+                        onChange={(e) => setValue(`cities.${idx}.nights`, Number(e.target.value || 1))}
+                        className="package-text-fix"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0 mt-6">
+                    <Button 
+                      type="button"
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => move(idx, Math.max(0, idx - 1))}
+                      disabled={idx === 0}
+                    >
+                      <FaArrowUp />
+                    </Button>
+                    <Button 
+                      type="button"
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => move(idx, Math.min(fields.length - 1, idx + 1))}
+                      disabled={idx === fields.length - 1}
+                    >
+                      <FaArrowDown />
+                    </Button>
+                    <Button 
+                      type="button"
+                      variant="destructive" 
+                      size="icon" 
+                      onClick={() => remove(idx)}
+                    >
+                      <FaTrash />
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Highlights Section */}
+                <div>
+                  <label className="text-sm font-medium mb-1 block">Highlights</label>
+                  <HighlightsEditor fieldIndex={idx} />
+                </div>
+
+                {/* Activities Included Section */}
+                <div>
+                  <label className="text-sm font-medium mb-1 block">Activities Included</label>
+                  <ActivitiesIncludedEditor fieldIndex={idx} />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Add City Button */}
+          <Button 
+            type="button"
+            onClick={addCity}
+            className="package-button-fix w-full"
+            variant="outline"
+          >
+            <FaPlus className="mr-2" /> Add City
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+
+const HighlightsEditor: React.FC<{ fieldIndex: number }> = ({ fieldIndex }) => {
+  const { control } = useFormContext<MultiCityPackageFormData>();
+  const { fields, append, remove } = useFieldArray({ control: control as any, name: `cities.${fieldIndex}.highlights` as any });
+  const [value, setValue] = useState("");
+  return (
+    <div className="space-y-2">
+      <div className="flex gap-2">
+        <Input value={value} onChange={(e) => setValue(e.target.value)} placeholder="e.g., Eiffel Tower" />
+        <Button type="button" onClick={() => { if (value.trim()) { append(value.trim() as any); setValue(""); } }}>Add</Button>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {fields.map((f, i) => (
+          <Badge key={f.id} variant="secondary" className="flex items-center gap-2">
+            <span>{(f as unknown as string) || "Item"}</span>
+            <button type="button" onClick={() => remove(i)} aria-label="remove" className="text-xs">×</button>
+          </Badge>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const ACTIVITIES_LIBRARY = ["City Tour", "Museum Visit", "Cooking Class", "Wine Tasting", "Boat Cruise", "Hiking", "Cycling", "Food Tour"];
+
+const ActivitiesIncludedEditor: React.FC<{ fieldIndex: number }> = ({ fieldIndex }) => {
+  const { control, watch, setValue } = useFormContext<MultiCityPackageFormData>();
+  const { fields } = useFieldArray({ control: control as any, name: `cities.${fieldIndex}.activitiesIncluded` as any });
+  const selected = (watch(`cities.${fieldIndex}.activitiesIncluded`) as string[]) || [];
+  const toggle = (name: string) => {
+    const set = new Set(selected);
+    if (set.has(name)) set.delete(name); else set.add(name);
+    setValue(`cities.${fieldIndex}.activitiesIncluded`, Array.from(set));
+  };
+  return (
+    <div className="flex flex-wrap gap-2">
+      {ACTIVITIES_LIBRARY.map(act => (
+        <Button key={act} type="button" variant={selected.includes(act) ? "default" : "outline"} onClick={() => toggle(act)} className="h-8 px-3 text-xs">
+          {act}
+        </Button>
+      ))}
+    </div>
+  );
+};
+
+
+const ItineraryTab: React.FC = () => {
+  const { watch, setValue, control } = useFormContext<MultiCityPackageFormData>();
+  const days = watch("days") || [];
+
+  const addFlight = (dayIndex: number) => {
+    const d = [...days];
+    const day = d[dayIndex];
+    if (!day) return;
+    if (!day.flights) day.flights = [];
+    day.flights.push({
+      id: generateId(),
+      departureCity: "",
+      departureTime: "",
+      arrivalCity: "",
+      arrivalTime: "",
+      airline: "",
+      flightNumber: "",
+    });
+    setValue("days", d);
+  };
+
+  const removeFlight = (dayIndex: number, flightIndex: number) => {
+    const d = [...days];
+    const day = d[dayIndex];
+    if (!day || !day.flights) return;
+    day.flights.splice(flightIndex, 1);
+    setValue("days", d);
+  };
+
+  const handlePhotoUpload = (dayIndex: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    // For now, we'll store the file name or create an object URL
+    // In production, you'd upload to storage and get a URL
+    const photoUrl = URL.createObjectURL(file);
+    const d = [...days];
+    if (d[dayIndex]) {
+      d[dayIndex]!.photoUrl = photoUrl;
+      setValue("days", d);
     }
   };
 
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <Card className="package-selector-glass package-shadow-fix">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FaClock /> Day-by-Day Itinerary
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {days.length > 0 ? (
+            <div className="w-full overflow-x-auto">
+              <div className="flex items-center gap-2 min-w-max p-2">
+                {days.map((day, i) => (
+                  <React.Fragment key={i}>
+                    <div className="flex flex-col items-center">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-r from-[#FF6B35] to-[#FF4B8C] text-white flex items-center justify-center font-semibold text-sm">
+                        {i + 1}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">{day.cityName}</div>
+                    </div>
+                    {i < days.length - 1 && <div className="w-16 h-0.5 bg-orange-200 mb-4" />}
+                  </React.Fragment>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              <FaClock className="h-12 w-12 mx-auto mb-3 text-gray-400" />
+              <p className="font-medium mb-1">No Days Yet</p>
+              <p className="text-sm">Add cities in the Basic Info tab to auto-generate days</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Day Cards */}
+      <div className="space-y-4">
+        {days.map((day, dayIndex) => (
+          <Card key={dayIndex} className="package-selector-glass package-shadow-fix">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Badge variant="secondary" className="text-base px-3 py-1">Day {dayIndex + 1}</Badge>
+                <span className="text-base font-semibold text-gray-700 dark:text-gray-300">{day.cityName || "—"}</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Description and Photo Row */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium mb-1 block">Description</label>
+                  <Textarea
+                    placeholder="Describe the activities and highlights for this day..."
+                    defaultValue={day.description}
+                    onChange={(e) => {
+                      const d = [...days];
+                      if (d[dayIndex]) {
+                        d[dayIndex]!.description = e.target.value;
+                        setValue("days", d);
+                      }
+                    }}
+                    rows={4}
+                    className="package-text-fix"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-1 block">Photo</label>
+                  <div className="space-y-2">
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handlePhotoUpload(dayIndex, e)}
+                      className="package-text-fix"
+                    />
+                    {day.photoUrl && (
+                      <div className="relative w-full h-32 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+                        <img 
+                          src={day.photoUrl} 
+                          alt={`Day ${dayIndex + 1}`} 
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Add Flights Checkbox */}
+              <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                <input
+                  type="checkbox"
+                  id={`hasFlights-${dayIndex}`}
+                  checked={day.hasFlights || false}
+                  onChange={(e) => {
+                    const d = [...days];
+                    if (d[dayIndex]) {
+                      d[dayIndex]!.hasFlights = e.target.checked;
+                      if (e.target.checked && (!d[dayIndex]!.flights || d[dayIndex]!.flights!.length === 0)) {
+                        // Add first flight automatically
+                        d[dayIndex]!.flights = [{
+                          id: generateId(),
+                          departureCity: "",
+                          departureTime: "",
+                          arrivalCity: "",
+                          arrivalTime: "",
+                          airline: "",
+                          flightNumber: "",
+                        }];
+                      }
+                      setValue("days", d);
+                    }
+                  }}
+                  className="w-4 h-4"
+                />
+                <label htmlFor={`hasFlights-${dayIndex}`} className="text-sm font-medium cursor-pointer">
+                  Add Flights for this day
+                </label>
+              </div>
+
+              {/* Flights Section */}
+              {day.hasFlights && (
+                <div className="space-y-3 pl-6 border-l-2 border-orange-300">
+                  {(day.flights || []).map((flight, flightIndex) => (
+                    <div key={flight.id} className="space-y-3 p-4 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                          Flight {flightIndex + 1}
+                        </h4>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeFlight(dayIndex, flightIndex)}
+                        >
+                          <FaTrash className="h-3 w-3" />
+                        </Button>
+                      </div>
+
+                      {/* Row 1: Departure and Arrival Info */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <div>
+                          <label className="text-xs font-medium mb-1 block">Departure City</label>
+                          <Input
+                            placeholder="e.g. Paris"
+                            defaultValue={flight.departureCity}
+                            onChange={(e) => {
+                              const d = [...days];
+                              if (d[dayIndex]?.flights?.[flightIndex]) {
+                                d[dayIndex]!.flights![flightIndex]!.departureCity = e.target.value;
+                                setValue("days", d);
+                              }
+                            }}
+                            className="package-text-fix text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium mb-1 block">Departure Time</label>
+                          <Input
+                            type="time"
+                            defaultValue={flight.departureTime}
+                            onChange={(e) => {
+                              const d = [...days];
+                              if (d[dayIndex]?.flights?.[flightIndex]) {
+                                d[dayIndex]!.flights![flightIndex]!.departureTime = e.target.value;
+                                setValue("days", d);
+                              }
+                            }}
+                            className="package-text-fix text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium mb-1 block">Arrival City</label>
+                          <Input
+                            placeholder="e.g. Rome"
+                            defaultValue={flight.arrivalCity}
+                            onChange={(e) => {
+                              const d = [...days];
+                              if (d[dayIndex]?.flights?.[flightIndex]) {
+                                d[dayIndex]!.flights![flightIndex]!.arrivalCity = e.target.value;
+                                setValue("days", d);
+                              }
+                            }}
+                            className="package-text-fix text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium mb-1 block">Arrival Time</label>
+                          <Input
+                            type="time"
+                            defaultValue={flight.arrivalTime}
+                            onChange={(e) => {
+                              const d = [...days];
+                              if (d[dayIndex]?.flights?.[flightIndex]) {
+                                d[dayIndex]!.flights![flightIndex]!.arrivalTime = e.target.value;
+                                setValue("days", d);
+                              }
+                            }}
+                            className="package-text-fix text-sm"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Row 2: Airline and Flight Number */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs font-medium mb-1 block">Airline</label>
+                          <Input
+                            placeholder="e.g. Air France"
+                            defaultValue={flight.airline}
+                            onChange={(e) => {
+                              const d = [...days];
+                              if (d[dayIndex]?.flights?.[flightIndex]) {
+                                d[dayIndex]!.flights![flightIndex]!.airline = e.target.value;
+                                setValue("days", d);
+                              }
+                            }}
+                            className="package-text-fix text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium mb-1 block">Flight Number</label>
+                          <Input
+                            placeholder="e.g. AF1234"
+                            defaultValue={flight.flightNumber}
+                            onChange={(e) => {
+                              const d = [...days];
+                              if (d[dayIndex]?.flights?.[flightIndex]) {
+                                d[dayIndex]!.flights![flightIndex]!.flightNumber = e.target.value;
+                                setValue("days", d);
+                              }
+                            }}
+                            className="package-text-fix text-sm"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Add Another Flight Button */}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => addFlight(dayIndex)}
+                    className="package-button-fix"
+                  >
+                    <FaPlus className="mr-2 h-3 w-3" /> Add Another Flight
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+
+const InclusionsExclusionsTab: React.FC = () => {
+  const { control } = useFormContext<MultiCityPackageFormData>();
+  const inc = useFieldArray({ control, name: "inclusions" });
+  const exc = useFieldArray({ control, name: "exclusions" });
+  const addons = useFieldArray({ control, name: "addOns" });
+  const [incText, setIncText] = useState("");
+  const [incCat, setIncCat] = useState<InclusionCategory>("Transport");
+  const [excText, setExcText] = useState("");
+  const [addOn, setAddOn] = useState({ name: "", description: "", price: 0 });
+  return (
+    <div className="space-y-6">
+      <Card className="package-selector-glass package-shadow-fix">
+        <CardHeader><CardTitle>What&apos;s Included</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+            <Select onValueChange={(v) => setIncCat(v as InclusionCategory)}>
+              <SelectTrigger><SelectValue placeholder="Category" /></SelectTrigger>
+              <SelectContent>
+                {["Transport","Activities","Meals","Guide Services","Entry Fees","Insurance"].map(c => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className="md:col-span-3 flex gap-2">
+              <Input value={incText} onChange={(e) => setIncText(e.target.value)} placeholder="Add inclusion" />
+              <Button type="button" onClick={() => { if (incText.trim()) { inc.append({ id: generateId(), category: incCat, text: incText.trim() }); setIncText(""); } }}>Add</Button>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {inc.fields.map((f, i) => (
+              <Badge key={f.id} variant="outline" className="flex items-center gap-2">
+                <span className="text-xs">{(f as any).category}:</span>
+                <span>{(f as any).text}</span>
+                <button type="button" onClick={() => inc.remove(i)} aria-label="remove" className="text-xs">×</button>
+              </Badge>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="package-selector-glass package-shadow-fix">
+        <CardHeader><CardTitle>What&apos;s Not Included</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex gap-2">
+            <Input value={excText} onChange={(e) => setExcText(e.target.value)} placeholder="Add exclusion" />
+            <Button type="button" onClick={() => { if (excText.trim()) { exc.append({ id: generateId(), text: excText.trim() }); setExcText(""); } }}>Add</Button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {exc.fields.map((f, i) => (
+              <Badge key={f.id} variant="secondary" className="flex items-center gap-2">
+                <span>{(f as any).text}</span>
+                <button type="button" onClick={() => exc.remove(i)} aria-label="remove" className="text-xs">×</button>
+              </Badge>
+            ))}
+          </div>
+      </CardContent>
+      </Card>
+
+      <Card className="package-selector-glass package-shadow-fix">
+        <CardHeader><CardTitle>Optional Add-ons</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+            <Input placeholder="Name" value={addOn.name} onChange={(e) => setAddOn(s => ({ ...s, name: e.target.value }))} />
+            <Input placeholder="Description" value={addOn.description} onChange={(e) => setAddOn(s => ({ ...s, description: e.target.value }))} />
+            <Input type="number" placeholder="Price" value={addOn.price} onChange={(e) => setAddOn(s => ({ ...s, price: Number(e.target.value || 0) }))} />
+          </div>
+          <Button type="button" onClick={() => { if (addOn.name.trim()) { addons.append({ id: generateId(), ...addOn }); setAddOn({ name: "", description: "", price: 0 }); } }}>Add Add-on</Button>
+          <div className="space-y-2">
+            {addons.fields.map((f, i) => (
+              <div key={f.id} className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 rounded px-3 py-2">
+                <div>
+                  <div className="font-medium">{(f as any).name}</div>
+                  <div className="text-xs text-gray-500">{(f as any).description || ""}</div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="text-sm font-semibold">${Number((f as any).price || 0).toFixed(2)}</div>
+                  <Button variant="destructive" size="icon" onClick={() => addons.remove(i)}><FaTrash /></Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+const PricingDatesTab: React.FC = () => {
+  const { watch, setValue } = useFormContext<MultiCityPackageFormData>();
+  const pricing = watch("pricing");
+  
+  const [newVehicle, setNewVehicle] = useState({
+    vehicleType: "",
+    maxCapacity: 1,
+    price: 0,
+    description: "",
+  });
+
+  const addVehicle = () => {
+    if (!newVehicle.vehicleType.trim() || newVehicle.price <= 0) return;
+    const vehicle: Vehicle = {
+      id: generateId(),
+      ...newVehicle,
+    };
+    setValue("pricing.vehicles", [...pricing.vehicles, vehicle]);
+    setNewVehicle({
+      vehicleType: "",
+      maxCapacity: 1,
+      price: 0,
+      description: "",
+    });
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Pricing Type Selector */}
+      <Card className="package-selector-glass package-shadow-fix">
+        <CardHeader><CardTitle>Pricing Model</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex gap-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="pricing-type"
+                checked={pricing.pricingType === "STANDARD"}
+                onChange={() => setValue("pricing.pricingType", "STANDARD")}
+                className="w-4 h-4"
+              />
+              <div>
+                <div className="font-medium">Standard Pricing</div>
+                <div className="text-xs text-gray-500">Per person pricing only</div>
+              </div>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="pricing-type"
+                checked={pricing.pricingType === "GROUP"}
+                onChange={() => setValue("pricing.pricingType", "GROUP")}
+                className="w-4 h-4"
+              />
+              <div>
+                <div className="font-medium">Group Pricing</div>
+                <div className="text-xs text-gray-500">Per person pricing + vehicle options</div>
+              </div>
+            </label>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Per Person Pricing (shown for both types) */}
+      <Card className="package-selector-glass package-shadow-fix">
+        <CardHeader>
+          <CardTitle>Per Person Pricing</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Adult Price */}
+            <div>
+              <label className="text-sm font-medium mb-1 block">Adult Price *</label>
+              <Input
+                type="number"
+                min={0}
+                value={pricing.adultPrice}
+                onChange={(e) => setValue("pricing.adultPrice", Number(e.target.value || 0))}
+                className="package-text-fix"
+                placeholder="0"
+              />
+            </div>
+
+            {/* Child Price */}
+            <div>
+              <label className="text-sm font-medium mb-1 block">Child Price</label>
+              <Input
+                type="number"
+                min={0}
+                value={pricing.childPrice}
+                onChange={(e) => setValue("pricing.childPrice", Number(e.target.value || 0))}
+                className="package-text-fix"
+                placeholder="0"
+              />
+            </div>
+
+            {/* Child Min Age */}
+            <div>
+              <label className="text-sm font-medium mb-1 block">Child Min Age</label>
+              <Input
+                type="number"
+                min={0}
+                value={pricing.childMinAge}
+                onChange={(e) => setValue("pricing.childMinAge", Number(e.target.value || 3))}
+                className="package-text-fix"
+              />
+            </div>
+
+            {/* Child Max Age */}
+            <div>
+              <label className="text-sm font-medium mb-1 block">Child Max Age</label>
+              <Input
+                type="number"
+                min={0}
+                value={pricing.childMaxAge}
+                onChange={(e) => setValue("pricing.childMaxAge", Number(e.target.value || 12))}
+                className="package-text-fix"
+              />
+            </div>
+
+            {/* Infant Price */}
+            <div>
+              <label className="text-sm font-medium mb-1 block">Infant Price</label>
+              <Input
+                type="number"
+                min={0}
+                value={pricing.infantPrice}
+                onChange={(e) => setValue("pricing.infantPrice", Number(e.target.value || 0))}
+                className="package-text-fix"
+                placeholder="0"
+              />
+            </div>
+
+            {/* Infant Max Age */}
+            <div>
+              <label className="text-sm font-medium mb-1 block">Infant Max Age</label>
+              <Input
+                type="number"
+                min={0}
+                value={pricing.infantMaxAge}
+                onChange={(e) => setValue("pricing.infantMaxAge", Number(e.target.value || 2))}
+                className="package-text-fix"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Vehicle Options (only for GROUP pricing) */}
+      {pricing.pricingType === "GROUP" && (
+        <Card className="package-selector-glass package-shadow-fix">
+          <CardHeader>
+            <CardTitle>Vehicle Options</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Add New Vehicle Form */}
+            <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+              <h4 className="font-medium mb-3">Add Vehicle Option</h4>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                <div>
+                  <label className="text-xs font-medium mb-1 block">Vehicle Type *</label>
+                  <Input
+                    placeholder="e.g., Sedan, SUV, Van"
+                    value={newVehicle.vehicleType}
+                    onChange={(e) => setNewVehicle(s => ({ ...s, vehicleType: e.target.value }))}
+                    className="package-text-fix"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium mb-1 block">Max Capacity *</label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={newVehicle.maxCapacity}
+                    onChange={(e) => setNewVehicle(s => ({ ...s, maxCapacity: Number(e.target.value || 1) }))}
+                    className="package-text-fix"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium mb-1 block">Price *</label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={newVehicle.price}
+                    onChange={(e) => setNewVehicle(s => ({ ...s, price: Number(e.target.value || 0) }))}
+                    className="package-text-fix"
+                    placeholder="Total price for vehicle"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium mb-1 block">Description</label>
+                  <Input
+                    placeholder="Optional"
+                    value={newVehicle.description}
+                    onChange={(e) => setNewVehicle(s => ({ ...s, description: e.target.value }))}
+                    className="package-text-fix"
+                  />
+                </div>
+              </div>
+              <div className="mt-3">
+                <Button type="button" onClick={addVehicle} className="package-button-fix">
+                  <FaPlus className="mr-2" /> Add Vehicle
+                </Button>
+              </div>
+            </div>
+
+            {/* Existing Vehicles */}
+            <div className="space-y-3">
+              {pricing.vehicles.map((vehicle, idx) => (
+                <div key={vehicle.id} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div>
+                      <div className="font-medium">{vehicle.vehicleType}</div>
+                      {vehicle.description && <div className="text-xs text-gray-500">{vehicle.description}</div>}
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      Max {vehicle.maxCapacity} {vehicle.maxCapacity === 1 ? 'person' : 'people'}
+                    </div>
+                    <div className="font-semibold text-green-600">
+                      ${vehicle.price}
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => {
+                      const vehicles = pricing.vehicles.filter((_, i) => i !== idx);
+                      setValue("pricing.vehicles", vehicles);
+                    }}
+                  >
+                    <FaTrash />
+                  </Button>
+                </div>
+              ))}
+              {pricing.vehicles.length === 0 && (
+                <p className="text-sm text-gray-500 text-center py-4">No vehicles added yet. Add at least one vehicle option.</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+};
+
+
+const ReviewPublishTab: React.FC<{ onPreview?: () => void }> = ({ onPreview }) => {
+  const { watch } = useFormContext<MultiCityPackageFormData>();
+  const data = watch();
+  const totalNights = data.cities.reduce((sum, c) => sum + (c.nights || 0), 0);
+  return (
+    <div className="space-y-6 package-scroll-fix">
+      <Card className="package-selector-glass package-shadow-fix">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><FaCheckCircle className="text-green-600" /> Summary</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm">
+          <div><span className="font-medium">Title:</span> {data.basic.title || "—"}</div>
+          <div><span className="font-medium">Region:</span> {data.basic.destinationRegion || "—"}</div>
+          <div><span className="font-medium">Cities:</span> {data.cities.length} • <span className="font-medium">Nights:</span> {totalNights}</div>
+          <div><span className="font-medium">Pricing Type:</span> {data.pricing.pricingType === "STANDARD" ? "Standard (Per Person)" : "Group (Per Person + Vehicles)"}</div>
+          <div><span className="font-medium">Adult Price:</span> ${data.pricing.adultPrice}</div>
+          {data.pricing.pricingType === "GROUP" && (
+            <div><span className="font-medium">Vehicle Options:</span> {data.pricing.vehicles.length}</div>
+          )}
+          {data.basic.packageValidityDate && (
+            <div><span className="font-medium">Valid Until:</span> {data.basic.packageValidityDate}</div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="package-selector-glass package-shadow-fix">
+        <CardHeader><CardTitle>Itinerary Timeline</CardTitle></CardHeader>
+        <CardContent>
+          <div className="w-full overflow-x-auto">
+            <div className="flex items-center gap-4 min-w-max p-2">
+              {data.days.map((day, i) => (
+                <div key={i} className="flex flex-col items-center">
+                  <div className="w-10 h-10 rounded-full bg-green-600 text-white flex items-center justify-center text-sm font-semibold">{i + 1}</div>
+                  <div className="text-xs text-gray-500 mt-1">{day.cityName}</div>
+                  {i < data.days.length - 1 && <div className="w-16 h-1 bg-green-200" />}
+                </div>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="flex items-center gap-3">
+        <Button type="button" variant="outline" onClick={onPreview} className="package-button-fix"><FaEye className="mr-2" /> Preview</Button>
+        <Button type="submit" className="package-button-fix">Publish</Button>
+      </div>
+    </div>
+  );
+};
+
+// MAIN FORM
+export const MultiCityPackageForm: React.FC<{
+  initialData?: Partial<MultiCityPackageFormData>;
+  onSave?: (data: MultiCityPackageFormData) => Promise<void> | void;
+  onPublish?: (data: MultiCityPackageFormData) => Promise<void> | void;
+  onPreview?: (data: MultiCityPackageFormData) => void;
+  className?: string;
+}> = ({ initialData, onSave, onPublish, onPreview, className }) => {
+  const form = useForm<MultiCityPackageFormData>({ defaultValues: { ...DEFAULT_DATA, ...initialData } });
+  const { handleSubmit, watch } = form;
+  const formData = watch();
+  const [activeTab, setActiveTab] = useState("basic");
+  const validation = useFormValidation(formData);
   // Auto-save disabled
-  // const autoSave = useAutoSave(data, onSave);
+  // const autoSave = useAutoSave(formData, onSave);
+
+  const saveDraft = async (data: MultiCityPackageFormData) => { if (onSave) await onSave(data); };
+  const publish = async (data: MultiCityPackageFormData) => { if (onPublish) await onPublish(data); };
+
+  const tabs = [
+    { id: "basic", label: "Basic Info", icon: <FaInfoCircle className="h-4 w-4" />, badge: validation.errors.filter(e => e.tab === "basic").length, hasErrors: validation.errors.some(e => e.tab === "basic") },
+    { id: "itinerary", label: "Itinerary", icon: <FaClock className="h-4 w-4" />, badge: validation.errors.filter(e => e.tab === "itinerary").length, hasErrors: validation.errors.some(e => e.tab === "itinerary") },
+    { id: "inclusions", label: "Inclusions", icon: <FaCheckCircle className="h-4 w-4" />, badge: 0, hasErrors: false },
+    { id: "pricing", label: "Pricing", icon: <FaDollarSign className="h-4 w-4" />, badge: validation.errors.filter(e => e.tab === "pricing").length, hasErrors: validation.errors.some(e => e.tab === "pricing") },
+    { id: "review", label: "Review", icon: <FaEye className="h-4 w-4" />, badge: validation.errors.length, hasErrors: !validation.isValid },
+  ];
 
   return (
     <FormProvider {...form}>
-      <form onSubmit={handleSubmit(onSave)} className={cn("w-full package-text-fix", className)}>
+      <form onSubmit={handleSubmit(publish)} className={cn("w-full package-text-fix", className)}>
         <div className="mb-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold">Create Multi-City with Hotel</h1>
-              <p className="text-gray-600">Full multi-city itinerary builder with hotel selection and pricing.</p>
+              <h1 className="text-2xl font-bold">Create Multi-City Package</h1>
+              <p className="text-gray-600">Build an itinerary across multiple cities with intuitive tools.</p>
             </div>
+            {/* Auto-save status and actions (aligned with other forms) */}
             {/* Auto-save status - DISABLED */}
             {/* <div className="flex items-center gap-4">
               <AnimatePresence>
-                {(saving || autoSave.isSaving) && (
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-2 text-sm text-blue-600">
+                {autoSave.isSaving && (
+                  <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="flex items-center gap-2 text-sm text-blue-600">
                     <FaSpinner className="h-4 w-4 animate-spin" /> Saving...
                   </motion.div>
                 )}
-                {(lastSaved || autoSave.lastSaved) && !(saving || autoSave.isSaving) && (
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-2 text-sm text-green-600">
+                {autoSave.lastSaved && !autoSave.isSaving && (
+                  <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="flex items-center gap-2 text-sm text-green-600">
                     <FaCheckCircle className="h-4 w-4" /> All changes saved
+                  </motion.div>
+                )}
+                {autoSave.error && (
+                  <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="flex items-center gap-2 text-sm text-red-600">
+                    {autoSave.error}
                   </motion.div>
                 )}
               </AnimatePresence>
             </div> */}
             <div>
               <div className="flex items-center gap-2">
-                <Button type="button" variant="outline" onClick={() => console.log("Preview", data)} className="package-button-fix">Preview</Button>
-                <Button type="submit" className="package-button-fix">Save</Button>
+                <Button type="button" variant="outline" onClick={() => onPreview?.(formData)} className="package-button-fix">Preview</Button>
+                <Button type="button" variant="outline" onClick={() => saveDraft(formData)} className="package-button-fix">Save Draft</Button>
+                <Button type="submit" disabled={!validation.isValid} className={cn("package-button-fix","bg-gradient-to-r from-[#FF6B35] to-[#FF4B8C] hover:from-[#E05A2A] hover:to-[#E04080]")}>Publish</Button>
               </div>
             </div>
           </div>
@@ -726,36 +1211,36 @@ export default function MultiCityHotelPackageForm({ className }: { className?: s
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <div className="mb-6">
             <TabsList className="w-full gap-2">
-              <TabsTrigger value="basic" icon={<FaInfoCircle className="h-4 w-4" />}>Basic Info</TabsTrigger>
-              <TabsTrigger value="destinations" icon={<FaMapMarkerAlt className="h-4 w-4" />}>Destinations</TabsTrigger>
-              <TabsTrigger value="accommodation" icon={<FaBed className="h-4 w-4" />}>Accommodation</TabsTrigger>
-              <TabsTrigger value="itinerary" icon={<FaConciergeBell className="h-4 w-4" />}>Itinerary</TabsTrigger>
-              <TabsTrigger value="pricing" icon={<FaDollarSign className="h-4 w-4" />}>Pricing</TabsTrigger>
-              <TabsTrigger value="review" icon={<FaEye className="h-4 w-4" />}>Review</TabsTrigger>
+              {tabs.map(t => (
+                <TabsTrigger
+                  key={t.id}
+                  value={t.id}
+                  icon={t.icon}
+                  badge={t.badge}
+                  badgeVariant={t.hasErrors ? "destructive" : "default"}
+                  className={cn("package-button-fix package-animation-fix", t.hasErrors && "text-red-600 border-red-200")}
+                >
+                  {t.label}
+                </TabsTrigger>
+              ))}
             </TabsList>
           </div>
 
           <div className="min-h-[600px]">
             <TabsContent value="basic"><BasicInformationTab /></TabsContent>
-            <TabsContent value="destinations"><DestinationsTab /></TabsContent>
-            <TabsContent value="accommodation"><AccommodationTab /></TabsContent>
-            <TabsContent value="itinerary"><EnhancedItineraryTab /></TabsContent>
-            <TabsContent value="pricing"><EnhancedPricingTab /></TabsContent>
-            <TabsContent value="review">
-              <Card className="package-selector-glass package-shadow-fix">
-                <CardHeader><CardTitle>Review & Publish</CardTitle></CardHeader>
-                <CardContent className="text-sm space-y-2">
-                  <div><span className="font-medium">Title:</span> {data.basic.title || "—"}</div>
-                  <div><span className="font-medium">Cities:</span> {data.cities.length}</div>
-                  <div><span className="font-medium">Hotel Sets:</span> {data.hotels.length}</div>
-                </CardContent>
-              </Card>
-            </TabsContent>
+            <TabsContent value="itinerary"><ItineraryTab /></TabsContent>
+            <TabsContent value="inclusions"><InclusionsExclusionsTab /></TabsContent>
+            <TabsContent value="pricing"><PricingDatesTab /></TabsContent>
+            <TabsContent value="review"><ReviewPublishTab onPreview={() => onPreview?.(formData)} /></TabsContent>
           </div>
         </Tabs>
       </form>
     </FormProvider>
   );
-}
+};
+
+// Export as MultiCityHotelPackageForm for multi-city-hotel pages
+export default MultiCityPackageForm;
+export { MultiCityPackageForm as MultiCityHotelPackageForm };
 
 
