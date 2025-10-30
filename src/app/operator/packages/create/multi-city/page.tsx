@@ -32,12 +32,8 @@ export default function MultiCityPackagePage() {
         short_description: data.basic.shortDescription,
         destination_region: data.basic.destinationRegion || null,
         package_validity_date: data.basic.packageValidityDate || null,
-        include_intercity_transport: data.includeIntercityTransport,
         base_price: basePrice,
         currency: 'USD',
-        validity_start: data.pricing.validityStart || null,
-        validity_end: data.pricing.validityEnd || null,
-        seasonal_notes: data.pricing.seasonalNotes || null,
         deposit_percent: data.policies.depositPercent || 0,
         balance_due_days: data.policies.balanceDueDays || 7,
         payment_methods: data.policies.paymentMethods || [],
@@ -89,12 +85,8 @@ export default function MultiCityPackagePage() {
         short_description: data.basic.shortDescription,
         destination_region: data.basic.destinationRegion || null,
         package_validity_date: data.basic.packageValidityDate || null,
-        include_intercity_transport: data.includeIntercityTransport,
         base_price: basePrice,
         currency: 'USD',
-        validity_start: data.pricing.validityStart || null,
-        validity_end: data.pricing.validityEnd || null,
-        seasonal_notes: data.pricing.seasonalNotes || null,
         deposit_percent: data.policies.depositPercent || 0,
         balance_due_days: data.policies.balanceDueDays || 7,
         payment_methods: data.policies.paymentMethods || [],
@@ -300,25 +292,6 @@ export default function MultiCityPackagePage() {
         
         if (cancellationError) {
           console.error('Cancellation insert error:', cancellationError);
-        }
-      }
-
-      // Insert departure dates
-      if (data.pricing.departures && data.pricing.departures.length > 0) {
-        const departuresData = data.pricing.departures.map(dep => ({
-          package_id: packageId,
-          departure_date: dep.date,
-          available_seats: dep.availableSeats || null,
-          price: dep.price || null,
-          cutoff_date: dep.cutoffDate || null,
-        }));
-        
-        const { error: departuresError } = await supabase
-          .from('multi_city_package_departures')
-          .insert(departuresData);
-        
-        if (departuresError) {
-          console.error('Departures insert error:', departuresError);
         }
       }
       

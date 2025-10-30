@@ -159,106 +159,89 @@ const SimplePricingCard: React.FC<SimplePricingCardProps> = ({
             </Select>
           </div>
 
-          {/* Pricing */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium">Adult Price ({currency}) *</label>
-              <Input
-                type="number"
-                min="0"
-                step="0.01"
-                value={editData.adultPrice || ''}
-                onChange={(e) => {
-                  const value = e.target.value === '' ? 0 : parseFloat(e.target.value);
-                  setEditData({ ...editData, adultPrice: isNaN(value) ? 0 : value });
-                }}
-                placeholder="0.00"
-                className="package-text-fix"
-              />
+          {/* Ticket Pricing Section */}
+          <div className="space-y-4 pt-4 border-t">
+            <div className="flex items-center gap-2">
+              <FaTicketAlt className="h-4 w-4 text-green-600" />
+              <label className="text-sm font-semibold">Ticket Pricing (Per Person)</label>
             </div>
-            <div>
-              <label className="text-sm font-medium">Child Price ({currency}) *</label>
-              <Input
-                type="number"
-                min="0"
-                step="0.01"
-                value={editData.childPrice || ''}
-                onChange={(e) => {
-                  const value = e.target.value === '' ? 0 : parseFloat(e.target.value);
-                  setEditData({ ...editData, childPrice: isNaN(value) ? 0 : value });
-                }}
-                placeholder="0.00"
-                className="package-text-fix"
-              />
-            </div>
-          </div>
 
-          {/* Child Age Range */}
-          <div>
-            <label className="text-sm font-medium">Child Age Range *</label>
-            <div className="flex gap-2 items-center">
-              <Input
-                type="number"
-                min="0"
-                value={editData.childMinAge || ''}
-                onChange={(e) => {
-                  const value = e.target.value === '' ? 0 : parseInt(e.target.value);
-                  setEditData({ ...editData, childMinAge: isNaN(value) ? 0 : value });
-                }}
-                placeholder="Min"
-                className="package-text-fix"
-              />
-              <span className="text-sm">to</span>
-              <Input
-                type="number"
-                min="0"
-                value={editData.childMaxAge || ''}
-                onChange={(e) => {
-                  const value = e.target.value === '' ? 0 : parseInt(e.target.value);
-                  setEditData({ ...editData, childMaxAge: isNaN(value) ? 0 : value });
-                }}
-                placeholder="Max"
-                className="package-text-fix"
-              />
-              <span className="text-sm text-gray-500">years</span>
+            {/* Pricing */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium">Adult Price ({currency}) *</label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={editData.adultPrice || ''}
+                  onChange={(e) => {
+                    const value = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                    setEditData({ ...editData, adultPrice: isNaN(value) ? 0 : value });
+                  }}
+                  placeholder="0.00"
+                  className="package-text-fix"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Child Price ({currency}) *</label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={editData.childPrice || ''}
+                  onChange={(e) => {
+                    const value = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                    setEditData({ ...editData, childPrice: isNaN(value) ? 0 : value });
+                  }}
+                  placeholder="0.00"
+                  className="package-text-fix"
+                />
+              </div>
+            </div>
+
+            {/* Child Age Range */}
+            <div>
+              <label className="text-sm font-medium">Child Age Range *</label>
+              <div className="flex gap-2 items-center">
+                <Input
+                  type="number"
+                  min="0"
+                  value={editData.childMinAge || ''}
+                  onChange={(e) => {
+                    const value = e.target.value === '' ? 0 : parseInt(e.target.value);
+                    setEditData({ ...editData, childMinAge: isNaN(value) ? 0 : value });
+                  }}
+                  placeholder="Min"
+                  className="package-text-fix"
+                />
+                <span className="text-sm">to</span>
+                <Input
+                  type="number"
+                  min="0"
+                  value={editData.childMaxAge || ''}
+                  onChange={(e) => {
+                    const value = e.target.value === '' ? 0 : parseInt(e.target.value);
+                    setEditData({ ...editData, childMaxAge: isNaN(value) ? 0 : value });
+                  }}
+                  placeholder="Max"
+                  className="package-text-fix"
+                />
+                <span className="text-sm text-gray-500">years</span>
+              </div>
             </div>
           </div>
 
           {/* Vehicles Section - Only for PRIVATE_TRANSFER */}
           {editData.packageType === 'PRIVATE_TRANSFER' && (
             <div className="space-y-4 pt-4 border-t">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <FaCar className="h-4 w-4 text-blue-600" />
-                  <label className="text-sm font-semibold">Vehicles</label>
-                </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    const newVehicle: PackageVehicle = {
-                      id: `vehicle-${Date.now()}`,
-                      vehicleType: 'Sedan',
-                      maxCapacity: 4,
-                      vehicleCategory: 'Standard',
-                      price: 0,
-                      description: '',
-                    };
-                    setEditData({
-                      ...editData,
-                      vehicles: [...(editData.vehicles || []), newVehicle],
-                    });
-                  }}
-                  className="package-button-fix"
-                >
-                  <FaPlus className="h-3 w-3 mr-1" />
-                  Add Vehicle
-                </Button>
+              <div className="flex items-center gap-2">
+                <FaCar className="h-4 w-4 text-blue-600" />
+                <label className="text-sm font-semibold">Vehicles</label>
               </div>
 
               {/* Vehicle List */}
-              {editData.vehicles && editData.vehicles.length > 0 ? (
+              {editData.vehicles && editData.vehicles.length > 0 && (
                 <div className="space-y-3">
                   {editData.vehicles.map((vehicle, vIndex) => (
                     <div key={vehicle.id} className="p-4 border rounded-lg bg-gray-50 dark:bg-gray-800 space-y-3">
@@ -394,11 +377,32 @@ const SimplePricingCard: React.FC<SimplePricingCardProps> = ({
                     </div>
                   ))}
                 </div>
-              ) : (
-                <div className="text-center py-4 text-sm text-gray-500">
-                  No vehicles added. Click &quot;Add Vehicle&quot; to add a vehicle.
-                </div>
               )}
+
+              {/* Add Vehicle Button - Below all vehicles */}
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  const newVehicle: PackageVehicle = {
+                    id: `vehicle-${Date.now()}`,
+                    vehicleType: 'Sedan',
+                    maxCapacity: 4,
+                    vehicleCategory: 'Standard',
+                    price: 0,
+                    description: '',
+                  };
+                  setEditData({
+                    ...editData,
+                    vehicles: [...(editData.vehicles || []), newVehicle],
+                  });
+                }}
+                className="package-button-fix w-full"
+              >
+                <FaPlus className="h-3 w-3 mr-1" />
+                Add Vehicle
+              </Button>
             </div>
           )}
 
@@ -597,22 +601,262 @@ export const ActivityPricingOptionsTab: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Pricing Options List */}
-      <div className="space-y-4">
-        <AnimatePresence>
-          {pricingOptions.map((option) => (
+      {/* Pricing Options - Tabular View */}
+      <div className="space-y-6">
+        {/* Group options by package type */}
+        {(() => {
+          const ticketOnly = pricingOptions.filter(opt => opt.packageType === 'TICKET_ONLY');
+          const sharedTransfer = pricingOptions.filter(opt => opt.packageType === 'SHARED_TRANSFER');
+          const privateTransfer = pricingOptions.filter(opt => opt.packageType === 'PRIVATE_TRANSFER');
+
+          return (
+            <>
+              {/* Ticket Only Table */}
+              {ticketOnly.length > 0 && (
+                <Card className="package-selector-glass package-shadow-fix">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <FaTicketAlt className="h-4 w-4 text-green-600" />
+                      Ticket Only Packages
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse">
+                        <thead>
+                          <tr className="border-b">
+                            <th className="text-left p-3 font-semibold">Package Name</th>
+                            <th className="text-left p-3 font-semibold">Ticket Price Adult</th>
+                            <th className="text-left p-3 font-semibold">Ticket Price Child</th>
+                            <th className="text-left p-3 font-semibold">Child Age Range</th>
+                            <th className="text-center p-3 font-semibold">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {ticketOnly.map((option) => (
+                            <tr key={option.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-800">
+                              <td className="p-3">{option.activityName}</td>
+                              <td className="p-3">{currency}{option.adultPrice.toFixed(2)}</td>
+                              <td className="p-3">{currency}{option.childPrice.toFixed(2)}</td>
+                              <td className="p-3">{option.childMinAge}-{option.childMaxAge} years</td>
+                              <td className="p-3">
+                                <div className="flex items-center justify-center gap-2">
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => setEditingId(option.id)}
+                                    className="package-button-fix"
+                                  >
+                                    <FaEdit className="h-3 w-3" />
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => handleRemoveOption(option.id)}
+                                    className="package-button-fix text-red-600 hover:text-red-700"
+                                  >
+                                    <FaTrash className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Shared Transfer Table */}
+              {sharedTransfer.length > 0 && (
+                <Card className="package-selector-glass package-shadow-fix">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <FaCar className="h-4 w-4 text-orange-600" />
+                      Shared Transfer Packages
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse">
+                        <thead>
+                          <tr className="border-b">
+                            <th className="text-left p-3 font-semibold">Package Name</th>
+                            <th className="text-left p-3 font-semibold">Ticket Price Adult</th>
+                            <th className="text-left p-3 font-semibold">Ticket Price Child</th>
+                            <th className="text-left p-3 font-semibold">Child Age Range</th>
+                            <th className="text-center p-3 font-semibold">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {sharedTransfer.map((option) => (
+                            <tr key={option.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-800">
+                              <td className="p-3">{option.activityName}</td>
+                              <td className="p-3">{currency}{option.adultPrice.toFixed(2)}</td>
+                              <td className="p-3">{currency}{option.childPrice.toFixed(2)}</td>
+                              <td className="p-3">{option.childMinAge}-{option.childMaxAge} years</td>
+                              <td className="p-3">
+                                <div className="flex items-center justify-center gap-2">
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => setEditingId(option.id)}
+                                    className="package-button-fix"
+                                  >
+                                    <FaEdit className="h-3 w-3" />
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => handleRemoveOption(option.id)}
+                                    className="package-button-fix text-red-600 hover:text-red-700"
+                                  >
+                                    <FaTrash className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Private Transfer Table - One row per vehicle */}
+              {privateTransfer.length > 0 && (
+                <Card className="package-selector-glass package-shadow-fix">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <FaCar className="h-4 w-4 text-blue-600" />
+                      Private Transfer Packages
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse">
+                        <thead>
+                          <tr className="border-b">
+                            <th className="text-left p-3 font-semibold">Package Name</th>
+                            <th className="text-left p-3 font-semibold">Vehicle Type</th>
+                            <th className="text-left p-3 font-semibold">Capacity</th>
+                            <th className="text-left p-3 font-semibold">Vehicle Price</th>
+                            <th className="text-left p-3 font-semibold">Ticket Price Adult</th>
+                            <th className="text-left p-3 font-semibold">Ticket Price Child</th>
+                            <th className="text-left p-3 font-semibold">Child Age</th>
+                            <th className="text-center p-3 font-semibold">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {privateTransfer.map((option) => {
+                            const vehicles = option.vehicles || [];
+                            if (vehicles.length === 0) {
+                              // Show row even if no vehicles
+                              return (
+                                <tr key={option.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-800">
+                                  <td className="p-3">{option.activityName}</td>
+                                  <td className="p-3 text-gray-400 italic" colSpan={3}>No vehicles added</td>
+                                  <td className="p-3">{currency}{option.adultPrice.toFixed(2)}</td>
+                                  <td className="p-3">{currency}{option.childPrice.toFixed(2)}</td>
+                                  <td className="p-3">{option.childMinAge}-{option.childMaxAge} yrs</td>
+                                  <td className="p-3">
+                                    <div className="flex items-center justify-center gap-2">
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => setEditingId(option.id)}
+                                        className="package-button-fix"
+                                      >
+                                        <FaEdit className="h-3 w-3" />
+                                      </Button>
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => handleRemoveOption(option.id)}
+                                        className="package-button-fix text-red-600 hover:text-red-700"
+                                      >
+                                        <FaTrash className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            }
+                            
+                            // One row per vehicle
+                            return vehicles.map((vehicle, vIndex) => (
+                              <tr key={`${option.id}-${vehicle.id}`} className="border-b hover:bg-gray-50 dark:hover:bg-gray-800">
+                                <td className="p-3">{option.activityName}</td>
+                                <td className="p-3">{vehicle.vehicleType}</td>
+                                <td className="p-3">{vehicle.maxCapacity} pax</td>
+                                <td className="p-3">{currency}{vehicle.price.toFixed(2)}</td>
+                                <td className="p-3">{currency}{option.adultPrice.toFixed(2)}</td>
+                                <td className="p-3">{currency}{option.childPrice.toFixed(2)}</td>
+                                <td className="p-3">{option.childMinAge}-{option.childMaxAge} yrs</td>
+                                <td className="p-3">
+                                  <div className="flex items-center justify-center gap-2">
+                                    {vIndex === 0 && (
+                                      <>
+                                        <Button
+                                          type="button"
+                                          size="sm"
+                                          variant="ghost"
+                                          onClick={() => setEditingId(option.id)}
+                                          className="package-button-fix"
+                                        >
+                                          <FaEdit className="h-3 w-3" />
+                                        </Button>
+                                        <Button
+                                          type="button"
+                                          size="sm"
+                                          variant="ghost"
+                                          onClick={() => handleRemoveOption(option.id)}
+                                          className="package-button-fix text-red-600 hover:text-red-700"
+                                        >
+                                          <FaTrash className="h-3 w-3" />
+                                        </Button>
+                                      </>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            ));
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </>
+          );
+        })()}
+
+        {/* Render edit form if editing */}
+        {editingId && (() => {
+          const option = pricingOptions.find(opt => opt.id === editingId);
+          if (!option) return null;
+          return (
             <SimplePricingCard
               key={option.id}
               option={option}
               onUpdate={handleUpdateOption}
               onRemove={handleRemoveOption}
-              isEditing={editingId === option.id}
+              isEditing={true}
               onEdit={setEditingId}
               onCancelEdit={() => setEditingId(null)}
               currency={currency}
             />
-          ))}
-        </AnimatePresence>
+          );
+        })()}
 
         {/* Add Pricing Option Button - Below all pricing sections */}
         <div className="flex justify-center pt-4">

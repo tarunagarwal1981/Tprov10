@@ -117,11 +117,6 @@ type PricingData = {
   infantMaxAge: number;
   // Vehicle options (only for GROUP type)
   vehicles: Vehicle[];
-  // Departure dates
-  departures: DepartureDate[];
-  validityStart?: string;
-  validityEnd?: string;
-  seasonalNotes?: string;
 };
 
 export type MultiCityPackageFormData = {
@@ -133,7 +128,6 @@ export type MultiCityPackageFormData = {
     imageGallery: string[];
   };
   cities: CityStop[];
-  includeIntercityTransport: boolean;
   connections: Connection[];
   days: DayPlan[];
   inclusions: InclusionItem[];
@@ -146,7 +140,6 @@ export type MultiCityPackageFormData = {
 const DEFAULT_DATA: MultiCityPackageFormData = {
   basic: { title: "", shortDescription: "", destinationRegion: "", packageValidityDate: "", imageGallery: [] },
   cities: [],
-  includeIntercityTransport: false,
   connections: [],
   days: [],
   inclusions: [],
@@ -160,11 +153,7 @@ const DEFAULT_DATA: MultiCityPackageFormData = {
     childMaxAge: 12,
     infantPrice: 0,
     infantMaxAge: 2,
-    vehicles: [],
-    departures: [],
-    validityStart: "",
-    validityEnd: "",
-    seasonalNotes: ""
+    vehicles: []
   },
   policies: { cancellation: [], insuranceRequirement: "OPTIONAL" },
 };
@@ -281,8 +270,6 @@ const BasicInformationTab: React.FC = () => {
     }
   }, []);
 
-  const includeTransport = watch("includeIntercityTransport");
-
   return (
     <div className="space-y-4">
       <Card className="package-selector-glass package-shadow-fix">
@@ -314,20 +301,6 @@ const BasicInformationTab: React.FC = () => {
               <p className="text-xs text-gray-500 mt-1">Last date this package is valid for bookings</p>
             </div>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Intercity Transport Toggle */}
-      <Card className="package-selector-glass package-shadow-fix">
-        <CardContent className="flex items-center justify-between p-4">
-          <div className="space-y-1">
-            <div className="font-medium">Include Inter-city Transport</div>
-            <div className="text-sm text-gray-500">Add transport details between each city</div>
-          </div>
-          <Switch 
-            checked={includeTransport} 
-            onCheckedChange={(val) => setValue("includeIntercityTransport", Boolean(val))} 
-          />
         </CardContent>
       </Card>
 
@@ -874,7 +847,6 @@ const InclusionsExclusionsTab: React.FC = () => {
 const PricingDatesTab: React.FC = () => {
   const { watch, setValue } = useFormContext<MultiCityPackageFormData>();
   const pricing = watch("pricing");
-  const [dep, setDep] = useState({ date: "", seats: 0, price: 0, cutoff: "" });
   
   const [newVehicle, setNewVehicle] = useState({
     vehicleType: "",
@@ -1114,59 +1086,6 @@ const PricingDatesTab: React.FC = () => {
           </CardContent>
         </Card>
       )}
-
-      {/* Departure Dates */}
-      <Card className="package-selector-glass package-shadow-fix">
-        <CardHeader><CardTitle>Departure Dates</CardTitle></CardHeader>
-        <CardContent className="space-y-3">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
-            <Input type="date" value={dep.date} onChange={(e) => setDep(s => ({ ...s, date: e.target.value }))} placeholder="Date" />
-            <Input type="number" placeholder="Available Seats" value={dep.seats} onChange={(e) => setDep(s => ({ ...s, seats: Number(e.target.value || 0) }))} />
-            <Input type="number" placeholder="Price (optional)" value={dep.price} onChange={(e) => setDep(s => ({ ...s, price: Number(e.target.value || 0) }))} />
-            <Input type="date" value={dep.cutoff} onChange={(e) => setDep(s => ({ ...s, cutoff: e.target.value }))} placeholder="Cutoff Date" />
-          </div>
-          <Button type="button" onClick={() => {
-            if (!dep.date) return;
-            const next = [...pricing.departures, { id: generateId(), date: dep.date, availableSeats: dep.seats, price: dep.price, cutoffDate: dep.cutoff }];
-            setValue("pricing.departures", next);
-            setDep({ date: "", seats: 0, price: 0, cutoff: "" });
-          }}>Add Departure Date</Button>
-
-          <div className="space-y-2">
-            {pricing.departures.map((d, i) => (
-              <div key={d.id} className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 rounded px-3 py-2">
-                <div className="text-sm">
-                  <span className="font-medium">{d.date}</span> • Seats: {d.availableSeats ?? "-"}
-                  {d.price ? <span> • ${Number(d.price).toFixed(2)}</span> : null}
-                  {d.cutoffDate ? <span className="text-xs text-gray-500"> • Cutoff: {d.cutoffDate}</span> : null}
-                </div>
-                <Button variant="destructive" size="icon" onClick={() => {
-                  const next = pricing.departures.slice(); next.splice(i,1); setValue("pricing.departures", next);
-                }}><FaTrash /></Button>
-              </div>
-            ))}
-            {pricing.departures.length === 0 && (
-              <p className="text-sm text-gray-500 text-center py-2">No departure dates added</p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Seasonal Notes */}
-      <Card className="package-selector-glass package-shadow-fix">
-        <CardHeader><CardTitle>Seasonal Information</CardTitle></CardHeader>
-        <CardContent className="space-y-3">
-          <div>
-            <label className="text-sm font-medium mb-1 block">Seasonal Pricing Notes</label>
-            <Textarea 
-              defaultValue={pricing.seasonalNotes} 
-              onChange={(e) => setValue("pricing.seasonalNotes", e.target.value)}
-              placeholder="Add any seasonal pricing variations or notes..."
-              rows={3}
-            />
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 };
@@ -1191,7 +1110,6 @@ const ReviewPublishTab: React.FC<{ onPreview?: () => void }> = ({ onPreview }) =
           {data.pricing.pricingType === "GROUP" && (
             <div><span className="font-medium">Vehicle Options:</span> {data.pricing.vehicles.length}</div>
           )}
-          <div><span className="font-medium">Departure Dates:</span> {data.pricing.departures.length}</div>
           {data.basic.packageValidityDate && (
             <div><span className="font-medium">Valid Until:</span> {data.basic.packageValidityDate}</div>
           )}
