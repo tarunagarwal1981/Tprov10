@@ -155,7 +155,7 @@ export default function MultiCityPackagePage() {
           display_order: index + 1,
         }));
         
-        const { error: pricingError } = await supabase
+        const { error: pricingError } = await (supabase as any)
           .from('multi_city_pricing_packages')
           .insert(pricingPackagesData);
         
@@ -177,7 +177,7 @@ export default function MultiCityPackagePage() {
             display_order: pkgIndex + 1,
           };
           
-          const { data: pricingResult, error: pricingError } = await supabase
+          const { data: pricingResult, error: pricingError } = await (supabase as any)
             .from('multi_city_pricing_packages')
             .insert(pricingPackageData)
             .select()
@@ -202,7 +202,7 @@ export default function MultiCityPackagePage() {
               display_order: tierIndex + 1,
             }));
             
-            const { error: tiersError } = await supabase
+            const { error: tiersError } = await (supabase as any)
               .from('multi_city_pricing_groups')
               .insert(groupTiersData);
             
@@ -226,7 +226,7 @@ export default function MultiCityPackagePage() {
             has_flights: day.hasFlights || false,
           };
           
-          const { data: dayResult, error: dayError } = await supabase
+          const { data: dayResult, error: dayError } = await (supabase as any)
             .from('multi_city_package_day_plans')
             .insert(dayPlanData)
             .select()
@@ -250,7 +250,7 @@ export default function MultiCityPackagePage() {
               flight_order: flightIndex + 1,
             }));
             
-            const { error: flightsError } = await supabase
+            const { error: flightsError } = await (supabase as any)
               .from('multi_city_package_day_flights')
               .insert(flightsData);
             
