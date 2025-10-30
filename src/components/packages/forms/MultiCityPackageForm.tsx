@@ -98,46 +98,26 @@ type Policies = {
 
 type PricingPackageType = 'STANDARD' | 'GROUP';
 
-type StandardPricingPackage = {
+type Vehicle = {
   id: string;
-  packageName: string;
+  vehicleType: string;
+  maxCapacity: number;
+  price: number;
   description?: string;
+};
+
+type PricingData = {
+  pricingType: PricingPackageType;
+  // Per person pricing (used by both STANDARD and GROUP)
   adultPrice: number;
   childPrice: number;
   childMinAge: number;
   childMaxAge: number;
   infantPrice: number;
   infantMaxAge: number;
-  includedItems: string[];
-  excludedItems: string[];
-  isFeatured: boolean;
-};
-
-type GroupPricingTier = {
-  id: string;
-  groupName: string;
-  minCapacity: number;
-  maxCapacity: number;
-  price: number;
-  vehicleType?: string;
-  accommodationNotes?: string;
-  description?: string;
-};
-
-type GroupPricingPackage = {
-  id: string;
-  packageName: string;
-  description?: string;
-  groups: GroupPricingTier[];
-  includedItems: string[];
-  excludedItems: string[];
-  isFeatured: boolean;
-};
-
-type PricingData = {
-  pricingType: PricingPackageType;
-  standardPackages: StandardPricingPackage[];
-  groupPackages: GroupPricingPackage[];
+  // Vehicle options (only for GROUP type)
+  vehicles: Vehicle[];
+  // Departure dates
   departures: DepartureDate[];
   validityStart?: string;
   validityEnd?: string;
@@ -174,8 +154,13 @@ const DEFAULT_DATA: MultiCityPackageFormData = {
   addOns: [],
   pricing: { 
     pricingType: "STANDARD",
-    standardPackages: [],
-    groupPackages: [],
+    adultPrice: 0,
+    childPrice: 0,
+    childMinAge: 3,
+    childMaxAge: 12,
+    infantPrice: 0,
+    infantMaxAge: 2,
+    vehicles: [],
     departures: [],
     validityStart: "",
     validityEnd: "",
@@ -205,11 +190,11 @@ const useFormValidation = (data: MultiCityPackageFormData): FormValidation => {
     if (data.days.length === 0) warnings.push({ tab: "itinerary", field: "days", message: "No days generated yet" });
 
     // Pricing validation
-    if (data.pricing.pricingType === "STANDARD" && data.pricing.standardPackages.length === 0) {
-      errors.push({ tab: "pricing", field: "standardPackages", message: "Add at least one standard pricing package", severity: "error" });
+    if (data.pricing.adultPrice <= 0) {
+      errors.push({ tab: "pricing", field: "adultPrice", message: "Adult price is required", severity: "error" });
     }
-    if (data.pricing.pricingType === "GROUP" && data.pricing.groupPackages.length === 0) {
-      errors.push({ tab: "pricing", field: "groupPackages", message: "Add at least one group pricing package", severity: "error" });
+    if (data.pricing.pricingType === "GROUP" && data.pricing.vehicles.length === 0) {
+      errors.push({ tab: "pricing", field: "vehicles", message: "Add at least one vehicle option for group pricing", severity: "error" });
     }
 
     return { isValid: errors.length === 0, errors, warnings };
@@ -887,90 +872,29 @@ const InclusionsExclusionsTab: React.FC = () => {
 };
 
 const PricingDatesTab: React.FC = () => {
-  const { watch, setValue, control } = useFormContext<MultiCityPackageFormData>();
+  const { watch, setValue } = useFormContext<MultiCityPackageFormData>();
   const pricing = watch("pricing");
   const [dep, setDep] = useState({ date: "", seats: 0, price: 0, cutoff: "" });
   
-  const [newStandardPkg, setNewStandardPkg] = useState({
-    packageName: "",
-    description: "",
-    adultPrice: 0,
-    childPrice: 0,
-    childMinAge: 3,
-    childMaxAge: 12,
-    infantPrice: 0,
-    infantMaxAge: 2,
-  });
-
-  const [newGroupPkg, setNewGroupPkg] = useState({
-    packageName: "",
-    description: "",
-  });
-
-  const [newGroupTier, setNewGroupTier] = useState({
-    groupName: "",
-    minCapacity: 1,
-    maxCapacity: 4,
-    price: 0,
+  const [newVehicle, setNewVehicle] = useState({
     vehicleType: "",
+    maxCapacity: 1,
+    price: 0,
+    description: "",
   });
 
-  const addStandardPackage = () => {
-    if (!newStandardPkg.packageName.trim()) return;
-    const pkg: StandardPricingPackage = {
+  const addVehicle = () => {
+    if (!newVehicle.vehicleType.trim() || newVehicle.price <= 0) return;
+    const vehicle: Vehicle = {
       id: generateId(),
-      ...newStandardPkg,
-      includedItems: [],
-      excludedItems: [],
-      isFeatured: false,
+      ...newVehicle,
     };
-    setValue("pricing.standardPackages", [...pricing.standardPackages, pkg]);
-    setNewStandardPkg({
-      packageName: "",
-      description: "",
-      adultPrice: 0,
-      childPrice: 0,
-      childMinAge: 3,
-      childMaxAge: 12,
-      infantPrice: 0,
-      infantMaxAge: 2,
-    });
-  };
-
-  const addGroupPackage = () => {
-    if (!newGroupPkg.packageName.trim()) return;
-    const pkg: GroupPricingPackage = {
-      id: generateId(),
-      ...newGroupPkg,
-      groups: [],
-      includedItems: [],
-      excludedItems: [],
-      isFeatured: false,
-    };
-    setValue("pricing.groupPackages", [...pricing.groupPackages, pkg]);
-    setNewGroupPkg({ packageName: "", description: "" });
-  };
-
-  const addGroupTier = (packageIndex: number) => {
-    if (!newGroupTier.groupName.trim()) return;
-    const packages = [...pricing.groupPackages];
-    const pkg = packages[packageIndex];
-    if (!pkg) return;
-    
-    const tier: GroupPricingTier = {
-      id: generateId(),
-      ...newGroupTier,
-      accommodationNotes: "",
-      description: "",
-    };
-    pkg.groups.push(tier);
-    setValue("pricing.groupPackages", packages);
-    setNewGroupTier({
-      groupName: "",
-      minCapacity: 1,
-      maxCapacity: 4,
-      price: 0,
+    setValue("pricing.vehicles", [...pricing.vehicles, vehicle]);
+    setNewVehicle({
       vehicleType: "",
+      maxCapacity: 1,
+      price: 0,
+      description: "",
     });
   };
 
@@ -991,7 +915,7 @@ const PricingDatesTab: React.FC = () => {
               />
               <div>
                 <div className="font-medium">Standard Pricing</div>
-                <div className="text-xs text-gray-500">Per person pricing with age categories (Adult/Child/Infant)</div>
+                <div className="text-xs text-gray-500">Per person pricing only</div>
               </div>
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
@@ -1004,325 +928,187 @@ const PricingDatesTab: React.FC = () => {
               />
               <div>
                 <div className="font-medium">Group Pricing</div>
-                <div className="text-xs text-gray-500">Capacity-based pricing with group size tiers</div>
+                <div className="text-xs text-gray-500">Per person pricing + vehicle options</div>
               </div>
             </label>
           </div>
         </CardContent>
       </Card>
 
-      {/* Standard Pricing Packages */}
-      {pricing.pricingType === "STANDARD" && (
-        <Card className="package-selector-glass package-shadow-fix">
-          <CardHeader>
-            <CardTitle>Standard Pricing Packages</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Add New Package Form */}
-            <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50">
-              <h4 className="font-medium mb-3">Add New Package</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-                <div className="lg:col-span-2">
-                  <label className="text-xs font-medium mb-1 block">Package Name *</label>
-                  <Input
-                    placeholder="e.g., Basic, Premium, VIP"
-                    value={newStandardPkg.packageName}
-                    onChange={(e) => setNewStandardPkg(s => ({ ...s, packageName: e.target.value }))}
-                    className="package-text-fix"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium mb-1 block">Adult Price *</label>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={newStandardPkg.adultPrice}
-                    onChange={(e) => setNewStandardPkg(s => ({ ...s, adultPrice: Number(e.target.value || 0) }))}
-                    className="package-text-fix"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium mb-1 block">Child Price</label>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={newStandardPkg.childPrice}
-                    onChange={(e) => setNewStandardPkg(s => ({ ...s, childPrice: Number(e.target.value || 0) }))}
-                    className="package-text-fix"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium mb-1 block">Child Min Age</label>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={newStandardPkg.childMinAge}
-                    onChange={(e) => setNewStandardPkg(s => ({ ...s, childMinAge: Number(e.target.value || 0) }))}
-                    className="package-text-fix"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium mb-1 block">Child Max Age</label>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={newStandardPkg.childMaxAge}
-                    onChange={(e) => setNewStandardPkg(s => ({ ...s, childMaxAge: Number(e.target.value || 0) }))}
-                    className="package-text-fix"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium mb-1 block">Infant Price</label>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={newStandardPkg.infantPrice}
-                    onChange={(e) => setNewStandardPkg(s => ({ ...s, infantPrice: Number(e.target.value || 0) }))}
-                    className="package-text-fix"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium mb-1 block">Infant Max Age</label>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={newStandardPkg.infantMaxAge}
-                    onChange={(e) => setNewStandardPkg(s => ({ ...s, infantMaxAge: Number(e.target.value || 0) }))}
-                    className="package-text-fix"
-                  />
-                </div>
-              </div>
-              <div className="mt-3">
-                <Button type="button" onClick={addStandardPackage} className="package-button-fix">
-                  <FaPlus className="mr-2" /> Add Package
-                </Button>
-              </div>
+      {/* Per Person Pricing (shown for both types) */}
+      <Card className="package-selector-glass package-shadow-fix">
+        <CardHeader>
+          <CardTitle>Per Person Pricing</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Adult Price */}
+            <div>
+              <label className="text-sm font-medium mb-1 block">Adult Price *</label>
+              <Input
+                type="number"
+                min={0}
+                value={pricing.adultPrice}
+                onChange={(e) => setValue("pricing.adultPrice", Number(e.target.value || 0))}
+                className="package-text-fix"
+                placeholder="0"
+              />
             </div>
 
-            {/* Existing Packages */}
-            <div className="space-y-3">
-              {pricing.standardPackages.map((pkg, idx) => (
-                <div key={pkg.id} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-semibold">{pkg.packageName}</h4>
-                      {pkg.isFeatured && <Badge variant="default">Featured</Badge>}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const packages = [...pricing.standardPackages];
-                          packages[idx]!.isFeatured = !packages[idx]!.isFeatured;
-                          setValue("pricing.standardPackages", packages);
-                        }}
-                      >
-                        {pkg.isFeatured ? "Unfeature" : "Feature"}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => {
-                          const packages = pricing.standardPackages.filter((_, i) => i !== idx);
-                          setValue("pricing.standardPackages", packages);
-                        }}
-                      >
-                        <FaTrash />
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                    <div>
-                      <span className="text-gray-500">Adult:</span> ${pkg.adultPrice}
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Child ({pkg.childMinAge}-{pkg.childMaxAge}y):</span> ${pkg.childPrice}
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Infant (0-{pkg.infantMaxAge}y):</span> ${pkg.infantPrice}
-                    </div>
-                  </div>
-                </div>
-              ))}
-              {pricing.standardPackages.length === 0 && (
-                <p className="text-sm text-gray-500 text-center py-4">No packages added yet</p>
-              )}
+            {/* Child Price */}
+            <div>
+              <label className="text-sm font-medium mb-1 block">Child Price</label>
+              <Input
+                type="number"
+                min={0}
+                value={pricing.childPrice}
+                onChange={(e) => setValue("pricing.childPrice", Number(e.target.value || 0))}
+                className="package-text-fix"
+                placeholder="0"
+              />
             </div>
-          </CardContent>
-        </Card>
-      )}
 
-      {/* Group Pricing Packages */}
+            {/* Child Min Age */}
+            <div>
+              <label className="text-sm font-medium mb-1 block">Child Min Age</label>
+              <Input
+                type="number"
+                min={0}
+                value={pricing.childMinAge}
+                onChange={(e) => setValue("pricing.childMinAge", Number(e.target.value || 3))}
+                className="package-text-fix"
+              />
+            </div>
+
+            {/* Child Max Age */}
+            <div>
+              <label className="text-sm font-medium mb-1 block">Child Max Age</label>
+              <Input
+                type="number"
+                min={0}
+                value={pricing.childMaxAge}
+                onChange={(e) => setValue("pricing.childMaxAge", Number(e.target.value || 12))}
+                className="package-text-fix"
+              />
+            </div>
+
+            {/* Infant Price */}
+            <div>
+              <label className="text-sm font-medium mb-1 block">Infant Price</label>
+              <Input
+                type="number"
+                min={0}
+                value={pricing.infantPrice}
+                onChange={(e) => setValue("pricing.infantPrice", Number(e.target.value || 0))}
+                className="package-text-fix"
+                placeholder="0"
+              />
+            </div>
+
+            {/* Infant Max Age */}
+            <div>
+              <label className="text-sm font-medium mb-1 block">Infant Max Age</label>
+              <Input
+                type="number"
+                min={0}
+                value={pricing.infantMaxAge}
+                onChange={(e) => setValue("pricing.infantMaxAge", Number(e.target.value || 2))}
+                className="package-text-fix"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Vehicle Options (only for GROUP pricing) */}
       {pricing.pricingType === "GROUP" && (
         <Card className="package-selector-glass package-shadow-fix">
           <CardHeader>
-            <CardTitle>Group Pricing Packages</CardTitle>
+            <CardTitle>Vehicle Options</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Add New Package Form */}
+            {/* Add New Vehicle Form */}
             <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50">
-              <h4 className="font-medium mb-3">Add New Package</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <h4 className="font-medium mb-3">Add Vehicle Option</h4>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                 <div>
-                  <label className="text-xs font-medium mb-1 block">Package Name *</label>
+                  <label className="text-xs font-medium mb-1 block">Vehicle Type *</label>
                   <Input
-                    placeholder="e.g., Basic, Premium, VIP"
-                    value={newGroupPkg.packageName}
-                    onChange={(e) => setNewGroupPkg(s => ({ ...s, packageName: e.target.value }))}
+                    placeholder="e.g., Sedan, SUV, Van"
+                    value={newVehicle.vehicleType}
+                    onChange={(e) => setNewVehicle(s => ({ ...s, vehicleType: e.target.value }))}
                     className="package-text-fix"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium mb-1 block">Max Capacity *</label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={newVehicle.maxCapacity}
+                    onChange={(e) => setNewVehicle(s => ({ ...s, maxCapacity: Number(e.target.value || 1) }))}
+                    className="package-text-fix"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium mb-1 block">Price *</label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={newVehicle.price}
+                    onChange={(e) => setNewVehicle(s => ({ ...s, price: Number(e.target.value || 0) }))}
+                    className="package-text-fix"
+                    placeholder="Total price for vehicle"
                   />
                 </div>
                 <div>
                   <label className="text-xs font-medium mb-1 block">Description</label>
                   <Input
-                    placeholder="Optional description"
-                    value={newGroupPkg.description}
-                    onChange={(e) => setNewGroupPkg(s => ({ ...s, description: e.target.value }))}
+                    placeholder="Optional"
+                    value={newVehicle.description}
+                    onChange={(e) => setNewVehicle(s => ({ ...s, description: e.target.value }))}
                     className="package-text-fix"
                   />
                 </div>
               </div>
               <div className="mt-3">
-                <Button type="button" onClick={addGroupPackage} className="package-button-fix">
-                  <FaPlus className="mr-2" /> Add Package
+                <Button type="button" onClick={addVehicle} className="package-button-fix">
+                  <FaPlus className="mr-2" /> Add Vehicle
                 </Button>
               </div>
             </div>
 
-            {/* Existing Packages */}
-            <div className="space-y-4">
-              {pricing.groupPackages.map((pkg, pkgIdx) => (
-                <div key={pkg.id} className="p-4 border-2 border-gray-300 dark:border-gray-600 rounded-lg">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-semibold text-lg">{pkg.packageName}</h4>
-                      {pkg.isFeatured && <Badge variant="default">Featured</Badge>}
+            {/* Existing Vehicles */}
+            <div className="space-y-3">
+              {pricing.vehicles.map((vehicle, idx) => (
+                <div key={vehicle.id} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div>
+                      <div className="font-medium">{vehicle.vehicleType}</div>
+                      {vehicle.description && <div className="text-xs text-gray-500">{vehicle.description}</div>}
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const packages = [...pricing.groupPackages];
-                          packages[pkgIdx]!.isFeatured = !packages[pkgIdx]!.isFeatured;
-                          setValue("pricing.groupPackages", packages);
-                        }}
-                      >
-                        {pkg.isFeatured ? "Unfeature" : "Feature"}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => {
-                          const packages = pricing.groupPackages.filter((_, i) => i !== pkgIdx);
-                          setValue("pricing.groupPackages", packages);
-                        }}
-                      >
-                        <FaTrash />
-                      </Button>
+                    <div className="text-sm text-gray-500">
+                      Max {vehicle.maxCapacity} {vehicle.maxCapacity === 1 ? 'person' : 'people'}
+                    </div>
+                    <div className="font-semibold text-green-600">
+                      ${vehicle.price}
                     </div>
                   </div>
-
-                  {/* Add Group Tier Form */}
-                  <div className="p-3 bg-gray-50 dark:bg-gray-800/30 rounded mb-3">
-                    <h5 className="text-sm font-medium mb-2">Add Group Size Tier</h5>
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-                      <div>
-                        <label className="text-xs mb-1 block">Tier Name *</label>
-                        <Input
-                          placeholder="Small Group"
-                          value={newGroupTier.groupName}
-                          onChange={(e) => setNewGroupTier(s => ({ ...s, groupName: e.target.value }))}
-                          className="package-text-fix text-sm"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs mb-1 block">Min Cap.</label>
-                        <Input
-                          type="number"
-                          min={1}
-                          value={newGroupTier.minCapacity}
-                          onChange={(e) => setNewGroupTier(s => ({ ...s, minCapacity: Number(e.target.value || 1) }))}
-                          className="package-text-fix text-sm"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs mb-1 block">Max Cap.</label>
-                        <Input
-                          type="number"
-                          min={1}
-                          value={newGroupTier.maxCapacity}
-                          onChange={(e) => setNewGroupTier(s => ({ ...s, maxCapacity: Number(e.target.value || 1) }))}
-                          className="package-text-fix text-sm"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs mb-1 block">Price *</label>
-                        <Input
-                          type="number"
-                          min={0}
-                          value={newGroupTier.price}
-                          onChange={(e) => setNewGroupTier(s => ({ ...s, price: Number(e.target.value || 0) }))}
-                          className="package-text-fix text-sm"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs mb-1 block">Vehicle</label>
-                        <Input
-                          placeholder="Optional"
-                          value={newGroupTier.vehicleType}
-                          onChange={(e) => setNewGroupTier(s => ({ ...s, vehicleType: e.target.value }))}
-                          className="package-text-fix text-sm"
-                        />
-                      </div>
-                    </div>
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={() => addGroupTier(pkgIdx)}
-                      className="package-button-fix mt-2"
-                    >
-                      <FaPlus className="mr-1" /> Add Tier
-                    </Button>
-                  </div>
-
-                  {/* Existing Tiers */}
-                  <div className="space-y-2">
-                    {pkg.groups.map((tier, tierIdx) => (
-                      <div key={tier.id} className="flex items-center justify-between p-3 bg-white dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-700">
-                        <div className="flex items-center gap-4 text-sm">
-                          <span className="font-medium">{tier.groupName}</span>
-                          <span className="text-gray-500">{tier.minCapacity}-{tier.maxCapacity} people</span>
-                          <span className="font-semibold text-green-600">${tier.price}</span>
-                          {tier.vehicleType && <span className="text-xs text-gray-500">• {tier.vehicleType}</span>}
-                        </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            const packages = [...pricing.groupPackages];
-                            packages[pkgIdx]!.groups.splice(tierIdx, 1);
-                            setValue("pricing.groupPackages", packages);
-                          }}
-                        >
-                          <FaTrash className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    ))}
-                    {pkg.groups.length === 0 && (
-                      <p className="text-xs text-gray-500 text-center py-2">No tiers added yet</p>
-                    )}
-                  </div>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => {
+                      const vehicles = pricing.vehicles.filter((_, i) => i !== idx);
+                      setValue("pricing.vehicles", vehicles);
+                    }}
+                  >
+                    <FaTrash />
+                  </Button>
                 </div>
               ))}
-              {pricing.groupPackages.length === 0 && (
-                <p className="text-sm text-gray-500 text-center py-4">No packages added yet</p>
+              {pricing.vehicles.length === 0 && (
+                <p className="text-sm text-gray-500 text-center py-4">No vehicles added yet. Add at least one vehicle option.</p>
               )}
             </div>
           </CardContent>
@@ -1400,12 +1186,10 @@ const ReviewPublishTab: React.FC<{ onPreview?: () => void }> = ({ onPreview }) =
           <div><span className="font-medium">Title:</span> {data.basic.title || "—"}</div>
           <div><span className="font-medium">Region:</span> {data.basic.destinationRegion || "—"}</div>
           <div><span className="font-medium">Cities:</span> {data.cities.length} • <span className="font-medium">Nights:</span> {totalNights}</div>
-          <div><span className="font-medium">Pricing Type:</span> {data.pricing.pricingType === "STANDARD" ? "Standard (Per Person)" : "Group (Capacity-based)"}</div>
-          {data.pricing.pricingType === "STANDARD" && (
-            <div><span className="font-medium">Pricing Packages:</span> {data.pricing.standardPackages.length}</div>
-          )}
+          <div><span className="font-medium">Pricing Type:</span> {data.pricing.pricingType === "STANDARD" ? "Standard (Per Person)" : "Group (Per Person + Vehicles)"}</div>
+          <div><span className="font-medium">Adult Price:</span> ${data.pricing.adultPrice}</div>
           {data.pricing.pricingType === "GROUP" && (
-            <div><span className="font-medium">Pricing Packages:</span> {data.pricing.groupPackages.length}</div>
+            <div><span className="font-medium">Vehicle Options:</span> {data.pricing.vehicles.length}</div>
           )}
           <div><span className="font-medium">Departure Dates:</span> {data.pricing.departures.length}</div>
           {data.basic.packageValidityDate && (
