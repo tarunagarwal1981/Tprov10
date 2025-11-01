@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useMemo, useRef, useState } from "react";
+import React, { useMemo, useRef, useState, useCallback } from "react";
 import { useForm, FormProvider, useFieldArray, useFormContext } from "react-hook-form";
+import Image from "next/image";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -322,9 +323,9 @@ const BasicInformationTab: React.FC = () => {
   const { register, control, setValue, watch } = useFormContext<MultiCityPackageFormData>();
   const { fields, append, remove, move } = useFieldArray({ control, name: "cities" });
 
-  const addCity = () => {
+  const addCity = useCallback(() => {
     append({ id: generateId(), name: "", country: "", nights: 2, highlights: [], activitiesIncluded: [], expanded: true, hotels: [] });
-  };
+  }, [append]);
 
   // Keep days in sync when cities change
   const cities = watch("cities");
@@ -354,14 +355,14 @@ const BasicInformationTab: React.FC = () => {
         JSON.stringify(days.map((d: DayPlan) => ({ cityId: d.cityId, cityName: d.cityName })))) {
       setValue("days", newDays);
     }
-  }, [cities, setValue]);
+  }, [cities, days, setValue]);
 
   // Initialize with one empty city by default
   React.useEffect(() => {
     if (fields.length === 0) {
       addCity();
     }
-  }, []);
+  }, [fields.length, addCity]);
 
   return (
     <div className="space-y-4">
@@ -712,10 +713,12 @@ const ItineraryTab: React.FC = () => {
                     />
                     {day.photoUrl && (
                       <div className="relative w-full h-32 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
-                        <img 
+                        <Image 
                           src={day.photoUrl} 
                           alt={`Day ${dayIndex + 1}`} 
-                          className="w-full h-full object-cover"
+                          fill
+                          className="object-cover"
+                          unoptimized
                         />
                       </div>
                     )}
