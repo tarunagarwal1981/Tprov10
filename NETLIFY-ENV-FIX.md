@@ -274,3 +274,4 @@ The fix is simple: **Ensure NEXT_PUBLIC_ prefix + redeploy**
 
 Your Supabase is working fine. The issue is just environment variable configuration in Netlify.
 
+

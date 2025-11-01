@@ -363,3 +363,4 @@ Break-even time: 250-625 months ❌
 
 **Still want to migrate? Start with the hybrid approach - migrate storage to S3 first (low risk, easy win), then reassess.**
 
+

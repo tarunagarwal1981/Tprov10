@@ -56,7 +56,24 @@ CREATE TABLE IF NOT EXISTS multi_city_hotel_package_cities (
 );
 
 -- ============================================================================
--- 3. CREATE DAY PLANS TABLE
+-- 3. CREATE CITY HOTELS TABLE
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS multi_city_hotel_package_city_hotels (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  city_id UUID NOT NULL REFERENCES multi_city_hotel_package_cities(id) ON DELETE CASCADE,
+  
+  hotel_name VARCHAR(255) NOT NULL,
+  hotel_type VARCHAR(50), -- 1 Star, 2 Star, etc.
+  room_type VARCHAR(100) NOT NULL,
+  display_order INTEGER DEFAULT 0,
+  
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ============================================================================
+-- 4. CREATE DAY PLANS TABLE
 -- ============================================================================
 
 CREATE TABLE IF NOT EXISTS multi_city_hotel_package_day_plans (
@@ -75,7 +92,7 @@ CREATE TABLE IF NOT EXISTS multi_city_hotel_package_day_plans (
 );
 
 -- ============================================================================
--- 4. CREATE DAY FLIGHTS TABLE
+-- 5. CREATE DAY FLIGHTS TABLE
 -- ============================================================================
 
 CREATE TABLE IF NOT EXISTS multi_city_hotel_package_day_flights (
@@ -94,7 +111,7 @@ CREATE TABLE IF NOT EXISTS multi_city_hotel_package_day_flights (
 );
 
 -- ============================================================================
--- 5. CREATE PRICING PACKAGES TABLE
+-- 6. CREATE PRICING PACKAGES TABLE
 -- ============================================================================
 
 CREATE TABLE IF NOT EXISTS multi_city_hotel_pricing_packages (
@@ -116,7 +133,7 @@ CREATE TABLE IF NOT EXISTS multi_city_hotel_pricing_packages (
 );
 
 -- ============================================================================
--- 6. CREATE PRICING VEHICLES TABLE (for GROUP pricing)
+-- 7. CREATE PRICING VEHICLES TABLE (for GROUP pricing)
 -- ============================================================================
 
 CREATE TABLE IF NOT EXISTS multi_city_hotel_pricing_vehicles (
@@ -134,7 +151,7 @@ CREATE TABLE IF NOT EXISTS multi_city_hotel_pricing_vehicles (
 );
 
 -- ============================================================================
--- 7. CREATE INCLUSIONS TABLE
+-- 8. CREATE INCLUSIONS TABLE
 -- ============================================================================
 
 CREATE TABLE IF NOT EXISTS multi_city_hotel_package_inclusions (
@@ -149,7 +166,7 @@ CREATE TABLE IF NOT EXISTS multi_city_hotel_package_inclusions (
 );
 
 -- ============================================================================
--- 8. CREATE EXCLUSIONS TABLE
+-- 9. CREATE EXCLUSIONS TABLE
 -- ============================================================================
 
 CREATE TABLE IF NOT EXISTS multi_city_hotel_package_exclusions (
@@ -163,7 +180,7 @@ CREATE TABLE IF NOT EXISTS multi_city_hotel_package_exclusions (
 );
 
 -- ============================================================================
--- 9. CREATE ADD-ONS TABLE
+-- 10. CREATE ADD-ONS TABLE
 -- ============================================================================
 
 CREATE TABLE IF NOT EXISTS multi_city_hotel_package_addons (
@@ -182,7 +199,7 @@ CREATE TABLE IF NOT EXISTS multi_city_hotel_package_addons (
 );
 
 -- ============================================================================
--- 10. CREATE CANCELLATION TIERS TABLE
+-- 11. CREATE CANCELLATION TIERS TABLE
 -- ============================================================================
 
 CREATE TABLE IF NOT EXISTS multi_city_hotel_package_cancellation_tiers (
@@ -196,7 +213,7 @@ CREATE TABLE IF NOT EXISTS multi_city_hotel_package_cancellation_tiers (
 );
 
 -- ============================================================================
--- 11. CREATE INDEXES
+-- 12. CREATE INDEXES
 -- ============================================================================
 
 CREATE INDEX IF NOT EXISTS idx_multi_city_hotel_packages_operator ON multi_city_hotel_packages(operator_id);
@@ -204,6 +221,7 @@ CREATE INDEX IF NOT EXISTS idx_multi_city_hotel_packages_status ON multi_city_ho
 CREATE INDEX IF NOT EXISTS idx_multi_city_hotel_packages_published ON multi_city_hotel_packages(published_at) WHERE status = 'published';
 
 CREATE INDEX IF NOT EXISTS idx_multi_city_hotel_package_cities_package ON multi_city_hotel_package_cities(package_id);
+CREATE INDEX IF NOT EXISTS idx_multi_city_hotel_package_city_hotels_city ON multi_city_hotel_package_city_hotels(city_id);
 CREATE INDEX IF NOT EXISTS idx_multi_city_hotel_package_day_plans_package ON multi_city_hotel_package_day_plans(package_id);
 CREATE INDEX IF NOT EXISTS idx_multi_city_hotel_package_day_flights_day_plan ON multi_city_hotel_package_day_flights(day_plan_id);
 
@@ -216,11 +234,12 @@ CREATE INDEX IF NOT EXISTS idx_multi_city_hotel_package_addons_package ON multi_
 CREATE INDEX IF NOT EXISTS idx_multi_city_hotel_package_cancellation_package ON multi_city_hotel_package_cancellation_tiers(package_id);
 
 -- ============================================================================
--- 12. ENABLE ROW LEVEL SECURITY
+-- 13. ENABLE ROW LEVEL SECURITY
 -- ============================================================================
 
 ALTER TABLE multi_city_hotel_packages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE multi_city_hotel_package_cities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE multi_city_hotel_package_city_hotels ENABLE ROW LEVEL SECURITY;
 ALTER TABLE multi_city_hotel_package_day_plans ENABLE ROW LEVEL SECURITY;
 ALTER TABLE multi_city_hotel_package_day_flights ENABLE ROW LEVEL SECURITY;
 ALTER TABLE multi_city_hotel_pricing_packages ENABLE ROW LEVEL SECURITY;
@@ -235,35 +254,52 @@ ALTER TABLE multi_city_hotel_package_cancellation_tiers ENABLE ROW LEVEL SECURIT
 -- ============================================================================
 
 -- Main packages table policies
+DROP POLICY IF EXISTS "Operators can view their own hotel packages" ON multi_city_hotel_packages;
 CREATE POLICY "Operators can view their own hotel packages"
   ON multi_city_hotel_packages FOR SELECT
   USING (operator_id = auth.uid());
 
+DROP POLICY IF EXISTS "Operators can create hotel packages" ON multi_city_hotel_packages;
 CREATE POLICY "Operators can create hotel packages"
   ON multi_city_hotel_packages FOR INSERT
   WITH CHECK (operator_id = auth.uid());
 
+DROP POLICY IF EXISTS "Operators can update their own hotel packages" ON multi_city_hotel_packages;
 CREATE POLICY "Operators can update their own hotel packages"
   ON multi_city_hotel_packages FOR UPDATE
   USING (operator_id = auth.uid());
 
+DROP POLICY IF EXISTS "Operators can delete their own hotel packages" ON multi_city_hotel_packages;
 CREATE POLICY "Operators can delete their own hotel packages"
   ON multi_city_hotel_packages FOR DELETE
   USING (operator_id = auth.uid());
 
+DROP POLICY IF EXISTS "Public can view published hotel packages" ON multi_city_hotel_packages;
 CREATE POLICY "Public can view published hotel packages"
   ON multi_city_hotel_packages FOR SELECT
   USING (status = 'published');
 
 -- Related tables policies (cities, day plans, flights, etc.)
+DROP POLICY IF EXISTS "Operators can manage their hotel package cities" ON multi_city_hotel_package_cities;
 CREATE POLICY "Operators can manage their hotel package cities"
   ON multi_city_hotel_package_cities FOR ALL
   USING (package_id IN (SELECT id FROM multi_city_hotel_packages WHERE operator_id = auth.uid()));
 
+DROP POLICY IF EXISTS "Operators can manage their hotel package city hotels" ON multi_city_hotel_package_city_hotels;
+CREATE POLICY "Operators can manage their hotel package city hotels"
+  ON multi_city_hotel_package_city_hotels FOR ALL
+  USING (city_id IN (
+    SELECT id FROM multi_city_hotel_package_cities WHERE package_id IN (
+      SELECT id FROM multi_city_hotel_packages WHERE operator_id = auth.uid()
+    )
+  ));
+
+DROP POLICY IF EXISTS "Operators can manage their hotel package day plans" ON multi_city_hotel_package_day_plans;
 CREATE POLICY "Operators can manage their hotel package day plans"
   ON multi_city_hotel_package_day_plans FOR ALL
   USING (package_id IN (SELECT id FROM multi_city_hotel_packages WHERE operator_id = auth.uid()));
 
+DROP POLICY IF EXISTS "Operators can manage their hotel package day flights" ON multi_city_hotel_package_day_flights;
 CREATE POLICY "Operators can manage their hotel package day flights"
   ON multi_city_hotel_package_day_flights FOR ALL
   USING (day_plan_id IN (
@@ -272,10 +308,12 @@ CREATE POLICY "Operators can manage their hotel package day flights"
     )
   ));
 
+DROP POLICY IF EXISTS "Operators can manage their hotel package pricing" ON multi_city_hotel_pricing_packages;
 CREATE POLICY "Operators can manage their hotel package pricing"
   ON multi_city_hotel_pricing_packages FOR ALL
   USING (package_id IN (SELECT id FROM multi_city_hotel_packages WHERE operator_id = auth.uid()));
 
+DROP POLICY IF EXISTS "Operators can manage their hotel package vehicles" ON multi_city_hotel_pricing_vehicles;
 CREATE POLICY "Operators can manage their hotel package vehicles"
   ON multi_city_hotel_pricing_vehicles FOR ALL
   USING (pricing_package_id IN (
@@ -284,31 +322,47 @@ CREATE POLICY "Operators can manage their hotel package vehicles"
     )
   ));
 
+DROP POLICY IF EXISTS "Operators can manage their hotel package inclusions" ON multi_city_hotel_package_inclusions;
 CREATE POLICY "Operators can manage their hotel package inclusions"
   ON multi_city_hotel_package_inclusions FOR ALL
   USING (package_id IN (SELECT id FROM multi_city_hotel_packages WHERE operator_id = auth.uid()));
 
+DROP POLICY IF EXISTS "Operators can manage their hotel package exclusions" ON multi_city_hotel_package_exclusions;
 CREATE POLICY "Operators can manage their hotel package exclusions"
   ON multi_city_hotel_package_exclusions FOR ALL
   USING (package_id IN (SELECT id FROM multi_city_hotel_packages WHERE operator_id = auth.uid()));
 
+DROP POLICY IF EXISTS "Operators can manage their hotel package addons" ON multi_city_hotel_package_addons;
 CREATE POLICY "Operators can manage their hotel package addons"
   ON multi_city_hotel_package_addons FOR ALL
   USING (package_id IN (SELECT id FROM multi_city_hotel_packages WHERE operator_id = auth.uid()));
 
+DROP POLICY IF EXISTS "Operators can manage their hotel package cancellation tiers" ON multi_city_hotel_package_cancellation_tiers;
 CREATE POLICY "Operators can manage their hotel package cancellation tiers"
   ON multi_city_hotel_package_cancellation_tiers FOR ALL
   USING (package_id IN (SELECT id FROM multi_city_hotel_packages WHERE operator_id = auth.uid()));
 
 -- Public read policies for published packages
+DROP POLICY IF EXISTS "Public can view published hotel package details" ON multi_city_hotel_package_cities;
 CREATE POLICY "Public can view published hotel package details"
   ON multi_city_hotel_package_cities FOR SELECT
   USING (package_id IN (SELECT id FROM multi_city_hotel_packages WHERE status = 'published'));
 
+DROP POLICY IF EXISTS "Public can view published hotel package city hotels" ON multi_city_hotel_package_city_hotels;
+CREATE POLICY "Public can view published hotel package city hotels"
+  ON multi_city_hotel_package_city_hotels FOR SELECT
+  USING (city_id IN (
+    SELECT id FROM multi_city_hotel_package_cities WHERE package_id IN (
+      SELECT id FROM multi_city_hotel_packages WHERE status = 'published'
+    )
+  ));
+
+DROP POLICY IF EXISTS "Public can view published hotel package day plans" ON multi_city_hotel_package_day_plans;
 CREATE POLICY "Public can view published hotel package day plans"
   ON multi_city_hotel_package_day_plans FOR SELECT
   USING (package_id IN (SELECT id FROM multi_city_hotel_packages WHERE status = 'published'));
 
+DROP POLICY IF EXISTS "Public can view published hotel package flights" ON multi_city_hotel_package_day_flights;
 CREATE POLICY "Public can view published hotel package flights"
   ON multi_city_hotel_package_day_flights FOR SELECT
   USING (day_plan_id IN (
@@ -317,10 +371,12 @@ CREATE POLICY "Public can view published hotel package flights"
     )
   ));
 
+DROP POLICY IF EXISTS "Public can view published hotel package pricing" ON multi_city_hotel_pricing_packages;
 CREATE POLICY "Public can view published hotel package pricing"
   ON multi_city_hotel_pricing_packages FOR SELECT
   USING (package_id IN (SELECT id FROM multi_city_hotel_packages WHERE status = 'published'));
 
+DROP POLICY IF EXISTS "Public can view published hotel package vehicles" ON multi_city_hotel_pricing_vehicles;
 CREATE POLICY "Public can view published hotel package vehicles"
   ON multi_city_hotel_pricing_vehicles FOR SELECT
   USING (pricing_package_id IN (
@@ -329,14 +385,17 @@ CREATE POLICY "Public can view published hotel package vehicles"
     )
   ));
 
+DROP POLICY IF EXISTS "Public can view published hotel package inclusions" ON multi_city_hotel_package_inclusions;
 CREATE POLICY "Public can view published hotel package inclusions"
   ON multi_city_hotel_package_inclusions FOR SELECT
   USING (package_id IN (SELECT id FROM multi_city_hotel_packages WHERE status = 'published'));
 
+DROP POLICY IF EXISTS "Public can view published hotel package exclusions" ON multi_city_hotel_package_exclusions;
 CREATE POLICY "Public can view published hotel package exclusions"
   ON multi_city_hotel_package_exclusions FOR SELECT
   USING (package_id IN (SELECT id FROM multi_city_hotel_packages WHERE status = 'published'));
 
+DROP POLICY IF EXISTS "Public can view active hotel package addons" ON multi_city_hotel_package_addons;
 CREATE POLICY "Public can view active hotel package addons"
   ON multi_city_hotel_package_addons FOR SELECT
   USING (is_active = true AND package_id IN (SELECT id FROM multi_city_hotel_packages WHERE status = 'published'));
@@ -354,10 +413,26 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trigger_update_multi_city_hotel_packages_updated_at ON multi_city_hotel_packages;
 CREATE TRIGGER trigger_update_multi_city_hotel_packages_updated_at
   BEFORE UPDATE ON multi_city_hotel_packages
   FOR EACH ROW
   EXECUTE FUNCTION update_multi_city_hotel_packages_updated_at();
+
+-- Update timestamp trigger for hotels
+CREATE OR REPLACE FUNCTION update_multi_city_hotel_package_city_hotels_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trigger_update_multi_city_hotel_package_city_hotels_updated_at ON multi_city_hotel_package_city_hotels;
+CREATE TRIGGER trigger_update_multi_city_hotel_package_city_hotels_updated_at
+  BEFORE UPDATE ON multi_city_hotel_package_city_hotels
+  FOR EACH ROW
+  EXECUTE FUNCTION update_multi_city_hotel_package_city_hotels_updated_at();
 
 -- ============================================================================
 -- SUCCESS MESSAGE

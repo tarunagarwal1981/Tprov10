@@ -101,3 +101,4 @@ echo -e "1. Review the backup file: ${BACKUP_FILE}"
 echo -e "2. Import to RDS using script: 2-database-import.sh"
 echo -e "3. Verify using table counts: ${VERIFY_FILE}"
 
+

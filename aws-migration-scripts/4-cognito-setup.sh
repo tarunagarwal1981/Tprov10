@@ -152,3 +152,4 @@ echo -e "NEXT_PUBLIC_COGNITO_DOMAIN=${DOMAIN_PREFIX}.auth.${AWS_REGION}.amazonco
 echo ""
 echo -e "${YELLOW}Next step: Run user migration script 5-migrate-users.ts${NC}"
 
+

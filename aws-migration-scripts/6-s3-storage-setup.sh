@@ -193,3 +193,4 @@ echo -e "CLOUDFRONT_DOMAIN=${DISTRIBUTION_DOMAIN}"
 echo ""
 echo -e "${YELLOW}Next step: Run migration script 7-migrate-storage.ts${NC}"
 
+
