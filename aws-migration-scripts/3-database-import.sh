@@ -80,3 +80,4 @@ echo -e "1. Verify RLS policies are active"
 echo -e "2. Test database connections from application"
 echo -e "3. Run migration script 4-cognito-setup.sh"
 
+

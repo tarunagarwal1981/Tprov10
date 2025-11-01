@@ -73,7 +73,7 @@ const PACKAGE_TYPES = [
     gradient: "from-blue-500 to-indigo-600",
     features: ["Flight details", "Group discounts", "Departure dates"],
     route: "/operator/packages/create/fixed-departure-flight",
-    available: false,
+    available: true,
   },
   {
     key: "land",
@@ -261,7 +261,7 @@ export default function CreatePackagePage() {
                       <div className="mt-auto">
                         <Button 
                           className={cn(
-                            "w-full gap-2",
+                            "w-full gap-2 text-sm whitespace-normal break-words h-auto py-2.5 px-4",
                             "bg-gradient-to-r from-[#FF6B35] to-[#FF4B8C] hover:from-[#E05A2A] hover:to-[#E04080]",
                             "shadow-lg hover:shadow-xl transform hover:scale-105",
                             "package-animation-fix package-button-fix"

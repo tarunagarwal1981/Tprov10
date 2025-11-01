@@ -34,6 +34,7 @@ type Flight = {
 type DayPlan = {
   cityId: string;
   cityName?: string;
+  date?: string; // Date for this day (calculated from city arrival date)
   description?: string;
   photoUrl?: string;
   hasFlights?: boolean;
@@ -52,6 +53,7 @@ type CityStop = {
   name: string;
   country?: string;
   nights: number;
+  date?: string; // Fixed departure date for this city
   highlights: string[];
   activitiesIncluded: string[];
   expanded?: boolean;
@@ -183,6 +185,7 @@ const useFormValidation = (data: MultiCityPackageFormData): FormValidation => {
 
     if (data.cities.length === 0) errors.push({ tab: "basic", field: "cities", message: "Add at least one city", severity: "error" });
     if (data.cities.some(c => c.nights <= 0)) errors.push({ tab: "basic", field: "nights", message: "Each city must have at least 1 night", severity: "error" });
+    if (data.cities.some(c => !c.date || !c.date.trim())) errors.push({ tab: "basic", field: "date", message: "Each city must have an arrival date", severity: "error" });
 
     if (data.days.length === 0) warnings.push({ tab: "itinerary", field: "days", message: "No days generated yet" });
 
@@ -323,7 +326,7 @@ const BasicInformationTab: React.FC = () => {
   const { fields, append, remove, move } = useFieldArray({ control, name: "cities" });
 
   const addCity = () => {
-    append({ id: generateId(), name: "", country: "", nights: 2, highlights: [], activitiesIncluded: [], expanded: true, hotels: [] });
+    append({ id: generateId(), name: "", country: "", nights: 2, date: "", highlights: [], activitiesIncluded: [], expanded: true, hotels: [] });
   };
 
   // Keep days in sync when cities change
@@ -331,13 +334,23 @@ const BasicInformationTab: React.FC = () => {
   const days = watch("days");
   
   React.useEffect(() => {
-    // Auto-generate days based on cities and nights
+    // Auto-generate days based on cities and nights with dates
     if (!cities || cities.length === 0) return;
     
     const newDays: DayPlan[] = [];
     cities.forEach((city) => {
       const nights = city.nights || 1;
+      const arrivalDate = city.date ? new Date(city.date) : null;
+      
       for (let i = 0; i < nights; i++) {
+        let dayDate: string | undefined;
+        if (arrivalDate) {
+          // Calculate date for each day (arrival date + day number)
+          const dayDateObj = new Date(arrivalDate);
+          dayDateObj.setDate(arrivalDate.getDate() + i);
+          dayDate = dayDateObj.toISOString().split('T')[0];
+        }
+        
         newDays.push({
           cityId: city.id,
           cityName: city.name,
@@ -345,13 +358,14 @@ const BasicInformationTab: React.FC = () => {
           photoUrl: "",
           hasFlights: false,
           flights: [],
+          date: dayDate,
         });
       }
     });
     
     // Only update if the structure changed
-    if (JSON.stringify(newDays.map(d => ({ cityId: d.cityId, cityName: d.cityName }))) !== 
-        JSON.stringify(days.map((d: DayPlan) => ({ cityId: d.cityId, cityName: d.cityName })))) {
+    if (JSON.stringify(newDays.map(d => ({ cityId: d.cityId, cityName: d.cityName, date: d.date }))) !== 
+        JSON.stringify(days.map((d: DayPlan) => ({ cityId: d.cityId, cityName: d.cityName, date: (d as any).date })))) {
       setValue("days", newDays);
     }
   }, [cities, setValue]);
@@ -412,7 +426,7 @@ const BasicInformationTab: React.FC = () => {
                   <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-r from-[#FF6B35] to-[#FF4B8C] text-white font-semibold flex-shrink-0 mt-6">
                     {idx + 1}
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 flex-1">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-3 flex-1">
                     <div>
                       <label className="text-sm font-medium mb-1 block">City Name *</label>
                       <Input 
@@ -428,6 +442,15 @@ const BasicInformationTab: React.FC = () => {
                         placeholder="e.g. France, Italy, Japan" 
                         defaultValue={field.country}
                         onChange={(e) => setValue(`cities.${idx}.country`, e.target.value)}
+                        className="package-text-fix"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">Arrival Date *</label>
+                      <Input 
+                        type="date" 
+                        defaultValue={field.date}
+                        onChange={(e) => setValue(`cities.${idx}.date`, e.target.value)}
                         className="package-text-fix"
                       />
                     </div>
@@ -656,6 +679,11 @@ const ItineraryTab: React.FC = () => {
                         {i + 1}
                       </div>
                       <div className="text-xs text-gray-500 mt-1">{day.cityName}</div>
+                      {day.date && (
+                        <div className="text-xs text-gray-400 mt-0.5">
+                          {new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </div>
+                      )}
                     </div>
                     {i < days.length - 1 && <div className="w-16 h-0.5 bg-orange-200 mb-4" />}
                   </React.Fragment>
@@ -677,9 +705,14 @@ const ItineraryTab: React.FC = () => {
         {days.map((day, dayIndex) => (
           <Card key={dayIndex} className="package-selector-glass package-shadow-fix">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 flex-wrap">
                 <Badge variant="secondary" className="text-base px-3 py-1">Day {dayIndex + 1}</Badge>
                 <span className="text-base font-semibold text-gray-700 dark:text-gray-300">{day.cityName || "—"}</span>
+                {day.date && (
+                  <span className="text-sm text-gray-500 dark:text-gray-400 font-normal">
+                    ({new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })})
+                  </span>
+                )}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -1312,8 +1345,8 @@ export const MultiCityPackageForm: React.FC<{
         <div className="mb-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold">Create Multi-City Package</h1>
-              <p className="text-gray-600">Build an itinerary across multiple cities with intuitive tools.</p>
+              <h1 className="text-2xl font-bold">Create Fixed Departure Flight Package</h1>
+              <p className="text-gray-600">Build an itinerary across multiple cities with fixed departure dates and flight inclusions.</p>
             </div>
             {/* Auto-save status and actions (aligned with other forms) */}
             {/* Auto-save status - DISABLED */}
@@ -1377,8 +1410,8 @@ export const MultiCityPackageForm: React.FC<{
   );
 };
 
-// Export as MultiCityHotelPackageForm for multi-city-hotel pages
+// Export as FixedDepartureFlightPackageForm for fixed-departure-flight pages
 export default MultiCityPackageForm;
-export { MultiCityPackageForm as MultiCityHotelPackageForm };
+export { MultiCityPackageForm as FixedDepartureFlightPackageForm };
 
 

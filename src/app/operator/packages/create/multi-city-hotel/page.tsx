@@ -214,12 +214,37 @@ export default function MultiCityHotelPackagePage() {
           city_order: index + 1,
         }));
         
-        const { error: citiesError } = await (supabase as any)
+        const { data: insertedCities, error: citiesError } = await (supabase as any)
           .from('multi_city_hotel_package_cities')
-          .insert(citiesData);
+          .insert(citiesData)
+          .select();
         
         if (citiesError) {
           console.error('Cities insert error:', citiesError);
+        } else if (insertedCities) {
+          // Insert hotels for each city
+          for (let i = 0; i < data.cities.length; i++) {
+            const city = data.cities[i];
+            const insertedCity = insertedCities[i];
+            
+            if (city && insertedCity && city.hotels && city.hotels.length > 0) {
+              const hotelsData = city.hotels.map((hotel, hotelIndex) => ({
+                city_id: insertedCity.id,
+                hotel_name: hotel.hotelName,
+                hotel_type: hotel.hotelType || null,
+                room_type: hotel.roomType,
+                display_order: hotelIndex + 1,
+              }));
+              
+              const { error: hotelsError } = await (supabase as any)
+                .from('multi_city_hotel_package_city_hotels')
+                .insert(hotelsData);
+              
+              if (hotelsError) {
+                console.error('Hotels insert error:', hotelsError);
+              }
+            }
+          }
         }
       }
 
