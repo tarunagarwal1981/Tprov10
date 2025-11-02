@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiPlus, FiTrash2, FiEdit2, FiGripVertical, FiCalendar, FiMapPin } from 'react-icons/fi';
+import { FiPlus, FiTrash2, FiEdit2, FiCalendar, FiMapPin } from 'react-icons/fi';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -103,7 +103,8 @@ export function ItineraryBuilderPanel({
 
       if (error) throw error;
 
-      onDaysChange(days.map(d => d.id === dayId ? data : d));
+      const updatedDay = data as unknown as ItineraryDay;
+      onDaysChange(days.map(d => d.id === dayId ? updatedDay : d));
       setEditingDay(null);
     } catch (err) {
       console.error('Error updating day:', err);

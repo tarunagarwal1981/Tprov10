@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiX, FiCheck, FiCar, FiUsers, FiDollarSign } from 'react-icons/fi';
+import { FiX, FiCheck, FiUsers, FiDollarSign } from 'react-icons/fi';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -79,9 +79,9 @@ export function PackageConfigModal({
         } else if (pkg.package_type === 'multi_city') {
           query = supabase.from('multi_city_packages').select('*, pricing, cities, city_hotels').eq('id', pkg.id).single();
         } else if (pkg.package_type === 'multi_city_hotel') {
-          query = supabase.from('multi_city_hotel_packages').select('*, pricing, cities, city_hotels').eq('id', pkg.id).single();
+          query = supabase.from('multi_city_hotel_packages' as any).select('*, pricing, cities, city_hotels').eq('id', pkg.id).single();
         } else if (pkg.package_type === 'fixed_departure') {
-          query = supabase.from('fixed_departure_flight_packages').select('*, pricing, cities, city_hotels').eq('id', pkg.id).single();
+          query = supabase.from('fixed_departure_flight_packages' as any).select('*, pricing, cities, city_hotels').eq('id', pkg.id).single();
         } else {
           throw new Error('Unknown package type');
         }
