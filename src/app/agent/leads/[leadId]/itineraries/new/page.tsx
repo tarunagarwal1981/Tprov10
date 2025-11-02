@@ -62,11 +62,12 @@ export default function CreateItineraryPage() {
         if (error) throw error;
 
         if (data) {
-          setLead(data as unknown as any);
+          const leadData = data as LeadDetails;
+          setLead(leadData);
           // Pre-fill form with lead data
           setFormData(prev => ({
             ...prev,
-            adultsCount: data.travelers_count || 2,
+            adultsCount: leadData.travelers_count || 2,
             childrenCount: 0,
             infantsCount: 0,
           }));
