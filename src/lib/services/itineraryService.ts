@@ -133,7 +133,8 @@ export class ItineraryService {
 
     if (error) throw error;
 
-    const uniqueOperatorIds = [...new Set((items || []).map(item => item.operator_id))];
+    const itemsTyped = (items || []) as unknown as Array<{ operator_id: string }>;
+    const uniqueOperatorIds = [...new Set(itemsTyped.map(item => item.operator_id))];
 
     // Get all items with operator info
     const { data: allItems, error: itemsError } = await this.supabase
@@ -230,17 +231,18 @@ export class ItineraryService {
 
     // Duplicate days
     const dayIdMap = new Map<string, string>();
+    const daysTyped = days as unknown as Array<{ id: string; day_number: number; date: string | null; city_name: string | null; notes: string | null; display_order?: number }>;
     
     for (const day of daysTyped) {
       const { data: newDay, error: dayError } = await this.supabase
         .from('itinerary_days' as any)
         .insert({
-          itinerary_id: newItinerary.id,
+          itinerary_id: newItineraryTyped.id,
           day_number: day.day_number,
           date: day.date,
           city_name: day.city_name,
           notes: day.notes,
-          display_order: day.display_order,
+          display_order: day.display_order ?? day.day_number,
         })
         .select()
         .single();
@@ -258,7 +260,7 @@ export class ItineraryService {
       const { error: itemError } = await this.supabase
         .from('itinerary_items' as any)
         .insert({
-          itinerary_id: newItinerary.id,
+          itinerary_id: newItineraryTyped.id,
           day_id: newDayId,
           package_type: item.package_type,
           package_id: item.package_id,

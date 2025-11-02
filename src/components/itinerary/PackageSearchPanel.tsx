@@ -76,16 +76,17 @@ export function PackageSearchPanel({
 
         const { data } = await query.limit(20);
         if (data) {
-          allPackages.push(...data.map(p => ({
+          const packagesTyped = data as unknown as Array<{ id: string; title: string; destination_country: string; destination_city: string; operator_id: string; featured_image_url: string | null; base_price: number | null; currency: string | null }>;
+          allPackages.push(...packagesTyped.map(p => ({
             id: p.id,
             title: p.title,
             destination_country: p.destination_country,
             destination_city: p.destination_city,
             package_type: 'activity' as const,
             operator_id: p.operator_id,
-            featured_image_url: p.featured_image_url,
-            base_price: p.base_price,
-            currency: p.currency,
+            featured_image_url: p.featured_image_url || undefined,
+            base_price: p.base_price || undefined,
+            currency: p.currency || undefined,
           })));
         }
       }
@@ -107,16 +108,17 @@ export function PackageSearchPanel({
 
         const { data } = await query.limit(20);
         if (data) {
-          allPackages.push(...data.map(p => ({
+          const packagesTyped = data as unknown as Array<{ id: string; title: string; destination_country: string; destination_city: string; operator_id: string; featured_image_url: string | null; base_price: number | null; currency: string | null }>;
+          allPackages.push(...packagesTyped.map(p => ({
             id: p.id,
             title: p.title,
             destination_country: p.destination_country,
             destination_city: p.destination_city,
             package_type: 'transfer' as const,
             operator_id: p.operator_id,
-            featured_image_url: p.featured_image_url,
-            base_price: p.base_price,
-            currency: p.currency,
+            featured_image_url: p.featured_image_url || undefined,
+            base_price: p.base_price || undefined,
+            currency: p.currency || undefined,
           })));
         }
       }
@@ -138,16 +140,17 @@ export function PackageSearchPanel({
 
         const { data } = await query.limit(20);
         if (data) {
-          allPackages.push(...data.map(p => ({
+          const packagesTyped = data as unknown as Array<{ id: string; title: string; destination_region: string | null; operator_id: string; featured_image_url: string | null; adult_price: number | null; currency: string | null }>;
+          allPackages.push(...packagesTyped.map(p => ({
             id: p.id,
             title: p.title,
             destination_country: p.destination_region || '',
             destination_city: '',
             package_type: 'multi_city' as const,
             operator_id: p.operator_id,
-            featured_image_url: p.featured_image_url,
-            base_price: p.adult_price,
-            currency: p.currency,
+            featured_image_url: p.featured_image_url || undefined,
+            base_price: p.adult_price || undefined,
+            currency: p.currency || undefined,
           })));
         }
       }
@@ -155,7 +158,7 @@ export function PackageSearchPanel({
       // Multi-City Hotel Packages
       if (selectedType === 'all' || selectedType === 'multi_city_hotel') {
         let query = supabase
-          .from('multi_city_hotel_packages')
+          .from('multi_city_hotel_packages' as any)
           .select('id, title, destination_region, operator_id, featured_image_url, adult_price, currency, status')
           .eq('status', 'published');
 
@@ -169,16 +172,17 @@ export function PackageSearchPanel({
 
         const { data } = await query.limit(20);
         if (data) {
-          allPackages.push(...data.map(p => ({
+          const packagesTyped = data as unknown as Array<{ id: string; title: string; destination_region: string | null; operator_id: string; featured_image_url: string | null; adult_price: number | null; currency: string | null }>;
+          allPackages.push(...packagesTyped.map(p => ({
             id: p.id,
             title: p.title,
             destination_country: p.destination_region || '',
             destination_city: '',
             package_type: 'multi_city_hotel' as const,
             operator_id: p.operator_id,
-            featured_image_url: p.featured_image_url,
-            base_price: p.adult_price,
-            currency: p.currency,
+            featured_image_url: p.featured_image_url || undefined,
+            base_price: p.adult_price || undefined,
+            currency: p.currency || undefined,
           })));
         }
       }
@@ -186,7 +190,7 @@ export function PackageSearchPanel({
       // Fixed Departure Packages
       if (selectedType === 'all' || selectedType === 'fixed_departure') {
         let query = supabase
-          .from('fixed_departure_flight_packages')
+          .from('fixed_departure_flight_packages' as any)
           .select('id, title, destination_region, operator_id, featured_image_url, adult_price, currency, status')
           .eq('status', 'published');
 
@@ -200,16 +204,17 @@ export function PackageSearchPanel({
 
         const { data } = await query.limit(20);
         if (data) {
-          allPackages.push(...data.map(p => ({
+          const packagesTyped = data as unknown as Array<{ id: string; title: string; destination_region: string | null; operator_id: string; featured_image_url: string | null; adult_price: number | null; currency: string | null }>;
+          allPackages.push(...packagesTyped.map(p => ({
             id: p.id,
             title: p.title,
             destination_country: p.destination_region || '',
             destination_city: '',
             package_type: 'fixed_departure' as const,
             operator_id: p.operator_id,
-            featured_image_url: p.featured_image_url,
-            base_price: p.adult_price,
-            currency: p.currency,
+            featured_image_url: p.featured_image_url || undefined,
+            base_price: p.adult_price || undefined,
+            currency: p.currency || undefined,
           })));
         }
       }
@@ -221,12 +226,13 @@ export function PackageSearchPanel({
       let operatorMap = new Map<string, string>();
       try {
         const { data: operators } = await supabase
-          .from('profiles')
+          .from('profiles' as any)
           .select('id, company_name')
           .in('id', operatorIds);
 
         if (operators) {
-          operatorMap = new Map(operators.map(o => [o.id, o.company_name || 'Unknown Operator']));
+          const operatorsTyped = operators as unknown as Array<{ id: string; company_name: string | null }>;
+          operatorMap = new Map(operatorsTyped.map(o => [o.id, o.company_name || 'Unknown Operator']));
         }
       } catch (err) {
         // Profiles table might not exist, use default

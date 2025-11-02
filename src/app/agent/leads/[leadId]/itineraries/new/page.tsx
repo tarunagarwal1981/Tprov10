@@ -62,7 +62,7 @@ export default function CreateItineraryPage() {
         if (error) throw error;
 
         if (data) {
-          const leadData = data as LeadDetails;
+          const leadData = data as unknown as LeadDetails;
           setLead(leadData);
           // Pre-fill form with lead data
           setFormData(prev => ({
@@ -115,8 +115,9 @@ export default function CreateItineraryPage() {
       if (itineraryError) throw itineraryError;
 
       if (itinerary) {
+        const itineraryData = itinerary as unknown as { id: string };
         toast.success('Itinerary created successfully!');
-        router.push(`/agent/itineraries/${itinerary.id}/builder`);
+        router.push(`/agent/itineraries/${itineraryData.id}/builder`);
       }
     } catch (err) {
       console.error('Error creating itinerary:', err);
