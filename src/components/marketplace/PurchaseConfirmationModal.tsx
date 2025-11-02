@@ -113,9 +113,10 @@ export const PurchaseConfirmationModal: React.FC<PurchaseConfirmationModalProps>
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent
-        className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto"
+        className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto bg-white z-50"
         closeOnOverlayClick={!isConfirming && !loading}
         preventClose={isConfirming || loading}
+        variant="default"
       >
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold flex items-center gap-2">

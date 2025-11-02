@@ -221,7 +221,7 @@ const TRAVEL_AGENT_NAVIGATION: NavigationItem[] = [
   {
     id: 'dashboard',
     label: 'Dashboard',
-    href: '/agent/dashboard',
+    href: '/agent',
     icon: FiHome,
   },
   {
