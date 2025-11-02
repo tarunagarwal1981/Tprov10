@@ -117,7 +117,7 @@ export function AgentSidebar() {
 			label: "My Leads",
 			href: "/agent/leads",
 			icon: FileText,
-			enabled: false,
+			enabled: true,
 			submenu: [
 				{ label: "All Leads", href: "/agent/leads" },
 				{ label: "Active", href: "/agent/leads/active" },

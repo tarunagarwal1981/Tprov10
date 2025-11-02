@@ -143,12 +143,12 @@ export const LeadCard: React.FC<LeadCardProps> = ({
       animate={{ opacity: 1, y: 0 }}
       whileHover={{ y: -4 }}
       transition={{ duration: 0.3, ease: 'easeOut' }}
-      className={cn('h-full', className)}
+      className={cn('flex', className)}
     >
       <Card
         variant="interactive"
         className={cn(
-          'h-full flex flex-col relative overflow-hidden',
+          'flex flex-col relative max-h-[650px] min-h-[550px]',
           'border-2 hover:border-primary/30',
           isExpiringSoon && 'border-orange-400 hover:border-orange-500'
         )}
@@ -189,20 +189,20 @@ export const LeadCard: React.FC<LeadCardProps> = ({
           </div>
 
           {/* Title */}
-          <h3 className="text-lg font-bold text-gray-900 line-clamp-2 leading-tight">
+          <h3 className="text-lg font-bold text-gray-900 line-clamp-2 leading-tight break-words">
             {lead.title}
           </h3>
 
           {/* Destination */}
           <div className="flex items-center gap-1.5 text-gray-600 mt-1">
-            <FaMapMarkerAlt className="w-3.5 h-3.5 text-gray-400" />
-            <span className="text-sm font-medium">{lead.destination}</span>
+            <FaMapMarkerAlt className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+            <span className="text-sm font-medium break-words">{lead.destination}</span>
           </div>
         </CardHeader>
 
-        <CardContent className="flex-1 pb-3">
+        <CardContent className="flex-1 pb-3 overflow-hidden flex flex-col">
           {/* Quality Score */}
-          <div className="flex items-center gap-2 mb-3 pb-3 border-b border-gray-100">
+          <div className="flex items-center gap-2 mb-3 pb-3 border-b border-gray-100 flex-shrink-0">
             <span className="text-xs text-gray-500 font-medium">Quality Score:</span>
             <div className="flex items-center gap-1">
               {[...Array(5)].map((_, i) => (
@@ -221,13 +221,13 @@ export const LeadCard: React.FC<LeadCardProps> = ({
           </div>
 
           {/* Details Grid */}
-          <div className="grid grid-cols-2 gap-3 mb-3">
+          <div className="grid grid-cols-2 gap-2 mb-3 flex-shrink-0">
             {/* Budget */}
             <div className="flex items-start gap-2">
               <FaDollarSign className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-xs text-gray-500">Budget</p>
-                <p className="text-sm font-semibold text-gray-900 truncate">
+                <p className="text-sm font-semibold text-gray-900 break-words">
                   {formatBudget(lead.budgetMin, lead.budgetMax)}
                 </p>
               </div>
@@ -261,7 +261,7 @@ export const LeadCard: React.FC<LeadCardProps> = ({
                 <FaCalendar className="w-4 h-4 text-orange-500 mt-0.5 flex-shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-gray-500">Travel Date</p>
-                  <p className="text-sm font-semibold text-gray-900">
+                  <p className="text-sm font-semibold text-gray-900 break-words">
                     {new Date(lead.travelDateStart).toLocaleDateString('en-US', {
                       month: 'short',
                       year: 'numeric',
@@ -274,7 +274,7 @@ export const LeadCard: React.FC<LeadCardProps> = ({
 
           {/* Locked Contact Info Section */}
           {!isPurchased && (
-            <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200 relative overflow-hidden">
+            <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200 relative overflow-hidden flex-shrink-0">
               <div className="absolute inset-0 backdrop-blur-[2px] bg-white/40 flex items-center justify-center z-10">
                 <div className="flex items-center gap-2 text-gray-600">
                   <FaLock className="w-4 h-4" />
@@ -291,7 +291,7 @@ export const LeadCard: React.FC<LeadCardProps> = ({
           )}
         </CardContent>
 
-        <CardFooter className="flex-col gap-2 pt-3 border-t border-gray-100">
+        <CardFooter className="flex-col gap-2 pt-3 border-t border-gray-100 flex-shrink-0 mt-auto">
           {/* Lead Price */}
           <div className="w-full flex items-center justify-between mb-2">
             <span className="text-sm text-gray-600 font-medium">Lead Price:</span>

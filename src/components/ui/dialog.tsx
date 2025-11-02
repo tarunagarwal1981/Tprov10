@@ -20,7 +20,7 @@ const dialogOverlayVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-black/80",
+        default: "bg-black/95",
         glass: "bg-black/40 backdrop-blur-md",
         subtle: "bg-black/20",
       },
