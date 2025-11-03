@@ -49,7 +49,12 @@ export function PackageSearchPanel({
   const [selectedType, setSelectedType] = useState<string>('all');
 
   useEffect(() => {
-    fetchPackages();
+    // Debounce package fetching to avoid excessive queries
+    const timeoutId = setTimeout(() => {
+      fetchPackages();
+    }, 300); // Wait 300ms after user stops typing
+
+    return () => clearTimeout(timeoutId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDestination, selectedType, searchQuery]);
 
@@ -66,22 +71,18 @@ export function PackageSearchPanel({
           .select('id, title, destination_country, destination_city, operator_id, base_price, currency, status')
           .eq('status', 'published');
 
-        // Build all OR conditions in a single call
-        const orConditions: string[] = [];
-        if (selectedDestination) {
-          // Use the full destination string (PostgREST will handle URL encoding)
-          orConditions.push(`destination_country.ilike.%${selectedDestination}%`);
-          orConditions.push(`destination_city.ilike.%${selectedDestination}%`);
+        // Apply filters - use direct filters when single, OR when multiple
+        if (selectedDestination && searchQuery) {
+          // Both destination and search query - use OR
+          query = query.or(`destination_country.ilike.%${selectedDestination}%,destination_city.ilike.%${selectedDestination}%,title.ilike.%${searchQuery}%,short_description.ilike.%${searchQuery}%`);
+        } else if (selectedDestination) {
+          // Only destination - use OR for country and city
+          query = query.or(`destination_country.ilike.%${selectedDestination}%,destination_city.ilike.%${selectedDestination}%`);
+        } else if (searchQuery) {
+          // Only search query - use OR for title and description
+          query = query.or(`title.ilike.%${searchQuery}%,short_description.ilike.%${searchQuery}%`);
         }
-        if (searchQuery) {
-          orConditions.push(`title.ilike.%${searchQuery}%`);
-          orConditions.push(`short_description.ilike.%${searchQuery}%`);
-        }
-
-        // Only use OR if we have conditions, otherwise fetch all published packages
-        if (orConditions.length > 0) {
-          query = query.or(orConditions.join(','));
-        }
+        // If no filters, fetch all published packages
 
         const { data } = await query.limit(20);
         if (data) {
@@ -107,22 +108,18 @@ export function PackageSearchPanel({
           .select('id, title, destination_country, destination_city, operator_id, base_price, currency, status')
           .eq('status', 'published');
 
-        // Build all OR conditions in a single call
-        const orConditions: string[] = [];
-        if (selectedDestination) {
-          // Use the full destination string (PostgREST will handle URL encoding)
-          orConditions.push(`destination_country.ilike.%${selectedDestination}%`);
-          orConditions.push(`destination_city.ilike.%${selectedDestination}%`);
+        // Apply filters - use direct filters when single, OR when multiple
+        if (selectedDestination && searchQuery) {
+          // Both destination and search query - use OR
+          query = query.or(`destination_country.ilike.%${selectedDestination}%,destination_city.ilike.%${selectedDestination}%,title.ilike.%${searchQuery}%,short_description.ilike.%${searchQuery}%`);
+        } else if (selectedDestination) {
+          // Only destination - use OR for country and city
+          query = query.or(`destination_country.ilike.%${selectedDestination}%,destination_city.ilike.%${selectedDestination}%`);
+        } else if (searchQuery) {
+          // Only search query - use OR for title and description
+          query = query.or(`title.ilike.%${searchQuery}%,short_description.ilike.%${searchQuery}%`);
         }
-        if (searchQuery) {
-          orConditions.push(`title.ilike.%${searchQuery}%`);
-          orConditions.push(`short_description.ilike.%${searchQuery}%`);
-        }
-
-        // Only use OR if we have conditions, otherwise fetch all published packages
-        if (orConditions.length > 0) {
-          query = query.or(orConditions.join(','));
-        }
+        // If no filters, fetch all published packages
 
         const { data } = await query.limit(20);
         if (data) {
@@ -148,20 +145,18 @@ export function PackageSearchPanel({
           .select('id, title, destination_region, operator_id, adult_price, currency, status')
           .eq('status', 'published');
 
-        // Build OR conditions - only one .or() call allowed, so combine all conditions
-        const orConditions: string[] = [];
-        if (selectedDestination) {
-          // Use the full destination string (PostgREST will handle URL encoding)
-          orConditions.push(`destination_region.ilike.%${selectedDestination}%`);
+        // Apply filters - use direct filters when single, OR when multiple
+        if (selectedDestination && searchQuery) {
+          // Both destination and search query - use OR
+          query = query.or(`destination_region.ilike.%${selectedDestination}%,title.ilike.%${searchQuery}%,short_description.ilike.%${searchQuery}%`);
+        } else if (selectedDestination) {
+          // Only destination - use direct ilike (no OR needed for single condition)
+          query = query.ilike('destination_region', `%${selectedDestination}%`);
+        } else if (searchQuery) {
+          // Only search query - use OR for title and description
+          query = query.or(`title.ilike.%${searchQuery}%,short_description.ilike.%${searchQuery}%`);
         }
-        if (searchQuery) {
-          orConditions.push(`title.ilike.%${searchQuery}%`);
-          orConditions.push(`short_description.ilike.%${searchQuery}%`);
-        }
-
-        if (orConditions.length > 0) {
-          query = query.or(orConditions.join(','));
-        }
+        // If no filters, fetch all published packages
 
         const { data } = await query.limit(20);
         if (data) {
@@ -187,20 +182,18 @@ export function PackageSearchPanel({
           .select('id, title, destination_region, operator_id, adult_price, currency, status')
           .eq('status', 'published');
 
-        // Build OR conditions - only one .or() call allowed, so combine all conditions
-        const orConditions: string[] = [];
-        if (selectedDestination) {
-          // Use the full destination string (PostgREST will handle URL encoding)
-          orConditions.push(`destination_region.ilike.%${selectedDestination}%`);
+        // Apply filters - use direct filters when single, OR when multiple
+        if (selectedDestination && searchQuery) {
+          // Both destination and search query - use OR
+          query = query.or(`destination_region.ilike.%${selectedDestination}%,title.ilike.%${searchQuery}%,short_description.ilike.%${searchQuery}%`);
+        } else if (selectedDestination) {
+          // Only destination - use direct ilike (no OR needed for single condition)
+          query = query.ilike('destination_region', `%${selectedDestination}%`);
+        } else if (searchQuery) {
+          // Only search query - use OR for title and description
+          query = query.or(`title.ilike.%${searchQuery}%,short_description.ilike.%${searchQuery}%`);
         }
-        if (searchQuery) {
-          orConditions.push(`title.ilike.%${searchQuery}%`);
-          orConditions.push(`short_description.ilike.%${searchQuery}%`);
-        }
-
-        if (orConditions.length > 0) {
-          query = query.or(orConditions.join(','));
-        }
+        // If no filters, fetch all published packages
 
         const { data } = await query.limit(20);
         if (data) {
@@ -226,20 +219,18 @@ export function PackageSearchPanel({
           .select('id, title, destination_region, operator_id, adult_price, currency, status')
           .eq('status', 'published');
 
-        // Build OR conditions - only one .or() call allowed, so combine all conditions
-        const orConditions: string[] = [];
-        if (selectedDestination) {
-          // Use the full destination string (PostgREST will handle URL encoding)
-          orConditions.push(`destination_region.ilike.%${selectedDestination}%`);
+        // Apply filters - use direct filters when single, OR when multiple
+        if (selectedDestination && searchQuery) {
+          // Both destination and search query - use OR
+          query = query.or(`destination_region.ilike.%${selectedDestination}%,title.ilike.%${searchQuery}%,short_description.ilike.%${searchQuery}%`);
+        } else if (selectedDestination) {
+          // Only destination - use direct ilike (no OR needed for single condition)
+          query = query.ilike('destination_region', `%${selectedDestination}%`);
+        } else if (searchQuery) {
+          // Only search query - use OR for title and description
+          query = query.or(`title.ilike.%${searchQuery}%,short_description.ilike.%${searchQuery}%`);
         }
-        if (searchQuery) {
-          orConditions.push(`title.ilike.%${searchQuery}%`);
-          orConditions.push(`short_description.ilike.%${searchQuery}%`);
-        }
-
-        if (orConditions.length > 0) {
-          query = query.or(orConditions.join(','));
-        }
+        // If no filters, fetch all published packages
 
         const { data } = await query.limit(20);
         if (data) {
