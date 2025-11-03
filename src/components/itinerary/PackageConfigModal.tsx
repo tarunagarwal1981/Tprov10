@@ -73,15 +73,49 @@ export function PackageConfigModal({
         let query: any;
         
         if (pkg.package_type === 'activity') {
-          query = supabase.from('activity_packages').select('*, pricing_options').eq('id', pkg.id).single();
+          // Fetch activity package and its pricing packages
+          const { data: packageData, error: packageError } = await supabase
+            .from('activity_packages')
+            .select('*')
+            .eq('id', pkg.id)
+            .single();
+
+          if (packageError) throw packageError;
+
+          // Fetch pricing packages
+          const { data: pricingData, error: pricingError } = await supabase
+            .from('activity_pricing_packages')
+            .select('*')
+            .eq('package_id', pkg.id)
+            .eq('is_active', true)
+            .order('display_order', { ascending: true });
+
+          if (pricingError && pricingError.code !== 'PGRST116') { // PGRST116 = no rows found
+            console.warn('Error fetching pricing packages:', pricingError);
+          }
+
+          setPackageData({
+            ...packageData,
+            pricing_packages: pricingData || [],
+          });
+
+          // Initialize default config
+          setConfig({
+            packageType: 'TICKET_ONLY',
+            selectedPricingPackageId: pricingData?.[0]?.id || null,
+            selectedVehicle: null,
+            quantity: 1,
+          });
+          setLoading(false);
+          return;
         } else if (pkg.package_type === 'transfer') {
-          query = supabase.from('transfer_packages').select('*, pricing_options').eq('id', pkg.id).single();
+          query = supabase.from('transfer_packages').select('*').eq('id', pkg.id).single();
         } else if (pkg.package_type === 'multi_city') {
-          query = supabase.from('multi_city_packages').select('*, pricing, cities, city_hotels').eq('id', pkg.id).single();
+          query = supabase.from('multi_city_packages').select('*').eq('id', pkg.id).single();
         } else if (pkg.package_type === 'multi_city_hotel') {
-          query = supabase.from('multi_city_hotel_packages' as any).select('*, pricing, cities, city_hotels').eq('id', pkg.id).single();
+          query = supabase.from('multi_city_hotel_packages' as any).select('*').eq('id', pkg.id).single();
         } else if (pkg.package_type === 'fixed_departure') {
-          query = supabase.from('fixed_departure_flight_packages' as any).select('*, pricing, cities, city_hotels').eq('id', pkg.id).single();
+          query = supabase.from('fixed_departure_flight_packages' as any).select('*').eq('id', pkg.id).single();
         } else {
           throw new Error('Unknown package type');
         }
@@ -93,13 +127,7 @@ export function PackageConfigModal({
           setPackageData(data);
           
           // Initialize default config based on package type
-          if (pkg.package_type === 'activity') {
-            setConfig({
-              packageType: 'TICKET_ONLY',
-              selectedVehicle: null,
-              quantity: 1,
-            });
-          } else if (pkg.package_type === 'transfer') {
+          if (pkg.package_type === 'transfer') {
             setConfig({
               pricingType: 'point-to-point',
               selectedOption: null,
@@ -133,65 +161,37 @@ export function PackageConfigModal({
     let price = 0;
 
     if (pkg.package_type === 'activity') {
-      // Handle pricing_options - can be JSONB array or object with nested arrays
-      let pricingOptions: any[] = [];
+      // Use pricing from activity_pricing_packages table
+      const pricingPackages = packageData.pricing_packages || [];
+      const selectedPricingPackage = pricingPackages.find((p: any) => p.id === config.selectedPricingPackageId);
       
-      if (Array.isArray(packageData.pricing_options)) {
-        pricingOptions = packageData.pricing_options;
-      } else if (packageData.pricing_options?.ticketOnlyOptions || packageData.pricing_options?.ticketWithTransferOptions) {
-        // Old format with nested arrays
-        pricingOptions = [
-          ...(packageData.pricing_options.ticketOnlyOptions || []).map((opt: any) => ({ ...opt, package_type: 'TICKET_ONLY' })),
-          ...(packageData.pricing_options.ticketWithTransferOptions || []).map((opt: any) => ({ ...opt, package_type: opt.package_type || 'PRIVATE_TRANSFER' })),
-        ];
-      }
-
-      const option = pricingOptions.find((opt: any) => opt.id === config.selectedOptionId);
-      if (option) {
-        const adultsPrice = (option.adult_price || option.adultPrice || 0) * (itineraryInfo.adults_count || 0);
-        const childrenPrice = (option.child_price || option.childPrice || 0) * (itineraryInfo.children_count || 0);
-        price = adultsPrice + childrenPrice;
-
-        if ((option.package_type === 'PRIVATE_TRANSFER' || option.packageType === 'PRIVATE_TRANSFER') && config.selectedVehicle) {
-          const vehicles = option.vehicles || [];
-          const vehicle = vehicles.find((v: any) => v.id === config.selectedVehicle || v.vehicleType === config.selectedVehicle);
-          if (vehicle) {
-            price += vehicle.price || 0;
-          }
+      if (selectedPricingPackage) {
+        const adultsPrice = (selectedPricingPackage.adult_price || 0) * (itineraryInfo.adults_count || 0);
+        const childrenPrice = (selectedPricingPackage.child_price || 0) * (itineraryInfo.children_count || 0);
+        const infantsPrice = (selectedPricingPackage.infant_price || 0) * (itineraryInfo.infants_count || 0);
+        price = adultsPrice + childrenPrice + infantsPrice;
+        
+        // Add transfer price if included
+        if (selectedPricingPackage.transfer_included) {
+          const transferAdultPrice = (selectedPricingPackage.transfer_price_adult || 0) * (itineraryInfo.adults_count || 0);
+          const transferChildPrice = (selectedPricingPackage.transfer_price_child || 0) * (itineraryInfo.children_count || 0);
+          const transferInfantPrice = (selectedPricingPackage.transfer_price_infant || 0) * (itineraryInfo.infants_count || 0);
+          price += transferAdultPrice + transferChildPrice + transferInfantPrice;
         }
-      } else if (pricingOptions.length === 0 && packageData.base_price) {
-        // Fallback to base_price if no pricing options
+      } else if (packageData.base_price) {
+        // Fallback to base_price if no pricing packages
         price = (packageData.base_price || 0) * ((itineraryInfo.adults_count || 0) + (itineraryInfo.children_count || 0));
       }
     } else if (pkg.package_type === 'transfer') {
-      // Handle pricing_options for transfer packages
-      let pricingOptions: any[] = [];
-      
-      if (Array.isArray(packageData.pricing_options)) {
-        pricingOptions = packageData.pricing_options;
-      } else if (packageData.hourly_pricing_options || packageData.point_to_point_pricing_options) {
-        // Try alternative field names
-        pricingOptions = [
-          ...(packageData.hourly_pricing_options || []).map((opt: any) => ({ ...opt, type: 'hourly' })),
-          ...(packageData.point_to_point_pricing_options || []).map((opt: any) => ({ ...opt, type: 'point-to-point' })),
-        ];
-      }
-
-      const option = pricingOptions.find((opt: any) => opt.id === config.selectedOptionId);
-      if (option) {
-        if (option.type === 'hourly' || config.pricingType === 'hourly') {
-          price = (option.rate_usd || option.rateUSD || 0) * (config.hours || 1);
-        } else {
-          price = option.cost_usd || option.costUSD || 0;
-        }
-      } else if (pricingOptions.length === 0 && packageData.base_price) {
-        // Fallback to base_price
-        price = packageData.base_price || 0;
+      // Transfer packages use base_price directly
+      if (packageData.base_price) {
+        price = (packageData.base_price || 0) * (config.quantity || 1);
       }
     } else if (pkg.package_type === 'multi_city' || pkg.package_type === 'multi_city_hotel' || pkg.package_type === 'fixed_departure') {
-      const adultsPrice = (packageData.pricing?.adult_price || 0) * (itineraryInfo.adults_count || 0);
-      const childrenPrice = (packageData.pricing?.child_price || 0) * (itineraryInfo.children_count || 0);
-      const infantsPrice = (packageData.pricing?.infant_price || 0) * (itineraryInfo.infants_count || 0);
+      // Multi-city packages use adult_price directly from the table
+      const adultsPrice = (packageData.adult_price || 0) * (itineraryInfo.adults_count || 0);
+      const childrenPrice = 0; // Multi-city packages typically don't have child pricing
+      const infantsPrice = 0;
       price = adultsPrice + childrenPrice + infantsPrice;
 
       if (config.pricingType === 'GROUP' && config.selectedVehicle) {
@@ -285,30 +285,24 @@ export function PackageConfigModal({
               <div>
                 <Label className="text-base font-semibold mb-3 block">Select Package Option</Label>
                 {(() => {
-                  // Handle different pricing_options formats
-                  let pricingOptions: any[] = [];
+                  // Use pricing packages from activity_pricing_packages table
+                  const pricingPackages = packageData?.pricing_packages || [];
                   
-                  if (Array.isArray(packageData?.pricing_options)) {
-                    pricingOptions = packageData.pricing_options;
-                  } else if (packageData?.pricing_options?.ticketOnlyOptions || packageData?.pricing_options?.ticketWithTransferOptions) {
-                    pricingOptions = [
-                      ...(packageData.pricing_options.ticketOnlyOptions || []).map((opt: any) => ({ ...opt, package_type: 'TICKET_ONLY', id: opt.id || `ticket-${Date.now()}` })),
-                      ...(packageData.pricing_options.ticketWithTransferOptions || []).map((opt: any) => ({ ...opt, package_type: opt.package_type || 'PRIVATE_TRANSFER', id: opt.id || `transfer-${Date.now()}` })),
-                    ];
-                  } else if (packageData?.base_price) {
-                    // Fallback: create a default option from base_price
-                    pricingOptions = [{
+                  // Fallback: create a default option from base_price if no pricing packages
+                  if (pricingPackages.length === 0 && packageData?.base_price) {
+                    const defaultOption = {
                       id: 'default',
-                      activity_name: pkg.title,
-                      package_type: 'TICKET_ONLY',
+                      package_name: pkg.title,
                       adult_price: packageData.base_price,
                       child_price: packageData.base_price * 0.7, // Estimate
-                      childMinAge: 3,
-                      childMaxAge: 12,
-                    }];
+                      child_min_age: 3,
+                      child_max_age: 12,
+                      transfer_included: false,
+                    };
+                    pricingPackages.push(defaultOption);
                   }
 
-                  if (pricingOptions.length === 0) {
+                  if (pricingPackages.length === 0) {
                     return (
                       <div className="text-center py-8 text-gray-500">
                         <p className="text-sm">No pricing options available for this package</p>
@@ -320,33 +314,31 @@ export function PackageConfigModal({
                   return (
                     <>
                       <RadioGroup
-                        value={config.selectedOptionId || pricingOptions[0]?.id || ''}
+                        value={config.selectedPricingPackageId || pricingPackages[0]?.id || ''}
                         onValueChange={(value) => {
-                          const option = pricingOptions.find((opt: any) => opt.id === value);
+                          const selectedPkg = pricingPackages.find((p: any) => p.id === value);
                           setConfig({
                             ...config,
-                            selectedOptionId: value,
-                            packageType: option?.package_type || option?.packageType || 'TICKET_ONLY',
+                            selectedPricingPackageId: value,
+                            packageType: selectedPkg?.transfer_included ? 'PRIVATE_TRANSFER' : 'TICKET_ONLY',
                             selectedVehicle: null,
                           });
                         }}
                       >
-                        {pricingOptions.map((option: any) => (
-                          <div key={option.id} className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-gray-50">
-                            <RadioGroupItem value={option.id} id={option.id} className="mt-1" />
-                            <Label htmlFor={option.id} className="flex-1 cursor-pointer">
-                              <div className="font-medium">{option.activity_name || 'Option'}</div>
+                        {pricingPackages.map((pkgOption: any) => (
+                          <div key={pkgOption.id} className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-gray-50">
+                            <RadioGroupItem value={pkgOption.id} id={pkgOption.id} className="mt-1" />
+                            <Label htmlFor={pkgOption.id} className="flex-1 cursor-pointer">
+                              <div className="font-medium">{pkgOption.package_name || 'Option'}</div>
                               <div className="text-sm text-gray-600 mt-1">
-                                {(option.package_type || option.packageType) === 'TICKET_ONLY' && 'Ticket Only'}
-                                {(option.package_type || option.packageType) === 'PRIVATE_TRANSFER' && 'Private Transfer'}
-                                {(option.package_type || option.packageType) === 'SHARED_TRANSFER' && 'Shared Transfer'}
+                                {pkgOption.transfer_included ? (pkgOption.transfer_type === 'SHARED' ? 'Shared Transfer' : 'Private Transfer') : 'Ticket Only'}
                               </div>
                               <div className="flex items-center gap-4 mt-2 text-sm">
                                 <span className="text-gray-600">
-                                  Adult: ${(option.adult_price || option.adultPrice || 0).toFixed(2)}
+                                  Adult: ${(pkgOption.adult_price || 0).toFixed(2)}
                                 </span>
                                 <span className="text-gray-600">
-                                  Child: ${(option.child_price || option.childPrice || 0).toFixed(2)}
+                                  Child: ${(pkgOption.child_price || 0).toFixed(2)}
                                 </span>
                               </div>
                             </Label>
