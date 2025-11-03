@@ -126,7 +126,7 @@ export default function ItineraryBuilderPage() {
       } catch (err) {
         console.error('Error fetching itinerary:', err);
         toast.error('Failed to load itinerary');
-        router.push('/agent/leads');
+        // Stay on the builder page; don't redirect on transient errors
       } finally {
         setLoading(false);
       }
