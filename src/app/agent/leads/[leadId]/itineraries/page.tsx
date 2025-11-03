@@ -7,7 +7,7 @@ import { FiArrowLeft, FiPlus, FiCopy, FiTrash2, FiEdit2, FiEye, FiFileText } fro
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { AgentDashboardLayout } from '@/components/dashboard/AgentDashboardLayout';
+ 
 import { useAuth } from '@/context/SupabaseAuthContext';
 import { useToast } from '@/hooks/useToast';
 import { itineraryService, Itinerary } from '@/lib/services/itineraryService';
@@ -94,19 +94,16 @@ export default function LeadItinerariesPage() {
 
   if (loading) {
     return (
-      <AgentDashboardLayout>
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading itineraries...</p>
-          </div>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading itineraries...</p>
         </div>
-      </AgentDashboardLayout>
+      </div>
     );
   }
 
   return (
-    <AgentDashboardLayout>
       <div className="p-4 lg:p-6 max-w-6xl mx-auto">
         {/* Header */}
         <motion.div
@@ -248,7 +245,6 @@ export default function LeadItinerariesPage() {
           </div>
         )}
       </div>
-    </AgentDashboardLayout>
   );
 }
 

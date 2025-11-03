@@ -154,3 +154,4 @@ If you still encounter issues after applying the migration:
 - `supabase/migrations/fix_marketplace_rls_policies.sql` - The migration script
 - `supabase/migrations/lead_marketplace.sql` - Original marketplace migration (contains old policies)
 - `src/lib/services/marketplaceService.ts` - Service that queries marketplace data
+

@@ -8,7 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { AgentDashboardLayout } from '@/components/dashboard/AgentDashboardLayout';
 import { useAuth } from '@/context/SupabaseAuthContext';
 import { useToast } from '@/hooks/useToast';
 import { createClient } from '@/lib/supabase/client';
@@ -164,35 +163,30 @@ export default function ItineraryBuilderPage() {
 
   if (loading) {
     return (
-      <AgentDashboardLayout>
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading itinerary...</p>
-          </div>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading itinerary...</p>
         </div>
-      </AgentDashboardLayout>
+      </div>
     );
   }
 
   if (!itinerary) {
     return (
-      <AgentDashboardLayout>
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <p className="text-gray-600 mb-4">Itinerary not found</p>
-            <Button onClick={() => router.push('/agent/leads')}>
-              <FiArrowLeft className="w-4 h-4 mr-2" />
-              Back to Leads
-            </Button>
-          </div>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <p className="text-gray-600 mb-4">Itinerary not found</p>
+          <Button onClick={() => router.push('/agent/leads')}>
+            <FiArrowLeft className="w-4 h-4 mr-2" />
+            Back to Leads
+          </Button>
         </div>
-      </AgentDashboardLayout>
+      </div>
     );
   }
 
   return (
-    <AgentDashboardLayout>
       <div className="h-screen flex flex-col overflow-hidden">
         {/* Header */}
         <div className="flex-shrink-0 bg-white border-b border-gray-200 px-4 lg:px-6 py-4">
@@ -360,7 +354,6 @@ export default function ItineraryBuilderPage() {
           </div>
         </div>
       </div>
-    </AgentDashboardLayout>
   );
 }
 
