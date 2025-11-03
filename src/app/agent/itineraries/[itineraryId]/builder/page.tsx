@@ -100,7 +100,7 @@ export default function ItineraryBuilderPage() {
 
           const lead = leadData as unknown as { destination?: string };
           if (lead?.destination) {
-            setSelectedDestination(lead.destination);
+            setSelectedDestination(prev => prev || lead.destination);
           }
 
           // Fetch days
@@ -215,12 +215,35 @@ export default function ItineraryBuilderPage() {
           </div>
         </div>
 
-        {/* Main Content - Responsive 3-Column Layout */}
+        {/* Summary Bar (compact) */}
+        <div className="flex-shrink-0 mb-4">
+          <ItinerarySummaryPanel
+            itinerary={itinerary}
+            items={items}
+            compact
+            onSave={async () => {
+              try {
+                const { error } = await supabase
+                  .from('itineraries' as any)
+                  .update({ status: 'completed', updated_at: new Date().toISOString() })
+                  .eq('id', itinerary.id);
+                if (error) throw error;
+                setItinerary(prev => prev ? { ...prev, status: 'completed' } : null);
+                toast.success('Itinerary saved successfully');
+              } catch (err) {
+                console.error('Error saving itinerary:', err);
+                toast.error('Failed to save itinerary');
+              }
+            }}
+          />
+        </div>
+
+        {/* Main Content - Responsive 2-Column Layout */}
         <div className="flex-1 flex overflow-hidden gap-4 lg:gap-6">
-          {/* Desktop: 3 columns */}
-          <div className="hidden xl:flex flex-1 divide-x divide-gray-200 rounded-lg">
-            {/* Package Search Panel (30%) */}
-            <div className="w-[30%] flex flex-col overflow-hidden bg-gray-50 border border-gray-200 rounded-lg">
+          {/* Desktop: 2 columns */}
+          <div className="hidden xl:flex flex-1 gap-4 rounded-lg">
+            {/* Package Search Panel (35%) */}
+            <div className="w-[35%] flex flex-col overflow-hidden bg-gray-50 border border-gray-200 rounded-lg">
               <PackageSearchPanel
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
@@ -234,8 +257,8 @@ export default function ItineraryBuilderPage() {
               />
             </div>
 
-            {/* Itinerary Builder Panel (50%) */}
-            <div className="w-[50%] flex flex-col overflow-hidden bg-white border border-gray-200 rounded-lg">
+            {/* Itinerary Builder Panel (65%) */}
+            <div className="w-[65%] flex flex-col overflow-hidden bg-white border border-gray-200 rounded-lg">
               <ItineraryBuilderPanel
                 itinerary={itinerary}
                 days={days}
@@ -246,30 +269,7 @@ export default function ItineraryBuilderPage() {
               />
             </div>
 
-            {/* Summary Panel (20%) */}
-            <div className="w-[20%] flex flex-col overflow-hidden bg-gray-50 border border-gray-200 rounded-lg">
-              <ItinerarySummaryPanel
-                itinerary={itinerary}
-                items={items}
-                onSave={async () => {
-                  // Save itinerary status
-                  try {
-                    const { error } = await supabase
-                      .from('itineraries' as any)
-                      .update({ status: 'completed', updated_at: new Date().toISOString() })
-                      .eq('id', itinerary.id);
-
-                    if (error) throw error;
-
-                    setItinerary(prev => prev ? { ...prev, status: 'completed' } : null);
-                    toast.success('Itinerary saved successfully');
-                  } catch (err) {
-                    console.error('Error saving itinerary:', err);
-                    toast.error('Failed to save itinerary');
-                  }
-                }}
-              />
-            </div>
+            {/* No right summary on desktop; compact bar used above */}
           </div>
 
           {/* Tablet: 2 columns with bottom bar */}

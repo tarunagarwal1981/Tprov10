@@ -69,8 +69,12 @@ export function PackageSearchPanel({
         // Build all OR conditions in a single call
         const orConditions: string[] = [];
         if (selectedDestination) {
-          orConditions.push(`destination_country.ilike.%${selectedDestination}%`);
-          orConditions.push(`destination_city.ilike.%${selectedDestination}%`);
+          const tokens = selectedDestination.split(',').map(t => t.trim()).filter(Boolean);
+          const parts = (tokens.length > 0 ? tokens : [selectedDestination]).map(t => [
+            `destination_country.ilike.%${t}%`,
+            `destination_city.ilike.%${t}%`,
+          ]).flat();
+          orConditions.push(...parts);
         }
         if (searchQuery) {
           orConditions.push(`title.ilike.%${searchQuery}%`);
@@ -109,8 +113,12 @@ export function PackageSearchPanel({
         // Build all OR conditions in a single call
         const orConditions: string[] = [];
         if (selectedDestination) {
-          orConditions.push(`destination_country.ilike.%${selectedDestination}%`);
-          orConditions.push(`destination_city.ilike.%${selectedDestination}%`);
+          const tokens = selectedDestination.split(',').map(t => t.trim()).filter(Boolean);
+          const parts = (tokens.length > 0 ? tokens : [selectedDestination]).map(t => [
+            `destination_country.ilike.%${t}%`,
+            `destination_city.ilike.%${t}%`,
+          ]).flat();
+          orConditions.push(...parts);
         }
         if (searchQuery) {
           orConditions.push(`title.ilike.%${searchQuery}%`);
@@ -149,8 +157,11 @@ export function PackageSearchPanel({
         // Build OR conditions - only one .or() call allowed, so combine all conditions
         const orConditions: string[] = [];
         if (selectedDestination) {
-          // Use % directly in pattern, PostgREST will handle URL encoding
-          orConditions.push(`destination_region.ilike.%${selectedDestination}%`);
+          const tokens = selectedDestination.split(',').map(t => t.trim()).filter(Boolean);
+          const parts = (tokens.length > 0 ? tokens : [selectedDestination]).map(t => 
+            `destination_region.ilike.%${t}%`
+          );
+          orConditions.push(...parts);
         }
         if (searchQuery) {
           // Use % directly in pattern, PostgREST will handle URL encoding
@@ -189,8 +200,11 @@ export function PackageSearchPanel({
         // Build OR conditions - only one .or() call allowed, so combine all conditions
         const orConditions: string[] = [];
         if (selectedDestination) {
-          // Use % directly in pattern, PostgREST will handle URL encoding
-          orConditions.push(`destination_region.ilike.%${selectedDestination}%`);
+          const tokens = selectedDestination.split(',').map(t => t.trim()).filter(Boolean);
+          const parts = (tokens.length > 0 ? tokens : [selectedDestination]).map(t => 
+            `destination_region.ilike.%${t}%`
+          );
+          orConditions.push(...parts);
         }
         if (searchQuery) {
           // Use % directly in pattern, PostgREST will handle URL encoding
@@ -229,8 +243,11 @@ export function PackageSearchPanel({
         // Build OR conditions - only one .or() call allowed, so combine all conditions
         const orConditions: string[] = [];
         if (selectedDestination) {
-          // Use % directly in pattern, PostgREST will handle URL encoding
-          orConditions.push(`destination_region.ilike.%${selectedDestination}%`);
+          const tokens = selectedDestination.split(',').map(t => t.trim()).filter(Boolean);
+          const parts = (tokens.length > 0 ? tokens : [selectedDestination]).map(t => 
+            `destination_region.ilike.%${t}%`
+          );
+          orConditions.push(...parts);
         }
         if (searchQuery) {
           // Use % directly in pattern, PostgREST will handle URL encoding
