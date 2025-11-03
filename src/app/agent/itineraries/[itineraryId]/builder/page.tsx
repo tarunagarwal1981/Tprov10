@@ -187,7 +187,7 @@ export default function ItineraryBuilderPage() {
   }
 
   return (
-      <div className="h-screen flex flex-col overflow-hidden">
+      <div className="min-h-[75vh] flex flex-col overflow-hidden px-4 lg:px-6">
         {/* Header */}
         <div className="flex-shrink-0 bg-white border-b border-gray-200 px-4 lg:px-6 py-4">
           <div className="flex items-center justify-between">
@@ -216,11 +216,11 @@ export default function ItineraryBuilderPage() {
         </div>
 
         {/* Main Content - Responsive 3-Column Layout */}
-        <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 flex overflow-hidden gap-4 lg:gap-6">
           {/* Desktop: 3 columns */}
-          <div className="hidden xl:flex flex-1 divide-x divide-gray-200">
+          <div className="hidden xl:flex flex-1 divide-x divide-gray-200 rounded-lg">
             {/* Package Search Panel (30%) */}
-            <div className="w-[30%] flex flex-col overflow-hidden bg-gray-50">
+            <div className="w-[30%] flex flex-col overflow-hidden bg-gray-50 border border-gray-200 rounded-lg">
               <PackageSearchPanel
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
@@ -235,7 +235,7 @@ export default function ItineraryBuilderPage() {
             </div>
 
             {/* Itinerary Builder Panel (50%) */}
-            <div className="w-[50%] flex flex-col overflow-hidden bg-white">
+            <div className="w-[50%] flex flex-col overflow-hidden bg-white border border-gray-200 rounded-lg">
               <ItineraryBuilderPanel
                 itinerary={itinerary}
                 days={days}
@@ -247,7 +247,7 @@ export default function ItineraryBuilderPage() {
             </div>
 
             {/* Summary Panel (20%) */}
-            <div className="w-[20%] flex flex-col overflow-hidden bg-gray-50 border-l border-gray-200">
+            <div className="w-[20%] flex flex-col overflow-hidden bg-gray-50 border border-gray-200 rounded-lg">
               <ItinerarySummaryPanel
                 itinerary={itinerary}
                 items={items}
@@ -273,10 +273,10 @@ export default function ItineraryBuilderPage() {
           </div>
 
           {/* Tablet: 2 columns with bottom bar */}
-          <div className="hidden lg:flex xl:hidden flex-1 flex-col">
+          <div className="hidden lg:flex xl:hidden flex-1 flex-col gap-4">
             <div className="flex-1 flex divide-x divide-gray-200 overflow-hidden">
               {/* Package Search Panel (40%) */}
-              <div className="w-[40%] flex flex-col overflow-hidden bg-gray-50">
+              <div className="w-[40%] flex flex-col overflow-hidden bg-gray-50 border border-gray-200 rounded-lg">
                 <PackageSearchPanel
                   searchQuery={searchQuery}
                   onSearchChange={setSearchQuery}
@@ -291,7 +291,7 @@ export default function ItineraryBuilderPage() {
               </div>
 
               {/* Itinerary Builder Panel (60%) */}
-              <div className="w-[60%] flex flex-col overflow-hidden bg-white">
+              <div className="w-[60%] flex flex-col overflow-hidden bg-white border border-gray-200 rounded-lg">
                 <ItineraryBuilderPanel
                   itinerary={itinerary}
                   days={days}
@@ -304,7 +304,7 @@ export default function ItineraryBuilderPage() {
             </div>
 
             {/* Summary Bar */}
-            <div className="flex-shrink-0 bg-white border-t border-gray-200 p-4">
+            <div className="flex-shrink-0 bg-white border border-gray-200 rounded-lg p-4">
               <ItinerarySummaryPanel
                 itinerary={itinerary}
                 items={items}
@@ -330,7 +330,7 @@ export default function ItineraryBuilderPage() {
           </div>
 
           {/* Mobile: Stacked with tabs */}
-          <div className="flex lg:hidden flex-1 flex-col overflow-hidden">
+          <div className="flex lg:hidden flex-1 flex-col overflow-hidden gap-3">
             <div className="flex-shrink-0 border-b border-gray-200">
               <div className="flex">
                 <button className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 border-b-2 border-blue-500">
