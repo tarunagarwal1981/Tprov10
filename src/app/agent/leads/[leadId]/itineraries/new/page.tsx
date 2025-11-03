@@ -67,30 +67,39 @@ export default function CreateItineraryPage() {
 
         // If it's a purchased marketplace lead, fetch from lead_marketplace
         if (purchaseData) {
-          const { data: marketplaceLead, error: marketplaceError } = await supabase
+          const { data: marketplaceLeadRaw, error: marketplaceError } = await supabase
             .from('lead_marketplace' as any)
             .select('id, destination, budget_min, budget_max, duration_days, travelers_count')
             .eq('id', leadId)
             .single();
 
           if (marketplaceError) throw marketplaceError;
+          const marketplaceLead = marketplaceLeadRaw as unknown as {
+            id: string;
+            destination: string;
+            budget_min?: number | null;
+            budget_max?: number | null;
+            duration_days?: number | null;
+            travelers_count?: number | null;
+          } | null;
+
           if (marketplaceLead) {
             leadData = {
               id: marketplaceLead.id,
               destination: marketplaceLead.destination,
-              budget_min: marketplaceLead.budget_min,
-              budget_max: marketplaceLead.budget_max,
-              duration_days: marketplaceLead.duration_days,
-              travelers_count: marketplaceLead.travelers_count,
+              budget_min: marketplaceLead.budget_min ?? undefined,
+              budget_max: marketplaceLead.budget_max ?? undefined,
+              duration_days: marketplaceLead.duration_days ?? undefined,
+              travelers_count: marketplaceLead.travelers_count ?? undefined,
             };
           }
         } else {
           // Otherwise, try fetching from leads table
           const { data: regularLead, error: leadsError } = await supabase
-            .from('leads' as any)
-            .select('id, destination, budget_min, budget_max, duration_days, travelers_count')
-            .eq('id', leadId)
-            .eq('agent_id', user.id)
+          .from('leads' as any)
+          .select('id, destination, budget_min, budget_max, duration_days, travelers_count')
+          .eq('id', leadId)
+          .eq('agent_id', user.id)
             .maybeSingle();
 
           if (leadsError && leadsError.code !== 'PGRST116') {
@@ -106,14 +115,14 @@ export default function CreateItineraryPage() {
           throw new Error('Lead not found or you do not have access to it');
         }
 
-        setLead(leadData);
-        // Pre-fill form with lead data
-        setFormData(prev => ({
-          ...prev,
-          adultsCount: leadData.travelers_count || 2,
-          childrenCount: 0,
-          infantsCount: 0,
-        }));
+          setLead(leadData);
+          // Pre-fill form with lead data
+          setFormData(prev => ({
+            ...prev,
+            adultsCount: leadData.travelers_count || 2,
+            childrenCount: 0,
+            infantsCount: 0,
+          }));
       } catch (err) {
         console.error('Error fetching lead:', err);
         toast.error('Failed to load lead details');
@@ -166,11 +175,16 @@ export default function CreateItineraryPage() {
             .single(),
         ]);
 
-        const purchase = purchaseResult.data;
-        const marketplaceLead = marketplaceLeadResult.data;
+        const purchase = (purchaseResult.data as unknown as { id: string } | null) || null;
+        const marketplaceLead = marketplaceLeadResult.data as unknown as {
+          customer_name?: string | null;
+          customer_email?: string | null;
+          customer_phone?: string | null;
+          special_requirements?: string | null;
+        } | null;
 
         // Create lead entry in leads table from marketplace lead data
-        const { data: newLead, error: createLeadError } = await supabase
+        const { data: newLeadRaw, error: createLeadError } = await supabase
           .from('leads' as any)
           .insert({
             agent_id: user.id,
@@ -195,11 +209,13 @@ export default function CreateItineraryPage() {
           .single();
 
         if (createLeadError) throw createLeadError;
+        const newLead = newLeadRaw as unknown as { id: string } | null;
         if (newLead) {
           actualLeadId = newLead.id;
         }
       } else {
-        actualLeadId = existingLead.id;
+        const typedExisting = existingLead as unknown as { id: string };
+        actualLeadId = typedExisting.id;
       }
 
       // Create itinerary using the actual lead_id from leads table
@@ -240,38 +256,38 @@ export default function CreateItineraryPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading lead details...</p>
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading lead details...</p>
+          </div>
         </div>
-      </div>
     );
   }
 
   if (!lead) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center">
-          <p className="text-gray-600 mb-4">Lead not found</p>
-          <Button onClick={() => router.push('/agent/leads')}>
-            <FiArrowLeft className="w-4 h-4 mr-2" />
-            Back to Leads
-          </Button>
+          <div className="text-center">
+            <p className="text-gray-600 mb-4">Lead not found</p>
+            <Button onClick={() => router.push('/agent/leads')}>
+              <FiArrowLeft className="w-4 h-4 mr-2" />
+              Back to Leads
+            </Button>
+          </div>
         </div>
-      </div>
     );
   }
 
   return (
     <div className="w-full max-w-5xl mx-auto p-4 lg:p-6">
-      {/* Form */}
-      <form onSubmit={handleSubmit}>
-        <Card className="shadow-lg">
-          <CardHeader>
+        {/* Form */}
+        <form onSubmit={handleSubmit}>
+          <Card className="shadow-lg">
+            <CardHeader>
             <div className="flex items-start justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  <FiPackage className="w-5 h-5 text-blue-600" />
+                <FiPackage className="w-5 h-5 text-blue-600" />
                   <CardTitle>Create New Itinerary</CardTitle>
                 </div>
                 <p className="text-sm text-gray-600">Create a custom itinerary for <span className="font-semibold">{lead.destination}</span></p>
@@ -281,8 +297,8 @@ export default function CreateItineraryPage() {
                 Back to Leads
               </Button>
             </div>
-          </CardHeader>
-          <CardContent className="space-y-6">
+            </CardHeader>
+            <CardContent className="space-y-6">
               {/* Itinerary Name */}
               <div>
                 <Label htmlFor="name">Itinerary Name</Label>
@@ -410,7 +426,7 @@ export default function CreateItineraryPage() {
             </CardContent>
           </Card>
         </form>
-    </div>
+      </div>
   );
 }
 
