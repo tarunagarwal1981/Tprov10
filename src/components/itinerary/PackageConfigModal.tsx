@@ -83,8 +83,9 @@ export function PackageConfigModal({
           if (packageError) throw packageError;
 
           // Fetch pricing packages
+          const pricingTable = 'activity_pricing_packages' as any;
           const { data: pricingData, error: pricingError } = await supabase
-            .from('activity_pricing_packages')
+            .from(pricingTable)
             .select('*')
             .eq('package_id', pkg.id)
             .eq('is_active', true)
@@ -96,13 +97,14 @@ export function PackageConfigModal({
 
           setPackageData({
             ...packageData,
-            pricing_packages: pricingData || [],
+            pricing_packages: (pricingData || []) as any[],
           });
 
           // Initialize default config
+          const pricingArray = (pricingData || []) as any[];
           setConfig({
             packageType: 'TICKET_ONLY',
-            selectedPricingPackageId: pricingData?.[0]?.id || null,
+            selectedPricingPackageId: pricingArray[0]?.id || null,
             selectedVehicle: null,
             quantity: 1,
           });
@@ -193,22 +195,8 @@ export function PackageConfigModal({
       const childrenPrice = 0; // Multi-city packages typically don't have child pricing
       const infantsPrice = 0;
       price = adultsPrice + childrenPrice + infantsPrice;
-
-      if (config.pricingType === 'GROUP' && config.selectedVehicle) {
-        const vehicle = packageData.pricing?.vehicles?.find((v: any) => v.id === config.selectedVehicle);
-        if (vehicle) {
-          price += vehicle.price || 0;
-        }
-      }
-
-      // Add hotel prices
-      if (config.selectedHotels && Array.isArray(config.selectedHotels)) {
-        config.selectedHotels.forEach((hotel: any) => {
-          if (hotel.price && hotel.nights) {
-            price += hotel.price * hotel.nights;
-          }
-        });
-      }
+      
+      // Note: Vehicle and hotel pricing will be added when those features are implemented
     }
 
     setCalculatedPrice(price * (config.quantity || 1));
@@ -347,49 +335,14 @@ export function PackageConfigModal({
                       </RadioGroup>
 
                       {/* Vehicle Selection for Private Transfer */}
-                      {(config.packageType === 'PRIVATE_TRANSFER' || config.selectedOptionId) && (() => {
-                        // Get vehicles from selected option
-                        let pricingOptionsForVehicles: any[] = [];
-                        if (Array.isArray(packageData?.pricing_options)) {
-                          pricingOptionsForVehicles = packageData.pricing_options;
-                        } else if (packageData?.pricing_options?.ticketWithTransferOptions) {
-                          pricingOptionsForVehicles = packageData.pricing_options.ticketWithTransferOptions || [];
+                      {(() => {
+                        const selectedPkg = pricingPackages.find((p: any) => p.id === config.selectedPricingPackageId);
+                        if (config.packageType === 'PRIVATE_TRANSFER' && selectedPkg?.transfer_included && selectedPkg?.transfer_type === 'PRIVATE') {
+                          // Note: Vehicles for private transfers need to be fetched from a separate table
+                          // For now, transfer pricing is included in the pricing package
+                          return null;
                         }
-
-                        const selectedOption = pricingOptionsForVehicles.find((opt: any) => opt.id === config.selectedOptionId);
-                        const vehicles = selectedOption?.vehicles || [];
-
-                        if (vehicles.length === 0) return null;
-
-                        return (
-                          <div className="mt-4">
-                            <Label className="text-sm font-semibold mb-2 block">Select Vehicle</Label>
-                            <Select
-                              value={config.selectedVehicle || ''}
-                              onValueChange={(value) => setConfig({ ...config, selectedVehicle: value })}
-                            >
-                              <SelectTrigger className="w-full bg-white">
-                                <SelectValue placeholder="Choose a vehicle" />
-                              </SelectTrigger>
-                              <SelectContent className="bg-white">
-                                {vehicles.map((vehicle: any) => (
-                                  <SelectItem key={vehicle.id} value={vehicle.id} className="bg-white">
-                                    <div className="flex items-center justify-between w-full">
-                                      <span>
-                                        {vehicle.vehicle_type === 'Others' ? vehicle.description : vehicle.vehicle_type}
-                                        {vehicle.vehicle_category && ` (${vehicle.vehicle_category})`}
-                                        {' • '}Max {vehicle.max_capacity} pax
-                                      </span>
-                                      <span className="ml-4 font-semibold text-green-600">
-                                        ${vehicle.price?.toFixed(2) || '0.00'}
-                                      </span>
-                                    </div>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        );
+                        return null;
                       })()}
                     </>
                   );
@@ -402,92 +355,48 @@ export function PackageConfigModal({
           {pkg.package_type === 'transfer' && (
             <div className="space-y-4">
               <div>
-                <Label className="text-base font-semibold mb-3 block">Select Transfer Option</Label>
-                {(() => {
-                  // Handle different pricing_options formats for transfer
-                  let pricingOptions: any[] = [];
-                  
-                  if (Array.isArray(packageData?.pricing_options)) {
-                    pricingOptions = packageData.pricing_options;
-                  } else if (packageData?.hourly_pricing_options || packageData?.point_to_point_pricing_options) {
-                    pricingOptions = [
-                      ...(packageData.hourly_pricing_options || []).map((opt: any) => ({ ...opt, type: 'hourly' })),
-                      ...(packageData.point_to_point_pricing_options || []).map((opt: any) => ({ ...opt, type: 'point-to-point' })),
-                    ];
-                  } else if (packageData?.base_price) {
-                    // Fallback: create default option
-                    pricingOptions = [{
-                      id: 'default',
-                      type: 'point-to-point',
-                      from_location: 'Origin',
-                      to_location: 'Destination',
-                      cost_usd: packageData.base_price,
-                      costUSD: packageData.base_price,
-                      vehicle_name: 'Standard Vehicle',
-                      max_passengers: 4,
-                    }];
-                  }
-
-                  if (pricingOptions.length === 0) {
-                    return (
-                      <div className="text-center py-8 text-gray-500">
-                        <p className="text-sm">No pricing options available</p>
-                      </div>
-                    );
-                  }
-
-                  return (
-                    <RadioGroup
-                      value={config.selectedOptionId || pricingOptions[0]?.id || ''}
-                      onValueChange={(value) => {
-                        const option = pricingOptions.find((opt: any) => opt.id === value);
-                        setConfig({
-                          ...config,
-                          selectedOptionId: value,
-                          pricingType: option?.type || 'point-to-point',
-                          hours: 1,
-                        });
-                      }}
-                    >
-                      {pricingOptions.map((option: any) => (
-                    <div key={option.id} className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-gray-50">
-                      <RadioGroupItem value={option.id} id={option.id} className="mt-1" />
-                      <Label htmlFor={option.id} className="flex-1 cursor-pointer">
-                        <div className="font-medium">
-                          {option.type === 'hourly' ? 'Hourly Rental' : 'One Way Transfer'}
-                        </div>
-                        {option.type === 'hourly' && (
-                          <div className="text-sm text-gray-600 mt-1">
-                            {option.vehicle_name || option.vehicleName} • ${(option.rate_usd || option.rateUSD || 0).toFixed(2)}/hr • Max {option.max_passengers || option.maxPassengers || 4} pax
-                          </div>
-                        )}
-                        {option.type === 'point-to-point' && (
-                          <div className="text-sm text-gray-600 mt-1">
-                            {option.from_location || option.fromLocation} → {option.to_location || option.toLocation}
-                            {' • '}{option.vehicle_name || option.vehicleName} • ${(option.cost_usd || option.costUSD || 0).toFixed(2)}
-                          </div>
-                        )}
-                      </Label>
-                    </div>
-                  ))}
-                    </RadioGroup>
-                  );
-                })()}
-
-                {/* Hours input for hourly rentals */}
-                {config.pricingType === 'hourly' && (
-                  <div className="mt-4">
-                    <Label htmlFor="hours">Number of Hours</Label>
-                    <Input
-                      id="hours"
-                      type="number"
-                      min="1"
-                      value={config.hours || 1}
-                      onChange={(e) => setConfig({ ...config, hours: parseInt(e.target.value) || 1 })}
-                      className="mt-1"
-                    />
+                <Label className="text-base font-semibold mb-3 block">Transfer Details</Label>
+                <div className="space-y-3 p-4 border rounded-lg bg-gray-50">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-gray-700">Base Price</span>
+                    <span className="text-lg font-semibold text-gray-900">
+                      {packageData?.base_price ? `$${packageData.base_price.toFixed(2)}` : 'Not set'}
+                    </span>
                   </div>
-                )}
+                  {packageData?.destination_name && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Destination</span>
+                      <span className="text-sm font-medium">{packageData.destination_name}</span>
+                    </div>
+                  )}
+                  {packageData?.transfer_type && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Transfer Type</span>
+                      <Badge>{packageData.transfer_type}</Badge>
+                    </div>
+                  )}
+                  {packageData?.estimated_duration_hours && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Duration</span>
+                      <span className="text-sm font-medium">
+                        {packageData.estimated_duration_hours}h {packageData.estimated_duration_minutes || 0}m
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Quantity Input */}
+                <div className="mt-4">
+                  <Label htmlFor="transfer-quantity">Quantity</Label>
+                  <Input
+                    id="transfer-quantity"
+                    type="number"
+                    min="1"
+                    value={config.quantity || 1}
+                    onChange={(e) => setConfig({ ...config, quantity: parseInt(e.target.value) || 1 })}
+                    className="mt-1"
+                  />
+                </div>
               </div>
             </div>
           )}
@@ -495,131 +404,48 @@ export function PackageConfigModal({
           {/* Multi-City Package Configuration */}
           {(pkg.package_type === 'multi_city' || pkg.package_type === 'multi_city_hotel' || pkg.package_type === 'fixed_departure') && packageData && (
             <div className="space-y-4">
-              {/* Pricing Type */}
               <div>
-                <Label className="text-base font-semibold mb-3 block">Pricing Model</Label>
-                <RadioGroup
-                  value={config.pricingType || 'STANDARD'}
-                  onValueChange={(value) => setConfig({ ...config, pricingType: value, selectedVehicle: null })}
-                >
-                  <div className="flex gap-4">
-                    <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-gray-50 flex-1">
-                      <RadioGroupItem value="STANDARD" id="standard" />
-                      <Label htmlFor="standard" className="cursor-pointer flex-1">
-                        <div className="font-medium">Standard Pricing</div>
-                        <div className="text-xs text-gray-600">Per person pricing only</div>
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-gray-50 flex-1">
-                      <RadioGroupItem value="GROUP" id="group" />
-                      <Label htmlFor="group" className="cursor-pointer flex-1">
-                        <div className="font-medium">Group Pricing</div>
-                        <div className="text-xs text-gray-600">Per person + vehicle</div>
-                      </Label>
-                    </div>
+                <Label className="text-base font-semibold mb-3 block">Package Details</Label>
+                <div className="space-y-3 p-4 border rounded-lg bg-gray-50">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-gray-700">Adult Price (per person)</span>
+                    <span className="text-lg font-semibold text-gray-900">
+                      {packageData?.adult_price ? `$${packageData.adult_price.toFixed(2)}` : 'Not set'}
+                    </span>
                   </div>
-                </RadioGroup>
+                  {packageData?.destination_region && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Destination Region</span>
+                      <span className="text-sm font-medium">{packageData.destination_region}</span>
+                    </div>
+                  )}
+                  {packageData?.total_days && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Duration</span>
+                      <span className="text-sm font-medium">{packageData.total_days} days / {packageData.total_nights || 0} nights</span>
+                    </div>
+                  )}
+                  {packageData?.total_cities && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Cities</span>
+                      <span className="text-sm font-medium">{packageData.total_cities} cities</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Quantity Input */}
+                <div className="mt-4">
+                  <Label htmlFor="multicity-quantity">Quantity</Label>
+                  <Input
+                    id="multicity-quantity"
+                    type="number"
+                    min="1"
+                    value={config.quantity || 1}
+                    onChange={(e) => setConfig({ ...config, quantity: parseInt(e.target.value) || 1 })}
+                    className="mt-1"
+                  />
+                </div>
               </div>
-
-              {/* Vehicle Selection for Group Pricing */}
-              {config.pricingType === 'GROUP' && packageData.pricing?.vehicles && (
-                <div>
-                  <Label className="text-sm font-semibold mb-2 block">Select Vehicle</Label>
-                  <Select
-                    value={config.selectedVehicle || ''}
-                    onValueChange={(value) => setConfig({ ...config, selectedVehicle: value })}
-                  >
-                    <SelectTrigger className="w-full bg-white">
-                      <SelectValue placeholder="Choose a vehicle" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white">
-                      {packageData.pricing.vehicles.map((vehicle: any) => (
-                        <SelectItem key={vehicle.id} value={vehicle.id} className="bg-white">
-                          <div className="flex items-center justify-between w-full">
-                            <span>
-                              {vehicle.vehicle_type} • Max {vehicle.max_capacity} pax
-                            </span>
-                            <span className="ml-4 font-semibold text-green-600">
-                              ${vehicle.price?.toFixed(2) || '0.00'}
-                            </span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              {/* Hotel Selection - Inline, Minimal */}
-              {(pkg.package_type === 'multi_city_hotel' || pkg.package_type === 'fixed_departure') && packageData.cities && (
-                <div>
-                  <Label className="text-sm font-semibold mb-3 block">Hotel Selection</Label>
-                  <div className="space-y-3">
-                    {packageData.cities.map((city: any, index: number) => {
-                      const hotels = city.hotels || [];
-                      const selectedHotel = config.selectedHotels?.find((h: any) => h.cityId === city.id);
-
-                      return (
-                        <Card key={city.id || index} className="bg-white">
-                          <CardContent className="p-3">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="font-medium text-sm">
-                                {city.city_name} ({city.nights || 0} nights)
-                              </span>
-                            </div>
-                            <Select
-                              value={selectedHotel?.hotelId || ''}
-                              onValueChange={(hotelId) => {
-                                const hotel = hotels.find((h: any) => h.id === hotelId);
-                                const updatedHotels = config.selectedHotels || [];
-                                const existingIndex = updatedHotels.findIndex((h: any) => h.cityId === city.id);
-                                
-                                const hotelData = {
-                                  cityId: city.id,
-                                  cityName: city.city_name,
-                                  hotelId: hotelId,
-                                  hotelName: hotel?.name || '',
-                                  price: hotel?.price_per_night || 0,
-                                  nights: city.nights || 1,
-                                };
-
-                                if (existingIndex >= 0) {
-                                  updatedHotels[existingIndex] = hotelData;
-                                } else {
-                                  updatedHotels.push(hotelData);
-                                }
-
-                                setConfig({ ...config, selectedHotels: updatedHotels });
-                              }}
-                            >
-                              <SelectTrigger className="w-full bg-white text-sm">
-                                <SelectValue placeholder="Select hotel..." />
-                              </SelectTrigger>
-                              <SelectContent className="bg-white">
-                                {hotels.map((hotel: any) => (
-                                  <SelectItem key={hotel.id} value={hotel.id} className="bg-white">
-                                    <div className="flex items-center justify-between w-full">
-                                      <span className="text-sm">{hotel.name}</span>
-                                      <span className="ml-4 text-xs font-semibold text-green-600">
-                                        ${hotel.price_per_night}/night
-                                      </span>
-                                    </div>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            {selectedHotel && (
-                              <p className="text-xs text-gray-600 mt-1">
-                                Total: ${(selectedHotel.price * selectedHotel.nights).toFixed(2)}
-                              </p>
-                            )}
-                          </CardContent>
-                        </Card>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
             </div>
           )}
 
@@ -647,7 +473,7 @@ export function PackageConfigModal({
                   </p>
                   {config.quantity > 1 && (
                     <p className="text-xs text-gray-600 mt-1">
-                      ${(calculatedPrice / config.quantity).toFixed(2)} × {config.quantity}
+                      ${(calculatedPrice / config.quantity).toFixed(2)} × {config.quantity || 1}
                     </p>
                   )}
                 </div>
