@@ -8,7 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { AgentDashboardLayout } from '@/components/dashboard/AgentDashboardLayout';
 import { useAuth } from '@/context/SupabaseAuthContext';
 import { useToast } from '@/hooks/useToast';
 import { createClient } from '@/lib/supabase/client';
@@ -52,26 +51,69 @@ export default function CreateItineraryPage() {
       if (!leadId || !user?.id) return;
 
       try {
-        const { data, error } = await supabase
-          .from('leads' as any)
-          .select('id, destination, budget_min, budget_max, duration_days, travelers_count')
-          .eq('id', leadId)
+        // First check if this is a purchased marketplace lead
+        const { data: purchaseData, error: purchaseError } = await supabase
+          .from('lead_purchases' as any)
+          .select('lead_id')
+          .eq('lead_id', leadId)
           .eq('agent_id', user.id)
-          .single();
+          .maybeSingle();
 
-        if (error) throw error;
-
-        if (data) {
-          const leadData = data as unknown as LeadDetails;
-          setLead(leadData);
-          // Pre-fill form with lead data
-          setFormData(prev => ({
-            ...prev,
-            adultsCount: leadData.travelers_count || 2,
-            childrenCount: 0,
-            infantsCount: 0,
-          }));
+        if (purchaseError && purchaseError.code !== 'PGRST116') {
+          throw purchaseError;
         }
+
+        let leadData: LeadDetails | null = null;
+
+        // If it's a purchased marketplace lead, fetch from lead_marketplace
+        if (purchaseData) {
+          const { data: marketplaceLead, error: marketplaceError } = await supabase
+            .from('lead_marketplace' as any)
+            .select('id, destination, budget_min, budget_max, duration_days, travelers_count')
+            .eq('id', leadId)
+            .single();
+
+          if (marketplaceError) throw marketplaceError;
+          if (marketplaceLead) {
+            leadData = {
+              id: marketplaceLead.id,
+              destination: marketplaceLead.destination,
+              budget_min: marketplaceLead.budget_min,
+              budget_max: marketplaceLead.budget_max,
+              duration_days: marketplaceLead.duration_days,
+              travelers_count: marketplaceLead.travelers_count,
+            };
+          }
+        } else {
+          // Otherwise, try fetching from leads table
+          const { data: regularLead, error: leadsError } = await supabase
+            .from('leads' as any)
+            .select('id, destination, budget_min, budget_max, duration_days, travelers_count')
+            .eq('id', leadId)
+            .eq('agent_id', user.id)
+            .maybeSingle();
+
+          if (leadsError && leadsError.code !== 'PGRST116') {
+            throw leadsError;
+          }
+
+          if (regularLead) {
+            leadData = regularLead as unknown as LeadDetails;
+          }
+        }
+
+        if (!leadData) {
+          throw new Error('Lead not found or you do not have access to it');
+        }
+
+        setLead(leadData);
+        // Pre-fill form with lead data
+        setFormData(prev => ({
+          ...prev,
+          adultsCount: leadData.travelers_count || 2,
+          childrenCount: 0,
+          infantsCount: 0,
+        }));
       } catch (err) {
         console.error('Error fetching lead:', err);
         toast.error('Failed to load lead details');
@@ -87,16 +129,84 @@ export default function CreateItineraryPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!user?.id || !leadId) return;
+    if (!user?.id || !leadId || !lead) return;
 
     setCreating(true);
 
     try {
-      // Create itinerary
+      // First, ensure the lead exists in the leads table (for foreign key constraint)
+      // Check if lead exists in leads table by marketplace_lead_id or by id
+      let actualLeadId = leadId;
+      
+      const { data: existingLead, error: checkError } = await supabase
+        .from('leads' as any)
+        .select('id')
+        .or(`id.eq.${leadId},marketplace_lead_id.eq.${leadId}`)
+        .eq('agent_id', user.id)
+        .maybeSingle();
+
+      if (checkError && checkError.code !== 'PGRST116') {
+        throw checkError;
+      }
+
+      // If lead doesn't exist in leads table, create it (for marketplace leads)
+      if (!existingLead) {
+        // Get purchase info and marketplace lead details with customer data
+        const [purchaseResult, marketplaceLeadResult] = await Promise.all([
+          supabase
+            .from('lead_purchases' as any)
+            .select('id')
+            .eq('lead_id', leadId)
+            .eq('agent_id', user.id)
+            .maybeSingle(),
+          supabase
+            .from('lead_marketplace' as any)
+            .select('customer_name, customer_email, customer_phone, special_requirements')
+            .eq('id', leadId)
+            .single(),
+        ]);
+
+        const purchase = purchaseResult.data;
+        const marketplaceLead = marketplaceLeadResult.data;
+
+        // Create lead entry in leads table from marketplace lead data
+        const { data: newLead, error: createLeadError } = await supabase
+          .from('leads' as any)
+          .insert({
+            agent_id: user.id,
+            destination: lead.destination,
+            budget_min: lead.budget_min || null,
+            budget_max: lead.budget_max || null,
+            duration_days: lead.duration_days || null,
+            travelers_count: lead.travelers_count || formData.adultsCount,
+            marketplace_lead_id: leadId,
+            purchased_from_marketplace: true,
+            purchase_id: purchase?.id || null,
+            is_purchased: true,
+            source: 'MARKETPLACE',
+            stage: 'NEW',
+            priority: 'MEDIUM',
+            customer_name: marketplaceLead?.customer_name || 'Customer',
+            customer_email: marketplaceLead?.customer_email || 'customer@example.com',
+            customer_phone: marketplaceLead?.customer_phone || null,
+            requirements: marketplaceLead?.special_requirements || null,
+          })
+          .select('id')
+          .single();
+
+        if (createLeadError) throw createLeadError;
+        if (newLead) {
+          actualLeadId = newLead.id;
+        }
+      } else {
+        actualLeadId = existingLead.id;
+      }
+
+      // Create itinerary using the actual lead_id from leads table
       const { data: itinerary, error: itineraryError } = await supabase
         .from('itineraries' as any)
         .insert({
-          lead_id: leadId,
+          lead_id: actualLeadId,
           agent_id: user.id,
           name: formData.name,
           adults_count: formData.adultsCount,
@@ -129,66 +239,50 @@ export default function CreateItineraryPage() {
 
   if (loading) {
     return (
-      <AgentDashboardLayout>
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading lead details...</p>
-          </div>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading lead details...</p>
         </div>
-      </AgentDashboardLayout>
+      </div>
     );
   }
 
   if (!lead) {
     return (
-      <AgentDashboardLayout>
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <p className="text-gray-600 mb-4">Lead not found</p>
-            <Button onClick={() => router.push('/agent/leads')}>
-              <FiArrowLeft className="w-4 h-4 mr-2" />
-              Back to Leads
-            </Button>
-          </div>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <p className="text-gray-600 mb-4">Lead not found</p>
+          <Button onClick={() => router.push('/agent/leads')}>
+            <FiArrowLeft className="w-4 h-4 mr-2" />
+            Back to Leads
+          </Button>
         </div>
-      </AgentDashboardLayout>
+      </div>
     );
   }
 
   return (
-    <AgentDashboardLayout>
-      <div className="p-4 lg:p-6 max-w-4xl mx-auto">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-6"
-        >
-          <Button
-            variant="ghost"
-            onClick={() => router.push('/agent/leads')}
-            className="mb-4"
-          >
-            <FiArrowLeft className="w-4 h-4 mr-2" />
-            Back to Leads
-          </Button>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Create New Itinerary</h1>
-          <p className="text-gray-600">
-            Create a custom itinerary for <span className="font-semibold">{lead.destination}</span>
-          </p>
-        </motion.div>
-
-        {/* Form */}
-        <form onSubmit={handleSubmit}>
-          <Card className="shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FiPackage className="w-5 h-5 text-blue-600" />
-                Itinerary Details
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
+    <div className="w-full max-w-5xl mx-auto p-4 lg:p-6">
+      {/* Form */}
+      <form onSubmit={handleSubmit}>
+        <Card className="shadow-lg">
+          <CardHeader>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <FiPackage className="w-5 h-5 text-blue-600" />
+                  <CardTitle>Create New Itinerary</CardTitle>
+                </div>
+                <p className="text-sm text-gray-600">Create a custom itinerary for <span className="font-semibold">{lead.destination}</span></p>
+              </div>
+              <Button variant="ghost" onClick={() => router.push('/agent/leads')}>
+                <FiArrowLeft className="w-4 h-4 mr-2" />
+                Back to Leads
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-6">
               {/* Itinerary Name */}
               <div>
                 <Label htmlFor="name">Itinerary Name</Label>
@@ -316,8 +410,7 @@ export default function CreateItineraryPage() {
             </CardContent>
           </Card>
         </form>
-      </div>
-    </AgentDashboardLayout>
+    </div>
   );
 }
 

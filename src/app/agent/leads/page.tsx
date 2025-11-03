@@ -89,9 +89,9 @@ function PurchasedLeadCard({ purchase }: { purchase: LeadPurchase }) {
       whileHover={{ y: -4 }}
       transition={{ duration: 0.2 }}
     >
-      <Card className="border-gray-200 hover:shadow-xl transition-all duration-300 overflow-hidden">
+      <Card className="border-gray-200 hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col h-full max-h-[850px]">
         {/* Header with trip type */}
-        <div className={`bg-gradient-to-r from-${tripColor}-500 to-${tripColor}-600 p-4`}>
+        <div className={`bg-gradient-to-r from-${tripColor}-500 to-${tripColor}-600 p-4 flex-shrink-0`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="bg-white/20 backdrop-blur-sm p-2 rounded-lg">
@@ -109,98 +109,100 @@ function PurchasedLeadCard({ purchase }: { purchase: LeadPurchase }) {
           </div>
         </div>
 
-        <CardContent className="p-6">
-          {/* Title and destination */}
-          <div className="mb-4">
-            <h3 className="text-xl font-bold text-gray-900 mb-2">{lead.title}</h3>
-            <div className="flex items-center gap-2 text-gray-600">
-              <FiMapPin className="w-4 h-4" />
-              <span className="font-medium">{lead.destination}</span>
-            </div>
-          </div>
-
-          {/* Lead details */}
-          <div className="grid grid-cols-2 gap-4 mb-4 pb-4 border-b border-gray-200">
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <FiDollarSign className="w-4 h-4 text-green-600" />
-              <span>
-                ${lead.budgetMin.toLocaleString()} - ${lead.budgetMax.toLocaleString()}
-              </span>
-            </div>
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <FiCalendar className="w-4 h-4 text-blue-600" />
-              <span>{lead.durationDays} days</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <FiUser className="w-4 h-4 text-purple-600" />
-              <span>{lead.travelersCount} travelers</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <FiStar className="w-4 h-4 text-yellow-500" />
-              <span>Quality: {lead.leadQualityScore}/100</span>
-            </div>
-          </div>
-
-          {/* Customer contact information - NOW VISIBLE */}
-          <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg p-4 mb-4">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="bg-blue-500 text-white rounded-full p-1">
-                <FiUser className="w-4 h-4" />
+        <CardContent className="p-6 flex flex-col flex-grow overflow-hidden">
+          <div className="flex-1 overflow-y-auto min-h-0 space-y-4">
+            {/* Title and destination */}
+            <div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2 line-clamp-2">{lead.title}</h3>
+              <div className="flex items-center gap-2 text-gray-600">
+                <FiMapPin className="w-4 h-4 flex-shrink-0" />
+                <span className="font-medium truncate">{lead.destination}</span>
               </div>
-              <h4 className="font-semibold text-gray-900">Customer Contact Details</h4>
             </div>
-            <div className="space-y-2">
-              {lead.customerName && (
-                <div className="flex items-center gap-2 text-sm">
-                  <FiUser className="w-4 h-4 text-gray-500" />
-                  <span className="font-medium text-gray-900">{lead.customerName}</span>
-                </div>
-              )}
-              {lead.customerEmail && (
-                <div className="flex items-center gap-2 text-sm">
-                  <FiMail className="w-4 h-4 text-gray-500" />
-                  <a 
-                    href={`mailto:${lead.customerEmail}`}
-                    className="text-blue-600 hover:text-blue-800 font-medium"
-                  >
-                    {lead.customerEmail}
-                  </a>
-                </div>
-              )}
-              {lead.customerPhone && (
-                <div className="flex items-center gap-2 text-sm">
-                  <FiPhone className="w-4 h-4 text-gray-500" />
-                  <a 
-                    href={`tel:${lead.customerPhone}`}
-                    className="text-blue-600 hover:text-blue-800 font-medium"
-                  >
-                    {lead.customerPhone}
-                  </a>
-                </div>
-              )}
-            </div>
-          </div>
 
-          {/* Special requirements */}
-          {lead.specialRequirements && (
-            <div className="mb-4">
-              <h4 className="text-sm font-semibold text-gray-700 mb-2">Special Requirements:</h4>
-              <p className="text-sm text-gray-600 line-clamp-3">{lead.specialRequirements}</p>
+            {/* Lead details */}
+            <div className="grid grid-cols-2 gap-4 pb-4 border-b border-gray-200">
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <FiDollarSign className="w-4 h-4 text-green-600 flex-shrink-0" />
+                <span className="truncate">
+                  ${lead.budgetMin.toLocaleString()} - ${lead.budgetMax.toLocaleString()}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <FiCalendar className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                <span>{lead.durationDays} days</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <FiUser className="w-4 h-4 text-purple-600 flex-shrink-0" />
+                <span>{lead.travelersCount} travelers</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <FiStar className="w-4 h-4 text-yellow-500 flex-shrink-0" />
+                <span>Quality: {lead.leadQualityScore}/100</span>
+              </div>
             </div>
-          )}
 
-          {/* Purchase info */}
-          <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-            <div className="text-sm text-gray-600">
-              Purchased on {new Date(purchase.purchasedAt).toLocaleDateString()}
+            {/* Customer contact information - NOW VISIBLE */}
+            <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="bg-blue-500 text-white rounded-full p-1">
+                  <FiUser className="w-4 h-4" />
+                </div>
+                <h4 className="font-semibold text-gray-900">Customer Contact Details</h4>
+              </div>
+              <div className="space-y-2">
+                {lead.customerName && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <FiUser className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                    <span className="font-medium text-gray-900 truncate">{lead.customerName}</span>
+                  </div>
+                )}
+                {lead.customerEmail && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <FiMail className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                    <a 
+                      href={`mailto:${lead.customerEmail}`}
+                      className="text-blue-600 hover:text-blue-800 font-medium truncate"
+                    >
+                      {lead.customerEmail}
+                    </a>
+                  </div>
+                )}
+                {lead.customerPhone && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <FiPhone className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                    <a 
+                      href={`tel:${lead.customerPhone}`}
+                      className="text-blue-600 hover:text-blue-800 font-medium truncate"
+                    >
+                      {lead.customerPhone}
+                    </a>
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="text-sm font-semibold text-gray-900">
-              Paid: ${purchase.purchasePrice}
+
+            {/* Special requirements */}
+            {lead.specialRequirements && (
+              <div>
+                <h4 className="text-sm font-semibold text-gray-700 mb-2">Special Requirements:</h4>
+                <p className="text-sm text-gray-600 line-clamp-3">{lead.specialRequirements}</p>
+              </div>
+            )}
+
+            {/* Purchase info */}
+            <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+              <div className="text-sm text-gray-600">
+                Purchased on {new Date(purchase.purchasedAt).toLocaleDateString()}
+              </div>
+              <div className="text-sm font-semibold text-gray-900">
+                Paid: ${purchase.purchasePrice}
+              </div>
             </div>
           </div>
 
           {/* Action buttons */}
-          <div className="flex gap-2 mt-4">
+          <div className="flex gap-2 mt-4 flex-shrink-0">
             <Link 
               href={`/agent/leads/${lead.id}/itineraries`}
               className="flex-1"
@@ -209,7 +211,7 @@ function PurchasedLeadCard({ purchase }: { purchase: LeadPurchase }) {
                 className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white"
               >
                 <FiPackage className="w-4 h-4 mr-2" />
-                View Itineraries
+                Create Itinerary
               </Button>
             </Link>
             {lead.customerEmail && (

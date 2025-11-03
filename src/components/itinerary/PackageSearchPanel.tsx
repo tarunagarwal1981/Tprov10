@@ -66,12 +66,20 @@ export function PackageSearchPanel({
           .select('id, title, destination_country, destination_city, operator_id, featured_image_url, base_price, currency, status')
           .eq('status', 'published');
 
+        // Build all OR conditions in a single call
+        const orConditions: string[] = [];
         if (selectedDestination) {
-          query = query.or(`destination_country.ilike.%${selectedDestination}%,destination_city.ilike.%${selectedDestination}%`);
+          orConditions.push(`destination_country.ilike.%${selectedDestination}%`);
+          orConditions.push(`destination_city.ilike.%${selectedDestination}%`);
+        }
+        if (searchQuery) {
+          orConditions.push(`title.ilike.%${searchQuery}%`);
+          orConditions.push(`short_description.ilike.%${searchQuery}%`);
         }
 
-        if (searchQuery) {
-          query = query.or(`title.ilike.%${searchQuery}%,short_description.ilike.%${searchQuery}%`);
+        // Only use OR if we have conditions, otherwise fetch all published packages
+        if (orConditions.length > 0) {
+          query = query.or(orConditions.join(','));
         }
 
         const { data } = await query.limit(20);
@@ -98,12 +106,20 @@ export function PackageSearchPanel({
           .select('id, title, destination_country, destination_city, operator_id, featured_image_url, base_price, currency, status')
           .eq('status', 'published');
 
+        // Build all OR conditions in a single call
+        const orConditions: string[] = [];
         if (selectedDestination) {
-          query = query.or(`destination_country.ilike.%${selectedDestination}%,destination_city.ilike.%${selectedDestination}%`);
+          orConditions.push(`destination_country.ilike.%${selectedDestination}%`);
+          orConditions.push(`destination_city.ilike.%${selectedDestination}%`);
+        }
+        if (searchQuery) {
+          orConditions.push(`title.ilike.%${searchQuery}%`);
+          orConditions.push(`short_description.ilike.%${searchQuery}%`);
         }
 
-        if (searchQuery) {
-          query = query.or(`title.ilike.%${searchQuery}%,short_description.ilike.%${searchQuery}%`);
+        // Only use OR if we have conditions, otherwise fetch all published packages
+        if (orConditions.length > 0) {
+          query = query.or(orConditions.join(','));
         }
 
         const { data } = await query.limit(20);
@@ -130,12 +146,20 @@ export function PackageSearchPanel({
           .select('id, title, destination_region, operator_id, featured_image_url, adult_price, currency, status')
           .eq('status', 'published');
 
+        // Build OR conditions - only one .or() call allowed, so combine all conditions
+        const orConditions: string[] = [];
         if (selectedDestination) {
-          query = query.ilike('destination_region', `%${selectedDestination}%`);
+          // Use % directly in pattern, PostgREST will handle URL encoding
+          orConditions.push(`destination_region.ilike.%${selectedDestination}%`);
+        }
+        if (searchQuery) {
+          // Use % directly in pattern, PostgREST will handle URL encoding
+          orConditions.push(`title.ilike.%${searchQuery}%`);
+          orConditions.push(`short_description.ilike.%${searchQuery}%`);
         }
 
-        if (searchQuery) {
-          query = query.or(`title.ilike.%${searchQuery}%,short_description.ilike.%${searchQuery}%`);
+        if (orConditions.length > 0) {
+          query = query.or(orConditions.join(','));
         }
 
         const { data } = await query.limit(20);
@@ -162,12 +186,20 @@ export function PackageSearchPanel({
           .select('id, title, destination_region, operator_id, featured_image_url, adult_price, currency, status')
           .eq('status', 'published');
 
+        // Build OR conditions - only one .or() call allowed, so combine all conditions
+        const orConditions: string[] = [];
         if (selectedDestination) {
-          query = query.ilike('destination_region', `%${selectedDestination}%`);
+          // Use % directly in pattern, PostgREST will handle URL encoding
+          orConditions.push(`destination_region.ilike.%${selectedDestination}%`);
+        }
+        if (searchQuery) {
+          // Use % directly in pattern, PostgREST will handle URL encoding
+          orConditions.push(`title.ilike.%${searchQuery}%`);
+          orConditions.push(`short_description.ilike.%${searchQuery}%`);
         }
 
-        if (searchQuery) {
-          query = query.or(`title.ilike.%${searchQuery}%,short_description.ilike.%${searchQuery}%`);
+        if (orConditions.length > 0) {
+          query = query.or(orConditions.join(','));
         }
 
         const { data } = await query.limit(20);
@@ -194,12 +226,20 @@ export function PackageSearchPanel({
           .select('id, title, destination_region, operator_id, featured_image_url, adult_price, currency, status')
           .eq('status', 'published');
 
+        // Build OR conditions - only one .or() call allowed, so combine all conditions
+        const orConditions: string[] = [];
         if (selectedDestination) {
-          query = query.ilike('destination_region', `%${selectedDestination}%`);
+          // Use % directly in pattern, PostgREST will handle URL encoding
+          orConditions.push(`destination_region.ilike.%${selectedDestination}%`);
+        }
+        if (searchQuery) {
+          // Use % directly in pattern, PostgREST will handle URL encoding
+          orConditions.push(`title.ilike.%${searchQuery}%`);
+          orConditions.push(`short_description.ilike.%${searchQuery}%`);
         }
 
-        if (searchQuery) {
-          query = query.or(`title.ilike.%${searchQuery}%,short_description.ilike.%${searchQuery}%`);
+        if (orConditions.length > 0) {
+          query = query.or(orConditions.join(','));
         }
 
         const { data } = await query.limit(20);
@@ -224,19 +264,23 @@ export function PackageSearchPanel({
       
       // Try to get operator info - if profiles table doesn't exist, use fallback
       let operatorMap = new Map<string, string>();
-      try {
-        const { data: operators } = await supabase
-          .from('profiles' as any)
-          .select('id, company_name')
-          .in('id', operatorIds);
+      
+      // Only query if we have operator IDs
+      if (operatorIds.length > 0) {
+        try {
+          const { data: operators } = await supabase
+            .from('profiles' as any)
+            .select('id, company_name')
+            .in('id', operatorIds);
 
-        if (operators) {
-          const operatorsTyped = operators as unknown as Array<{ id: string; company_name: string | null }>;
-          operatorMap = new Map(operatorsTyped.map(o => [o.id, o.company_name || 'Unknown Operator']));
+          if (operators) {
+            const operatorsTyped = operators as unknown as Array<{ id: string; company_name: string | null }>;
+            operatorMap = new Map(operatorsTyped.map(o => [o.id, o.company_name || 'Unknown Operator']));
+          }
+        } catch (err) {
+          // Profiles table might not exist, use default
+          console.warn('Profiles table not found, using default operator names');
         }
-      } catch (err) {
-        // Profiles table might not exist, use default
-        console.warn('Profiles table not found, using default operator names');
       }
 
       // Fill in missing operators with default name
