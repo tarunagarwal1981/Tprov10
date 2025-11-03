@@ -63,18 +63,15 @@ export function PackageSearchPanel({
       if (selectedType === 'all' || selectedType === 'activity') {
         let query = supabase
           .from('activity_packages')
-          .select('id, title, destination_country, destination_city, operator_id, featured_image_url, base_price, currency, status')
+          .select('id, title, destination_country, destination_city, operator_id, base_price, currency, status')
           .eq('status', 'published');
 
         // Build all OR conditions in a single call
         const orConditions: string[] = [];
         if (selectedDestination) {
-          const tokens = selectedDestination.split(',').map(t => t.trim()).filter(Boolean);
-          const parts = (tokens.length > 0 ? tokens : [selectedDestination]).map(t => [
-            `destination_country.ilike.%${t}%`,
-            `destination_city.ilike.%${t}%`,
-          ]).flat();
-          orConditions.push(...parts);
+          // Use the full destination string (PostgREST will handle URL encoding)
+          orConditions.push(`destination_country.ilike.%${selectedDestination}%`);
+          orConditions.push(`destination_city.ilike.%${selectedDestination}%`);
         }
         if (searchQuery) {
           orConditions.push(`title.ilike.%${searchQuery}%`);
@@ -88,7 +85,7 @@ export function PackageSearchPanel({
 
         const { data } = await query.limit(20);
         if (data) {
-          const packagesTyped = data as unknown as Array<{ id: string; title: string; destination_country: string; destination_city: string; operator_id: string; featured_image_url: string | null; base_price: number | null; currency: string | null }>;
+          const packagesTyped = data as unknown as Array<{ id: string; title: string; destination_country: string; destination_city: string; operator_id: string; base_price: number | null; currency: string | null }>;
           allPackages.push(...packagesTyped.map(p => ({
             id: p.id,
             title: p.title,
@@ -96,7 +93,7 @@ export function PackageSearchPanel({
             destination_city: p.destination_city,
             package_type: 'activity' as const,
             operator_id: p.operator_id,
-            featured_image_url: p.featured_image_url || undefined,
+            featured_image_url: undefined,
             base_price: p.base_price || undefined,
             currency: p.currency || undefined,
           })));
@@ -107,18 +104,15 @@ export function PackageSearchPanel({
       if (selectedType === 'all' || selectedType === 'transfer') {
         let query = supabase
           .from('transfer_packages')
-          .select('id, title, destination_country, destination_city, operator_id, featured_image_url, base_price, currency, status')
+          .select('id, title, destination_country, destination_city, operator_id, base_price, currency, status')
           .eq('status', 'published');
 
         // Build all OR conditions in a single call
         const orConditions: string[] = [];
         if (selectedDestination) {
-          const tokens = selectedDestination.split(',').map(t => t.trim()).filter(Boolean);
-          const parts = (tokens.length > 0 ? tokens : [selectedDestination]).map(t => [
-            `destination_country.ilike.%${t}%`,
-            `destination_city.ilike.%${t}%`,
-          ]).flat();
-          orConditions.push(...parts);
+          // Use the full destination string (PostgREST will handle URL encoding)
+          orConditions.push(`destination_country.ilike.%${selectedDestination}%`);
+          orConditions.push(`destination_city.ilike.%${selectedDestination}%`);
         }
         if (searchQuery) {
           orConditions.push(`title.ilike.%${searchQuery}%`);
@@ -132,7 +126,7 @@ export function PackageSearchPanel({
 
         const { data } = await query.limit(20);
         if (data) {
-          const packagesTyped = data as unknown as Array<{ id: string; title: string; destination_country: string; destination_city: string; operator_id: string; featured_image_url: string | null; base_price: number | null; currency: string | null }>;
+          const packagesTyped = data as unknown as Array<{ id: string; title: string; destination_country: string; destination_city: string; operator_id: string; base_price: number | null; currency: string | null }>;
           allPackages.push(...packagesTyped.map(p => ({
             id: p.id,
             title: p.title,
@@ -140,7 +134,7 @@ export function PackageSearchPanel({
             destination_city: p.destination_city,
             package_type: 'transfer' as const,
             operator_id: p.operator_id,
-            featured_image_url: p.featured_image_url || undefined,
+            featured_image_url: undefined,
             base_price: p.base_price || undefined,
             currency: p.currency || undefined,
           })));
@@ -151,20 +145,16 @@ export function PackageSearchPanel({
       if (selectedType === 'all' || selectedType === 'multi_city') {
         let query = supabase
           .from('multi_city_packages')
-          .select('id, title, destination_region, operator_id, featured_image_url, adult_price, currency, status')
+          .select('id, title, destination_region, operator_id, adult_price, currency, status')
           .eq('status', 'published');
 
         // Build OR conditions - only one .or() call allowed, so combine all conditions
         const orConditions: string[] = [];
         if (selectedDestination) {
-          const tokens = selectedDestination.split(',').map(t => t.trim()).filter(Boolean);
-          const parts = (tokens.length > 0 ? tokens : [selectedDestination]).map(t => 
-            `destination_region.ilike.%${t}%`
-          );
-          orConditions.push(...parts);
+          // Use the full destination string (PostgREST will handle URL encoding)
+          orConditions.push(`destination_region.ilike.%${selectedDestination}%`);
         }
         if (searchQuery) {
-          // Use % directly in pattern, PostgREST will handle URL encoding
           orConditions.push(`title.ilike.%${searchQuery}%`);
           orConditions.push(`short_description.ilike.%${searchQuery}%`);
         }
@@ -175,7 +165,7 @@ export function PackageSearchPanel({
 
         const { data } = await query.limit(20);
         if (data) {
-          const packagesTyped = data as unknown as Array<{ id: string; title: string; destination_region: string | null; operator_id: string; featured_image_url: string | null; adult_price: number | null; currency: string | null }>;
+          const packagesTyped = data as unknown as Array<{ id: string; title: string; destination_region: string | null; operator_id: string; adult_price: number | null; currency: string | null }>;
           allPackages.push(...packagesTyped.map(p => ({
             id: p.id,
             title: p.title,
@@ -183,7 +173,7 @@ export function PackageSearchPanel({
             destination_city: '',
             package_type: 'multi_city' as const,
             operator_id: p.operator_id,
-            featured_image_url: p.featured_image_url || undefined,
+            featured_image_url: undefined,
             base_price: p.adult_price || undefined,
             currency: p.currency || undefined,
           })));
@@ -194,20 +184,16 @@ export function PackageSearchPanel({
       if (selectedType === 'all' || selectedType === 'multi_city_hotel') {
         let query = supabase
           .from('multi_city_hotel_packages' as any)
-          .select('id, title, destination_region, operator_id, featured_image_url, adult_price, currency, status')
+          .select('id, title, destination_region, operator_id, adult_price, currency, status')
           .eq('status', 'published');
 
         // Build OR conditions - only one .or() call allowed, so combine all conditions
         const orConditions: string[] = [];
         if (selectedDestination) {
-          const tokens = selectedDestination.split(',').map(t => t.trim()).filter(Boolean);
-          const parts = (tokens.length > 0 ? tokens : [selectedDestination]).map(t => 
-            `destination_region.ilike.%${t}%`
-          );
-          orConditions.push(...parts);
+          // Use the full destination string (PostgREST will handle URL encoding)
+          orConditions.push(`destination_region.ilike.%${selectedDestination}%`);
         }
         if (searchQuery) {
-          // Use % directly in pattern, PostgREST will handle URL encoding
           orConditions.push(`title.ilike.%${searchQuery}%`);
           orConditions.push(`short_description.ilike.%${searchQuery}%`);
         }
@@ -237,20 +223,16 @@ export function PackageSearchPanel({
       if (selectedType === 'all' || selectedType === 'fixed_departure') {
         let query = supabase
           .from('fixed_departure_flight_packages' as any)
-          .select('id, title, destination_region, operator_id, featured_image_url, adult_price, currency, status')
+          .select('id, title, destination_region, operator_id, adult_price, currency, status')
           .eq('status', 'published');
 
         // Build OR conditions - only one .or() call allowed, so combine all conditions
         const orConditions: string[] = [];
         if (selectedDestination) {
-          const tokens = selectedDestination.split(',').map(t => t.trim()).filter(Boolean);
-          const parts = (tokens.length > 0 ? tokens : [selectedDestination]).map(t => 
-            `destination_region.ilike.%${t}%`
-          );
-          orConditions.push(...parts);
+          // Use the full destination string (PostgREST will handle URL encoding)
+          orConditions.push(`destination_region.ilike.%${selectedDestination}%`);
         }
         if (searchQuery) {
-          // Use % directly in pattern, PostgREST will handle URL encoding
           orConditions.push(`title.ilike.%${searchQuery}%`);
           orConditions.push(`short_description.ilike.%${searchQuery}%`);
         }
@@ -284,19 +266,19 @@ export function PackageSearchPanel({
       
       // Only query if we have operator IDs
       if (operatorIds.length > 0) {
-        try {
-          const { data: operators } = await supabase
-            .from('profiles' as any)
-            .select('id, company_name')
-            .in('id', operatorIds);
+      try {
+        const { data: operators } = await supabase
+          .from('profiles' as any)
+          .select('id, company_name')
+          .in('id', operatorIds);
 
-          if (operators) {
-            const operatorsTyped = operators as unknown as Array<{ id: string; company_name: string | null }>;
-            operatorMap = new Map(operatorsTyped.map(o => [o.id, o.company_name || 'Unknown Operator']));
-          }
-        } catch (err) {
-          // Profiles table might not exist, use default
-          console.warn('Profiles table not found, using default operator names');
+        if (operators) {
+          const operatorsTyped = operators as unknown as Array<{ id: string; company_name: string | null }>;
+          operatorMap = new Map(operatorsTyped.map(o => [o.id, o.company_name || 'Unknown Operator']));
+        }
+      } catch (err) {
+        // Profiles table might not exist, use default
+        console.warn('Profiles table not found, using default operator names');
         }
       }
 

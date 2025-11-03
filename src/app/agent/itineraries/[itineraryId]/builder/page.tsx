@@ -164,25 +164,25 @@ export default function ItineraryBuilderPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading itinerary...</p>
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading itinerary...</p>
+          </div>
         </div>
-      </div>
     );
   }
 
   if (!itinerary) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center">
-          <p className="text-gray-600 mb-4">Itinerary not found</p>
-          <Button onClick={() => router.push('/agent/leads')}>
-            <FiArrowLeft className="w-4 h-4 mr-2" />
-            Back to Leads
-          </Button>
+          <div className="text-center">
+            <p className="text-gray-600 mb-4">Itinerary not found</p>
+            <Button onClick={() => router.push('/agent/leads')}>
+              <FiArrowLeft className="w-4 h-4 mr-2" />
+              Back to Leads
+            </Button>
+          </div>
         </div>
-      </div>
     );
   }
 
