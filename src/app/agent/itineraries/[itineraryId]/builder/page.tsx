@@ -99,8 +99,8 @@ export default function ItineraryBuilderPage() {
             .single();
 
           const lead = leadData as unknown as { destination?: string };
-          if (lead?.destination) {
-            setSelectedDestination(prev => prev || lead.destination);
+          if (lead?.destination && !selectedDestination) {
+            setSelectedDestination(lead.destination);
           }
 
           // Fetch days
