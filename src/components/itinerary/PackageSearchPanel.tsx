@@ -71,16 +71,20 @@ export function PackageSearchPanel({
           .select('id, title, destination_country, destination_city, operator_id, base_price, currency, status')
           .eq('status', 'published');
 
-        // Apply filters - use direct filters when single, OR when multiple
-        if (selectedDestination && searchQuery) {
-          // Both destination and search query - use OR
-          query = query.or(`destination_country.ilike.%${selectedDestination}%,destination_city.ilike.%${selectedDestination}%,title.ilike.%${searchQuery}%,short_description.ilike.%${searchQuery}%`);
-        } else if (selectedDestination) {
-          // Only destination - use OR for country and city
-          query = query.or(`destination_country.ilike.%${selectedDestination}%,destination_city.ilike.%${selectedDestination}%`);
-        } else if (searchQuery) {
-          // Only search query - use OR for title and description
-          query = query.or(`title.ilike.%${searchQuery}%,short_description.ilike.%${searchQuery}%`);
+        // Apply filters - build OR conditions array and combine into single OR call
+        const orConditions: string[] = [];
+        if (selectedDestination) {
+          // Add destination OR conditions
+          orConditions.push(`destination_country.ilike.%${selectedDestination}%`);
+          orConditions.push(`destination_city.ilike.%${selectedDestination}%`);
+        }
+        if (searchQuery) {
+          // Add search OR conditions
+          orConditions.push(`title.ilike.%${searchQuery}%`);
+          orConditions.push(`short_description.ilike.%${searchQuery}%`);
+        }
+        if (orConditions.length > 0) {
+          query = query.or(orConditions.join(','));
         }
         // If no filters, fetch all published packages
 
@@ -108,16 +112,20 @@ export function PackageSearchPanel({
           .select('id, title, destination_country, destination_city, operator_id, base_price, currency, status')
           .eq('status', 'published');
 
-        // Apply filters - use direct filters when single, OR when multiple
-        if (selectedDestination && searchQuery) {
-          // Both destination and search query - use OR
-          query = query.or(`destination_country.ilike.%${selectedDestination}%,destination_city.ilike.%${selectedDestination}%,title.ilike.%${searchQuery}%,short_description.ilike.%${searchQuery}%`);
-        } else if (selectedDestination) {
-          // Only destination - use OR for country and city
-          query = query.or(`destination_country.ilike.%${selectedDestination}%,destination_city.ilike.%${selectedDestination}%`);
-        } else if (searchQuery) {
-          // Only search query - use OR for title and description
-          query = query.or(`title.ilike.%${searchQuery}%,short_description.ilike.%${searchQuery}%`);
+        // Apply filters - build OR conditions array and combine into single OR call
+        const orConditions: string[] = [];
+        if (selectedDestination) {
+          // Add destination OR conditions
+          orConditions.push(`destination_country.ilike.%${selectedDestination}%`);
+          orConditions.push(`destination_city.ilike.%${selectedDestination}%`);
+        }
+        if (searchQuery) {
+          // Add search OR conditions
+          orConditions.push(`title.ilike.%${searchQuery}%`);
+          orConditions.push(`short_description.ilike.%${searchQuery}%`);
+        }
+        if (orConditions.length > 0) {
+          query = query.or(orConditions.join(','));
         }
         // If no filters, fetch all published packages
 
@@ -145,16 +153,19 @@ export function PackageSearchPanel({
           .select('id, title, destination_region, operator_id, adult_price, currency, status')
           .eq('status', 'published');
 
-        // Apply filters - use direct filters when single, OR when multiple
-        if (selectedDestination && searchQuery) {
-          // Both destination and search query - use OR
-          query = query.or(`destination_region.ilike.%${selectedDestination}%,title.ilike.%${searchQuery}%,short_description.ilike.%${searchQuery}%`);
-        } else if (selectedDestination) {
-          // Only destination - use direct ilike (no OR needed for single condition)
-          query = query.ilike('destination_region', `%${selectedDestination}%`);
-        } else if (searchQuery) {
-          // Only search query - use OR for title and description
-          query = query.or(`title.ilike.%${searchQuery}%,short_description.ilike.%${searchQuery}%`);
+        // Apply filters - build OR conditions array and combine into single OR call
+        const orConditions: string[] = [];
+        if (selectedDestination) {
+          // Add destination condition
+          orConditions.push(`destination_region.ilike.%${selectedDestination}%`);
+        }
+        if (searchQuery) {
+          // Add search OR conditions
+          orConditions.push(`title.ilike.%${searchQuery}%`);
+          orConditions.push(`short_description.ilike.%${searchQuery}%`);
+        }
+        if (orConditions.length > 0) {
+          query = query.or(orConditions.join(','));
         }
         // If no filters, fetch all published packages
 
@@ -182,16 +193,19 @@ export function PackageSearchPanel({
           .select('id, title, destination_region, operator_id, adult_price, currency, status')
           .eq('status', 'published');
 
-        // Apply filters - use direct filters when single, OR when multiple
-        if (selectedDestination && searchQuery) {
-          // Both destination and search query - use OR
-          query = query.or(`destination_region.ilike.%${selectedDestination}%,title.ilike.%${searchQuery}%,short_description.ilike.%${searchQuery}%`);
-        } else if (selectedDestination) {
-          // Only destination - use direct ilike (no OR needed for single condition)
-          query = query.ilike('destination_region', `%${selectedDestination}%`);
-        } else if (searchQuery) {
-          // Only search query - use OR for title and description
-          query = query.or(`title.ilike.%${searchQuery}%,short_description.ilike.%${searchQuery}%`);
+        // Apply filters - build OR conditions array and combine into single OR call
+        const orConditions: string[] = [];
+        if (selectedDestination) {
+          // Add destination condition
+          orConditions.push(`destination_region.ilike.%${selectedDestination}%`);
+        }
+        if (searchQuery) {
+          // Add search OR conditions
+          orConditions.push(`title.ilike.%${searchQuery}%`);
+          orConditions.push(`short_description.ilike.%${searchQuery}%`);
+        }
+        if (orConditions.length > 0) {
+          query = query.or(orConditions.join(','));
         }
         // If no filters, fetch all published packages
 
@@ -219,16 +233,19 @@ export function PackageSearchPanel({
           .select('id, title, destination_region, operator_id, adult_price, currency, status')
           .eq('status', 'published');
 
-        // Apply filters - use direct filters when single, OR when multiple
-        if (selectedDestination && searchQuery) {
-          // Both destination and search query - use OR
-          query = query.or(`destination_region.ilike.%${selectedDestination}%,title.ilike.%${searchQuery}%,short_description.ilike.%${searchQuery}%`);
-        } else if (selectedDestination) {
-          // Only destination - use direct ilike (no OR needed for single condition)
-          query = query.ilike('destination_region', `%${selectedDestination}%`);
-        } else if (searchQuery) {
-          // Only search query - use OR for title and description
-          query = query.or(`title.ilike.%${searchQuery}%,short_description.ilike.%${searchQuery}%`);
+        // Apply filters - build OR conditions array and combine into single OR call
+        const orConditions: string[] = [];
+        if (selectedDestination) {
+          // Add destination condition
+          orConditions.push(`destination_region.ilike.%${selectedDestination}%`);
+        }
+        if (searchQuery) {
+          // Add search OR conditions
+          orConditions.push(`title.ilike.%${searchQuery}%`);
+          orConditions.push(`short_description.ilike.%${searchQuery}%`);
+        }
+        if (orConditions.length > 0) {
+          query = query.or(orConditions.join(','));
         }
         // If no filters, fetch all published packages
 
