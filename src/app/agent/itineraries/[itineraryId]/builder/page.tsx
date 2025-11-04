@@ -74,6 +74,8 @@ export default function ItineraryBuilderPage() {
 
   // Fetch itinerary data
   useEffect(() => {
+    let isMounted = true;
+    
     const fetchItinerary = async () => {
       if (!itineraryId || !user?.id) return;
 
@@ -88,7 +90,7 @@ export default function ItineraryBuilderPage() {
 
         if (itineraryError) throw itineraryError;
 
-        if (itineraryData) {
+        if (itineraryData && isMounted) {
           setItinerary(itineraryData as unknown as Itinerary);
 
           // Fetch lead destination
@@ -98,9 +100,11 @@ export default function ItineraryBuilderPage() {
             .eq('id', (itineraryData as unknown as Itinerary).lead_id)
             .single();
 
-          const lead = leadData as unknown as { destination?: string };
-          if (lead?.destination && !selectedDestination) {
-            setSelectedDestination(lead.destination);
+          if (isMounted) {
+            const lead = leadData as unknown as { destination?: string };
+            if (lead?.destination) {
+              setSelectedDestination((prev) => prev || lead.destination || '');
+            }
           }
 
           // Fetch days
@@ -111,7 +115,9 @@ export default function ItineraryBuilderPage() {
             .order('day_number', { ascending: true });
 
           if (daysError) throw daysError;
-          setDays((daysData || []) as unknown as ItineraryDay[]);
+          if (isMounted) {
+            setDays((daysData || []) as unknown as ItineraryDay[]);
+          }
 
           // Fetch items
           const { data: itemsData, error: itemsError } = await supabase
@@ -121,19 +127,29 @@ export default function ItineraryBuilderPage() {
             .order('display_order', { ascending: true });
 
           if (itemsError) throw itemsError;
-          setItems((itemsData || []) as unknown as ItineraryItem[]);
+          if (isMounted) {
+            setItems((itemsData || []) as unknown as ItineraryItem[]);
+          }
         }
       } catch (err) {
         console.error('Error fetching itinerary:', err);
-        toast.error('Failed to load itinerary');
-        // Stay on the builder page; don't redirect on transient errors
+        if (isMounted) {
+          toast.error('Failed to load itinerary');
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchItinerary();
-  }, [itineraryId, user?.id, router, toast, supabase]);
+
+    return () => {
+      isMounted = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [itineraryId, user?.id]);
 
   const handleAddDay = async () => {
     if (!itinerary) return;

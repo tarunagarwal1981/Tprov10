@@ -50,6 +50,8 @@ export function PackageConfigModal({
 
   // Fetch itinerary info (adults, children, infants)
   useEffect(() => {
+    let isMounted = true;
+    
     const fetchItinerary = async () => {
       const { data } = await supabase
         .from('itineraries' as any)
@@ -57,17 +59,26 @@ export function PackageConfigModal({
         .eq('id', itineraryId)
         .single();
 
-      if (data) {
+      if (data && isMounted) {
         setItineraryInfo(data);
       }
     };
 
     fetchItinerary();
-  }, [itineraryId, supabase]);
+
+    return () => {
+      isMounted = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [itineraryId]);
 
   // Fetch package details
   useEffect(() => {
+    let isMounted = true;
+    
     const fetchPackage = async () => {
+      if (!isMounted) return;
+      
       setLoading(true);
       try {
         let query: any;
@@ -108,7 +119,9 @@ export function PackageConfigModal({
             selectedVehicle: null,
             quantity: 1,
           });
-          setLoading(false);
+          if (isMounted) {
+            setLoading(false);
+          }
           return;
         } else if (pkg.package_type === 'transfer') {
           query = supabase.from('transfer_packages').select('*').eq('id', pkg.id).single();
@@ -125,7 +138,7 @@ export function PackageConfigModal({
         const { data, error } = await query;
 
         if (error) throw error;
-        if (data) {
+        if (data && isMounted) {
           setPackageData(data);
           
           // Initialize default config based on package type
@@ -147,14 +160,23 @@ export function PackageConfigModal({
         }
       } catch (err) {
         console.error('Error fetching package:', err);
-        toast.error('Failed to load package details');
+        if (isMounted) {
+          toast.error('Failed to load package details');
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchPackage();
-  }, [pkg.id, pkg.package_type, supabase, toast]);
+
+    return () => {
+      isMounted = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pkg.id, pkg.package_type]);
 
   // Calculate price in real-time
   useEffect(() => {

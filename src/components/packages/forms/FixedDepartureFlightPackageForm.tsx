@@ -36,6 +36,7 @@ type DayPlan = {
   cityId: string;
   cityName?: string;
   date?: string; // Date for this day (calculated from city arrival date)
+  title?: string;
   description?: string;
   photoUrl?: string;
   hasFlights?: boolean;
@@ -717,6 +718,23 @@ const ItineraryTab: React.FC = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Title Field */}
+              <div>
+                <label className="text-sm font-medium mb-1 block">Title</label>
+                <Input
+                  placeholder="Enter a title for this day..."
+                  defaultValue={day.title}
+                  onChange={(e) => {
+                    const d = [...days];
+                    if (d[dayIndex]) {
+                      d[dayIndex]!.title = e.target.value;
+                      setValue("days", d);
+                    }
+                  }}
+                  className="package-text-fix"
+                />
+              </div>
+
               {/* Description and Photo Row */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -735,7 +753,8 @@ const ItineraryTab: React.FC = () => {
                     className="package-text-fix"
                   />
                 </div>
-                <div>
+                {/* Photo Upload - Commented Out */}
+                {/* <div>
                   <label className="text-sm font-medium mb-1 block">Photo</label>
                   <div className="space-y-2">
                     <Input
@@ -756,7 +775,7 @@ const ItineraryTab: React.FC = () => {
                       </div>
                     )}
                   </div>
-                </div>
+                </div> */}
               </div>
 
               {/* Add Flights Checkbox */}

@@ -795,28 +795,24 @@ export const ActivityPricingOptionsTab: React.FC = () => {
                                 <td className="p-3">{option.childMinAge}-{option.childMaxAge} yrs</td>
                                 <td className="p-3">
                                   <div className="flex items-center justify-center gap-2">
-                                    {vIndex === 0 && (
-                                      <>
-                                        <Button
-                                          type="button"
-                                          size="sm"
-                                          variant="ghost"
-                                          onClick={() => setEditingId(option.id)}
-                                          className="package-button-fix"
-                                        >
-                                          <FaEdit className="h-3 w-3" />
-                                        </Button>
-                                        <Button
-                                          type="button"
-                                          size="sm"
-                                          variant="ghost"
-                                          onClick={() => handleRemoveOption(option.id)}
-                                          className="package-button-fix text-red-600 hover:text-red-700"
-                                        >
-                                          <FaTrash className="h-3 w-3" />
-                                        </Button>
-                                      </>
-                                    )}
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => setEditingId(option.id)}
+                                      className="package-button-fix"
+                                    >
+                                      <FaEdit className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => handleRemoveOption(option.id)}
+                                      className="package-button-fix text-red-600 hover:text-red-700"
+                                    >
+                                      <FaTrash className="h-3 w-3" />
+                                    </Button>
                                   </div>
                                 </td>
                               </tr>

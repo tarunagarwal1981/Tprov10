@@ -163,6 +163,7 @@ export default function FixedDepartureFlightPackagePage() {
             day_number: dayIndex + 1,
             city_name: day.cityName || null,
             date: day.date || null,
+            title: day.title || null,
             description: day.description || null,
             photo_url: day.photoUrl || null,
             has_flights: day.hasFlights || false,
