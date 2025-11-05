@@ -1067,33 +1067,33 @@ const InclusionsExclusionsTab: React.FC = () => {
           {/* Custom Inclusions */}
           <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
             <h3 className="text-sm font-medium mb-3">Custom Inclusions</h3>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
-              <Select onValueChange={(v) => setIncCat(v as InclusionCategory)}>
-                <SelectTrigger><SelectValue placeholder="Category" /></SelectTrigger>
-                <SelectContent>
-                  {["Transport","Activities","Meals","Guide Services","Entry Fees","Insurance"].map(c => (
-                    <SelectItem key={c} value={c}>{c}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <div className="md:col-span-3 flex gap-2">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+            <Select onValueChange={(v) => setIncCat(v as InclusionCategory)}>
+              <SelectTrigger><SelectValue placeholder="Category" /></SelectTrigger>
+              <SelectContent>
+                {["Transport","Activities","Meals","Guide Services","Entry Fees","Insurance"].map(c => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className="md:col-span-3 flex gap-2">
                 <Input value={incText} onChange={(e) => setIncText(e.target.value)} placeholder="Add custom inclusion" />
-                <Button type="button" onClick={() => { if (incText.trim()) { inc.append({ id: generateId(), category: incCat, text: incText.trim() }); setIncText(""); } }}>Add</Button>
-              </div>
+              <Button type="button" onClick={() => { if (incText.trim()) { inc.append({ id: generateId(), category: incCat, text: incText.trim() }); setIncText(""); } }}>Add</Button>
             </div>
+          </div>
           </div>
 
           {/* Selected Inclusions */}
           <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
             <h3 className="text-sm font-medium mb-3">Selected Inclusions ({inclusions.length})</h3>
-            <div className="flex flex-wrap gap-2">
-              {inc.fields.map((f, i) => (
-                <Badge key={f.id} variant="outline" className="flex items-center gap-2">
-                  <span className="text-xs">{(f as any).category}:</span>
-                  <span>{(f as any).text}</span>
-                  <button type="button" onClick={() => inc.remove(i)} aria-label="remove" className="text-xs">×</button>
-                </Badge>
-              ))}
+          <div className="flex flex-wrap gap-2">
+            {inc.fields.map((f, i) => (
+              <Badge key={f.id} variant="outline" className="flex items-center gap-2">
+                <span className="text-xs">{(f as any).category}:</span>
+                <span>{(f as any).text}</span>
+                <button type="button" onClick={() => inc.remove(i)} aria-label="remove" className="text-xs">×</button>
+              </Badge>
+            ))}
             </div>
           </div>
         </CardContent>
@@ -1123,23 +1123,23 @@ const InclusionsExclusionsTab: React.FC = () => {
           {/* Custom Exclusions */}
           <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
             <h3 className="text-sm font-medium mb-3">Custom Exclusions</h3>
-            <div className="flex gap-2">
+          <div className="flex gap-2">
               <Input value={excText} onChange={(e) => setExcText(e.target.value)} placeholder="Add custom exclusion" />
-              <Button type="button" onClick={() => { if (excText.trim()) { exc.append({ id: generateId(), text: excText.trim() }); setExcText(""); } }}>Add</Button>
-            </div>
+            <Button type="button" onClick={() => { if (excText.trim()) { exc.append({ id: generateId(), text: excText.trim() }); setExcText(""); } }}>Add</Button>
+          </div>
           </div>
 
           {/* Selected Exclusions */}
           <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
             <h3 className="text-sm font-medium mb-3">Selected Exclusions ({exclusions.length})</h3>
-            <div className="flex flex-wrap gap-2">
-              {exc.fields.map((f, i) => (
-                <Badge key={f.id} variant="secondary" className="flex items-center gap-2">
-                  <span>{(f as any).text}</span>
-                  <button type="button" onClick={() => exc.remove(i)} aria-label="remove" className="text-xs">×</button>
-                </Badge>
-              ))}
-            </div>
+          <div className="flex flex-wrap gap-2">
+            {exc.fields.map((f, i) => (
+              <Badge key={f.id} variant="secondary" className="flex items-center gap-2">
+                <span>{(f as any).text}</span>
+                <button type="button" onClick={() => exc.remove(i)} aria-label="remove" className="text-xs">×</button>
+              </Badge>
+            ))}
+          </div>
           </div>
         </CardContent>
       </Card>
@@ -1150,7 +1150,7 @@ const InclusionsExclusionsTab: React.FC = () => {
 const PricingDatesTab: React.FC = () => {
   const { watch, setValue } = useFormContext<MultiCityPackageFormData>();
   const pricing = watch("pricing");
-
+  
   // Initialize with one default pricing row when SIC pricing is selected
   React.useEffect(() => {
     if (pricing.pricingType === "SIC" && pricing.pricingRows.length === 0) {
@@ -1168,7 +1168,7 @@ const PricingDatesTab: React.FC = () => {
   React.useEffect(() => {
     if (pricing.pricingType === "PRIVATE_PACKAGE" && pricing.privatePackageRows.length === 0) {
       const defaultRow: PrivatePackageRow = {
-        id: generateId(),
+      id: generateId(),
         numberOfAdults: 1,
         numberOfChildren: 0,
         carType: "",
@@ -1282,11 +1282,11 @@ const PricingDatesTab: React.FC = () => {
 
       {/* SIC Pricing: Tabular Format */}
       {pricing.pricingType === "SIC" && (
-        <Card className="package-selector-glass package-shadow-fix">
-          <CardHeader>
+      <Card className="package-selector-glass package-shadow-fix">
+        <CardHeader>
             <CardTitle>SIC Pricing</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        </CardHeader>
+        <CardContent className="space-y-4">
             {/* Pricing Table */}
             <div className="overflow-x-auto">
               <table className="w-full border-collapse text-sm">
@@ -1302,31 +1302,31 @@ const PricingDatesTab: React.FC = () => {
                   {pricing.pricingRows.map((row, index) => (
                     <tr key={row.id} className="border-b border-gray-200 dark:border-gray-700">
                       <td className="py-2 px-3">
-                        <Input
-                          type="number"
-                          min={0}
+              <Input
+                type="number"
+                min={0}
                           value={row.numberOfAdults}
                           onChange={(e) => updatePricingRow(index, "numberOfAdults", Number(e.target.value || 0))}
                           className="package-text-fix w-20 h-8 text-sm"
                         />
                       </td>
                       <td className="py-2 px-3">
-                        <Input
-                          type="number"
-                          min={0}
+              <Input
+                type="number"
+                min={0}
                           value={row.numberOfChildren}
                           onChange={(e) => updatePricingRow(index, "numberOfChildren", Number(e.target.value || 0))}
                           className="package-text-fix w-20 h-8 text-sm"
                         />
                       </td>
                       <td className="py-2 px-3">
-                        <Input
-                          type="number"
-                          min={0}
+              <Input
+                type="number"
+                min={0}
                           step="0.01"
                           value={row.totalPrice}
                           onChange={(e) => updatePricingRow(index, "totalPrice", Number(e.target.value || 0))}
-                          className="package-text-fix w-28 h-8 text-sm"
+                          className="package-text-fix w-28 h-8 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                           placeholder="0.00"
                         />
                       </td>
@@ -1374,37 +1374,37 @@ const PricingDatesTab: React.FC = () => {
                 <label htmlFor="child-age-restriction" className="text-xs font-medium cursor-pointer">
                   Child Age Restriction
                 </label>
-              </div>
-              
+            </div>
+
               {pricing.hasChildAgeRestriction && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 ml-6">
-                  <div>
+            <div>
                     <label className="text-xs font-medium mb-1 block">Child Min Age *</label>
-                    <Input
-                      type="number"
-                      min={0}
+              <Input
+                type="number"
+                min={0}
                       value={pricing.childMinAge || ""}
                       onChange={(e) => setValue("pricing.childMinAge", Number(e.target.value || 0))}
                       className="package-text-fix h-8 text-sm"
                       placeholder="e.g., 3"
-                    />
-                  </div>
-                  <div>
+              />
+            </div>
+            <div>
                     <label className="text-xs font-medium mb-1 block">Child Max Age *</label>
-                    <Input
-                      type="number"
-                      min={0}
+              <Input
+                type="number"
+                min={0}
                       value={pricing.childMaxAge || ""}
                       onChange={(e) => setValue("pricing.childMaxAge", Number(e.target.value || 0))}
                       className="package-text-fix h-8 text-sm"
                       placeholder="e.g., 12"
-                    />
-                  </div>
+              />
+            </div>
                 </div>
               )}
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+        </CardContent>
+      </Card>
       )}
 
       {/* Private Package Pricing: Tabular Format */}
@@ -1431,7 +1431,7 @@ const PricingDatesTab: React.FC = () => {
                   {pricing.privatePackageRows.map((row, index) => (
                     <tr key={row.id} className="border-b border-gray-200 dark:border-gray-700">
                       <td className="py-2 px-3">
-                        <Input
+                  <Input
                           type="number"
                           min={0}
                           value={row.numberOfAdults}
@@ -1457,36 +1457,36 @@ const PricingDatesTab: React.FC = () => {
                         />
                       </td>
                       <td className="py-2 px-3">
-                        <Input
-                          type="number"
-                          min={1}
+                  <Input
+                    type="number"
+                    min={1}
                           value={row.vehicleCapacity}
                           onChange={(e) => updatePrivatePackageRow(index, "vehicleCapacity", Number(e.target.value || 1))}
                           className="package-text-fix w-20 h-8 text-sm"
                         />
                       </td>
                       <td className="py-2 px-3">
-                        <Input
-                          type="number"
-                          min={0}
+                  <Input
+                    type="number"
+                    min={0}
                           step="0.01"
                           value={row.totalPrice}
                           onChange={(e) => updatePrivatePackageRow(index, "totalPrice", Number(e.target.value || 0))}
-                          className="package-text-fix w-28 h-8 text-sm"
+                          className="package-text-fix w-28 h-8 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                           placeholder="0.00"
                         />
                       </td>
                       <td className="py-2 px-3">
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          size="sm"
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
                           onClick={() => removePrivatePackageRow(index)}
                           className="h-8 w-8 p-0"
                           disabled={pricing.privatePackageRows.length === 1}
                         >
                           <FaTrash className="h-3 w-3" />
-                        </Button>
+                  </Button>
                       </td>
                     </tr>
                   ))}
