@@ -67,7 +67,6 @@ type InclusionCategory = "Transport" | "Activities" | "Meals" | "Guide Services"
 
 type InclusionItem = { id: string; category: InclusionCategory; text: string };
 type ExclusionItem = { id: string; text: string };
-type AddOn = { id: string; name: string; description?: string; price?: number };
 
 type PricingMode = "FIXED" | "PER_PERSON" | "GROUP_TIERED";
 
@@ -98,27 +97,34 @@ type Policies = {
   terms?: string;
 };
 
-type PricingPackageType = 'STANDARD' | 'GROUP';
+type PricingPackageType = 'SIC' | 'PRIVATE_PACKAGE';
 
-type Vehicle = {
+type PricingRow = {
   id: string;
-  vehicleType: string;
-  maxCapacity: number;
-  price: number;
-  description?: string;
+  numberOfAdults: number;
+  numberOfChildren: number;
+  totalPrice: number;
+};
+
+type PrivatePackageRow = {
+  id: string;
+  numberOfAdults: number;
+  numberOfChildren: number;
+  carType: string;
+  vehicleCapacity: number;
+  totalPrice: number;
 };
 
 type PricingData = {
   pricingType: PricingPackageType;
-  // Per person pricing (used by both STANDARD and GROUP)
-  adultPrice: number;
-  childPrice: number;
-  childMinAge: number;
-  childMaxAge: number;
-  infantPrice: number;
-  infantMaxAge: number;
-  // Vehicle options (only for GROUP type)
-  vehicles: Vehicle[];
+  // Tabular pricing rows (for SIC pricing)
+  pricingRows: PricingRow[];
+  // Private package pricing rows (for PRIVATE_PACKAGE pricing)
+  privatePackageRows: PrivatePackageRow[];
+  // Child age restriction (optional checkbox)
+  hasChildAgeRestriction: boolean;
+  childMinAge?: number;
+  childMaxAge?: number;
 };
 
 export type MultiCityPackageFormData = {
@@ -134,7 +140,6 @@ export type MultiCityPackageFormData = {
   days: DayPlan[];
   inclusions: InclusionItem[];
   exclusions: ExclusionItem[];
-  addOns: AddOn[];
   pricing: PricingData;
   policies: Policies;
 };
@@ -146,16 +151,13 @@ const DEFAULT_DATA: MultiCityPackageFormData = {
   days: [],
   inclusions: [],
   exclusions: [],
-  addOns: [],
   pricing: { 
-    pricingType: "STANDARD",
-    adultPrice: 0,
-    childPrice: 0,
-    childMinAge: 3,
-    childMaxAge: 12,
-    infantPrice: 0,
-    infantMaxAge: 2,
-    vehicles: []
+    pricingType: "SIC",
+    pricingRows: [],
+    privatePackageRows: [],
+    hasChildAgeRestriction: false,
+    childMinAge: undefined,
+    childMaxAge: undefined,
   },
   policies: { cancellation: [], insuranceRequirement: "OPTIONAL" },
 };
@@ -181,11 +183,14 @@ const useFormValidation = (data: MultiCityPackageFormData): FormValidation => {
     if (data.days.length === 0) warnings.push({ tab: "itinerary", field: "days", message: "No days generated yet" });
 
     // Pricing validation
-    if (data.pricing.adultPrice <= 0) {
-      errors.push({ tab: "pricing", field: "adultPrice", message: "Adult price is required", severity: "error" });
+    if (data.pricing.pricingType === "SIC" && data.pricing.pricingRows.length === 0) {
+      errors.push({ tab: "pricing", field: "pricingRows", message: "Add at least one pricing row", severity: "error" });
     }
-    if (data.pricing.pricingType === "GROUP" && data.pricing.vehicles.length === 0) {
-      errors.push({ tab: "pricing", field: "vehicles", message: "Add at least one vehicle option for group pricing", severity: "error" });
+    if (data.pricing.pricingType === "SIC" && data.pricing.hasChildAgeRestriction && (!data.pricing.childMinAge || !data.pricing.childMaxAge)) {
+      errors.push({ tab: "pricing", field: "childAge", message: "Child min and max age are required when age restriction is enabled", severity: "error" });
+    }
+    if (data.pricing.pricingType === "PRIVATE_PACKAGE" && data.pricing.privatePackageRows.length === 0) {
+      errors.push({ tab: "pricing", field: "privatePackageRows", message: "Add at least one private package pricing row", severity: "error" });
     }
 
     return { isValid: errors.length === 0, errors, warnings };
@@ -241,16 +246,56 @@ const BasicInformationTab: React.FC = () => {
   
   React.useEffect(() => {
     // Auto-generate days based on cities and nights
+    // For each city with N nights: create N+1 days (arrival + N full days with nights + departure)
+    // For intermediate cities, the departure day is also the arrival day of the next city (counted once)
+    // Example: City 1 (2 nights) + City 2 (2 nights) = 5 days total
+    // Day 1: Arrival City 1, Night 1 City 1
+    // Day 2: Full day City 1, Night 2 City 1
+    // Day 3: Departure City 1 + Arrival City 2, Night 1 City 2
+    // Day 4: Full day City 2, Night 2 City 2
+    // Day 5: Departure City 2
     if (!cities || cities.length === 0) return;
     
     const newDays: DayPlan[] = [];
-    cities.forEach((city) => {
+    cities.forEach((city, cityIndex) => {
       const nights = city.nights || 1;
-      for (let i = 0; i < nights; i++) {
+      const isLastCity = cityIndex === cities.length - 1;
+      const isFirstCity = cityIndex === 0;
+      
+      // For each city, create nights + 1 days
+      // For intermediate cities, the last day (departure) is also the arrival of next city
+      // So we create: nights + 1 days for first city, nights days for intermediate cities, nights + 1 for last city
+      const daysToCreate = isFirstCity || isLastCity ? nights + 1 : nights;
+      
+      for (let i = 0; i < daysToCreate; i++) {
+        const dayIndex = isFirstCity ? i : (i + 1); // For non-first cities, start from day 1 (not arrival day)
+        const isArrivalDay = isFirstCity && i === 0;
+        const isDepartureDay = (isLastCity && i === nights) || (!isLastCity && i === nights);
+        const isMiddleDay = i > 0 && i < nights;
+        
+        // Determine the day type label
+        let dayTitle = "";
+        if (isArrivalDay) {
+          dayTitle = `Arrival - ${city.name}`;
+        } else if (isDepartureDay && !isLastCity) {
+          dayTitle = `Departure ${city.name} / Arrival ${cities[cityIndex + 1]?.name || ''}`;
+        } else if (isDepartureDay && isLastCity) {
+          dayTitle = `Departure - ${city.name}`;
+        } else {
+          dayTitle = `Day ${dayIndex} - ${city.name} (Night ${dayIndex})`;
+        }
+        
         newDays.push({
           cityId: city.id,
           cityName: city.name,
-          description: "",
+          title: dayTitle,
+          description: isArrivalDay 
+            ? `Arrival in ${city.name}. Check-in and orientation. Overnight stay (Night 1).`
+            : isDepartureDay && !isLastCity
+            ? `Departure from ${city.name} and arrival in ${cities[cityIndex + 1]?.name || ''}. Overnight stay in ${cities[cityIndex + 1]?.name || ''} (Night 1).`
+            : isDepartureDay && isLastCity
+            ? `Final day in ${city.name}. Check-out and departure.`
+            : `Full day in ${city.name}. Overnight stay (Night ${dayIndex}).`,
           photoUrl: "",
           hasFlights: false,
           flights: [],
@@ -259,8 +304,8 @@ const BasicInformationTab: React.FC = () => {
     });
     
     // Only update if the structure changed
-    if (JSON.stringify(newDays.map(d => ({ cityId: d.cityId, cityName: d.cityName }))) !== 
-        JSON.stringify(days.map((d: DayPlan) => ({ cityId: d.cityId, cityName: d.cityName })))) {
+    if (JSON.stringify(newDays.map(d => ({ cityId: d.cityId, cityName: d.cityName, title: d.title }))) !== 
+        JSON.stringify(days.map((d: DayPlan) => ({ cityId: d.cityId, cityName: d.cityName, title: d.title })))) {
       setValue("days", newDays);
     }
   }, [cities, days, setValue]);
@@ -780,85 +825,183 @@ const ItineraryTab: React.FC = () => {
 
 
 const InclusionsExclusionsTab: React.FC = () => {
-  const { control } = useFormContext<MultiCityPackageFormData>();
+  const { control, watch, setValue } = useFormContext<MultiCityPackageFormData>();
   const inc = useFieldArray({ control, name: "inclusions" });
   const exc = useFieldArray({ control, name: "exclusions" });
-  const addons = useFieldArray({ control, name: "addOns" });
   const [incText, setIncText] = useState("");
   const [incCat, setIncCat] = useState<InclusionCategory>("Transport");
   const [excText, setExcText] = useState("");
-  const [addOn, setAddOn] = useState({ name: "", description: "", price: 0 });
+
+  // Standard inclusions for multi-city tours
+  const standardInclusions = [
+    { id: "accommodation", text: "Accommodation", category: "Transport" as InclusionCategory },
+    { id: "breakfast", text: "Daily Breakfast", category: "Meals" as InclusionCategory },
+    { id: "all_meals", text: "All Meals (Breakfast, Lunch, Dinner)", category: "Meals" as InclusionCategory },
+    { id: "airport_transfer", text: "Airport Transfers", category: "Transport" as InclusionCategory },
+    { id: "intercity_transport", text: "Intercity Transportation", category: "Transport" as InclusionCategory },
+    { id: "tour_guide", text: "Professional Tour Guide", category: "Guide Services" as InclusionCategory },
+    { id: "local_guide", text: "Local Guides", category: "Guide Services" as InclusionCategory },
+    { id: "entry_fees", text: "Entry Fees to Attractions", category: "Entry Fees" as InclusionCategory },
+    { id: "travel_insurance", text: "Travel Insurance", category: "Insurance" as InclusionCategory },
+    { id: "visa_assistance", text: "Visa Assistance", category: "Activities" as InclusionCategory },
+    { id: "welcome_dinner", text: "Welcome Dinner", category: "Meals" as InclusionCategory },
+    { id: "farewell_dinner", text: "Farewell Dinner", category: "Meals" as InclusionCategory },
+    { id: "city_tours", text: "City Tours", category: "Activities" as InclusionCategory },
+    { id: "baggage_handling", text: "Baggage Handling", category: "Transport" as InclusionCategory },
+    { id: "tour_manager", text: "Tour Manager", category: "Guide Services" as InclusionCategory },
+  ];
+
+  // Standard exclusions for multi-city tours
+  const standardExclusions = [
+    { id: "international_flights", text: "International Flights" },
+    { id: "domestic_flights", text: "Domestic Flights" },
+    { id: "personal_expenses", text: "Personal Expenses" },
+    { id: "tips_gratuities", text: "Tips and Gratuities" },
+    { id: "optional_activities", text: "Optional Activities" },
+    { id: "travel_insurance", text: "Travel Insurance" },
+    { id: "visa_fees", text: "Visa Fees" },
+    { id: "airport_taxes", text: "Airport Taxes" },
+    { id: "laundry", text: "Laundry Services" },
+    { id: "phone_calls", text: "Phone Calls and Internet" },
+    { id: "beverages", text: "Beverages (unless specified)" },
+    { id: "porterage", text: "Porterage Fees" },
+    { id: "single_supplement", text: "Single Room Supplement" },
+  ];
+
+  const inclusions = watch("inclusions");
+  const exclusions = watch("exclusions");
+
+  const toggleStandardInclusion = (item: typeof standardInclusions[0]) => {
+    const existingIndex = inclusions.findIndex(
+      (inc: InclusionItem) => inc.text === item.text
+    );
+    
+    if (existingIndex >= 0) {
+      inc.remove(existingIndex);
+    } else {
+      inc.append({ id: generateId(), category: item.category, text: item.text });
+    }
+  };
+
+  const toggleStandardExclusion = (item: typeof standardExclusions[0]) => {
+    const existingIndex = exclusions.findIndex(
+      (exc: ExclusionItem) => exc.text === item.text
+    );
+    
+    if (existingIndex >= 0) {
+      exc.remove(existingIndex);
+    } else {
+      exc.append({ id: generateId(), text: item.text });
+    }
+  };
+
+  const isInclusionSelected = (text: string) => {
+    return inclusions.some((inc: InclusionItem) => inc.text === text);
+  };
+
+  const isExclusionSelected = (text: string) => {
+    return exclusions.some((exc: ExclusionItem) => exc.text === text);
+  };
+
   return (
     <div className="space-y-6">
       <Card className="package-selector-glass package-shadow-fix">
         <CardHeader><CardTitle>What&apos;s Included</CardTitle></CardHeader>
-        <CardContent className="space-y-3">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
-            <Select onValueChange={(v) => setIncCat(v as InclusionCategory)}>
-              <SelectTrigger><SelectValue placeholder="Category" /></SelectTrigger>
-              <SelectContent>
-                {["Transport","Activities","Meals","Guide Services","Entry Fees","Insurance"].map(c => (
-                  <SelectItem key={c} value={c}>{c}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <div className="md:col-span-3 flex gap-2">
-              <Input value={incText} onChange={(e) => setIncText(e.target.value)} placeholder="Add inclusion" />
-              <Button type="button" onClick={() => { if (incText.trim()) { inc.append({ id: generateId(), category: incCat, text: incText.trim() }); setIncText(""); } }}>Add</Button>
+        <CardContent className="space-y-4">
+          {/* Standard Inclusions */}
+          <div>
+            <h3 className="text-sm font-medium mb-3">Standard Inclusions</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              {standardInclusions.map((item) => (
+                <label key={item.id} className="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-800">
+                  <input
+                    type="checkbox"
+                    checked={isInclusionSelected(item.text)}
+                    onChange={() => toggleStandardInclusion(item)}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-sm">{item.text}</span>
+                </label>
+              ))}
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {inc.fields.map((f, i) => (
-              <Badge key={f.id} variant="outline" className="flex items-center gap-2">
-                <span className="text-xs">{(f as any).category}:</span>
-                <span>{(f as any).text}</span>
-                <button type="button" onClick={() => inc.remove(i)} aria-label="remove" className="text-xs">×</button>
-              </Badge>
-            ))}
+
+          {/* Custom Inclusions */}
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+            <h3 className="text-sm font-medium mb-3">Custom Inclusions</h3>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+              <Select onValueChange={(v) => setIncCat(v as InclusionCategory)}>
+                <SelectTrigger><SelectValue placeholder="Category" /></SelectTrigger>
+                <SelectContent>
+                  {["Transport","Activities","Meals","Guide Services","Entry Fees","Insurance"].map(c => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <div className="md:col-span-3 flex gap-2">
+                <Input value={incText} onChange={(e) => setIncText(e.target.value)} placeholder="Add custom inclusion" />
+                <Button type="button" onClick={() => { if (incText.trim()) { inc.append({ id: generateId(), category: incCat, text: incText.trim() }); setIncText(""); } }}>Add</Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Selected Inclusions */}
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+            <h3 className="text-sm font-medium mb-3">Selected Inclusions ({inclusions.length})</h3>
+            <div className="flex flex-wrap gap-2">
+              {inc.fields.map((f, i) => (
+                <Badge key={f.id} variant="outline" className="flex items-center gap-2">
+                  <span className="text-xs">{(f as any).category}:</span>
+                  <span>{(f as any).text}</span>
+                  <button type="button" onClick={() => inc.remove(i)} aria-label="remove" className="text-xs">×</button>
+                </Badge>
+              ))}
+            </div>
           </div>
         </CardContent>
       </Card>
 
       <Card className="package-selector-glass package-shadow-fix">
         <CardHeader><CardTitle>What&apos;s Not Included</CardTitle></CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex gap-2">
-            <Input value={excText} onChange={(e) => setExcText(e.target.value)} placeholder="Add exclusion" />
-            <Button type="button" onClick={() => { if (excText.trim()) { exc.append({ id: generateId(), text: excText.trim() }); setExcText(""); } }}>Add</Button>
+        <CardContent className="space-y-4">
+          {/* Standard Exclusions */}
+          <div>
+            <h3 className="text-sm font-medium mb-3">Standard Exclusions</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              {standardExclusions.map((item) => (
+                <label key={item.id} className="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-800">
+                  <input
+                    type="checkbox"
+                    checked={isExclusionSelected(item.text)}
+                    onChange={() => toggleStandardExclusion(item)}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-sm">{item.text}</span>
+                </label>
+              ))}
+            </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {exc.fields.map((f, i) => (
-              <Badge key={f.id} variant="secondary" className="flex items-center gap-2">
-                <span>{(f as any).text}</span>
-                <button type="button" onClick={() => exc.remove(i)} aria-label="remove" className="text-xs">×</button>
-              </Badge>
-            ))}
-          </div>
-      </CardContent>
-      </Card>
 
-      <Card className="package-selector-glass package-shadow-fix">
-        <CardHeader><CardTitle>Optional Add-ons</CardTitle></CardHeader>
-        <CardContent className="space-y-3">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-            <Input placeholder="Name" value={addOn.name} onChange={(e) => setAddOn(s => ({ ...s, name: e.target.value }))} />
-            <Input placeholder="Description" value={addOn.description} onChange={(e) => setAddOn(s => ({ ...s, description: e.target.value }))} />
-            <Input type="number" placeholder="Price" value={addOn.price} onChange={(e) => setAddOn(s => ({ ...s, price: Number(e.target.value || 0) }))} />
+          {/* Custom Exclusions */}
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+            <h3 className="text-sm font-medium mb-3">Custom Exclusions</h3>
+            <div className="flex gap-2">
+              <Input value={excText} onChange={(e) => setExcText(e.target.value)} placeholder="Add custom exclusion" />
+              <Button type="button" onClick={() => { if (excText.trim()) { exc.append({ id: generateId(), text: excText.trim() }); setExcText(""); } }}>Add</Button>
+            </div>
           </div>
-          <Button type="button" onClick={() => { if (addOn.name.trim()) { addons.append({ id: generateId(), ...addOn }); setAddOn({ name: "", description: "", price: 0 }); } }}>Add Add-on</Button>
-          <div className="space-y-2">
-            {addons.fields.map((f, i) => (
-              <div key={f.id} className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 rounded px-3 py-2">
-                <div>
-                  <div className="font-medium">{(f as any).name}</div>
-                  <div className="text-xs text-gray-500">{(f as any).description || ""}</div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="text-sm font-semibold">${Number((f as any).price || 0).toFixed(2)}</div>
-                  <Button variant="destructive" size="icon" onClick={() => addons.remove(i)}><FaTrash /></Button>
-                </div>
-              </div>
-            ))}
+
+          {/* Selected Exclusions */}
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+            <h3 className="text-sm font-medium mb-3">Selected Exclusions ({exclusions.length})</h3>
+            <div className="flex flex-wrap gap-2">
+              {exc.fields.map((f, i) => (
+                <Badge key={f.id} variant="secondary" className="flex items-center gap-2">
+                  <span>{(f as any).text}</span>
+                  <button type="button" onClick={() => exc.remove(i)} aria-label="remove" className="text-xs">×</button>
+                </Badge>
+              ))}
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -869,27 +1012,97 @@ const InclusionsExclusionsTab: React.FC = () => {
 const PricingDatesTab: React.FC = () => {
   const { watch, setValue } = useFormContext<MultiCityPackageFormData>();
   const pricing = watch("pricing");
-  
-  const [newVehicle, setNewVehicle] = useState({
-    vehicleType: "",
-    maxCapacity: 1,
-    price: 0,
-    description: "",
-  });
 
-  const addVehicle = () => {
-    if (!newVehicle.vehicleType.trim() || newVehicle.price <= 0) return;
-    const vehicle: Vehicle = {
+  // Initialize with one default pricing row when SIC pricing is selected
+  React.useEffect(() => {
+    if (pricing.pricingType === "SIC" && pricing.pricingRows.length === 0) {
+      const defaultRow: PricingRow = {
+        id: generateId(),
+        numberOfAdults: 1,
+        numberOfChildren: 0,
+        totalPrice: 0,
+      };
+      setValue("pricing.pricingRows", [defaultRow]);
+    }
+  }, [pricing.pricingType, pricing.pricingRows.length, setValue]);
+
+  // Initialize with one default private package row when PRIVATE_PACKAGE pricing is selected
+  React.useEffect(() => {
+    if (pricing.pricingType === "PRIVATE_PACKAGE" && pricing.privatePackageRows.length === 0) {
+      const defaultRow: PrivatePackageRow = {
+        id: generateId(),
+        numberOfAdults: 1,
+        numberOfChildren: 0,
+        carType: "",
+        vehicleCapacity: 4,
+        totalPrice: 0,
+      };
+      setValue("pricing.privatePackageRows", [defaultRow]);
+    }
+  }, [pricing.pricingType, pricing.privatePackageRows.length, setValue]);
+
+  const addPricingRow = () => {
+    const newRow: PricingRow = {
       id: generateId(),
-      ...newVehicle,
+      numberOfAdults: 1,
+      numberOfChildren: 0,
+      totalPrice: 0,
     };
-    setValue("pricing.vehicles", [...pricing.vehicles, vehicle]);
-    setNewVehicle({
-      vehicleType: "",
-      maxCapacity: 1,
-      price: 0,
-      description: "",
-    });
+    setValue("pricing.pricingRows", [...pricing.pricingRows, newRow]);
+  };
+
+  const removePricingRow = (index: number) => {
+    const rows = pricing.pricingRows.filter((_, i) => i !== index);
+    setValue("pricing.pricingRows", rows);
+  };
+
+  const updatePricingRow = (index: number, field: keyof PricingRow, value: number) => {
+    const rows = [...pricing.pricingRows];
+    const currentRow = rows[index];
+    if (currentRow) {
+      rows[index] = { 
+        id: currentRow.id,
+        numberOfAdults: currentRow.numberOfAdults,
+        numberOfChildren: currentRow.numberOfChildren,
+        totalPrice: currentRow.totalPrice,
+        [field]: value 
+      } as PricingRow;
+      setValue("pricing.pricingRows", rows);
+    }
+  };
+
+  const addPrivatePackageRow = () => {
+    const newRow: PrivatePackageRow = {
+      id: generateId(),
+      numberOfAdults: 1,
+      numberOfChildren: 0,
+      carType: "",
+      vehicleCapacity: 4,
+      totalPrice: 0,
+    };
+    setValue("pricing.privatePackageRows", [...pricing.privatePackageRows, newRow]);
+  };
+
+  const removePrivatePackageRow = (index: number) => {
+    const rows = pricing.privatePackageRows.filter((_, i) => i !== index);
+    setValue("pricing.privatePackageRows", rows);
+  };
+
+  const updatePrivatePackageRow = (index: number, field: keyof PrivatePackageRow, value: number | string) => {
+    const rows = [...pricing.privatePackageRows];
+    const currentRow = rows[index];
+    if (currentRow) {
+      rows[index] = { 
+        id: currentRow.id,
+        numberOfAdults: currentRow.numberOfAdults,
+        numberOfChildren: currentRow.numberOfChildren,
+        carType: currentRow.carType,
+        vehicleCapacity: currentRow.vehicleCapacity,
+        totalPrice: currentRow.totalPrice,
+        [field]: value 
+      } as PrivatePackageRow;
+      setValue("pricing.privatePackageRows", rows);
+    }
   };
 
   return (
@@ -903,207 +1116,251 @@ const PricingDatesTab: React.FC = () => {
               <input
                 type="radio"
                 name="pricing-type"
-                checked={pricing.pricingType === "STANDARD"}
-                onChange={() => setValue("pricing.pricingType", "STANDARD")}
+                checked={pricing.pricingType === "SIC"}
+                onChange={() => setValue("pricing.pricingType", "SIC")}
                 className="w-4 h-4"
               />
               <div>
-                <div className="font-medium">Standard Pricing</div>
-                <div className="text-xs text-gray-500">Per person pricing only</div>
+                <div className="font-medium">SIC Pricing</div>
+                <div className="text-xs text-gray-500">Tabular pricing format</div>
               </div>
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="radio"
                 name="pricing-type"
-                checked={pricing.pricingType === "GROUP"}
-                onChange={() => setValue("pricing.pricingType", "GROUP")}
+                checked={pricing.pricingType === "PRIVATE_PACKAGE"}
+                onChange={() => setValue("pricing.pricingType", "PRIVATE_PACKAGE")}
                 className="w-4 h-4"
               />
               <div>
-                <div className="font-medium">Group Pricing</div>
-                <div className="text-xs text-gray-500">Per person pricing + vehicle options</div>
+                <div className="font-medium">Private Package</div>
+                <div className="text-xs text-gray-500">Tabular pricing with vehicle details</div>
               </div>
             </label>
           </div>
         </CardContent>
       </Card>
 
-      {/* Per Person Pricing (shown for both types) */}
+      {/* SIC Pricing: Tabular Format */}
+      {pricing.pricingType === "SIC" && (
       <Card className="package-selector-glass package-shadow-fix">
         <CardHeader>
-          <CardTitle>Per Person Pricing</CardTitle>
+            <CardTitle>SIC Pricing</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {/* Adult Price */}
-            <div>
-              <label className="text-sm font-medium mb-1 block">Adult Price *</label>
+            {/* Pricing Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-sm">
+                <thead>
+                  <tr className="border-b border-gray-200 dark:border-gray-700">
+                    <th className="text-left py-2 px-3 font-medium text-xs">No. of Adults</th>
+                    <th className="text-left py-2 px-3 font-medium text-xs">No. of Children</th>
+                    <th className="text-left py-2 px-3 font-medium text-xs">Total Price (Adult + Child)</th>
+                    <th className="text-left py-2 px-3 font-medium text-xs w-16">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pricing.pricingRows.map((row, index) => (
+                    <tr key={row.id} className="border-b border-gray-200 dark:border-gray-700">
+                      <td className="py-2 px-3">
               <Input
                 type="number"
                 min={0}
-                value={pricing.adultPrice}
-                onChange={(e) => setValue("pricing.adultPrice", Number(e.target.value || 0))}
-                className="package-text-fix"
-                placeholder="0"
-              />
+                          value={row.numberOfAdults}
+                          onChange={(e) => updatePricingRow(index, "numberOfAdults", Number(e.target.value || 0))}
+                          className="package-text-fix w-20 h-8 text-sm"
+                        />
+                      </td>
+                      <td className="py-2 px-3">
+              <Input
+                type="number"
+                min={0}
+                          value={row.numberOfChildren}
+                          onChange={(e) => updatePricingRow(index, "numberOfChildren", Number(e.target.value || 0))}
+                          className="package-text-fix w-20 h-8 text-sm"
+                        />
+                      </td>
+                      <td className="py-2 px-3">
+              <Input
+                type="number"
+                min={0}
+                          step="0.01"
+                          value={row.totalPrice}
+                          onChange={(e) => updatePricingRow(index, "totalPrice", Number(e.target.value || 0))}
+                          className="package-text-fix w-28 h-8 text-sm"
+                          placeholder="0.00"
+                        />
+                      </td>
+                      <td className="py-2 px-3">
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => removePricingRow(index)}
+                          className="h-8 w-8 p-0"
+                          disabled={pricing.pricingRows.length === 1}
+                        >
+                          <FaTrash className="h-3 w-3" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
 
-            {/* Child Price */}
-            <div>
-              <label className="text-sm font-medium mb-1 block">Child Price</label>
-              <Input
-                type="number"
-                min={0}
-                value={pricing.childPrice}
-                onChange={(e) => setValue("pricing.childPrice", Number(e.target.value || 0))}
-                className="package-text-fix"
-                placeholder="0"
-              />
+            {/* Add Pricing Row Button */}
+            <div className="flex justify-end">
+              <Button type="button" onClick={addPricingRow} className="package-button-fix">
+                <FaPlus className="mr-2" /> Add Pricing Row
+              </Button>
             </div>
 
-            {/* Child Min Age */}
-            <div>
-              <label className="text-sm font-medium mb-1 block">Child Min Age</label>
-              <Input
-                type="number"
-                min={0}
-                value={pricing.childMinAge}
-                onChange={(e) => setValue("pricing.childMinAge", Number(e.target.value || 3))}
-                className="package-text-fix"
-              />
+            {/* Child Age Restriction (at the end) */}
+            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex items-center gap-2 mb-3">
+                <input
+                  type="checkbox"
+                  id="child-age-restriction"
+                  checked={pricing.hasChildAgeRestriction}
+                  onChange={(e) => {
+                    setValue("pricing.hasChildAgeRestriction", e.target.checked);
+                    if (!e.target.checked) {
+                      setValue("pricing.childMinAge", undefined);
+                      setValue("pricing.childMaxAge", undefined);
+                    }
+                  }}
+                  className="w-4 h-4"
+                />
+                <label htmlFor="child-age-restriction" className="text-xs font-medium cursor-pointer">
+                  Child Age Restriction
+                </label>
+              </div>
+              
+              {pricing.hasChildAgeRestriction && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 ml-6">
+                  <div>
+                    <label className="text-xs font-medium mb-1 block">Child Min Age *</label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={pricing.childMinAge || ""}
+                      onChange={(e) => setValue("pricing.childMinAge", Number(e.target.value || 0))}
+                      className="package-text-fix h-8 text-sm"
+                      placeholder="e.g., 3"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium mb-1 block">Child Max Age *</label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={pricing.childMaxAge || ""}
+                      onChange={(e) => setValue("pricing.childMaxAge", Number(e.target.value || 0))}
+                      className="package-text-fix h-8 text-sm"
+                      placeholder="e.g., 12"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
-
-            {/* Child Max Age */}
-            <div>
-              <label className="text-sm font-medium mb-1 block">Child Max Age</label>
-              <Input
-                type="number"
-                min={0}
-                value={pricing.childMaxAge}
-                onChange={(e) => setValue("pricing.childMaxAge", Number(e.target.value || 12))}
-                className="package-text-fix"
-              />
-            </div>
-
-            {/* Infant Price */}
-            <div>
-              <label className="text-sm font-medium mb-1 block">Infant Price</label>
-              <Input
-                type="number"
-                min={0}
-                value={pricing.infantPrice}
-                onChange={(e) => setValue("pricing.infantPrice", Number(e.target.value || 0))}
-                className="package-text-fix"
-                placeholder="0"
-              />
-            </div>
-
-            {/* Infant Max Age */}
-            <div>
-              <label className="text-sm font-medium mb-1 block">Infant Max Age</label>
-              <Input
-                type="number"
-                min={0}
-                value={pricing.infantMaxAge}
-                onChange={(e) => setValue("pricing.infantMaxAge", Number(e.target.value || 2))}
-                className="package-text-fix"
-              />
-            </div>
-          </div>
         </CardContent>
       </Card>
+      )}
 
-      {/* Vehicle Options (only for GROUP pricing) */}
-      {pricing.pricingType === "GROUP" && (
+      {/* Private Package Pricing: Tabular Format */}
+      {pricing.pricingType === "PRIVATE_PACKAGE" && (
         <Card className="package-selector-glass package-shadow-fix">
           <CardHeader>
-            <CardTitle>Vehicle Options</CardTitle>
+            <CardTitle>Private Package Pricing</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Add New Vehicle Form */}
-            <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50">
-              <h4 className="font-medium mb-3">Add Vehicle Option</h4>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                <div>
-                  <label className="text-xs font-medium mb-1 block">Vehicle Type *</label>
-                  <Input
-                    placeholder="e.g., Sedan, SUV, Van"
-                    value={newVehicle.vehicleType}
-                    onChange={(e) => setNewVehicle(s => ({ ...s, vehicleType: e.target.value }))}
-                    className="package-text-fix"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium mb-1 block">Max Capacity *</label>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={newVehicle.maxCapacity}
-                    onChange={(e) => setNewVehicle(s => ({ ...s, maxCapacity: Number(e.target.value || 1) }))}
-                    className="package-text-fix"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium mb-1 block">Price *</label>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={newVehicle.price}
-                    onChange={(e) => setNewVehicle(s => ({ ...s, price: Number(e.target.value || 0) }))}
-                    className="package-text-fix"
-                    placeholder="Total price for vehicle"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium mb-1 block">Description</label>
-                  <Input
-                    placeholder="Optional"
-                    value={newVehicle.description}
-                    onChange={(e) => setNewVehicle(s => ({ ...s, description: e.target.value }))}
-                    className="package-text-fix"
-                  />
-                </div>
-              </div>
-              <div className="mt-3">
-                <Button type="button" onClick={addVehicle} className="package-button-fix">
-                  <FaPlus className="mr-2" /> Add Vehicle
-                </Button>
-              </div>
+            {/* Pricing Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-sm">
+                <thead>
+                  <tr className="border-b border-gray-200 dark:border-gray-700">
+                    <th className="text-left py-2 px-3 font-medium text-xs">No. of Adults</th>
+                    <th className="text-left py-2 px-3 font-medium text-xs">No. of Children</th>
+                    <th className="text-left py-2 px-3 font-medium text-xs">Type of Car</th>
+                    <th className="text-left py-2 px-3 font-medium text-xs">Vehicle Capacity</th>
+                    <th className="text-left py-2 px-3 font-medium text-xs">Total Price</th>
+                    <th className="text-left py-2 px-3 font-medium text-xs w-16">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pricing.privatePackageRows.map((row, index) => (
+                    <tr key={row.id} className="border-b border-gray-200 dark:border-gray-700">
+                      <td className="py-2 px-3">
+                        <Input
+                          type="number"
+                          min={0}
+                          value={row.numberOfAdults}
+                          onChange={(e) => updatePrivatePackageRow(index, "numberOfAdults", Number(e.target.value || 0))}
+                          className="package-text-fix w-20 h-8 text-sm"
+                        />
+                      </td>
+                      <td className="py-2 px-3">
+                        <Input
+                          type="number"
+                          min={0}
+                          value={row.numberOfChildren}
+                          onChange={(e) => updatePrivatePackageRow(index, "numberOfChildren", Number(e.target.value || 0))}
+                          className="package-text-fix w-20 h-8 text-sm"
+                        />
+                      </td>
+                      <td className="py-2 px-3">
+                        <Input
+                          placeholder="e.g., Sedan, SUV"
+                          value={row.carType}
+                          onChange={(e) => updatePrivatePackageRow(index, "carType", e.target.value)}
+                          className="package-text-fix w-24 h-8 text-sm"
+                        />
+                      </td>
+                      <td className="py-2 px-3">
+                        <Input
+                          type="number"
+                          min={1}
+                          value={row.vehicleCapacity}
+                          onChange={(e) => updatePrivatePackageRow(index, "vehicleCapacity", Number(e.target.value || 1))}
+                          className="package-text-fix w-20 h-8 text-sm"
+                        />
+                      </td>
+                      <td className="py-2 px-3">
+                        <Input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          value={row.totalPrice}
+                          onChange={(e) => updatePrivatePackageRow(index, "totalPrice", Number(e.target.value || 0))}
+                          className="package-text-fix w-28 h-8 text-sm"
+                          placeholder="0.00"
+                        />
+                      </td>
+                      <td className="py-2 px-3">
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => removePrivatePackageRow(index)}
+                          className="h-8 w-8 p-0"
+                          disabled={pricing.privatePackageRows.length === 1}
+                        >
+                          <FaTrash className="h-3 w-3" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
 
-            {/* Existing Vehicles */}
-            <div className="space-y-3">
-              {pricing.vehicles.map((vehicle, idx) => (
-                <div key={vehicle.id} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div>
-                      <div className="font-medium">{vehicle.vehicleType}</div>
-                      {vehicle.description && <div className="text-xs text-gray-500">{vehicle.description}</div>}
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      Max {vehicle.maxCapacity} {vehicle.maxCapacity === 1 ? 'person' : 'people'}
-                    </div>
-                    <div className="font-semibold text-green-600">
-                      ${vehicle.price}
-                    </div>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => {
-                      const vehicles = pricing.vehicles.filter((_, i) => i !== idx);
-                      setValue("pricing.vehicles", vehicles);
-                    }}
-                  >
-                    <FaTrash />
-                  </Button>
-                </div>
-              ))}
-              {pricing.vehicles.length === 0 && (
-                <p className="text-sm text-gray-500 text-center py-4">No vehicles added yet. Add at least one vehicle option.</p>
-              )}
+            {/* Add Pricing Row Button */}
+            <div className="flex justify-end">
+              <Button type="button" onClick={addPrivatePackageRow} className="package-button-fix">
+                <FaPlus className="mr-2" /> Add Pricing Row
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -1127,10 +1384,17 @@ const ReviewPublishTab: React.FC<{ onPreview?: () => void }> = ({ onPreview }) =
           <div><span className="font-medium">Title:</span> {data.basic.title || "—"}</div>
           <div><span className="font-medium">Region:</span> {data.basic.destinationRegion || "—"}</div>
           <div><span className="font-medium">Cities:</span> {data.cities.length} • <span className="font-medium">Nights:</span> {totalNights}</div>
-          <div><span className="font-medium">Pricing Type:</span> {data.pricing.pricingType === "STANDARD" ? "Standard (Per Person)" : "Group (Per Person + Vehicles)"}</div>
-          <div><span className="font-medium">Adult Price:</span> ${data.pricing.adultPrice}</div>
-          {data.pricing.pricingType === "GROUP" && (
-            <div><span className="font-medium">Vehicle Options:</span> {data.pricing.vehicles.length}</div>
+          <div><span className="font-medium">Pricing Type:</span> {data.pricing.pricingType === "SIC" ? "SIC (Tabular)" : "Private Package (Tabular)"}</div>
+          {data.pricing.pricingType === "SIC" && (
+            <>
+              <div><span className="font-medium">Pricing Rows:</span> {data.pricing.pricingRows.length}</div>
+              {data.pricing.hasChildAgeRestriction && (
+                <div><span className="font-medium">Child Age:</span> {data.pricing.childMinAge}-{data.pricing.childMaxAge} years</div>
+              )}
+            </>
+          )}
+          {data.pricing.pricingType === "PRIVATE_PACKAGE" && (
+            <div><span className="font-medium">Private Package Rows:</span> {data.pricing.privatePackageRows.length}</div>
           )}
           {data.basic.packageValidityDate && (
             <div><span className="font-medium">Valid Until:</span> {data.basic.packageValidityDate}</div>
