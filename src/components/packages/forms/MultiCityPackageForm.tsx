@@ -1182,13 +1182,13 @@ const PricingDatesTab: React.FC = () => {
                         />
                       </td>
                       <td className="py-2 px-3">
-              <Input
-                type="number"
-                min={0}
+                        <Input
+                          type="number"
+                          min={0}
                           step="0.01"
                           value={row.totalPrice}
                           onChange={(e) => updatePricingRow(index, "totalPrice", Number(e.target.value || 0))}
-                          className="package-text-fix w-28 h-8 text-sm"
+                          className="package-text-fix w-28 h-8 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                           placeholder="0.00"
                         />
                       </td>
@@ -1334,7 +1334,7 @@ const PricingDatesTab: React.FC = () => {
                           step="0.01"
                           value={row.totalPrice}
                           onChange={(e) => updatePrivatePackageRow(index, "totalPrice", Number(e.target.value || 0))}
-                          className="package-text-fix w-28 h-8 text-sm"
+                          className="package-text-fix w-28 h-8 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                           placeholder="0.00"
                         />
                       </td>
