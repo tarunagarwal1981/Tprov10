@@ -22,8 +22,12 @@ export default function FixedDepartureFlightPackagePage() {
         throw new Error('User not authenticated');
       }
 
-      // Base price is the adult per-person price
-      const basePrice = data.pricing.adultPrice || 0;
+      // Base price: use first pricing row's total price for SIC or PRIVATE_PACKAGE
+      const basePrice = (data.pricing.pricingType === 'SIC' && data.pricing.pricingRows.length > 0)
+        ? (data.pricing.pricingRows[0]?.totalPrice || 0)
+        : (data.pricing.pricingType === 'PRIVATE_PACKAGE' && data.pricing.privatePackageRows.length > 0)
+        ? (data.pricing.privatePackageRows[0]?.totalPrice || 0)
+        : 0;
 
       // Transform and insert main package
       const packageData = {
@@ -75,8 +79,12 @@ export default function FixedDepartureFlightPackagePage() {
         throw new Error('User not authenticated');
       }
 
-      // Base price is the adult per-person price
-      const basePrice = data.pricing.adultPrice || 0;
+      // Base price: use first pricing row's total price for SIC or PRIVATE_PACKAGE
+      const basePrice = (data.pricing.pricingType === 'SIC' && data.pricing.pricingRows.length > 0)
+        ? (data.pricing.pricingRows[0]?.totalPrice || 0)
+        : (data.pricing.pricingType === 'PRIVATE_PACKAGE' && data.pricing.privatePackageRows.length > 0)
+        ? (data.pricing.privatePackageRows[0]?.totalPrice || 0)
+        : 0;
 
       // Transform and insert main package
       const packageData = {
@@ -112,15 +120,12 @@ export default function FixedDepartureFlightPackagePage() {
       const packageId = packageResult.id;
 
       // Insert pricing configuration
-      const pricingData = {
+      const pricingData: any = {
         package_id: packageId,
         pricing_type: data.pricing.pricingType,
-        adult_price: data.pricing.adultPrice,
-        child_price: data.pricing.childPrice,
-        child_min_age: data.pricing.childMinAge,
-        child_max_age: data.pricing.childMaxAge,
-        infant_price: data.pricing.infantPrice,
-        infant_max_age: data.pricing.infantMaxAge,
+        has_child_age_restriction: data.pricing.hasChildAgeRestriction || false,
+        child_min_age: data.pricing.hasChildAgeRestriction ? data.pricing.childMinAge : null,
+        child_max_age: data.pricing.hasChildAgeRestriction ? data.pricing.childMaxAge : null,
       };
       
       const { data: pricingResult, error: pricingError } = await (supabase as any)
@@ -134,23 +139,43 @@ export default function FixedDepartureFlightPackagePage() {
         throw pricingError;
       }
 
-      // Insert vehicles for GROUP pricing type
-      if (data.pricing.pricingType === 'GROUP' && data.pricing.vehicles && data.pricing.vehicles.length > 0) {
-        const vehiclesData = data.pricing.vehicles.map((vehicle, index) => ({
+      // Insert pricing rows for SIC pricing type
+      if (data.pricing.pricingType === 'SIC' && data.pricing.pricingRows && data.pricing.pricingRows.length > 0) {
+        const pricingRowsData = data.pricing.pricingRows.map((row, index) => ({
           pricing_package_id: pricingResult.id,
-          vehicle_type: vehicle.vehicleType,
-          max_capacity: vehicle.maxCapacity,
-          price: vehicle.price,
-          description: vehicle.description || null,
+          number_of_adults: row.numberOfAdults,
+          number_of_children: row.numberOfChildren,
+          total_price: row.totalPrice,
           display_order: index + 1,
         }));
         
-        const { error: vehiclesError } = await (supabase as any)
-          .from('fixed_departure_flight_pricing_vehicles')
-          .insert(vehiclesData);
+        const { error: pricingRowsError } = await (supabase as any)
+          .from('fixed_departure_flight_pricing_rows')
+          .insert(pricingRowsData);
         
-        if (vehiclesError) {
-          console.error('Vehicles insert error:', vehiclesError);
+        if (pricingRowsError) {
+          console.error('Pricing rows insert error:', pricingRowsError);
+        }
+      }
+
+      // Insert private package rows for PRIVATE_PACKAGE pricing type
+      if (data.pricing.pricingType === 'PRIVATE_PACKAGE' && data.pricing.privatePackageRows && data.pricing.privatePackageRows.length > 0) {
+        const privatePackageRowsData = data.pricing.privatePackageRows.map((row, index) => ({
+          pricing_package_id: pricingResult.id,
+          number_of_adults: row.numberOfAdults,
+          number_of_children: row.numberOfChildren,
+          car_type: row.carType,
+          vehicle_capacity: row.vehicleCapacity,
+          total_price: row.totalPrice,
+          display_order: index + 1,
+        }));
+        
+        const { error: privatePackageRowsError } = await (supabase as any)
+          .from('fixed_departure_flight_private_package_rows')
+          .insert(privatePackageRowsData);
+        
+        if (privatePackageRowsError) {
+          console.error('Private package rows insert error:', privatePackageRowsError);
         }
       }
 
@@ -283,26 +308,6 @@ export default function FixedDepartureFlightPackagePage() {
         
         if (exclusionsError) {
           console.error('Exclusions insert error:', exclusionsError);
-        }
-      }
-
-      // Insert addons
-      if (data.addOns && data.addOns.length > 0) {
-        const addonsData = data.addOns.map((addon, index) => ({
-          package_id: packageId,
-          name: addon.name,
-          description: addon.description || null,
-          price: addon.price || 0,
-          is_active: true,
-          display_order: index + 1,
-        }));
-        
-        const { error: addonsError } = await (supabase as any)
-          .from('fixed_departure_flight_package_addons')
-          .insert(addonsData);
-        
-        if (addonsError) {
-          console.error('Addons insert error:', addonsError);
         }
       }
 
