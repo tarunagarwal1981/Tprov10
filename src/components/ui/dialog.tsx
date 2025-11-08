@@ -78,6 +78,7 @@ export interface DialogContentProps
   showCloseButton?: boolean
   closeOnOverlayClick?: boolean
   preventClose?: boolean
+  overlayVariant?: 'default' | 'glass' | 'subtle'
 }
 
 const DialogContent = React.forwardRef<
@@ -91,6 +92,7 @@ const DialogContent = React.forwardRef<
   showCloseButton = true,
   closeOnOverlayClick = true,
   preventClose = false,
+  overlayVariant,
   ...props 
 }, ref) => {
   const [isMobile, setIsMobile] = React.useState(false)
@@ -105,10 +107,13 @@ const DialogContent = React.forwardRef<
   }, [])
 
   const effectiveVariant = isMobile && variant === "default" ? "mobile" : variant
+  
+  // Determine overlay variant: use overlayVariant prop if provided, otherwise use variant logic
+  const effectiveOverlayVariant = overlayVariant || (variant === "glass" ? "glass" : "default")
 
   return (
     <DialogPortal>
-      <DialogOverlay variant={variant === "glass" ? "glass" : "default"} />
+      <DialogOverlay variant={effectiveOverlayVariant} />
       <DialogPrimitive.Content
         ref={ref}
         className={cn(dialogContentVariants({ variant: effectiveVariant, size, className }))}

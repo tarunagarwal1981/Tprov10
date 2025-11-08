@@ -179,9 +179,16 @@ export default function MultiCityPackagePage() {
         }
       }
 
-      // Insert day plans with flights
+      // Insert day plans
       if (data.days && data.days.length > 0) {
         for (const [dayIndex, day] of data.days.entries()) {
+          // Prepare time slots JSON
+          const timeSlots = day.timeSlots || {
+            morning: { time: "", activities: [], transfers: [] },
+            afternoon: { time: "", activities: [], transfers: [] },
+            evening: { time: "", activities: [], transfers: [] },
+          };
+
           const dayPlanData = {
             package_id: packageId,
             city_id: day.cityId || null,
@@ -190,7 +197,8 @@ export default function MultiCityPackagePage() {
             title: day.title || null,
             description: day.description || null,
             photo_url: day.photoUrl || null,
-            has_flights: day.hasFlights || false,
+            has_flights: false,
+            time_slots: timeSlots,
           };
           
           const { data: dayResult, error: dayError } = await (supabase as any)
@@ -202,28 +210,6 @@ export default function MultiCityPackagePage() {
           if (dayError) {
             console.error('Day plan insert error:', dayError);
             continue;
-          }
-
-          // Insert flights for this day if any
-          if (day.hasFlights && day.flights && day.flights.length > 0) {
-            const flightsData = day.flights.map((flight, flightIndex) => ({
-              day_plan_id: dayResult.id,
-              departure_city: flight.departureCity,
-              departure_time: flight.departureTime || null,
-              arrival_city: flight.arrivalCity,
-              arrival_time: flight.arrivalTime || null,
-              airline: flight.airline || null,
-              flight_number: flight.flightNumber || null,
-              flight_order: flightIndex + 1,
-            }));
-            
-            const { error: flightsError } = await (supabase as any)
-              .from('multi_city_package_day_flights')
-              .insert(flightsData);
-            
-            if (flightsError) {
-              console.error('Flights insert error:', flightsError);
-            }
           }
         }
       }

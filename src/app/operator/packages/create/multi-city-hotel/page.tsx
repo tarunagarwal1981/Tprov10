@@ -179,9 +179,16 @@ export default function MultiCityHotelPackagePage() {
         }
       }
 
-      // Insert day plans with flights
+      // Insert day plans
       if (data.days && data.days.length > 0) {
         for (const [dayIndex, day] of data.days.entries()) {
+          // Prepare time slots JSON
+          const timeSlots = day.timeSlots || {
+            morning: { time: "", activities: [], transfers: [] },
+            afternoon: { time: "", activities: [], transfers: [] },
+            evening: { time: "", activities: [], transfers: [] },
+          };
+
           const dayPlanData = {
             package_id: packageId,
             city_id: day.cityId || null,
@@ -190,7 +197,8 @@ export default function MultiCityHotelPackagePage() {
             title: day.title || null,
             description: day.description || null,
             photo_url: day.photoUrl || null,
-            has_flights: day.hasFlights || false,
+            has_flights: false,
+            time_slots: timeSlots,
           };
           
           const { data: dayResult, error: dayError } = await (supabase as any)
@@ -202,28 +210,6 @@ export default function MultiCityHotelPackagePage() {
           if (dayError) {
             console.error('Day plan insert error:', dayError);
             continue;
-          }
-
-          // Insert flights for this day if any
-          if (day.hasFlights && day.flights && day.flights.length > 0) {
-            const flightsData = day.flights.map((flight, flightIndex) => ({
-              day_plan_id: dayResult.id,
-              departure_city: flight.departureCity,
-              departure_time: flight.departureTime || null,
-              arrival_city: flight.arrivalCity,
-              arrival_time: flight.arrivalTime || null,
-              airline: flight.airline || null,
-              flight_number: flight.flightNumber || null,
-              flight_order: flightIndex + 1,
-            }));
-            
-            const { error: flightsError } = await (supabase as any)
-              .from('multi_city_hotel_package_day_flights')
-              .insert(flightsData);
-            
-            if (flightsError) {
-              console.error('Flights insert error:', flightsError);
-            }
           }
         }
       }
@@ -259,6 +245,8 @@ export default function MultiCityHotelPackagePage() {
                 hotel_name: hotel.hotelName,
                 hotel_type: hotel.hotelType || null,
                 room_type: hotel.roomType,
+                room_capacity_adults: hotel.roomCapacityAdults !== undefined ? hotel.roomCapacityAdults : null,
+                room_capacity_children: hotel.roomCapacityChildren !== undefined ? hotel.roomCapacityChildren : null,
                 display_order: hotelIndex + 1,
               }));
               
