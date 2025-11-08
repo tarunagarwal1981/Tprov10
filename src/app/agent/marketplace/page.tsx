@@ -322,6 +322,7 @@ export default function MarketplacePage() {
         {/* Single Column Layout */}
         <div>
           {/* Filters Bar - Replaces Search Bar */}
+          {/* COMMENTED OUT - Filter section removed per user request
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -354,6 +355,7 @@ export default function MarketplacePage() {
               </CardContent>
             </Card>
           </motion.div>
+          */}
 
           {/* Leads Grid */}
           <div>

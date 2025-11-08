@@ -63,6 +63,19 @@ export function AgentSidebar() {
 		try {
 			setSupportsHover(window.matchMedia && window.matchMedia('(hover: hover)').matches);
 		} catch {}
+		
+		// Listen for sidebar toggle events from other components
+		const handleSidebarToggle = (e: Event) => {
+			const detail = (e as CustomEvent).detail as { collapsed?: boolean };
+			if (typeof detail?.collapsed === 'boolean') {
+				setIsCollapsed(detail.collapsed);
+			}
+		};
+		
+		window.addEventListener('agent-sidebar-toggled', handleSidebarToggle);
+		return () => {
+			window.removeEventListener('agent-sidebar-toggled', handleSidebarToggle);
+		};
 	}, []);
 
 	// Fetch available leads count for marketplace badge

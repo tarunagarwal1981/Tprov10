@@ -23,7 +23,10 @@ import type { LeadPurchase } from '@/lib/types/marketplace';
 import { TripType } from '@/lib/types/marketplace';
 import { useAuth } from '@/context/SupabaseAuthContext';
 import { useToast } from '@/hooks/useToast';
+import { queryService } from '@/lib/services/queryService';
+import { QueryModal } from '@/components/agent/QueryModal';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 // Trip type icon mapping
 const getTripTypeIcon = (tripType: TripType) => {
@@ -75,7 +78,13 @@ function LeadCardSkeleton() {
 }
 
 // Purchased lead card component
-function PurchasedLeadCard({ purchase }: { purchase: LeadPurchase }) {
+function PurchasedLeadCard({ 
+  purchase, 
+  onCreateItinerary 
+}: { 
+  purchase: LeadPurchase;
+  onCreateItinerary: (leadId: string) => void;
+}) {
   const { lead } = purchase;
   if (!lead) return null;
 
@@ -203,17 +212,13 @@ function PurchasedLeadCard({ purchase }: { purchase: LeadPurchase }) {
 
           {/* Action buttons */}
           <div className="flex gap-2 mt-4 flex-shrink-0">
-            <Link 
-              href={`/agent/leads/${lead.id}/itineraries`}
-              className="flex-1"
+            <Button 
+              onClick={() => onCreateItinerary(lead.id)}
+              className="w-full flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white"
             >
-              <Button 
-                className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white"
-              >
-                <FiPackage className="w-4 h-4 mr-2" />
-                Create Itinerary
-              </Button>
-            </Link>
+              <FiPackage className="w-4 h-4 mr-2" />
+              Create Itinerary
+            </Button>
             {lead.customerEmail && (
               <Button 
                 className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white"
@@ -268,10 +273,16 @@ function EmptyState() {
 export default function MyLeadsPage() {
   const { user } = useAuth();
   const toast = useToast();
+  const router = useRouter();
   
   const [purchases, setPurchases] = useState<LeadPurchase[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Query modal state
+  const [queryModalOpen, setQueryModalOpen] = useState(false);
+  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
+  const [queryLoading, setQueryLoading] = useState(false);
 
   const fetchPurchasedLeads = async () => {
     if (!user?.id) return;
@@ -294,6 +305,75 @@ export default function MyLeadsPage() {
   useEffect(() => {
     fetchPurchasedLeads();
   }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Handle Create Itinerary button click
+  const handleCreateItinerary = async (leadId: string) => {
+    if (!user?.id) return;
+
+    try {
+      // Check if query exists for this lead
+      const existingQuery = await queryService.getQueryByLeadId(leadId);
+      
+      if (existingQuery) {
+        // Query exists, navigate to lead detail page
+        router.push(`/agent/leads/${leadId}`);
+      } else {
+        // No query exists, open query modal
+        setSelectedLeadId(leadId);
+        setQueryModalOpen(true);
+      }
+    } catch (err) {
+      console.error('Error checking query:', err);
+      // On error, open modal anyway
+      setSelectedLeadId(leadId);
+      setQueryModalOpen(true);
+    }
+  };
+
+  // Handle query save
+  const handleQuerySave = async (data: {
+    destinations: Array<{ city: string; nights: number }>;
+    leaving_from: string;
+    nationality: string;
+    leaving_on: string;
+    travelers: { rooms: number; adults: number; children: number; infants: number };
+    star_rating?: number;
+    add_transfers: boolean;
+  }) => {
+    if (!user?.id || !selectedLeadId) return;
+
+    setQueryLoading(true);
+    try {
+      await queryService.upsertQuery({
+        lead_id: selectedLeadId,
+        agent_id: user.id,
+        destinations: data.destinations,
+        leaving_from: data.leaving_from,
+        nationality: data.nationality,
+        leaving_on: data.leaving_on,
+        travelers: data.travelers,
+        star_rating: data.star_rating,
+        add_transfers: data.add_transfers,
+      });
+
+      toast.success('Query saved successfully!');
+      
+      // Save leadId before clearing state
+      const savedLeadId = selectedLeadId;
+      
+      setQueryModalOpen(false);
+      setSelectedLeadId(null);
+      
+      // Navigate to lead detail page
+      router.push(`/agent/leads/${savedLeadId}`);
+    } catch (err) {
+      console.error('Error saving query:', err);
+      toast.error('Failed to save query. Please try again.');
+      throw err;
+    } finally {
+      setQueryLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/30">
@@ -461,13 +541,31 @@ export default function MyLeadsPage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.1 * (index % 6) }}
                 >
-                  <PurchasedLeadCard purchase={purchase} />
+                  <PurchasedLeadCard 
+                    purchase={purchase} 
+                    onCreateItinerary={handleCreateItinerary}
+                  />
                 </motion.div>
               ))}
             </div>
           </div>
         )}
       </div>
+
+      {/* Query Modal */}
+      {selectedLeadId && (
+        <QueryModal
+          isOpen={queryModalOpen}
+          onClose={() => {
+            setQueryModalOpen(false);
+            setSelectedLeadId(null);
+          }}
+          onSave={handleQuerySave}
+          initialData={null}
+          leadId={selectedLeadId}
+          loading={queryLoading}
+        />
+      )}
     </div>
   );
 }

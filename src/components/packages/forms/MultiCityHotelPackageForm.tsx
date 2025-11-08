@@ -32,6 +32,12 @@ type Flight = {
   flightNumber: string;
 };
 
+type TimeSlot = {
+  time: string; // HH:MM format
+  activities: string[];
+  transfers: string[];
+};
+
 type DayPlan = {
   cityId: string;
   cityName?: string;
@@ -40,6 +46,11 @@ type DayPlan = {
   photoUrl?: string;
   hasFlights?: boolean;
   flights?: Flight[];
+  timeSlots?: {
+    morning: TimeSlot;
+    afternoon: TimeSlot;
+    evening: TimeSlot;
+  };
 };
 
 type HotelOption = {
@@ -47,6 +58,8 @@ type HotelOption = {
   hotelName: string;
   hotelType?: string; // 1 star, 2 star, 3 star, 4 star, 5 star, etc.
   roomType: string;
+  roomCapacityAdults?: number;
+  roomCapacityChildren?: number;
 };
 
 type CityStop = {
@@ -244,6 +257,8 @@ const HotelFormRow: React.FC<{ cityIndex: number; field: any; setValue: any }> =
   const [hotelName, setHotelName] = useState("");
   const [hotelType, setHotelType] = useState("");
   const [roomType, setRoomType] = useState("");
+  const [roomCapacityAdults, setRoomCapacityAdults] = useState<number | "">("");
+  const [roomCapacityChildren, setRoomCapacityChildren] = useState<number | "">("");
 
   const handleAddHotel = () => {
     if (hotelName.trim() && roomType.trim()) {
@@ -253,19 +268,24 @@ const HotelFormRow: React.FC<{ cityIndex: number; field: any; setValue: any }> =
         hotelName: hotelName.trim(),
         hotelType: (hotelType.trim() && hotelType !== "none") ? hotelType.trim() : undefined,
         roomType: roomType.trim(),
+        roomCapacityAdults: roomCapacityAdults !== "" ? Number(roomCapacityAdults) : undefined,
+        roomCapacityChildren: roomCapacityChildren !== "" ? Number(roomCapacityChildren) : undefined,
       };
       setValue(`cities.${cityIndex}.hotels`, [...currentHotels, newHotel]);
       setHotelName("");
       setHotelType("");
       setRoomType("");
+      setRoomCapacityAdults("");
+      setRoomCapacityChildren("");
     }
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
-      <div className="md:col-span-1">
+    <div className="grid grid-cols-1 md:grid-cols-6 gap-3 items-end">
+      <div className="md:col-span-2">
+        <label className="text-xs font-medium mb-1 block">Hotel Name *</label>
         <Input
-          placeholder="Hotel Name *"
+          placeholder="Enter hotel name"
           value={hotelName}
           onChange={(e) => setHotelName(e.target.value)}
           onKeyDown={(e) => {
@@ -274,13 +294,14 @@ const HotelFormRow: React.FC<{ cityIndex: number; field: any; setValue: any }> =
               handleAddHotel();
             }
           }}
-          className="package-text-fix text-sm"
+          className="package-text-fix"
         />
       </div>
       <div className="md:col-span-1">
+        <label className="text-xs font-medium mb-1 block">Hotel Type</label>
         <Select value={hotelType || "none"} onValueChange={(value) => setHotelType(value === "none" ? "" : value)}>
-          <SelectTrigger className="package-text-fix text-sm">
-            <SelectValue placeholder="Hotel Type (optional)" />
+          <SelectTrigger className="package-text-fix">
+            <SelectValue placeholder="Select type" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="none">No rating</SelectItem>
@@ -297,8 +318,9 @@ const HotelFormRow: React.FC<{ cityIndex: number; field: any; setValue: any }> =
         </Select>
       </div>
       <div className="md:col-span-1">
+        <label className="text-xs font-medium mb-1 block">Room Type *</label>
         <Input
-          placeholder="Room Type *"
+          placeholder="e.g. Deluxe, Suite"
           value={roomType}
           onChange={(e) => setRoomType(e.target.value)}
           onKeyDown={(e) => {
@@ -307,18 +329,57 @@ const HotelFormRow: React.FC<{ cityIndex: number; field: any; setValue: any }> =
               handleAddHotel();
             }
           }}
-          className="package-text-fix text-sm"
+          className="package-text-fix"
         />
       </div>
       <div className="md:col-span-1">
+        <label className="text-xs font-medium mb-1 block">Room Capacity</label>
+        <div className="flex gap-2">
+          <div className="flex-1">
+            <Input
+              type="number"
+              min="0"
+              placeholder="Adults"
+              value={roomCapacityAdults}
+              onChange={(e) => setRoomCapacityAdults(e.target.value === "" ? "" : Number(e.target.value))}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleAddHotel();
+                }
+              }}
+              className="package-text-fix"
+              title="Max adults per room"
+            />
+          </div>
+          <div className="flex-1">
+            <Input
+              type="number"
+              min="0"
+              placeholder="Children"
+              value={roomCapacityChildren}
+              onChange={(e) => setRoomCapacityChildren(e.target.value === "" ? "" : Number(e.target.value))}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleAddHotel();
+                }
+              }}
+              className="package-text-fix"
+              title="Max children per room"
+            />
+          </div>
+        </div>
+      </div>
+      <div className="md:col-span-1">
+        <label className="text-xs font-medium mb-1 block opacity-0">Action</label>
         <Button
           type="button"
-          size="sm"
           variant="outline"
           onClick={handleAddHotel}
           className="package-button-fix w-full"
         >
-          <FaPlus className="h-3 w-3 mr-1" /> Add Hotel
+          <FaPlus className="h-4 w-4 mr-1" /> Add Hotel
         </Button>
       </div>
     </div>
@@ -419,7 +480,7 @@ const BasicInformationTab: React.FC = () => {
         <CardContent className="space-y-4">
           <div>
             <label className="text-sm font-medium">Title</label>
-            <Input {...register("basic.title")} placeholder="Grand Europe Multi-City Adventure" />
+            <Input {...register("basic.title")} placeholder="Grand Europe Multi-City with Hotel Adventure" />
           </div>
           <div>
             <label className="text-sm font-medium">Short Description</label>
@@ -527,7 +588,7 @@ const BasicInformationTab: React.FC = () => {
                   {field.hotels && field.hotels.length > 0 && (
                     <div className="space-y-2 mb-3">
                       {field.hotels.map((hotel, hotelIdx) => (
-                        <div key={hotel.id} className="grid grid-cols-1 md:grid-cols-4 gap-2 p-2 bg-white dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-700">
+                        <div key={hotel.id} className="grid grid-cols-1 md:grid-cols-6 gap-2 p-3 bg-white dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-700">
                           <div className="flex-1">
                             <span className="text-xs text-gray-500">Hotel Name:</span>
                             <div className="text-sm font-medium">{hotel.hotelName}</div>
@@ -539,6 +600,14 @@ const BasicInformationTab: React.FC = () => {
                           <div className="flex-1">
                             <span className="text-xs text-gray-500">Room Type:</span>
                             <div className="text-sm">{hotel.roomType}</div>
+                          </div>
+                          <div className="flex-1">
+                            <span className="text-xs text-gray-500">Adults Capacity:</span>
+                            <div className="text-sm">{hotel.roomCapacityAdults !== undefined ? `${hotel.roomCapacityAdults}` : "—"}</div>
+                          </div>
+                          <div className="flex-1">
+                            <span className="text-xs text-gray-500">Children Capacity:</span>
+                            <div className="text-sm">{hotel.roomCapacityChildren !== undefined ? `${hotel.roomCapacityChildren}` : "—"}</div>
                           </div>
                           <div className="flex items-center justify-end">
                             <Button
@@ -640,34 +709,181 @@ const ActivitiesIncludedEditor: React.FC<{ fieldIndex: number }> = ({ fieldIndex
 };
 
 
+// Time Slot Editor Component
+const TimeSlotEditor: React.FC<{ 
+  dayIndex: number; 
+  slotName: "morning" | "afternoon" | "evening";
+  slot: TimeSlot;
+  days: DayPlan[];
+  setValue: any;
+  isFirstOrLastDay: boolean;
+}> = ({ dayIndex, slotName, slot, days, setValue, isFirstOrLastDay }) => {
+  const [activityText, setActivityText] = useState("");
+  const [transferText, setTransferText] = useState("");
+
+  const updateTimeSlot = (updates: Partial<TimeSlot>) => {
+    const d = [...days];
+    if (!d[dayIndex]) return;
+    if (!d[dayIndex]!.timeSlots) {
+      d[dayIndex]!.timeSlots = {
+        morning: { time: "", activities: [], transfers: [] },
+        afternoon: { time: "", activities: [], transfers: [] },
+        evening: { time: "", activities: [], transfers: [] },
+      };
+    }
+    d[dayIndex]!.timeSlots![slotName] = { ...d[dayIndex]!.timeSlots![slotName], ...updates };
+    setValue("days", d);
+  };
+
+  const addActivity = () => {
+    if (activityText.trim()) {
+      updateTimeSlot({ activities: [...slot.activities, activityText.trim()] });
+      setActivityText("");
+    }
+  };
+
+  const removeActivity = (index: number) => {
+    const newActivities = slot.activities.filter((_, i) => i !== index);
+    updateTimeSlot({ activities: newActivities });
+  };
+
+  const addTransfer = () => {
+    if (transferText.trim()) {
+      updateTimeSlot({ transfers: [...slot.transfers, transferText.trim()] });
+      setTransferText("");
+    }
+  };
+
+  const removeTransfer = (index: number) => {
+    const newTransfers = slot.transfers.filter((_, i) => i !== index);
+    updateTimeSlot({ transfers: newTransfers });
+  };
+
+  const slotLabels = {
+    morning: "Morning",
+    afternoon: "Afternoon",
+    evening: "Evening",
+  };
+
+  return (
+    <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+      <div className="flex items-center gap-3 mb-3">
+        <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 min-w-[100px]">
+          {slotLabels[slotName]}
+        </h4>
+        <Input
+          type="time"
+          value={slot.time}
+          onChange={(e) => updateTimeSlot({ time: e.target.value })}
+          className="package-text-fix text-sm w-32"
+          placeholder="HH:MM"
+        />
+      </div>
+
+      {/* Activities Section */}
+      <div className="mb-3">
+        <label className="text-xs font-medium mb-1 block text-gray-600 dark:text-gray-400">Activities</label>
+        <div className="flex gap-2 mb-2">
+          <Input
+            placeholder="Add activity..."
+            value={activityText}
+            onChange={(e) => setActivityText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                addActivity();
+              }
+            }}
+            className="package-text-fix text-sm flex-1"
+            disabled={isFirstOrLastDay}
+          />
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={addActivity}
+            disabled={isFirstOrLastDay || !activityText.trim()}
+            className="package-button-fix"
+          >
+            <FaPlus className="h-3 w-3" />
+          </Button>
+        </div>
+        {slot.activities.length > 0 && (
+          <div className="space-y-1">
+            {slot.activities.map((activity, idx) => (
+              <div key={idx} className="flex items-center gap-2 p-2 bg-white dark:bg-gray-900 rounded text-sm">
+                <span className="flex-1">{activity}</span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => removeActivity(idx)}
+                  className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                  disabled={isFirstOrLastDay}
+                >
+                  <FaTrash className="h-3 w-3" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Transfers Section */}
+      <div>
+        <label className="text-xs font-medium mb-1 block text-gray-600 dark:text-gray-400">Transfers</label>
+        <div className="flex gap-2 mb-2">
+          <Input
+            placeholder="Add transfer..."
+            value={transferText}
+            onChange={(e) => setTransferText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                addTransfer();
+              }
+            }}
+            className="package-text-fix text-sm flex-1"
+            disabled={isFirstOrLastDay}
+          />
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={addTransfer}
+            disabled={isFirstOrLastDay || !transferText.trim()}
+            className="package-button-fix"
+          >
+            <FaPlus className="h-3 w-3" />
+          </Button>
+        </div>
+        {slot.transfers.length > 0 && (
+          <div className="space-y-1">
+            {slot.transfers.map((transfer, idx) => (
+              <div key={idx} className="flex items-center gap-2 p-2 bg-white dark:bg-gray-900 rounded text-sm">
+                <span className="flex-1">{transfer}</span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => removeTransfer(idx)}
+                  className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                  disabled={isFirstOrLastDay}
+                >
+                  <FaTrash className="h-3 w-3" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const ItineraryTab: React.FC = () => {
   const { watch, setValue, control } = useFormContext<MultiCityPackageFormData>();
   const days = watch("days") || [];
-
-  const addFlight = (dayIndex: number) => {
-    const d = [...days];
-    const day = d[dayIndex];
-    if (!day) return;
-    if (!day.flights) day.flights = [];
-    day.flights.push({
-      id: generateId(),
-      departureCity: "",
-      departureTime: "",
-      arrivalCity: "",
-      arrivalTime: "",
-      airline: "",
-      flightNumber: "",
-    });
-    setValue("days", d);
-  };
-
-  const removeFlight = (dayIndex: number, flightIndex: number) => {
-    const d = [...days];
-    const day = d[dayIndex];
-    if (!day || !day.flights) return;
-    day.flights.splice(flightIndex, 1);
-    setValue("days", d);
-  };
 
   const handlePhotoUpload = (dayIndex: number, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -682,6 +898,25 @@ const ItineraryTab: React.FC = () => {
       setValue("days", d);
     }
   };
+
+  // Initialize time slots for days that don't have them
+  React.useEffect(() => {
+    const d = [...days];
+    let updated = false;
+    d.forEach((day, idx) => {
+      if (!day.timeSlots) {
+        d[idx]!.timeSlots = {
+          morning: { time: "", activities: [], transfers: [] },
+          afternoon: { time: "", activities: [], transfers: [] },
+          evening: { time: "", activities: [], transfers: [] },
+        };
+        updated = true;
+      }
+    });
+    if (updated) {
+      setValue("days", d);
+    }
+  }, [days.length, setValue]);
 
   return (
     <div className="space-y-4">
@@ -747,212 +982,60 @@ const ItineraryTab: React.FC = () => {
                 />
               </div>
 
-              {/* Description and Photo Row */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium mb-1 block">Description</label>
-                  <Textarea
-                    placeholder="Describe the activities and highlights for this day..."
-                    defaultValue={day.description}
-                    onChange={(e) => {
-                      const d = [...days];
-                      if (d[dayIndex]) {
-                        d[dayIndex]!.description = e.target.value;
-                        setValue("days", d);
-                      }
-                    }}
-                    rows={4}
-                    className="package-text-fix"
-                  />
-                </div>
-                {/* Photo Upload - Commented Out */}
-                {/* <div>
-                  <label className="text-sm font-medium mb-1 block">Photo</label>
-                  <div className="space-y-2">
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handlePhotoUpload(dayIndex, e)}
-                      className="package-text-fix"
-                    />
-                    {day.photoUrl && (
-                      <div className="relative w-full h-32 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
-                        <Image 
-                          src={day.photoUrl} 
-                          alt={`Day ${dayIndex + 1}`} 
-                          fill
-                          className="object-cover"
-                          unoptimized
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div> */}
-              </div>
-
-              {/* Add Flights Checkbox */}
-              <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                <input
-                  type="checkbox"
-                  id={`hasFlights-${dayIndex}`}
-                  checked={day.hasFlights || false}
-                  onChange={(e) => {
-                    const d = [...days];
-                    if (d[dayIndex]) {
-                      d[dayIndex]!.hasFlights = e.target.checked;
-                      if (e.target.checked && (!d[dayIndex]!.flights || d[dayIndex]!.flights!.length === 0)) {
-                        // Add first flight automatically
-                        d[dayIndex]!.flights = [{
-                          id: generateId(),
-                          departureCity: "",
-                          departureTime: "",
-                          arrivalCity: "",
-                          arrivalTime: "",
-                          airline: "",
-                          flightNumber: "",
-                        }];
-                      }
-                      setValue("days", d);
-                    }
-                  }}
-                  className="w-4 h-4"
-                />
-                <label htmlFor={`hasFlights-${dayIndex}`} className="text-sm font-medium cursor-pointer">
-                  Add Flights for this day
-                </label>
-              </div>
-
-              {/* Flights Section */}
-              {day.hasFlights && (
-                <div className="space-y-3 pl-6 border-l-2 border-orange-300">
-                  {(day.flights || []).map((flight, flightIndex) => (
-                    <div key={flight.id} className="space-y-3 p-4 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                          Flight {flightIndex + 1}
-                        </h4>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeFlight(dayIndex, flightIndex)}
-                        >
-                          <FaTrash className="h-3 w-3" />
-                        </Button>
-                      </div>
-
-                      {/* Row 1: Departure and Arrival Info */}
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        <div>
-                          <label className="text-xs font-medium mb-1 block">Departure City</label>
-                          <Input
-                            placeholder="e.g. Paris"
-                            defaultValue={flight.departureCity}
-                            onChange={(e) => {
-                              const d = [...days];
-                              if (d[dayIndex]?.flights?.[flightIndex]) {
-                                d[dayIndex]!.flights![flightIndex]!.departureCity = e.target.value;
-                                setValue("days", d);
-                              }
-                            }}
-                            className="package-text-fix text-sm"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-xs font-medium mb-1 block">Departure Time</label>
-                          <Input
-                            type="time"
-                            defaultValue={flight.departureTime}
-                            onChange={(e) => {
-                              const d = [...days];
-                              if (d[dayIndex]?.flights?.[flightIndex]) {
-                                d[dayIndex]!.flights![flightIndex]!.departureTime = e.target.value;
-                                setValue("days", d);
-                              }
-                            }}
-                            className="package-text-fix text-sm"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-xs font-medium mb-1 block">Arrival City</label>
-                          <Input
-                            placeholder="e.g. Rome"
-                            defaultValue={flight.arrivalCity}
-                            onChange={(e) => {
-                              const d = [...days];
-                              if (d[dayIndex]?.flights?.[flightIndex]) {
-                                d[dayIndex]!.flights![flightIndex]!.arrivalCity = e.target.value;
-                                setValue("days", d);
-                              }
-                            }}
-                            className="package-text-fix text-sm"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-xs font-medium mb-1 block">Arrival Time</label>
-                          <Input
-                            type="time"
-                            defaultValue={flight.arrivalTime}
-                            onChange={(e) => {
-                              const d = [...days];
-                              if (d[dayIndex]?.flights?.[flightIndex]) {
-                                d[dayIndex]!.flights![flightIndex]!.arrivalTime = e.target.value;
-                                setValue("days", d);
-                              }
-                            }}
-                            className="package-text-fix text-sm"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Row 2: Airline and Flight Number */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div>
-                          <label className="text-xs font-medium mb-1 block">Airline</label>
-                          <Input
-                            placeholder="e.g. Air France"
-                            defaultValue={flight.airline}
-                            onChange={(e) => {
-                              const d = [...days];
-                              if (d[dayIndex]?.flights?.[flightIndex]) {
-                                d[dayIndex]!.flights![flightIndex]!.airline = e.target.value;
-                                setValue("days", d);
-                              }
-                            }}
-                            className="package-text-fix text-sm"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-xs font-medium mb-1 block">Flight Number</label>
-                          <Input
-                            placeholder="e.g. AF1234"
-                            defaultValue={flight.flightNumber}
-                            onChange={(e) => {
-                              const d = [...days];
-                              if (d[dayIndex]?.flights?.[flightIndex]) {
-                                d[dayIndex]!.flights![flightIndex]!.flightNumber = e.target.value;
-                                setValue("days", d);
-                              }
-                            }}
-                            className="package-text-fix text-sm"
-                          />
-                        </div>
-                      </div>
+              {/* First/Last Day Suggestion */}
+              {(dayIndex === 0 || dayIndex === days.length - 1) && (
+                <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <FaInfoCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+                    <div className="text-sm text-amber-800 dark:text-amber-200">
+                      <p className="font-medium mb-1">
+                        {dayIndex === 0 ? "First Day - Arrival" : "Last Day - Departure"}
+                      </p>
+                      <p className="text-xs">
+                        {dayIndex === 0 
+                          ? "Travel/flight timings may vary on arrival day. It's recommended not to add activities or transfers for this day."
+                          : "Travel/flight timings may vary on departure day. It's recommended not to add activities or transfers for this day."
+                        }
+                      </p>
                     </div>
-                  ))}
-
-                  {/* Add Another Flight Button */}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => addFlight(dayIndex)}
-                    className="package-button-fix"
-                  >
-                    <FaPlus className="mr-2 h-3 w-3" /> Add Another Flight
-                  </Button>
+                  </div>
                 </div>
               )}
+
+              {/* Time Slots Section */}
+              <div>
+                <label className="text-sm font-medium mb-3 block">Activities & Transfers by Time Slots</label>
+                <div className="space-y-3">
+                  {day.timeSlots && (
+                    <>
+                      <TimeSlotEditor
+                        dayIndex={dayIndex}
+                        slotName="morning"
+                        slot={day.timeSlots.morning}
+                        days={days}
+                        setValue={setValue}
+                        isFirstOrLastDay={dayIndex === 0 || dayIndex === days.length - 1}
+                      />
+                      <TimeSlotEditor
+                        dayIndex={dayIndex}
+                        slotName="afternoon"
+                        slot={day.timeSlots.afternoon}
+                        days={days}
+                        setValue={setValue}
+                        isFirstOrLastDay={dayIndex === 0 || dayIndex === days.length - 1}
+                      />
+                      <TimeSlotEditor
+                        dayIndex={dayIndex}
+                        slotName="evening"
+                        slot={day.timeSlots.evening}
+                        days={days}
+                        setValue={setValue}
+                        isFirstOrLastDay={dayIndex === 0 || dayIndex === days.length - 1}
+                      />
+                    </>
+                  )}
+                </div>
+              </div>
             </CardContent>
           </Card>
         ))}
@@ -1598,8 +1681,8 @@ export const MultiCityPackageForm: React.FC<{
         <div className="mb-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold">Create Multi-City Package</h1>
-              <p className="text-gray-600">Build an itinerary across multiple cities with intuitive tools.</p>
+              <h1 className="text-2xl font-bold">Create Multi-City with Hotel Package</h1>
+              <p className="text-gray-600">Build an itinerary across multiple cities with hotel accommodations and intuitive tools.</p>
             </div>
             {/* Auto-save status and actions (aligned with other forms) */}
             {/* Auto-save status - DISABLED */}
