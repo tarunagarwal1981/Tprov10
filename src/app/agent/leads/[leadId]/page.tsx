@@ -450,8 +450,7 @@ export default function LeadDetailPage() {
             {/* Insert Itinerary Card */}
             <Card className="border-dashed border-2 border-gray-300 hover:border-blue-500 transition-colors cursor-pointer flex items-center justify-center min-h-[200px]"
               onClick={() => {
-                // TODO: Implement insert itinerary functionality
-                toast.info('Insert Itinerary feature coming soon');
+                router.push(`/agent/leads/${leadId}/insert`);
               }}
             >
               <CardContent className="flex flex-col items-center justify-center py-8">

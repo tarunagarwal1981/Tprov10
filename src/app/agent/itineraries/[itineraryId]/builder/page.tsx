@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { FiArrowLeft, FiSearch, FiPackage, FiPlus, FiCalendar } from 'react-icons/fi';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,7 +13,9 @@ import { useToast } from '@/hooks/useToast';
 import { createClient } from '@/lib/supabase/client';
 import { PackageSearchPanel } from '@/components/itinerary/PackageSearchPanel';
 import { ItineraryBuilderPanel } from '@/components/itinerary/ItineraryBuilderPanel';
+import { EnhancedItineraryBuilder } from '@/components/itinerary/EnhancedItineraryBuilder';
 import { ItinerarySummaryPanel } from '@/components/itinerary/ItinerarySummaryPanel';
+import { PackageConfigModal } from '@/components/itinerary/PackageConfigModal';
 
 interface Itinerary {
   id: string;
@@ -36,7 +38,26 @@ interface ItineraryDay {
   day_number: number;
   date: string | null;
   city_name: string | null;
-  notes: string | null;
+  arrival_flight_id?: string | null;
+  arrival_time?: string | null;
+  departure_flight_id?: string | null;
+  departure_time?: string | null;
+  hotel_id?: string | null;
+  hotel_name?: string | null;
+  hotel_star_rating?: number | null;
+  room_type?: string | null;
+  meal_plan?: string | null;
+  time_slots?: {
+    morning: { time: string; activities: string[]; transfers: string[] };
+    afternoon: { time: string; activities: string[]; transfers: string[] };
+    evening: { time: string; activities: string[]; transfers: string[] };
+  };
+  lunch_included?: boolean;
+  lunch_details?: string | null;
+  dinner_included?: boolean;
+  dinner_details?: string | null;
+  arrival_description?: string | null;
+  notes?: string | null;
 }
 
 interface ItineraryItem {
@@ -59,6 +80,7 @@ interface ItineraryItem {
 export default function ItineraryBuilderPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useAuth();
   const toast = useToast();
   const supabase = createClient();
@@ -71,6 +93,18 @@ export default function ItineraryBuilderPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDestination, setSelectedDestination] = useState<string>('');
+  const [selectedPackage, setSelectedPackage] = useState<{
+    id: string;
+    title: string;
+    destination_country: string;
+    destination_city: string;
+    package_type: 'activity' | 'transfer' | 'multi_city' | 'multi_city_hotel' | 'fixed_departure';
+    operator_id: string;
+    operator_name?: string;
+    featured_image_url?: string;
+    base_price?: number;
+    currency?: string;
+  } | null>(null);
 
   // Fetch itinerary data
   useEffect(() => {
@@ -107,7 +141,7 @@ export default function ItineraryBuilderPage() {
             }
           }
 
-          // Fetch days
+          // Fetch days with all new fields
           const { data: daysData, error: daysError } = await supabase
             .from('itinerary_days' as any)
             .select('*')
@@ -116,7 +150,16 @@ export default function ItineraryBuilderPage() {
 
           if (daysError) throw daysError;
           if (isMounted) {
-            setDays((daysData || []) as unknown as ItineraryDay[]);
+            // Ensure time_slots exists for each day
+            const daysWithTimeSlots = (daysData || []).map((day: any) => ({
+              ...day,
+              time_slots: day.time_slots || {
+                morning: { time: '', activities: [], transfers: [] },
+                afternoon: { time: '', activities: [], transfers: [] },
+                evening: { time: '', activities: [], transfers: [] },
+              },
+            }));
+            setDays(daysWithTimeSlots as unknown as ItineraryDay[]);
           }
 
           // Fetch items
@@ -129,6 +172,18 @@ export default function ItineraryBuilderPage() {
           if (itemsError) throw itemsError;
           if (isMounted) {
             setItems((itemsData || []) as unknown as ItineraryItem[]);
+            
+            // Check if any multi-city packages need configuration
+            const multiCityItems = (itemsData || []).filter(
+              (item: any) => 
+                (item.package_type === 'multi_city' || item.package_type === 'multi_city_hotel') &&
+                (!item.configuration?.selectedHotels && !item.configuration?.activities && !item.configuration?.transfers)
+            );
+            
+            // If there are unconfigured multi-city packages, show a notification
+            if (multiCityItems.length > 0) {
+              toast.info(`${multiCityItems.length} package(s) need configuration. Click to configure.`);
+            }
           }
         }
       } catch (err) {
@@ -150,6 +205,88 @@ export default function ItineraryBuilderPage() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [itineraryId, user?.id]);
+
+  // Handle package selection from URL params (when coming from insert page)
+  useEffect(() => {
+    const packageId = searchParams.get('packageId');
+    const packageType = searchParams.get('packageType') as 'multi_city' | 'multi_city_hotel' | null;
+
+    if (packageId && packageType && !selectedPackage) {
+      const fetchPackageForModal = async () => {
+        try {
+          let query: any;
+          
+          if (packageType === 'multi_city') {
+            query = supabase
+              .from('multi_city_packages' as any)
+              .select('id, title, destination_region, operator_id, base_price, currency')
+              .eq('id', packageId)
+              .single();
+          } else if (packageType === 'multi_city_hotel') {
+            query = supabase
+              .from('multi_city_hotel_packages' as any)
+              .select('id, title, destination_region, operator_id, base_price, currency')
+              .eq('id', packageId)
+              .single();
+          } else {
+            return;
+          }
+
+          const { data, error } = await query;
+          
+          if (error) throw error;
+          
+          if (data) {
+            // Fetch operator name
+            const { data: operatorData } = await supabase
+              .from('users' as any)
+              .select('name')
+              .eq('id', data.operator_id)
+              .single();
+
+            // Fetch cover image
+            const imageTable = packageType === 'multi_city' 
+              ? 'multi_city_package_images' 
+              : 'multi_city_hotel_package_images';
+            const { data: imageData } = await supabase
+              .from(imageTable as any)
+              .select('public_url')
+              .eq('package_id', packageId)
+              .eq('is_cover', true)
+              .limit(1)
+              .maybeSingle();
+
+            const operatorTyped = operatorData as unknown as { name?: string } | null;
+            const imageTyped = imageData as unknown as { public_url?: string } | null;
+
+            setSelectedPackage({
+              id: data.id,
+              title: data.title,
+              destination_country: data.destination_region || '',
+              destination_city: '',
+              package_type: packageType,
+              operator_id: data.operator_id,
+              operator_name: operatorTyped?.name || 'Unknown Operator',
+              featured_image_url: imageTyped?.public_url || undefined,
+              base_price: data.base_price || undefined,
+              currency: data.currency || 'USD',
+            });
+
+            // Clear URL params
+            router.replace(`/agent/itineraries/${itineraryId}/builder`, { scroll: false });
+          }
+        } catch (err) {
+          console.error('Error fetching package for modal:', err);
+          toast.error('Failed to load package details');
+          // Clear URL params even on error
+          router.replace(`/agent/itineraries/${itineraryId}/builder`, { scroll: false });
+        }
+      };
+
+      fetchPackageForModal();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, itineraryId]);
 
   const handleAddDay = async () => {
     if (!itinerary) return;
@@ -273,15 +410,17 @@ export default function ItineraryBuilderPage() {
               />
             </div>
 
-            {/* Itinerary Builder Panel (65%) */}
-            <div className="w-[65%] flex flex-col overflow-hidden bg-white border border-gray-200 rounded-lg">
-              <ItineraryBuilderPanel
-                itinerary={itinerary}
+            {/* Enhanced Itinerary Builder (65%) */}
+            <div className="w-[65%] flex flex-col overflow-hidden bg-white border border-gray-200 rounded-lg p-6 overflow-y-auto">
+              <EnhancedItineraryBuilder
+                itineraryId={itinerary.id}
                 days={days}
                 items={items}
                 onDaysChange={setDays}
-                onItemsChange={setItems}
-                onAddDay={handleAddDay}
+                onItemsChange={(items) => setItems(items)}
+                onEditPackage={(itemId) => {
+                  router.push(`/agent/itineraries/${itinerary.id}/configure/${itemId}`);
+                }}
               />
             </div>
 
@@ -306,15 +445,17 @@ export default function ItineraryBuilderPage() {
                 />
               </div>
 
-              {/* Itinerary Builder Panel (60%) */}
-              <div className="w-[60%] flex flex-col overflow-hidden bg-white border border-gray-200 rounded-lg">
-                <ItineraryBuilderPanel
-                  itinerary={itinerary}
+              {/* Enhanced Itinerary Builder (60%) */}
+              <div className="w-[60%] flex flex-col overflow-hidden bg-white border border-gray-200 rounded-lg p-6 overflow-y-auto">
+                <EnhancedItineraryBuilder
+                  itineraryId={itinerary.id}
                   days={days}
                   items={items}
                   onDaysChange={setDays}
-                  onItemsChange={setItems}
-                  onAddDay={handleAddDay}
+                  onItemsChange={(items) => setItems(items)}
+                  onEditPackage={(itemId) => {
+                    router.push(`/agent/itineraries/${itinerary.id}/configure/${itemId}`);
+                  }}
                 />
               </div>
             </div>
@@ -357,18 +498,44 @@ export default function ItineraryBuilderPage() {
                 </button>
               </div>
             </div>
-            <div className="flex-1 overflow-y-auto">
-              <ItineraryBuilderPanel
-                itinerary={itinerary}
+            <div className="flex-1 overflow-y-auto p-4">
+              <EnhancedItineraryBuilder
+                itineraryId={itinerary.id}
                 days={days}
                 items={items}
                 onDaysChange={setDays}
-                onItemsChange={setItems}
-                onAddDay={handleAddDay}
+                onItemsChange={(items) => setItems(items)}
+                onEditPackage={(itemId) => {
+                  router.push(`/agent/itineraries/${itinerary.id}/configure/${itemId}`);
+                }}
               />
             </div>
           </div>
         </div>
+
+        {/* Package Configuration Modal (for packages selected from insert page) */}
+        {selectedPackage && itinerary && (
+          <PackageConfigModal
+            package={selectedPackage}
+            itineraryId={itinerary.id}
+            onClose={() => {
+              setSelectedPackage(null);
+              // If it's a multi-city package, we'll navigate away, so don't clear
+            }}
+            onPackageAdded={(item) => {
+              setItems(prev => [...prev, item]);
+              // Don't clear selectedPackage here for multi-city - navigation will happen
+              if (selectedPackage.package_type !== 'multi_city' && selectedPackage.package_type !== 'multi_city_hotel') {
+                setSelectedPackage(null);
+                toast.success('Package added to itinerary');
+              }
+            }}
+            onNavigateToConfigure={(itemId) => {
+              // Navigate immediately to configure page
+              router.push(`/agent/itineraries/${itinerary.id}/configure/${itemId}`);
+            }}
+          />
+        )}
       </div>
   );
 }

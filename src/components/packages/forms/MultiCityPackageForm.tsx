@@ -265,9 +265,14 @@ const BasicInformationTab: React.FC = () => {
     // Day 3: Departure City 1 + Arrival City 2, Night 1 City 2
     // Day 4: Full day City 2, Night 2 City 2
     // Day 5: Departure City 2
-    if (!cities || cities.length === 0) return;
+    if (!cities || cities.length === 0) {
+      setValue("days", []);
+      return;
+    }
     
     const newDays: DayPlan[] = [];
+    let globalDayNumber = 1;
+    
     cities.forEach((city, cityIndex) => {
       const nights = city.nights || 1;
       const isLastCity = cityIndex === cities.length - 1;
@@ -279,45 +284,52 @@ const BasicInformationTab: React.FC = () => {
       const daysToCreate = isFirstCity || isLastCity ? nights + 1 : nights;
       
       for (let i = 0; i < daysToCreate; i++) {
-        const dayIndex = isFirstCity ? i : (i + 1); // For non-first cities, start from day 1 (not arrival day)
         const isArrivalDay = isFirstCity && i === 0;
         const isDepartureDay = (isLastCity && i === nights) || (!isLastCity && i === nights);
-        const isMiddleDay = i > 0 && i < nights;
         
-        // Determine the day type label
+        // Determine the day type label - always use the current city name
         let dayTitle = "";
         if (isArrivalDay) {
-          dayTitle = `Arrival - ${city.name}`;
+          dayTitle = `Arrival - ${city.name || 'City ' + (cityIndex + 1)}`;
         } else if (isDepartureDay && !isLastCity) {
-          dayTitle = `Departure ${city.name} / Arrival ${cities[cityIndex + 1]?.name || ''}`;
+          dayTitle = `Departure ${city.name || 'City ' + (cityIndex + 1)} / Arrival ${cities[cityIndex + 1]?.name || 'City ' + (cityIndex + 2)}`;
         } else if (isDepartureDay && isLastCity) {
-          dayTitle = `Departure - ${city.name}`;
+          dayTitle = `Departure - ${city.name || 'City ' + (cityIndex + 1)}`;
         } else {
-          dayTitle = `Day ${dayIndex} - ${city.name} (Night ${dayIndex})`;
+          dayTitle = `Day ${globalDayNumber} - ${city.name || 'City ' + (cityIndex + 1)} (Night ${globalDayNumber})`;
         }
         
         newDays.push({
           cityId: city.id,
-          cityName: city.name,
+          cityName: city.name || '', // Always set cityName, even if empty
           title: dayTitle,
           description: isArrivalDay 
-            ? `Arrival in ${city.name}. Check-in and orientation. Overnight stay (Night 1).`
+            ? `Arrival in ${city.name || 'City ' + (cityIndex + 1)}. Check-in and orientation. Overnight stay (Night 1).`
             : isDepartureDay && !isLastCity
-            ? `Departure from ${city.name} and arrival in ${cities[cityIndex + 1]?.name || ''}. Overnight stay in ${cities[cityIndex + 1]?.name || ''} (Night 1).`
+            ? `Departure from ${city.name || 'City ' + (cityIndex + 1)} and arrival in ${cities[cityIndex + 1]?.name || 'City ' + (cityIndex + 2)}. Overnight stay in ${cities[cityIndex + 1]?.name || 'City ' + (cityIndex + 2)} (Night 1).`
             : isDepartureDay && isLastCity
-            ? `Final day in ${city.name}. Check-out and departure.`
-            : `Full day in ${city.name}. Overnight stay (Night ${dayIndex}).`,
+            ? `Final day in ${city.name || 'City ' + (cityIndex + 1)}. Check-out and departure.`
+            : `Full day in ${city.name || 'City ' + (cityIndex + 1)}. Overnight stay (Night ${globalDayNumber}).`,
           photoUrl: "",
           hasFlights: false,
           flights: [],
         });
+        
+        globalDayNumber++;
       }
     });
     
-    // Only update if the structure changed
-    if (JSON.stringify(newDays.map(d => ({ cityId: d.cityId, cityName: d.cityName, title: d.title }))) !== 
-        JSON.stringify(days.map((d: DayPlan) => ({ cityId: d.cityId, cityName: d.cityName, title: d.title })))) {
-      setValue("days", newDays);
+    // Always update days when cities change - compare based on city IDs, names, and nights
+    const currentDaysKey = JSON.stringify(
+      (days || []).map((d: DayPlan) => ({ cityId: d.cityId, cityName: d.cityName || '' }))
+    );
+    const newDaysKey = JSON.stringify(
+      newDays.map(d => ({ cityId: d.cityId, cityName: d.cityName || '' }))
+    );
+    
+    // Update if structure changed, city names changed, or number of days changed
+    if (currentDaysKey !== newDaysKey || newDays.length !== (days?.length || 0)) {
+      setValue("days", newDays, { shouldDirty: true });
     }
   }, [cities, days, setValue]);
 
