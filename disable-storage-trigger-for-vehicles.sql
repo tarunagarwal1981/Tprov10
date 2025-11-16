@@ -28,3 +28,4 @@ WHERE event_object_schema = 'storage'
 -- Option 3: Modify the trigger to handle vehicle images correctly
 -- (This is more complex and requires recreating the trigger function)
 
+

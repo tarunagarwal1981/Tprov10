@@ -17,3 +17,4 @@ WHERE event_object_schema = 'storage'
 
 -- Should return empty (no results) if successfully dropped
 
+

@@ -7,7 +7,6 @@ import {
   FiDollarSign,
   FiTrendingUp,
   FiFilter,
-  FiX,
   FiRefreshCw,
   FiPackage,
   FiAlertCircle,
@@ -131,7 +130,6 @@ export default function MarketplacePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<LeadFiltersType>({ status: LeadStatus.AVAILABLE });
-  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<MarketplaceLead | null>(null);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
   const [isPurchasing, setIsPurchasing] = useState(false);
@@ -207,7 +205,6 @@ export default function MarketplacePage() {
   // Handle filter changes
   const handleFiltersChange = (newFilters: LeadFiltersType) => {
     setFilters(newFilters);
-    setIsFiltersOpen(false);
   };
 
   // Handle filter reset
@@ -279,23 +276,6 @@ export default function MarketplacePage() {
                 Browse and purchase quality leads to grow your business
               </p>
             </div>
-            <Button
-              onClick={() => setIsFiltersOpen(!isFiltersOpen)}
-              variant="outline"
-              className="bg-white/10 border-white/20 text-white hover:bg-white/20 lg:hidden"
-            >
-              {isFiltersOpen ? (
-                <>
-                  <FiX className="w-5 h-5 mr-2" />
-                  Close
-                </>
-              ) : (
-                <>
-                  <FiFilter className="w-5 h-5 mr-2" />
-                  Filters
-                </>
-              )}
-            </Button>
           </div>
         </motion.div>
 
@@ -339,91 +319,52 @@ export default function MarketplacePage() {
           </motion.div>
         </div>
 
-        {/* Two-Column Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Filters Panel - Desktop */}
+        {/* Single Column Layout */}
+        <div>
+          {/* Filters Bar - Replaces Search Bar */}
+          {/* COMMENTED OUT - Filter section removed per user request
           <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.4 }}
-            className="lg:col-span-3 hidden lg:block"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="mb-6"
           >
-            <div className="sticky top-6">
-              <Card className="border-gray-200 shadow-lg">
-                <CardHeader className="border-b border-gray-200 pb-4">
-                  <CardTitle className="flex items-center justify-between text-lg">
-                    <span className="flex items-center gap-2">
-                      <FiFilter className="w-5 h-5 text-[#FF6B35]" />
-                      Filters
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleFiltersReset}
-                      className="text-[#FF6B35] hover:text-[#E05A2A]"
-                    >
-                      Reset
-                    </Button>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-4">
-                  <LeadFilters
-                    filters={filters}
-                    onChange={handleFiltersChange}
-                    onReset={handleFiltersReset}
-                  />
-                </CardContent>
-              </Card>
-            </div>
+            <Card className="border-gray-200 shadow-lg">
+              <CardHeader className="border-b border-gray-200 pb-4">
+                <CardTitle className="flex items-center justify-between text-lg">
+                  <span className="flex items-center gap-2">
+                    <FiFilter className="w-5 h-5 text-[#FF6B35]" />
+                    Filters
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleFiltersReset}
+                    className="text-[#FF6B35] hover:text-[#E05A2A]"
+                  >
+                    Reset
+                  </Button>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4">
+                <LeadFilters
+                  filters={filters}
+                  onChange={handleFiltersChange}
+                  onReset={handleFiltersReset}
+                />
+              </CardContent>
+            </Card>
           </motion.div>
-
-          {/* Filters Panel - Mobile */}
-          <AnimatePresence>
-            {isFiltersOpen && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="lg:hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
-                onClick={() => setIsFiltersOpen(false)}
-              >
-                <motion.div
-                  initial={{ x: '-100%' }}
-                  animate={{ x: 0 }}
-                  exit={{ x: '-100%' }}
-                  transition={{ type: 'spring', damping: 20 }}
-                  className="fixed left-0 top-0 bottom-0 w-80 bg-white shadow-xl overflow-y-auto"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <div className="p-4">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-bold text-gray-900">Filters</h3>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setIsFiltersOpen(false)}
-                      >
-                        <FiX className="w-5 h-5" />
-                      </Button>
-                    </div>
-                    <LeadFilters
-                      filters={filters}
-                      onChange={handleFiltersChange}
-                      onReset={handleFiltersReset}
-                    />
-                  </div>
-                </motion.div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          */}
 
           {/* Leads Grid */}
-          <div className="lg:col-span-9">
+          <div>
+
             {/* Sort Options */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
+              transition={{ delay: 0.6 }}
               className="flex items-center justify-between mb-6"
             >
               <div className="flex items-center gap-2">
@@ -486,7 +427,7 @@ export default function MarketplacePage() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.6 }}
-                className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"
+                className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"
               >
                 {leads.map((lead, index) => (
                   <motion.div

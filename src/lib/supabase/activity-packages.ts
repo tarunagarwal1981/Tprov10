@@ -296,6 +296,12 @@ export async function updateActivityPackage(
 ): Promise<{ data: ActivityPackageWithRelations | null; error: SupabaseError | null }> {
   const supabase = createSupabaseBrowserClient();
   
+  console.log('🔄 [updateActivityPackage] Starting update', {
+    packageId: id,
+    hasImages: !!data.images,
+    imageCount: data.images?.length || 0
+  });
+  
   return withErrorHandling(async () => {
     // Get the operator ID from the package
     const { data: existingPackage } = await supabase
@@ -310,11 +316,30 @@ export async function updateActivityPackage(
     const finalImages: ActivityPackageImageInsert[] = [];
     
     if (data.images && data.images.length > 0) {
+      console.log('📸 [updateActivityPackage] Processing images', {
+        totalImages: data.images.length,
+        images: data.images.map(img => ({
+          file_name: img.file_name,
+          storage_path_preview: img.storage_path?.substring(0, 50) + '...',
+          is_base64: img.storage_path?.startsWith('data:'),
+          is_cover: img.is_cover
+        }))
+      });
+      
       // Separate base64 images from already uploaded images
       const base64Images = data.images.filter(img => img.storage_path?.startsWith('data:'));
       const alreadyUploadedImages = data.images.filter(img => !img.storage_path?.startsWith('data:'));
       
+      console.log('🔍 [updateActivityPackage] Image separation', {
+        base64Count: base64Images.length,
+        alreadyUploadedCount: alreadyUploadedImages.length
+      });
+      
       if (base64Images.length > 0) {
+        console.log('📤 [updateActivityPackage] Uploading base64 images to storage', {
+          count: base64Images.length
+        });
+        
         // Convert base64 to files and upload
         const files = base64Images.map(img => {
           const fileName = img.file_name || `image_${Date.now()}.jpg`;
@@ -322,6 +347,14 @@ export async function updateActivityPackage(
         });
         
         const uploadResults = await uploadImageFiles(files, userId, 'activity-packages-images');
+        
+        console.log('✅ [updateActivityPackage] Upload complete', {
+          uploadCount: uploadResults.length,
+          results: uploadResults.map(r => ({
+            path: r.data?.path,
+            publicUrl: r.data?.publicUrl?.substring(0, 50) + '...'
+          }))
+        });
         
         // Create image records with proper storage paths
         const newImageRecords = uploadResults.map((result, index) => {
@@ -345,6 +378,16 @@ export async function updateActivityPackage(
       
       // Add already uploaded images with package_id
       finalImages.push(...alreadyUploadedImages.map(img => ({ ...img, package_id: id })));
+      
+      console.log('🎯 [updateActivityPackage] Final images ready', {
+        finalImageCount: finalImages.length,
+        finalImages: finalImages.map(img => ({
+          file_name: img.file_name,
+          storage_path: img.storage_path,
+          public_url: img.public_url?.substring(0, 50) + '...',
+          is_cover: img.is_cover
+        }))
+      });
     }
 
     // Update the main package
@@ -373,21 +416,38 @@ export async function updateActivityPackage(
 
     // Update related data if provided
     if (finalImages.length > 0) {
+      console.log('💾 [updateActivityPackage] Deleting old images and inserting new ones', {
+        packageId: id,
+        imageCount: finalImages.length
+      });
+      
       // Delete existing images and insert new ones
       await supabase
         .from('activity_package_images')
         .delete()
         .eq('package_id', id);
 
-      const { data: imagesData, error: imagesError } = await supabase
-        .from('activity_package_images')
+        const { data: imagesData, error: imagesError } = await supabase
+          .from('activity_package_images')
         .insert(finalImages)
-        .select();
+          .select();
 
-      if (imagesError) {
-        throw imagesError;
-      }
-      result.images = imagesData || [];
+        if (imagesError) {
+        console.error('❌ [updateActivityPackage] Error inserting images', imagesError);
+          throw imagesError;
+        }
+      
+      console.log('✅ [updateActivityPackage] Images saved to database', {
+        savedCount: imagesData?.length || 0,
+        savedImages: imagesData?.map(img => ({
+          id: img.id,
+          file_name: img.file_name,
+          public_url: img.public_url?.substring(0, 50) + '...',
+          is_cover: img.is_cover
+        }))
+      });
+      
+        result.images = imagesData || [];
     } else if (!data.images) {
       // Keep existing images only if no images were provided in the update
       const { data: imagesData } = await supabase
@@ -890,7 +950,22 @@ export function formDataToDatabase(
     dynamic_pricing_season_multiplier: formData.pricing?.dynamicPricing?.seasonMultiplier || 1.0,
   };
 
+  console.log('📦 [formDataToDatabase] Processing images', {
+    imageGalleryCount: formData.basicInformation?.imageGallery?.length || 0,
+    imageGallery: formData.basicInformation?.imageGallery?.map(img => ({
+      fileName: img.fileName,
+      url: img.url?.substring(0, 50) + '...',
+      isCover: img.isCover
+    })),
+    featuredImage: formData.basicInformation?.featuredImage ? {
+      fileName: formData.basicInformation.featuredImage.fileName,
+      url: formData.basicInformation.featuredImage.url?.substring(0, 50) + '...',
+      isCover: formData.basicInformation.featuredImage.isCover
+    } : null
+  });
+
   const images: ActivityPackageImageInsert[] = [
+    ...(formData.basicInformation?.featuredImage ? [formData.basicInformation.featuredImage] : []),
     ...(formData.basicInformation?.imageGallery || []),
     ...(formData.activityDetails?.meetingPoint?.images || []),
     ...(formData.packageVariants?.variants?.flatMap(v => v.images || []) || []),
@@ -906,6 +981,16 @@ export function formDataToDatabase(
     is_featured: img.isCover || false,
     display_order: index,
   }));
+
+  console.log('✅ [formDataToDatabase] Images transformed', {
+    totalImages: images.length,
+    images: images.map(img => ({
+      file_name: img.file_name,
+      storage_path: img.storage_path?.substring(0, 50) + '...',
+      is_cover: img.is_cover,
+      is_featured: img.is_featured
+    }))
+  });
 
   const timeSlots: ActivityPackageTimeSlotInsert[] = (formData.activityDetails?.operationalHours?.timeSlots || []).map(slot => ({
     package_id: '', // Will be set by the service

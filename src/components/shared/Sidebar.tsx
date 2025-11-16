@@ -221,7 +221,7 @@ const TRAVEL_AGENT_NAVIGATION: NavigationItem[] = [
   {
     id: 'dashboard',
     label: 'Dashboard',
-    href: '/agent/dashboard',
+    href: '/agent',
     icon: FiHome,
   },
   {
@@ -634,7 +634,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
             exit={{ opacity: 0 }}
             transition={{ duration: reduceMotion ? 0 : 0.2 }}
           >
-            <h1 className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
               TravelPro
             </h1>
           </motion.div>

@@ -283,6 +283,37 @@ export async function savePricingPackages(
 }
 
 /**
+ * Save pricing packages with their vehicles
+ * This is the main function to use when saving from the form
+ */
+export async function savePricingPackagesWithVehicles(
+  packageId: string,
+  simplePricingOptions: any[]
+): Promise<void> {
+  // Convert simple options to full pricing packages
+  const pricingPackages = simplePricingOptions.map((opt, index) => 
+    convertSimpleToPricingPackage(opt, index)
+  );
+  
+  // Save pricing packages first
+  const savedPackages = await savePricingPackages(packageId, pricingPackages);
+  
+  // Save vehicles for private transfer packages
+  const { saveVehiclesForPricingPackage } = await import('./activity-package-vehicles');
+  
+  for (let i = 0; i < simplePricingOptions.length; i++) {
+    const simpleOption = simplePricingOptions[i];
+    const savedPackage = savedPackages[i];
+    
+    // Save vehicles if this is a private transfer package
+    if (simpleOption.packageType === 'PRIVATE_TRANSFER' && savedPackage) {
+      const vehicles = simpleOption.vehicles || [];
+      await saveVehiclesForPricingPackage(savedPackage.id, vehicles);
+    }
+  }
+}
+
+/**
  * Toggle active status of a pricing package
  */
 export async function togglePricingPackageStatus(
@@ -368,6 +399,7 @@ export function convertSimpleToPricingPackage(
     childPrice: number;
     childMinAge: number;
     childMaxAge: number;
+    vehicles?: any[]; // Vehicles array for private transfers
   },
   displayOrder: number = 0
 ): ActivityPricingPackage {
@@ -406,9 +438,9 @@ export function convertSimpleToPricingPackage(
  * Convert ActivityPricingPackage to simple format for form
  * Used when loading database data into form
  */
-export function convertPricingPackageToSimple(
+export async function convertPricingPackageToSimple(
   pkg: ActivityPricingPackage
-): {
+): Promise<{
   id: string;
   activityName: string;
   packageType: 'TICKET_ONLY' | 'PRIVATE_TRANSFER' | 'SHARED_TRANSFER';
@@ -416,14 +448,15 @@ export function convertPricingPackageToSimple(
   childPrice: number;
   childMinAge: number;
   childMaxAge: number;
-} {
+  vehicles?: any[];
+}> {
   let packageType: 'TICKET_ONLY' | 'PRIVATE_TRANSFER' | 'SHARED_TRANSFER' = 'TICKET_ONLY';
   
   if (pkg.transferIncluded) {
     packageType = pkg.transferType === 'PRIVATE' ? 'PRIVATE_TRANSFER' : 'SHARED_TRANSFER';
   }
   
-  return {
+  const simple: any = {
     id: pkg.id,
     activityName: pkg.packageName,
     packageType,
@@ -432,5 +465,19 @@ export function convertPricingPackageToSimple(
     childMinAge: pkg.childMinAge,
     childMaxAge: pkg.childMaxAge,
   };
+
+  // Load vehicles for private transfers if pricing package has a real database ID
+  if (packageType === 'PRIVATE_TRANSFER' && pkg.id && !pkg.id.startsWith('temp-')) {
+    try {
+      const { getVehiclesForPricingPackage } = await import('./activity-package-vehicles');
+      const vehicles = await getVehiclesForPricingPackage(pkg.id);
+      simple.vehicles = vehicles;
+    } catch (error) {
+      console.error('Error loading vehicles:', error);
+      simple.vehicles = [];
+    }
+  }
+  
+  return simple;
 }
 
