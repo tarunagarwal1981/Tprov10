@@ -3,14 +3,16 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { FiArrowLeft, FiUsers, FiCalendar, FiPackage } from 'react-icons/fi';
+import { FiArrowLeft, FiUsers, FiCalendar, FiPackage, FiMapPin } from 'react-icons/fi';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/context/SupabaseAuthContext';
 import { useToast } from '@/hooks/useToast';
 import { createClient } from '@/lib/supabase/client';
+import { queryService } from '@/lib/services/queryService';
 
 interface LeadDetails {
   id: string;
@@ -31,6 +33,7 @@ export default function CreateItineraryPage() {
   const leadId = params.leadId as string;
 
   const [lead, setLead] = useState<LeadDetails | null>(null);
+  const [query, setQuery] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
 
@@ -45,12 +48,24 @@ export default function CreateItineraryPage() {
     notes: '',
   });
 
-  // Fetch lead details
+  // Fetch lead and query details
   useEffect(() => {
-    const fetchLead = async () => {
+    const fetchData = async () => {
       if (!leadId || !user?.id) return;
 
       try {
+        // Fetch query data first (required for Create Itinerary)
+        const queryData = await queryService.getQueryByLeadId(leadId);
+        
+        if (!queryData || !queryData.destinations || queryData.destinations.length === 0) {
+          toast.error('Please create a query with destinations first');
+          router.push(`/agent/leads/${leadId}`);
+          return;
+        }
+
+        setQuery(queryData);
+
+        // Fetch lead details
         // First check if this is a purchased marketplace lead
         const { data: purchaseData, error: purchaseError } = await supabase
           .from('lead_purchases' as any)
@@ -115,30 +130,35 @@ export default function CreateItineraryPage() {
           throw new Error('Lead not found or you do not have access to it');
         }
 
-          setLead(leadData);
-          // Pre-fill form with lead data
-          setFormData(prev => ({
-            ...prev,
-            adultsCount: leadData.travelers_count || 2,
-            childrenCount: 0,
-            infantsCount: 0,
-          }));
+        setLead(leadData);
+        
+        // Pre-fill form with query data
+        const startDateValue = queryData.leaving_on 
+          ? (new Date(queryData.leaving_on).toISOString().split('T')[0] || '')
+          : '';
+        setFormData(prev => ({
+          ...prev,
+          adultsCount: queryData.travelers?.adults || 2,
+          childrenCount: queryData.travelers?.children || 0,
+          infantsCount: queryData.travelers?.infants || 0,
+          startDate: startDateValue,
+        }));
       } catch (err) {
-        console.error('Error fetching lead:', err);
-        toast.error('Failed to load lead details');
-        router.push('/agent/leads');
+        console.error('Error fetching data:', err);
+        toast.error('Failed to load data');
+        router.push(`/agent/leads/${leadId}`);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchLead();
+    fetchData();
   }, [leadId, user?.id, router, toast, supabase]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!user?.id || !leadId || !lead) return;
+    if (!user?.id || !leadId || !lead || !query) return;
 
     setCreating(true);
 
@@ -218,6 +238,12 @@ export default function CreateItineraryPage() {
         actualLeadId = typedExisting.id;
       }
 
+      // Calculate end date based on destinations and nights
+      const totalNights = query.destinations.reduce((sum: number, dest: any) => sum + (dest.nights || 0), 0);
+      const startDate = formData.startDate ? new Date(formData.startDate) : new Date();
+      const endDate = new Date(startDate);
+      endDate.setDate(endDate.getDate() + totalNights);
+
       // Create itinerary using the actual lead_id from leads table
       const { data: itinerary, error: itineraryError } = await supabase
         .from('itineraries' as any)
@@ -228,8 +254,8 @@ export default function CreateItineraryPage() {
           adults_count: formData.adultsCount,
           children_count: formData.childrenCount,
           infants_count: formData.infantsCount,
-          start_date: formData.startDate || null,
-          end_date: formData.endDate || null,
+          start_date: formData.startDate || startDate.toISOString().split('T')[0],
+          end_date: endDate.toISOString().split('T')[0],
           notes: formData.notes || null,
           lead_budget_min: lead?.budget_min || null,
           lead_budget_max: lead?.budget_max || null,
@@ -240,11 +266,54 @@ export default function CreateItineraryPage() {
 
       if (itineraryError) throw itineraryError;
 
-      if (itinerary) {
-        const itineraryData = itinerary as unknown as { id: string };
-        toast.success('Itinerary created successfully!');
-        router.push(`/agent/itineraries/${itineraryData.id}/builder`);
+      const itineraryData = itinerary as unknown as { id: string };
+      const itineraryId = itineraryData.id;
+
+      // Generate days based on query destinations
+      const daysToInsert: any[] = [];
+      let currentDate = new Date(startDate);
+      let dayNumber = 1;
+
+      for (const destination of query.destinations) {
+        const cityName = destination.city;
+        const nights = destination.nights || 1;
+
+        // Create a day for each night in this destination
+        for (let night = 0; night < nights; night++) {
+          const dayDate = new Date(currentDate);
+          dayDate.setDate(currentDate.getDate() + night);
+
+          daysToInsert.push({
+            itinerary_id: itineraryId,
+            day_number: dayNumber,
+            date: dayDate.toISOString().split('T')[0],
+            city_name: cityName,
+            display_order: dayNumber,
+            time_slots: {
+              morning: { time: '', activities: [], transfers: [] },
+              afternoon: { time: '', activities: [], transfers: [] },
+              evening: { time: '', activities: [], transfers: [] }
+            },
+            notes: null,
+          });
+
+          dayNumber++;
+        }
+
+        currentDate.setDate(currentDate.getDate() + nights);
       }
+
+      // Insert all days
+      if (daysToInsert.length > 0) {
+        const { error: daysError } = await supabase
+          .from('itinerary_days' as any)
+          .insert(daysToInsert);
+
+        if (daysError) throw daysError;
+      }
+
+      toast.success('Itinerary created successfully!');
+      router.push(`/agent/itineraries/${itineraryId}/builder`);
     } catch (err) {
       console.error('Error creating itinerary:', err);
       toast.error('Failed to create itinerary. Please try again.');
@@ -391,6 +460,29 @@ export default function CreateItineraryPage() {
                   placeholder="Add any special notes or requirements..."
                 />
               </div>
+
+              {/* Query Destinations Preview */}
+              {query && query.destinations && query.destinations.length > 0 && (
+                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                  <p className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                    <FiMapPin className="w-4 h-4" />
+                    Itinerary Destinations
+                  </p>
+                  <div className="space-y-2">
+                    {query.destinations.map((dest: any, index: number) => (
+                      <div key={index} className="flex items-center justify-between text-sm">
+                        <span className="text-gray-700">
+                          {dest.city} - {dest.nights || 1} {dest.nights === 1 ? 'night' : 'nights'}
+                        </span>
+                        <Badge variant="secondary">{dest.nights || 1}N</Badge>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-3">
+                    Total: {query.destinations.reduce((sum: number, d: any) => sum + (d.nights || 1), 0)} nights
+                  </p>
+                </div>
+              )}
 
               {/* Budget Info */}
               {lead.budget_min && lead.budget_max && (

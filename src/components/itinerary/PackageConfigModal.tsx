@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiX, FiCheck, FiUsers, FiDollarSign } from 'react-icons/fi';
+import { FiX, FiCheck, FiUsers, FiDollarSign, FiCalendar, FiMapPin, FiPlus } from 'react-icons/fi';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,6 +32,7 @@ interface PackageConfigModalProps {
   itineraryId: string;
   onClose: () => void;
   onPackageAdded: (item: any) => void;
+  onNavigateToConfigure?: (itemId: string) => void;
 }
 
 export function PackageConfigModal({
@@ -39,6 +40,7 @@ export function PackageConfigModal({
   itineraryId,
   onClose,
   onPackageAdded,
+  onNavigateToConfigure,
 }: PackageConfigModalProps) {
   const supabase = createClient();
   const toast = useToast();
@@ -47,6 +49,10 @@ export function PackageConfigModal({
   const [config, setConfig] = useState<any>({});
   const [calculatedPrice, setCalculatedPrice] = useState(0);
   const [itineraryInfo, setItineraryInfo] = useState<any>(null);
+  const [showDayAssignment, setShowDayAssignment] = useState(false);
+  const [addedItem, setAddedItem] = useState<any>(null);
+  const [days, setDays] = useState<any[]>([]);
+  const [selectedDayId, setSelectedDayId] = useState<string | null>(null);
 
   // Fetch itinerary info (adults, children, infants)
   useEffect(() => {
@@ -71,6 +77,27 @@ export function PackageConfigModal({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [itineraryId]);
+
+  // Fetch days when showing day assignment
+  useEffect(() => {
+    if (showDayAssignment) {
+      const fetchDays = async () => {
+        const { data, error } = await supabase
+          .from('itinerary_days' as any)
+          .select('*')
+          .eq('itinerary_id', itineraryId)
+          .order('day_number', { ascending: true });
+
+        if (error) {
+          console.error('Error fetching days:', error);
+        } else if (data) {
+          setDays(data || []);
+        }
+      };
+
+      fetchDays();
+    }
+  }, [showDayAssignment, itineraryId]);
 
   // Fetch package details
   useEffect(() => {
@@ -126,37 +153,214 @@ export function PackageConfigModal({
         } else if (pkg.package_type === 'transfer') {
           query = supabase.from('transfer_packages').select('*').eq('id', pkg.id).single();
         } else if (pkg.package_type === 'multi_city') {
-          query = supabase.from('multi_city_packages').select('*').eq('id', pkg.id).single();
+          const { data: packageData, error: packageError } = await supabase
+            .from('multi_city_packages')
+            .select('id, title, destination_region, operator_id, base_price, currency, total_nights, total_days, total_cities')
+            .eq('id', pkg.id)
+            .single();
+
+          if (packageError) throw packageError;
+
+          // Fetch pricing packages
+          const { data: pricingPackages, error: pricingError } = await supabase
+            .from('multi_city_pricing_packages' as any)
+            .select('*')
+            .eq('package_id', pkg.id)
+            .order('created_at', { ascending: true });
+
+          if (pricingError && pricingError.code !== 'PGRST116') {
+            console.warn('Error fetching pricing packages:', pricingError);
+          }
+
+          const pricingPkg = (pricingPackages?.[0] as any) || null;
+          let sicRows: any[] = [];
+          let privateRows: any[] = [];
+
+          if (pricingPkg) {
+            if (pricingPkg.pricing_type === 'SIC') {
+              // Fetch SIC pricing rows
+              const { data: rows } = await supabase
+                .from('multi_city_pricing_rows' as any)
+                .select('*')
+                .eq('pricing_package_id', pricingPkg.id)
+                .order('display_order', { ascending: true });
+              sicRows = (rows as any[]) || [];
+            } else if (pricingPkg.pricing_type === 'PRIVATE_PACKAGE') {
+              // Fetch PRIVATE_PACKAGE pricing rows
+              const { data: rows } = await supabase
+                .from('multi_city_private_package_rows' as any)
+                .select('*')
+                .eq('pricing_package_id', pricingPkg.id)
+                .order('display_order', { ascending: true });
+              privateRows = (rows as any[]) || [];
+            }
+          }
+
+          setPackageData({
+            ...(packageData as any),
+            pricing_package: pricingPkg,
+            sic_pricing_rows: sicRows,
+            private_package_rows: privateRows,
+          });
+
+          // Initialize default config
+          setConfig({
+            pricingType: (pricingPkg?.pricing_type as 'SIC' | 'PRIVATE_PACKAGE') || 'SIC',
+            selectedPricingRowId: sicRows[0]?.id || privateRows[0]?.id || null,
+            selectedVehicle: null,
+            selectedHotels: [],
+            quantity: 1,
+          });
+
+          if (isMounted) {
+            setLoading(false);
+          }
+          return;
         } else if (pkg.package_type === 'multi_city_hotel') {
-          query = supabase.from('multi_city_hotel_packages' as any).select('*').eq('id', pkg.id).single();
+          const { data: packageData, error: packageError } = await supabase
+            .from('multi_city_hotel_packages' as any)
+            .select('id, title, destination_region, operator_id, base_price, currency, total_nights, total_cities')
+            .eq('id', pkg.id)
+            .single();
+
+          if (packageError) throw packageError;
+
+          // Fetch pricing packages
+          const { data: pricingPackages, error: pricingError } = await supabase
+            .from('multi_city_hotel_pricing_packages' as any)
+            .select('*')
+            .eq('package_id', pkg.id)
+            .order('created_at', { ascending: true });
+
+          if (pricingError && pricingError.code !== 'PGRST116') {
+            console.warn('Error fetching pricing packages:', pricingError);
+          }
+
+          const pricingPkg = (pricingPackages?.[0] as any) || null;
+          let sicRows: any[] = [];
+          let privateRows: any[] = [];
+
+          if (pricingPkg) {
+            if (pricingPkg.pricing_type === 'SIC') {
+              const { data: rows } = await supabase
+                .from('multi_city_hotel_pricing_rows' as any)
+                .select('*')
+                .eq('pricing_package_id', pricingPkg.id)
+                .order('display_order', { ascending: true });
+              sicRows = (rows as any[]) || [];
+            } else if (pricingPkg.pricing_type === 'PRIVATE_PACKAGE') {
+              const { data: rows } = await supabase
+                .from('multi_city_hotel_private_package_rows' as any)
+                .select('*')
+                .eq('pricing_package_id', pricingPkg.id)
+                .order('display_order', { ascending: true });
+              privateRows = (rows as any[]) || [];
+            }
+          }
+
+          // Fetch cities and hotels
+          const { data: cities } = await supabase
+            .from('multi_city_hotel_package_cities' as any)
+            .select('id, name, nights, city_order')
+            .eq('package_id', pkg.id)
+            .order('city_order', { ascending: true });
+
+          const cityIds = (cities as any[])?.map((c: any) => c.id) || [];
+          let hotelsByCity: Record<string, any[]> = {};
+
+          if (cityIds.length > 0) {
+            const { data: hotels } = await supabase
+              .from('multi_city_hotel_package_city_hotels' as any)
+              .select('*')
+              .in('city_id', cityIds)
+              .order('display_order', { ascending: true });
+
+            // Group hotels by city
+            if (hotels && Array.isArray(hotels)) {
+              (hotels as any[]).forEach((hotel: any) => {
+                if (hotel.city_id) {
+                  if (!hotelsByCity[hotel.city_id]) {
+                    hotelsByCity[hotel.city_id] = [];
+                  }
+                  hotelsByCity[hotel.city_id]!.push(hotel);
+                }
+              });
+            }
+          }
+
+          setPackageData({
+            ...(packageData as any),
+            pricing_package: pricingPkg,
+            sic_pricing_rows: sicRows,
+            private_package_rows: privateRows,
+            cities: (cities as any[]) || [],
+            hotels_by_city: hotelsByCity,
+          });
+
+          // Initialize default config with hotel selections
+          const defaultHotels = ((cities as any[]) || []).map((city: any) => ({
+            city_id: city.id,
+            city_name: city.name,
+            hotel_id: hotelsByCity[city.id]?.[0]?.id || null,
+            nights: city.nights || 1,
+          }));
+
+          setConfig({
+            pricingType: (pricingPkg?.pricing_type as 'SIC' | 'PRIVATE_PACKAGE') || 'SIC',
+            selectedPricingRowId: sicRows[0]?.id || privateRows[0]?.id || null,
+            selectedVehicle: null,
+            selectedHotels: defaultHotels,
+            quantity: 1,
+          });
+
+          if (isMounted) {
+            setLoading(false);
+          }
+          return;
         } else if (pkg.package_type === 'fixed_departure') {
-          query = supabase.from('fixed_departure_flight_packages' as any).select('*').eq('id', pkg.id).single();
-        } else {
-          throw new Error('Unknown package type');
-        }
+          const { data: fixedData, error: fixedError } = await supabase
+            .from('fixed_departure_flight_packages' as any)
+            .select('*')
+            .eq('id', pkg.id)
+            .single();
 
-        const { data, error } = await query;
+          if (fixedError) throw fixedError;
+          if (fixedData && isMounted) {
+            setPackageData(fixedData);
+            setConfig({
+              pricingType: 'SIC',
+              selectedVehicle: null,
+              selectedHotels: [],
+              quantity: 1,
+            });
+          }
+          if (isMounted) {
+            setLoading(false);
+          }
+          return;
+        } else if (pkg.package_type === 'transfer') {
+          const { data: transferData, error: transferError } = await supabase
+            .from('transfer_packages')
+            .select('*')
+            .eq('id', pkg.id)
+            .single();
 
-        if (error) throw error;
-        if (data && isMounted) {
-          setPackageData(data);
-          
-          // Initialize default config based on package type
-          if (pkg.package_type === 'transfer') {
+          if (transferError) throw transferError;
+          if (transferData && isMounted) {
+            setPackageData(transferData);
             setConfig({
               pricingType: 'point-to-point',
               selectedOption: null,
               hours: 1,
               quantity: 1,
             });
-          } else if (pkg.package_type === 'multi_city' || pkg.package_type === 'multi_city_hotel' || pkg.package_type === 'fixed_departure') {
-            setConfig({
-              pricingType: data.pricing?.pricing_type || 'STANDARD',
-              selectedVehicle: null,
-              selectedHotels: [],
-              quantity: 1,
-            });
           }
+          if (isMounted) {
+            setLoading(false);
+          }
+          return;
+        } else {
+          throw new Error('Unknown package type');
         }
       } catch (err) {
         console.error('Error fetching package:', err);
@@ -211,14 +415,79 @@ export function PackageConfigModal({
       if (packageData.base_price) {
         price = (packageData.base_price || 0) * (config.quantity || 1);
       }
-    } else if (pkg.package_type === 'multi_city' || pkg.package_type === 'multi_city_hotel' || pkg.package_type === 'fixed_departure') {
-      // Multi-city packages use adult_price directly from the table
-      const adultsPrice = (packageData.adult_price || 0) * (itineraryInfo.adults_count || 0);
-      const childrenPrice = 0; // Multi-city packages typically don't have child pricing
-      const infantsPrice = 0;
-      price = adultsPrice + childrenPrice + infantsPrice;
+    } else if (pkg.package_type === 'multi_city' || pkg.package_type === 'multi_city_hotel') {
+      // Multi-city packages use pricing rows based on travelers
+      const adults = itineraryInfo.adults_count || 0;
+      const children = itineraryInfo.children_count || 0;
+      const pkgData = packageData as any;
+      const pricingType = config.pricingType || pkgData.pricing_package?.pricing_type || 'SIC';
       
-      // Note: Vehicle and hotel pricing will be added when those features are implemented
+      if (pricingType === 'SIC') {
+        // Use selected pricing row, or find matching one
+        const sicRows = pkgData.sic_pricing_rows || [];
+        let selectedRow = null;
+        
+        if (config.selectedPricingRowId) {
+          selectedRow = sicRows.find((row: any) => row.id === config.selectedPricingRowId);
+        }
+        
+        // If no selected row or selected row doesn't match, find best match
+        if (!selectedRow) {
+          selectedRow = sicRows.find((row: any) => 
+            row.number_of_adults === adults && row.number_of_children === children
+          ) || sicRows.find((row: any) => 
+            row.number_of_adults >= adults && row.number_of_children >= children
+          ) || sicRows[sicRows.length - 1]; // Fallback to last row
+        }
+        
+        if (selectedRow) {
+          price = selectedRow.total_price || 0;
+        }
+      } else if (pricingType === 'PRIVATE_PACKAGE') {
+        // Use selected pricing row, or find matching one
+        const privateRows = pkgData.private_package_rows || [];
+        let selectedRow = null;
+        
+        if (config.selectedPricingRowId) {
+          selectedRow = privateRows.find((row: any) => row.id === config.selectedPricingRowId);
+        }
+        
+        // If no selected row or selected row doesn't match, find best match
+        if (!selectedRow) {
+          selectedRow = privateRows.find((row: any) => 
+            row.number_of_adults === adults && row.number_of_children === children
+          ) || privateRows.find((row: any) => 
+            row.number_of_adults >= adults && row.number_of_children >= children
+          ) || privateRows[privateRows.length - 1]; // Fallback to last row
+        }
+        
+        if (selectedRow) {
+          price = selectedRow.total_price || 0;
+        }
+      }
+
+      // Add hotel prices for multi-city-hotel packages
+      if (pkg.package_type === 'multi_city_hotel' && config.selectedHotels && Array.isArray(config.selectedHotels)) {
+        const hotelsByCity = pkgData.hotels_by_city || {};
+        let hotelPrice = 0;
+        
+        config.selectedHotels.forEach((hotelSelection: any) => {
+          if (hotelSelection.hotel_id && hotelsByCity[hotelSelection.city_id]) {
+            const hotel = hotelsByCity[hotelSelection.city_id].find((h: any) => h.id === hotelSelection.hotel_id);
+            if (hotel) {
+              const nights = hotelSelection.nights || 1;
+              const adultPrice = (hotel.adult_price || 0) * adults * nights;
+              const childPrice = (hotel.child_price || 0) * children * nights;
+              hotelPrice += adultPrice + childPrice;
+            }
+          }
+        });
+        
+        price += hotelPrice;
+      }
+    } else if (pkg.package_type === 'fixed_departure') {
+      // Fixed departure uses base_price for now (can be enhanced later)
+      price = (packageData as any).base_price || 0;
     }
 
     setCalculatedPrice(price * (config.quantity || 1));
@@ -250,16 +519,109 @@ export function PackageConfigModal({
         .single();
 
       if (error) throw error;
+      if (!item) throw new Error('Failed to create itinerary item');
 
-      onPackageAdded(item);
-      toast.success('Package added to itinerary');
-      onClose();
+      const itemTyped = item as unknown as { id: string };
+
+      // For multi-city and multi-city hotel packages, navigate directly to configuration page
+      if (pkg.package_type === 'multi_city' || pkg.package_type === 'multi_city_hotel') {
+        onPackageAdded(itemTyped);
+        onClose();
+        
+        // Navigate immediately to configuration page (don't show builder page)
+        if (onNavigateToConfigure) {
+          // Use setTimeout to ensure modal closes first, then navigate
+          setTimeout(() => {
+            onNavigateToConfigure(itemTyped.id);
+          }, 100);
+        } else {
+          // Fallback: use window.location for immediate navigation
+          setTimeout(() => {
+            window.location.href = `/agent/itineraries/${itineraryId}/configure/${itemTyped.id}`;
+          }, 100);
+        }
+      } else {
+        // For other package types, show day assignment
+        setAddedItem(item);
+        setShowDayAssignment(true);
+        toast.success('Package added! Now assign it to a day');
+      }
     } catch (err) {
       console.error('Error adding package:', err);
       toast.error('Failed to add package to itinerary');
+      setLoading(false);
+    }
+  };
+
+  const handleAssignToDay = async () => {
+    if (!addedItem || !selectedDayId) return;
+
+    setLoading(true);
+    try {
+      // Update item with selected day
+      const { error } = await supabase
+        .from('itinerary_items' as any)
+        .update({ day_id: selectedDayId })
+        .eq('id', addedItem.id);
+
+      if (error) throw error;
+
+      onPackageAdded({ ...addedItem, day_id: selectedDayId });
+      toast.success('Package assigned to day successfully');
+      onClose();
+    } catch (err) {
+      console.error('Error assigning to day:', err);
+      toast.error('Failed to assign package to day');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSkipDayAssignment = () => {
+    onPackageAdded(addedItem);
+    toast.success('Package added to itinerary (unassigned)');
+    onClose();
+  };
+
+  const handleCreateDay = async () => {
+    setLoading(true);
+    try {
+      const newDayNumber = days.length > 0 ? Math.max(...days.map(d => d.day_number)) + 1 : 1;
+      
+      const { data: newDay, error } = await supabase
+        .from('itinerary_days' as any)
+        .insert({
+          itinerary_id: itineraryId,
+          day_number: newDayNumber,
+          display_order: newDayNumber,
+          time_slots: {
+            morning: { time: '', activities: [], transfers: [] },
+            afternoon: { time: '', activities: [], transfers: [] },
+            evening: { time: '', activities: [], transfers: [] },
+          },
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      if (!newDay) throw new Error('Failed to create day');
+
+      const newDayTyped = newDay as unknown as { id: string; day_number: number; date: string | null; city_name: string | null };
+      setDays([...days, newDayTyped]);
+      setSelectedDayId(newDayTyped.id);
+      toast.success('Day created successfully');
+    } catch (err) {
+      console.error('Error creating day:', err);
+      toast.error('Failed to create day');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return 'Date TBD';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
   };
 
   if (loading && !packageData) {
@@ -281,14 +643,112 @@ export function PackageConfigModal({
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-white">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold">{pkg.title}</DialogTitle>
+          <DialogTitle className="text-2xl font-bold">
+            {showDayAssignment ? 'Assign Package to Day' : pkg.title}
+          </DialogTitle>
           <p className="text-sm text-gray-600 mt-1">
-            {pkg.destination_city && `${pkg.destination_city}, `}
-            {pkg.destination_country} • {pkg.operator_name}
+            {showDayAssignment ? (
+              `Select which day to assign "${pkg.title}"`
+            ) : (
+              <>
+                {pkg.destination_city && `${pkg.destination_city}, `}
+                {pkg.destination_country} • {pkg.operator_name}
+              </>
+            )}
           </p>
         </DialogHeader>
 
-        <div className="space-y-6 mt-4">
+        {showDayAssignment ? (
+          <div className="space-y-6 mt-4">
+            {/* Day Assignment UI */}
+            <div>
+              <Label className="text-base font-semibold mb-3 block">Select Day</Label>
+              
+              {days.length === 0 ? (
+                <Card className="border-2 border-dashed border-gray-300 p-8 text-center">
+                  <FiCalendar className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No days created yet</h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Create your first day to assign this package
+                  </p>
+                  <Button onClick={handleCreateDay} disabled={loading}>
+                    <FiPlus className="w-4 h-4 mr-2" />
+                    Create First Day
+                  </Button>
+                </Card>
+              ) : (
+                <div className="space-y-3">
+                  {days.map((day) => (
+                    <div
+                      key={day.id}
+                      onClick={() => setSelectedDayId(day.id)}
+                      className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                        selectedDayId === day.id
+                          ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
+                          : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
+                            selectedDayId === day.id
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-gray-200 text-gray-700'
+                          }`}>
+                            {day.day_number}
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-gray-900">
+                              Day {day.day_number}: {formatDate(day.date)}
+                            </h3>
+                            {day.city_name && (
+                              <p className="text-sm text-gray-600 flex items-center gap-1 mt-1">
+                                <FiMapPin className="w-4 h-4" />
+                                {day.city_name}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        {selectedDayId === day.id && (
+                          <FiCheck className="w-6 h-6 text-blue-600" />
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  
+                  <Button
+                    variant="outline"
+                    onClick={handleCreateDay}
+                    disabled={loading}
+                    className="w-full mt-2"
+                  >
+                    <FiPlus className="w-4 h-4 mr-2" />
+                    Create New Day
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3 pt-4 border-t">
+              <Button
+                variant="outline"
+                onClick={handleSkipDayAssignment}
+                className="flex-1"
+              >
+                Skip (Assign Later)
+              </Button>
+              <Button
+                onClick={handleAssignToDay}
+                disabled={loading || !selectedDayId}
+                className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white"
+              >
+                {loading ? 'Assigning...' : 'Assign to Day'}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-6 mt-4">
           {/* Activity Package Configuration */}
           {pkg.package_type === 'activity' && (
             <div className="space-y-4">
@@ -426,15 +886,10 @@ export function PackageConfigModal({
           {/* Multi-City Package Configuration */}
           {(pkg.package_type === 'multi_city' || pkg.package_type === 'multi_city_hotel' || pkg.package_type === 'fixed_departure') && packageData && (
             <div className="space-y-4">
+              {/* Package Details */}
               <div>
                 <Label className="text-base font-semibold mb-3 block">Package Details</Label>
                 <div className="space-y-3 p-4 border rounded-lg bg-gray-50">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium text-gray-700">Adult Price (per person)</span>
-                    <span className="text-lg font-semibold text-gray-900">
-                      {packageData?.adult_price ? `$${packageData.adult_price.toFixed(2)}` : 'Not set'}
-                    </span>
-                  </div>
                   {packageData?.destination_region && (
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-600">Destination Region</span>
@@ -454,35 +909,165 @@ export function PackageConfigModal({
                     </div>
                   )}
                 </div>
+              </div>
 
-                {/* Quantity Input */}
-                <div className="mt-4">
-                  <Label htmlFor="multicity-quantity">Quantity</Label>
-                  <Input
-                    id="multicity-quantity"
-                    type="number"
-                    min="1"
-                    value={config.quantity || 1}
-                    onChange={(e) => setConfig({ ...config, quantity: parseInt(e.target.value) || 1 })}
-                    className="mt-1"
-                  />
+              {/* Pricing Type Selection (SIC vs PRIVATE_PACKAGE) */}
+              {packageData.pricing_package && (
+                <div>
+                  <Label className="text-base font-semibold mb-3 block">Pricing Type</Label>
+                  <div className="p-3 border rounded-lg bg-gray-50">
+                    <div className="font-medium">
+                      {(packageData.pricing_package as any).pricing_type === 'SIC' ? 'SIC (Seat-In-Coach)' : 'Private Package'}
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      {(packageData.pricing_package as any).pricing_type === 'SIC' 
+                        ? 'Shared transportation' 
+                        : 'Private vehicle transportation'}
+                    </div>
+                  </div>
                 </div>
+              )}
+
+              {/* SIC Pricing Rows */}
+              {(packageData.pricing_package as any)?.pricing_type === 'SIC' && (packageData as any).sic_pricing_rows && (packageData as any).sic_pricing_rows.length > 0 && (
+                <div>
+                  <Label className="text-base font-semibold mb-3 block">Select Pricing (Based on {itineraryInfo?.adults_count || 0} Adults, {itineraryInfo?.children_count || 0} Children)</Label>
+                  <div className="space-y-2">
+                    {((packageData as any).sic_pricing_rows || []).map((row: any) => {
+                      const isSelected = config.selectedPricingRowId === row.id;
+                      const isMatching = row.number_of_adults === (itineraryInfo?.adults_count || 0) && 
+                                        row.number_of_children === (itineraryInfo?.children_count || 0);
+                      return (
+                        <div
+                          key={row.id}
+                          onClick={() => setConfig({ ...config, selectedPricingRowId: row.id })}
+                          className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                            isSelected ? 'border-blue-500 bg-blue-50' : 'hover:bg-gray-50'
+                          } ${isMatching ? 'ring-2 ring-green-500' : ''}`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="font-medium">
+                                {row.number_of_adults} Adult{row.number_of_adults !== 1 ? 's' : ''}
+                                {row.number_of_children > 0 && `, ${row.number_of_children} Child${row.number_of_children !== 1 ? 'ren' : ''}`}
+                              </div>
+                              {isMatching && (
+                                <Badge className="mt-1 bg-green-100 text-green-700">Matches your group</Badge>
+                              )}
+                            </div>
+                            <div className="text-lg font-semibold text-green-600">
+                              ${row.total_price.toFixed(2)}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* PRIVATE_PACKAGE Pricing Rows */}
+              {(packageData.pricing_package as any)?.pricing_type === 'PRIVATE_PACKAGE' && (packageData as any).private_package_rows && (packageData as any).private_package_rows.length > 0 && (
+                <div>
+                  <Label className="text-base font-semibold mb-3 block">Select Vehicle & Pricing (Based on {itineraryInfo?.adults_count || 0} Adults, {itineraryInfo?.children_count || 0} Children)</Label>
+                  <div className="space-y-2">
+                    {((packageData as any).private_package_rows || []).map((row: any) => {
+                      const isSelected = config.selectedPricingRowId === row.id;
+                      const isMatching = row.number_of_adults === (itineraryInfo?.adults_count || 0) && 
+                                        row.number_of_children === (itineraryInfo?.children_count || 0);
+                      return (
+                        <div
+                          key={row.id}
+                          onClick={() => setConfig({ 
+                            ...config, 
+                            selectedPricingRowId: row.id,
+                            selectedVehicle: row.id,
+                          })}
+                          className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                            isSelected ? 'border-blue-500 bg-blue-50' : 'hover:bg-gray-50'
+                          } ${isMatching ? 'ring-2 ring-green-500' : ''}`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="font-medium">{row.car_type}</div>
+                              <div className="text-sm text-gray-600">
+                                Capacity: {row.vehicle_capacity} • {row.number_of_adults} Adult{row.number_of_adults !== 1 ? 's' : ''}
+                                {row.number_of_children > 0 && `, ${row.number_of_children} Child${row.number_of_children !== 1 ? 'ren' : ''}`}
+                              </div>
+                              {isMatching && (
+                                <Badge className="mt-1 bg-green-100 text-green-700">Matches your group</Badge>
+                              )}
+                            </div>
+                            <div className="text-lg font-semibold text-green-600">
+                              ${row.total_price.toFixed(2)}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Hotel Selection for Multi-City Hotel Packages */}
+              {pkg.package_type === 'multi_city_hotel' && (packageData as any).cities && (packageData as any).cities.length > 0 && (
+                <div>
+                  <Label className="text-base font-semibold mb-3 block">Select Hotels</Label>
+                  <div className="space-y-4">
+                    {((packageData as any).cities || []).map((city: any) => {
+                      const hotels = ((packageData as any).hotels_by_city || {})[city.id] || [];
+                      const selectedHotel = config.selectedHotels?.find((h: any) => h.city_id === city.id);
+                      return (
+                        <div key={city.id} className="p-4 border rounded-lg">
+                          <div className="mb-3">
+                            <div className="font-medium">{city.name}</div>
+                            <div className="text-sm text-gray-600">{city.nights} night{city.nights !== 1 ? 's' : ''}</div>
+                          </div>
+                          {hotels.length > 0 ? (
+                            <Select
+                              value={selectedHotel?.hotel_id || ''}
+                              onValueChange={(hotelId) => {
+                                const updatedHotels = (config.selectedHotels || []).map((h: any) =>
+                                  h.city_id === city.id ? { ...h, hotel_id: hotelId } : h
+                                );
+                                setConfig({ ...config, selectedHotels: updatedHotels });
+                              }}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select hotel" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {hotels.map((hotel: any) => (
+                                  <SelectItem key={hotel.id} value={hotel.id}>
+                                    {hotel.hotel_name} ({hotel.hotel_type}) - ${hotel.adult_price?.toFixed(2) || '0.00'}/night
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <div className="text-sm text-gray-500">No hotels available for this city</div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Quantity Input */}
+              <div>
+                <Label htmlFor="multicity-quantity">Quantity</Label>
+                <Input
+                  id="multicity-quantity"
+                  type="number"
+                  min="1"
+                  value={config.quantity || 1}
+                  onChange={(e) => setConfig({ ...config, quantity: parseInt(e.target.value) || 1 })}
+                  className="mt-1"
+                />
               </div>
             </div>
           )}
-
-          {/* Quantity */}
-          <div>
-            <Label htmlFor="quantity">Quantity</Label>
-            <Input
-              id="quantity"
-              type="number"
-              min="1"
-              value={config.quantity || 1}
-              onChange={(e) => setConfig({ ...config, quantity: parseInt(e.target.value) || 1 })}
-              className="mt-1"
-            />
-          </div>
 
           {/* Price Summary */}
           <Card className="bg-gray-50">
@@ -526,7 +1111,8 @@ export function PackageConfigModal({
               {loading ? 'Adding...' : 'Add to Itinerary'}
             </Button>
           </div>
-        </div>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

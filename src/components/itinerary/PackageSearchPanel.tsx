@@ -71,12 +71,15 @@ export function PackageSearchPanel({
           .select('id, title, destination_country, destination_city, operator_id, base_price, currency, status')
           .eq('status', 'published');
 
-        // Apply filters - build OR conditions array and combine into single OR call
+        // Apply filters - handle destination with commas properly
         const orConditions: string[] = [];
         if (selectedDestination) {
-          // Add destination OR conditions
-          orConditions.push(`destination_country.ilike.%${selectedDestination}%`);
-          orConditions.push(`destination_city.ilike.%${selectedDestination}%`);
+          // Split destination by comma and search for each part separately
+          const destinationParts = selectedDestination.split(',').map(d => d.trim()).filter(d => d);
+          destinationParts.forEach(part => {
+            orConditions.push(`destination_country.ilike.%${part}%`);
+            orConditions.push(`destination_city.ilike.%${part}%`);
+          });
         }
         if (searchQuery) {
           // Add search OR conditions
@@ -84,9 +87,9 @@ export function PackageSearchPanel({
           orConditions.push(`short_description.ilike.%${searchQuery}%`);
         }
         if (orConditions.length > 0) {
-          query = query.or(orConditions.join(','));
+          // Supabase OR syntax: wrap in parentheses and join with comma
+          query = query.or(`(${orConditions.join(',')})`);
         }
-        // If no filters, fetch all published packages
 
         const { data } = await query.limit(20);
         if (data) {
@@ -112,12 +115,15 @@ export function PackageSearchPanel({
           .select('id, title, destination_country, destination_city, operator_id, base_price, currency, status')
           .eq('status', 'published');
 
-        // Apply filters - build OR conditions array and combine into single OR call
+        // Apply filters - handle destination with commas properly
         const orConditions: string[] = [];
         if (selectedDestination) {
-          // Add destination OR conditions
-          orConditions.push(`destination_country.ilike.%${selectedDestination}%`);
-          orConditions.push(`destination_city.ilike.%${selectedDestination}%`);
+          // Split destination by comma and search for each part separately
+          const destinationParts = selectedDestination.split(',').map(d => d.trim()).filter(d => d);
+          destinationParts.forEach(part => {
+            orConditions.push(`destination_country.ilike.%${part}%`);
+            orConditions.push(`destination_city.ilike.%${part}%`);
+          });
         }
         if (searchQuery) {
           // Add search OR conditions
@@ -125,9 +131,9 @@ export function PackageSearchPanel({
           orConditions.push(`short_description.ilike.%${searchQuery}%`);
         }
         if (orConditions.length > 0) {
-          query = query.or(orConditions.join(','));
+          // Supabase OR syntax: wrap in parentheses and join with comma
+          query = query.or(`(${orConditions.join(',')})`);
         }
-        // If no filters, fetch all published packages
 
         const { data } = await query.limit(20);
         if (data) {
@@ -150,14 +156,17 @@ export function PackageSearchPanel({
       if (selectedType === 'all' || selectedType === 'multi_city') {
         let query = supabase
           .from('multi_city_packages')
-          .select('id, title, destination_region, operator_id, adult_price, currency, status')
+          .select('id, title, destination_region, operator_id, base_price, currency, status')
           .eq('status', 'published');
 
-        // Apply filters - build OR conditions array and combine into single OR call
+        // Apply filters - handle destination with commas properly
         const orConditions: string[] = [];
         if (selectedDestination) {
-          // Add destination condition
-          orConditions.push(`destination_region.ilike.%${selectedDestination}%`);
+          // Split destination by comma and search for each part separately
+          const destinationParts = selectedDestination.split(',').map(d => d.trim()).filter(d => d);
+          destinationParts.forEach(part => {
+            orConditions.push(`destination_region.ilike.%${part}%`);
+          });
         }
         if (searchQuery) {
           // Add search OR conditions
@@ -165,13 +174,20 @@ export function PackageSearchPanel({
           orConditions.push(`short_description.ilike.%${searchQuery}%`);
         }
         if (orConditions.length > 0) {
-          query = query.or(orConditions.join(','));
+          // Supabase OR syntax: wrap in parentheses and join with comma
+          query = query.or(`(${orConditions.join(',')})`);
         }
-        // If no filters, fetch all published packages
 
         const { data } = await query.limit(20);
         if (data) {
-          const packagesTyped = data as unknown as Array<{ id: string; title: string; destination_region: string | null; operator_id: string; adult_price: number | null; currency: string | null }>;
+          const packagesTyped = data as unknown as Array<{ 
+            id: string; 
+            title: string; 
+            destination_region: string | null; 
+            operator_id: string; 
+            base_price: number | null;
+            currency: string | null;
+          }>;
           allPackages.push(...packagesTyped.map(p => ({
             id: p.id,
             title: p.title,
@@ -180,7 +196,7 @@ export function PackageSearchPanel({
             package_type: 'multi_city' as const,
             operator_id: p.operator_id,
             featured_image_url: undefined,
-            base_price: p.adult_price || undefined,
+            base_price: p.base_price || undefined,
             currency: p.currency || undefined,
           })));
         }
@@ -190,14 +206,17 @@ export function PackageSearchPanel({
       if (selectedType === 'all' || selectedType === 'multi_city_hotel') {
         let query = supabase
           .from('multi_city_hotel_packages' as any)
-          .select('id, title, destination_region, operator_id, adult_price, currency, status')
+          .select('id, title, destination_region, operator_id, base_price, currency, status')
           .eq('status', 'published');
 
-        // Apply filters - build OR conditions array and combine into single OR call
+        // Apply filters - handle destination with commas properly
         const orConditions: string[] = [];
         if (selectedDestination) {
-          // Add destination condition
-          orConditions.push(`destination_region.ilike.%${selectedDestination}%`);
+          // Split destination by comma and search for each part separately
+          const destinationParts = selectedDestination.split(',').map(d => d.trim()).filter(d => d);
+          destinationParts.forEach(part => {
+            orConditions.push(`destination_region.ilike.%${part}%`);
+          });
         }
         if (searchQuery) {
           // Add search OR conditions
@@ -205,13 +224,13 @@ export function PackageSearchPanel({
           orConditions.push(`short_description.ilike.%${searchQuery}%`);
         }
         if (orConditions.length > 0) {
-          query = query.or(orConditions.join(','));
+          // Supabase OR syntax: wrap in parentheses and join with comma
+          query = query.or(`(${orConditions.join(',')})`);
         }
-        // If no filters, fetch all published packages
 
         const { data } = await query.limit(20);
         if (data) {
-          const packagesTyped = data as unknown as Array<{ id: string; title: string; destination_region: string | null; operator_id: string; featured_image_url: string | null; adult_price: number | null; currency: string | null }>;
+          const packagesTyped = data as unknown as Array<{ id: string; title: string; destination_region: string | null; operator_id: string; base_price: number | null; currency: string | null }>;
           allPackages.push(...packagesTyped.map(p => ({
             id: p.id,
             title: p.title,
@@ -219,8 +238,8 @@ export function PackageSearchPanel({
             destination_city: '',
             package_type: 'multi_city_hotel' as const,
             operator_id: p.operator_id,
-            featured_image_url: p.featured_image_url || undefined,
-            base_price: p.adult_price || undefined,
+            featured_image_url: undefined,
+            base_price: p.base_price || undefined,
             currency: p.currency || undefined,
           })));
         }
@@ -230,14 +249,17 @@ export function PackageSearchPanel({
       if (selectedType === 'all' || selectedType === 'fixed_departure') {
         let query = supabase
           .from('fixed_departure_flight_packages' as any)
-          .select('id, title, destination_region, operator_id, adult_price, currency, status')
+          .select('id, title, destination_region, operator_id, base_price, currency, status')
           .eq('status', 'published');
 
-        // Apply filters - build OR conditions array and combine into single OR call
+        // Apply filters - handle destination with commas properly
         const orConditions: string[] = [];
         if (selectedDestination) {
-          // Add destination condition
-          orConditions.push(`destination_region.ilike.%${selectedDestination}%`);
+          // Split destination by comma and search for each part separately
+          const destinationParts = selectedDestination.split(',').map(d => d.trim()).filter(d => d);
+          destinationParts.forEach(part => {
+            orConditions.push(`destination_region.ilike.%${part}%`);
+          });
         }
         if (searchQuery) {
           // Add search OR conditions
@@ -245,13 +267,13 @@ export function PackageSearchPanel({
           orConditions.push(`short_description.ilike.%${searchQuery}%`);
         }
         if (orConditions.length > 0) {
-          query = query.or(orConditions.join(','));
+          // Supabase OR syntax: wrap in parentheses and join with comma
+          query = query.or(`(${orConditions.join(',')})`);
         }
-        // If no filters, fetch all published packages
 
         const { data } = await query.limit(20);
         if (data) {
-          const packagesTyped = data as unknown as Array<{ id: string; title: string; destination_region: string | null; operator_id: string; featured_image_url: string | null; adult_price: number | null; currency: string | null }>;
+          const packagesTyped = data as unknown as Array<{ id: string; title: string; destination_region: string | null; operator_id: string; base_price: number | null; currency: string | null }>;
           allPackages.push(...packagesTyped.map(p => ({
             id: p.id,
             title: p.title,
@@ -259,8 +281,8 @@ export function PackageSearchPanel({
             destination_city: '',
             package_type: 'fixed_departure' as const,
             operator_id: p.operator_id,
-            featured_image_url: p.featured_image_url || undefined,
-            base_price: p.adult_price || undefined,
+            featured_image_url: undefined,
+            base_price: p.base_price || undefined,
             currency: p.currency || undefined,
           })));
         }
@@ -450,6 +472,10 @@ export function PackageSearchPanel({
           onPackageAdded={(item) => {
             onPackageAdded(item);
             setSelectedPackage(null);
+          }}
+          onNavigateToConfigure={(itemId) => {
+            // Navigate using window.location since we don't have router here
+            window.location.href = `/agent/itineraries/${itineraryId}/configure/${itemId}`;
           }}
         />
       )}
