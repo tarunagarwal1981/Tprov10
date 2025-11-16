@@ -415,7 +415,23 @@ export const BasicInformationTab: React.FC = () => {
 
   const handleImageUpload = useCallback(async (files: File[], isFeatured = false) => {
     try {
+      console.log('🖼️ [BasicInfoTab] handleImageUpload called', {
+        filesCount: files.length,
+        isFeatured,
+        fileNames: files.map(f => f.name),
+        fileSizes: files.map(f => f.size)
+      });
+      
       const processedImages = await processUploadedFiles(files);
+      console.log('✅ [BasicInfoTab] Images processed', {
+        processedCount: processedImages.length,
+        processedImages: processedImages.map(img => ({
+          id: img.id,
+          url: img.url?.substring(0, 50) + '...',
+          fileName: img.fileName,
+          fileSize: img.fileSize
+        }))
+      });
       
       if (isFeatured) {
         // Handle featured image
@@ -432,16 +448,26 @@ export const BasicInformationTab: React.FC = () => {
             order: firstImage.order,
             uploadedAt: firstImage.uploadedAt
           };
+          console.log('🎯 [BasicInfoTab] Setting featured image', { featuredImage });
           setValue('basicInformation.featuredImage', featuredImage);
         }
       } else {
         // Handle gallery images
         const currentGallery = watchedData.imageGallery || [];
         const newGallery = [...currentGallery, ...processedImages];
+        console.log('🖼️ [BasicInfoTab] Setting gallery images', {
+          currentCount: currentGallery.length,
+          newCount: newGallery.length,
+          newGallery: newGallery.map(img => ({
+            id: img.id,
+            url: img.url?.substring(0, 50) + '...',
+            fileName: img.fileName
+          }))
+        });
         setValue('basicInformation.imageGallery', newGallery);
       }
     } catch (error) {
-      console.error('Error processing images:', error);
+      console.error('❌ [BasicInfoTab] Error processing images:', error);
     }
   }, [watchedData.imageGallery, setValue]);
 
@@ -456,6 +482,15 @@ export const BasicInformationTab: React.FC = () => {
   }, [setValue]);
 
   const handleImagesChange = useCallback((images: ImageInfo[]) => {
+    console.log('🔄 [BasicInfoTab] handleImagesChange called', {
+      imageCount: images.length,
+      images: images.map(img => ({
+        id: img.id,
+        url: img.url?.substring(0, 50) + '...',
+        fileName: img.fileName,
+        isCover: img.isCover
+      }))
+    });
     setValue('basicInformation.imageGallery', images);
   }, [setValue]);
 

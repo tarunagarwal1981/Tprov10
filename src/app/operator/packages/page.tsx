@@ -35,6 +35,7 @@ import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import { FaCar } from 'react-icons/fa';
 import { TransferPackageCard, TransferPackageCardData } from '@/components/packages/TransferPackageCard';
+import { ActivityPackageCard, ActivityPackageCardData } from '@/components/packages/ActivityPackageCard';
 import { listTransferPackagesWithCardData, deleteTransferPackage } from '@/lib/supabase/transfer-packages';
 
 interface Package {
@@ -74,6 +75,7 @@ export default function PackagesPage() {
 	const router = useRouter();
 	const [packages, setPackages] = useState<Package[]>([]);
 	const [transferPackages, setTransferPackages] = useState<TransferPackageCardData[]>([]);
+	const [activityPackages, setActivityPackages] = useState<ActivityPackageCardData[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 	const [searchQuery, setSearchQuery] = useState('');
@@ -167,7 +169,7 @@ export default function PackagesPage() {
 		}
 
 		// Transform activity packages
-		const activityPackages: Package[] = await Promise.all(
+		const activityPackages: ActivityPackageCardData[] = await Promise.all(
 			(activityResult.data || []).map(async (pkg: any) => {
 				const coverImage = pkg.activity_package_images?.find((img: any) => img.is_cover);
 				const imageUrl = coverImage?.public_url || pkg.activity_package_images?.[0]?.public_url || '';
@@ -202,21 +204,23 @@ export default function PackagesPage() {
 				return {
 					id: pkg.id,
 					title: pkg.title,
-					type: 'Activity',
+					short_description: pkg.short_description,
+					destination_city: pkg.destination_city,
+					destination_country: pkg.destination_country,
 					status: displayStatus,
 					price: minPrice,
 					maxPrice: maxPrice,
-					rating: 0,
-					reviews: 0,
-					bookings: 0,
-					views: 0,
+					duration_hours: pkg.duration_hours,
+					duration_minutes: pkg.duration_minutes,
 					image: imageUrl,
-					createdAt: new Date(pkg.created_at),
+					images: pkg.activity_package_images || [],
+					created_at: new Date(pkg.created_at),
 				};
 			})
 		);
 
-		// Store transfer packages with full data for TransferPackageCard
+		// Store activity packages and transfer packages separately
+		setActivityPackages(activityPackages);
 		const transferPackagesWithCardData = transferResult.data || [];
 		setTransferPackages(transferPackagesWithCardData);
 
@@ -250,19 +254,21 @@ export default function PackagesPage() {
 			};
 		});
 
-		// Store packages separately by type for organized display
-		const allPackages = [...activityPackages, ...multiCityPackages]
+		// Store remaining packages (multi-city, etc.) separately
+		const allPackages = [...multiCityPackages]
 			.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
 			setPackages(allPackages);
 
-			// Update stats (including transfer packages in count)
-			const activeCount = allPackages.filter(p => p.status === 'PUBLISHED').length + 
-				transferPackagesWithCardData.filter(p => p.status === 'published').length;
+			// Update stats (including all package types)
+			const activeActivityCount = activityPackages.filter(p => p.status === 'PUBLISHED').length;
+			const activeTransferCount = transferPackagesWithCardData.filter(p => p.status === 'published').length;
+			const activeOtherCount = allPackages.filter(p => p.status === 'PUBLISHED').length;
+			const activeCount = activeActivityCount + activeTransferCount + activeOtherCount;
 			const totalRevenue = allPackages.reduce((sum, p) => sum + (p.bookings * p.price), 0);
 			
 			setStats({
-				total: allPackages.length + transferPackagesWithCardData.length,
+				total: activityPackages.length + transferPackagesWithCardData.length + allPackages.length,
 				active: activeCount,
 				revenue: totalRevenue,
 				avgRating: 4.8, // TODO: Calculate from reviews
@@ -279,10 +285,9 @@ export default function PackagesPage() {
 		fetchPackages();
 	}, []);
 
-	// Separate packages by type for organized display
+	// Filter activity packages
 	const filteredActivityPackages = useMemo(() => {
-		return packages
-			.filter(p => p.type === 'Activity')
+		return activityPackages
 			.filter(p => {
 				if (statusFilter === 'ALL') return true;
 				const pkgStatus = p.status?.toUpperCase();
@@ -290,7 +295,7 @@ export default function PackagesPage() {
 				return pkgStatus === statusFilter;
 			})
 			.filter(p => !searchQuery || p.title.toLowerCase().includes(searchQuery.toLowerCase()));
-	}, [packages, statusFilter, searchQuery]);
+	}, [activityPackages, statusFilter, searchQuery]);
 
 	const filteredMultiCityPackages = useMemo(() => {
 		return packages
@@ -578,6 +583,52 @@ export default function PackagesPage() {
 		}
 	};
 
+	// Activity Package-specific handlers
+	const handleViewActivityPackage = (pkg: ActivityPackageCardData) => {
+		router.push(`/operator/packages/create/activity?id=${pkg.id}&view=true`);
+	};
+
+	const handleEditActivityPackage = (pkg: ActivityPackageCardData) => {
+		router.push(`/operator/packages/create/activity?id=${pkg.id}`);
+	};
+
+	const handleDuplicateActivityPackage = async (pkg: ActivityPackageCardData) => {
+		toast.info('Duplicate feature coming soon!');
+		// TODO: Implement activity package duplication
+	};
+
+	const handleDeleteActivityPackage = async (pkg: ActivityPackageCardData) => {
+		if (!confirm(`Are you sure you want to delete "${pkg.title}"? This action cannot be undone.`)) {
+			return;
+		}
+
+		try {
+			const supabase = createClient();
+			const { error } = await supabase
+				.from('activity_packages')
+				.delete()
+				.eq('id', pkg.id);
+			
+			if (error) throw error;
+			
+			toast.success('Activity package deleted successfully');
+			
+			// Remove from local state
+			setActivityPackages(prev => prev.filter(p => p.id !== pkg.id));
+			
+			// Update stats
+			setStats(prev => ({
+				...prev,
+				total: prev.total - 1,
+				active: pkg.status === 'PUBLISHED' ? prev.active - 1 : prev.active,
+			}));
+
+		} catch (error) {
+			console.error('Error deleting activity package:', error);
+			toast.error('Failed to delete activity package');
+		}
+	};
+
 	// Filter transfer packages
 	const filteredTransferPackages = useMemo(() => {
 		return transferPackages.filter(pkg => {
@@ -755,20 +806,20 @@ export default function PackagesPage() {
 				</div>
 			)}
 
-			{/* Empty State */}
-			{!loading && packages.length === 0 && (
-				<div className="text-center py-12">
-					<PackageIcon className="w-16 h-16 mx-auto text-slate-300 mb-4" />
-					<h3 className="text-xl font-semibold text-slate-900 mb-2">No packages yet</h3>
-					<p className="text-sm text-slate-600 mb-6">Create your first package to get started</p>
-					<Link href="/operator/packages/create">
-						<Button className="bg-gradient-to-r from-[#FF6B35] to-[#FF4B8C] hover:from-[#E05A2A] hover:to-[#E04080]">
-							<Plus className="w-4 h-4 mr-2" />
-							Create Your First Package
-						</Button>
-					</Link>
-				</div>
-			)}
+		{/* Empty State */}
+		{!loading && packages.length === 0 && transferPackages.length === 0 && activityPackages.length === 0 && (
+			<div className="text-center py-12">
+				<PackageIcon className="w-16 h-16 mx-auto text-slate-300 mb-4" />
+				<h3 className="text-xl font-semibold text-slate-900 mb-2">No packages yet</h3>
+				<p className="text-sm text-slate-600 mb-6">Create your first package to get started</p>
+				<Link href="/operator/packages/create">
+					<Button className="bg-gradient-to-r from-[#FF6B35] to-[#FF4B8C] hover:from-[#E05A2A] hover:to-[#E04080]">
+						<Plus className="w-4 h-4 mr-2" />
+						Create Your First Package
+					</Button>
+				</Link>
+			</div>
+		)}
 
 		{/* No Results State */}
 		{!loading && packages.length > 0 && 
@@ -808,127 +859,27 @@ export default function PackagesPage() {
 				</div>
 			)}
 
-		{/* Activity Packages Section */}
+		{/* Activity Packages Section with New Card */}
 		{!loading && filteredActivityPackages.length > 0 && (
 			<div className="mb-8">
 				<h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
 					<PackageIcon className="h-5 w-5 text-[#FF6B35]" />
 					Activity Packages ({filteredActivityPackages.length})
 				</h2>
-				<div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-4'}>
+				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 					{filteredActivityPackages.map((pkg) => (
-						<motion.div
+						<ActivityPackageCard
 							key={pkg.id}
-							initial={{ opacity: 0, y: 20 }}
-							animate={{ opacity: 1, y: 0 }}
-							transition={{ duration: 0.3 }}
-						>
-							<Card className="bg-white/80 dark:bg-zinc-900/70 backdrop-blur-sm border-slate-200/60 shadow-lg hover:shadow-xl transition-all overflow-hidden">
-								{/* Package Image */}
-								<div className="relative h-48 w-full bg-gradient-to-br from-slate-100 to-slate-200">
-									{pkg.image ? (
-										<Image 
-											src={pkg.image} 
-											alt={pkg.title}
-											fill
-											className="object-cover"
-											onError={(e) => {
-												// Hide the image and show placeholder instead
-												e.currentTarget.style.display = 'none';
-												const placeholder = e.currentTarget.parentElement?.querySelector('.image-placeholder') as HTMLElement;
-												if (placeholder) placeholder.style.display = 'flex';
-											}}
-										/>
-									) : null}
-									
-									{/* Placeholder when no image */}
-									<div 
-										className={`image-placeholder absolute inset-0 flex flex-col items-center justify-center text-slate-400 ${pkg.image ? 'hidden' : 'flex'}`}
-									>
-										<PackageIcon className="w-12 h-12 mb-2 opacity-50" />
-										<span className="text-sm font-medium">No Image</span>
-									</div>
-									
-									<div className="absolute top-2 right-2">
-										<Badge className={getStatusColor(pkg.status)}>
-											{getStatusLabel(pkg.status)}
-										</Badge>
-									</div>
-								</div>
-								
-								<CardContent className="p-4">
-									<h3 className="text-lg font-bold text-slate-900 mb-2 line-clamp-2">{pkg.title}</h3>
-									<p className="text-sm text-slate-600 mb-3">{pkg.type}</p>
-									
-								<div className="flex items-center justify-between mb-4">
-									<div className="flex items-center gap-1">
-										<Star className="w-4 h-4 text-amber-500 fill-amber-500" />
-										<span className="text-sm font-medium">{pkg.rating.toFixed(1)}</span>
-										<span className="text-xs text-slate-500">({pkg.reviews})</span>
-									</div>
-									<div className="text-lg font-bold text-[#FF6B35]">
-										{pkg.maxPrice && pkg.maxPrice > pkg.price ? (
-											<span className="text-sm">From ${pkg.price.toFixed(2)} - ${pkg.maxPrice.toFixed(2)}</span>
-										) : (
-											<span>${pkg.price.toFixed(2)}</span>
-										)}
-									</div>
-								</div>
-
-									<div className="flex items-center justify-between pt-3 border-t border-slate-200">
-										<div className="flex items-center gap-4 text-xs text-slate-600">
-											<span className="flex items-center gap-1">
-												<Eye className="w-3 h-3" />
-												{pkg.views}
-											</span>
-											<span>{pkg.bookings} bookings</span>
-										</div>
-
-										<DropdownMenu>
-											<DropdownMenuTrigger asChild>
-												<Button variant="ghost" size="sm" className="hover:bg-slate-100">
-													<MoreVertical className="w-4 h-4" />
-												</Button>
-											</DropdownMenuTrigger>
-											<DropdownMenuContent align="end" className="bg-white border border-slate-200 shadow-lg">
-												<DropdownMenuItem 
-													className="cursor-pointer hover:bg-slate-50 text-slate-700"
-													onClick={() => handleViewPackage(pkg)}
-												>
-													<Eye className="w-4 h-4 mr-2" />
-													View
-												</DropdownMenuItem>
-												<DropdownMenuItem 
-													className="cursor-pointer hover:bg-slate-50 text-slate-700"
-													onClick={() => handleEditPackage(pkg)}
-												>
-													<Edit className="w-4 h-4 mr-2" />
-													Edit
-												</DropdownMenuItem>
-												<DropdownMenuItem 
-													className="cursor-pointer hover:bg-slate-50 text-slate-700"
-													onClick={() => handleDuplicatePackage(pkg)}
-												>
-													<Copy className="w-4 h-4 mr-2" />
-													Duplicate
-												</DropdownMenuItem>
-												<DropdownMenuItem 
-													className="cursor-pointer hover:bg-red-50 text-red-600"
-													onClick={() => handleDeletePackage(pkg)}
-												>
-													<Trash className="w-4 h-4 mr-2" />
-													Delete
-												</DropdownMenuItem>
-											</DropdownMenuContent>
-										</DropdownMenu>
-									</div>
-								</CardContent>
-							</Card>
-						</motion.div>
+							package={pkg}
+							onView={handleViewActivityPackage}
+							onEdit={handleEditActivityPackage}
+							onDuplicate={handleDuplicateActivityPackage}
+							onDelete={handleDeleteActivityPackage}
+						/>
 					))}
-					</div>
 				</div>
-			)}
+			</div>
+		)}
 
 		{/* Multi-City Packages Section */}
 		{!loading && filteredMultiCityPackages.length > 0 && (

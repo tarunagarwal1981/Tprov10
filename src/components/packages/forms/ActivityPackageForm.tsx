@@ -186,10 +186,15 @@ export const ActivityPackageForm: React.FC<ActivityPackageFormProps> = ({
         try {
           const { getPricingPackages, convertPricingPackageToSimple } = await import('@/lib/supabase/activity-pricing-simple');
           const pricingPackages = await getPricingPackages(packageId);
-          // Convert database format to simple format for form
-          formData.pricingOptions = Array.isArray(pricingPackages) 
-            ? pricingPackages.map(convertPricingPackageToSimple)
-            : [];
+          // Convert database format to simple format for form (now async to load vehicles)
+          if (Array.isArray(pricingPackages)) {
+            const convertedOptions = await Promise.all(
+              pricingPackages.map(pkg => convertPricingPackageToSimple(pkg))
+            );
+            formData.pricingOptions = convertedOptions;
+          } else {
+            formData.pricingOptions = [];
+          }
           
           console.log('✅ Loaded pricing options:', formData.pricingOptions);
         } catch (error) {

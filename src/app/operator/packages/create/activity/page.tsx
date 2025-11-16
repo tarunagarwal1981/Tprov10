@@ -25,7 +25,12 @@ export default function CreateActivityPackagePage() {
 
   const handleSave = async (data: ActivityPackageFormData) => {
     try {
-      console.log("💾 Saving activity package draft:", data);
+      console.log("💾 [Page] Saving activity package draft:", {
+        title: data.basicInformation?.title,
+        hasImages: !!(data.basicInformation?.imageGallery || data.basicInformation?.featuredImage),
+        imageGalleryCount: data.basicInformation?.imageGallery?.length || 0,
+        hasFeaturedImage: !!data.basicInformation?.featuredImage
+      });
       setLoading(true);
       
       const supabase = createClient();
@@ -38,6 +43,12 @@ export default function CreateActivityPackagePage() {
 
       // Transform form data to database format with draft status
       const dbData = formDataToDatabase(data, user.id, 'draft');
+      
+      console.log("📦 [Page] Transformed database data:", {
+        packageTitle: dbData.package.title,
+        hasImages: !!dbData.images,
+        imageCount: dbData.images?.length || 0
+      });
       
       let savedPackageId = currentPackageId;
       
@@ -76,18 +87,14 @@ export default function CreateActivityPackagePage() {
         toast.success("Activity package draft saved successfully!");
       }
       
-      // Save pricing packages if they exist
+      // Save pricing packages with vehicles if they exist
       if (savedPackageId && data.pricingOptions && Array.isArray(data.pricingOptions)) {
         try {
           console.log('💾 Saving pricing options for package:', savedPackageId);
-          const { savePricingPackages, convertSimpleToPricingPackage } = await import('@/lib/supabase/activity-pricing-simple');
-          // Convert simple pricing options to full format
-          const fullPricingPackages = data.pricingOptions.map((opt: any, index: number) => 
-            convertSimpleToPricingPackage(opt, index)
-          );
-          console.log('💾 Converted pricing packages:', fullPricingPackages);
-          await savePricingPackages(savedPackageId, fullPricingPackages);
-          console.log('✅ Pricing options saved successfully');
+          const { savePricingPackagesWithVehicles } = await import('@/lib/supabase/activity-pricing-simple');
+          // Save pricing packages and their associated vehicles
+          await savePricingPackagesWithVehicles(savedPackageId, data.pricingOptions);
+          console.log('✅ Pricing options and vehicles saved successfully');
         } catch (pricingError) {
           console.error('❌ Error saving pricing packages:', pricingError);
           // Don't fail the entire save if pricing fails
@@ -103,7 +110,12 @@ export default function CreateActivityPackagePage() {
 
   const handlePublish = async (data: ActivityPackageFormData) => {
     try {
-      console.log("🚀 Publishing activity package:", data);
+      console.log("🚀 [Page] Publishing activity package:", {
+        title: data.basicInformation?.title,
+        hasImages: !!(data.basicInformation?.imageGallery || data.basicInformation?.featuredImage),
+        imageGalleryCount: data.basicInformation?.imageGallery?.length || 0,
+        hasFeaturedImage: !!data.basicInformation?.featuredImage
+      });
       setLoading(true);
       
       const supabase = createClient();
@@ -116,6 +128,12 @@ export default function CreateActivityPackagePage() {
 
       // Transform form data to database format with published status
       const dbData = formDataToDatabase(data, user.id, 'published');
+      
+      console.log("📦 [Page] Transformed database data:", {
+        packageTitle: dbData.package.title,
+        hasImages: !!dbData.images,
+        imageCount: dbData.images?.length || 0
+      });
       
       let savedPackageId = currentPackageId;
       
@@ -151,17 +169,14 @@ export default function CreateActivityPackagePage() {
         toast.success("Activity package published successfully!");
       }
       
-      // Save pricing packages if they exist
+      // Save pricing packages with vehicles if they exist
       if (savedPackageId && data.pricingOptions && Array.isArray(data.pricingOptions)) {
         try {
           console.log('💾 Saving pricing options for package:', savedPackageId);
-          const { savePricingPackages, convertSimpleToPricingPackage } = await import('@/lib/supabase/activity-pricing-simple');
-          // Convert simple pricing options to full format
-          const fullPricingPackages = data.pricingOptions.map((opt: any, index: number) => 
-            convertSimpleToPricingPackage(opt, index)
-          );
-          await savePricingPackages(savedPackageId, fullPricingPackages);
-          console.log('✅ Pricing options saved successfully');
+          const { savePricingPackagesWithVehicles } = await import('@/lib/supabase/activity-pricing-simple');
+          // Save pricing packages and their associated vehicles
+          await savePricingPackagesWithVehicles(savedPackageId, data.pricingOptions);
+          console.log('✅ Pricing options and vehicles saved successfully');
         } catch (pricingError) {
           console.error('❌ Error saving pricing packages:', pricingError);
         }

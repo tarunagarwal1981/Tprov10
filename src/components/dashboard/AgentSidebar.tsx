@@ -63,6 +63,19 @@ export function AgentSidebar() {
 		try {
 			setSupportsHover(window.matchMedia && window.matchMedia('(hover: hover)').matches);
 		} catch {}
+		
+		// Listen for sidebar toggle events from other components
+		const handleSidebarToggle = (e: Event) => {
+			const detail = (e as CustomEvent).detail as { collapsed?: boolean };
+			if (typeof detail?.collapsed === 'boolean') {
+				setIsCollapsed(detail.collapsed);
+			}
+		};
+		
+		window.addEventListener('agent-sidebar-toggled', handleSidebarToggle);
+		return () => {
+			window.removeEventListener('agent-sidebar-toggled', handleSidebarToggle);
+		};
 	}, []);
 
 	// Fetch available leads count for marketplace badge
@@ -117,7 +130,7 @@ export function AgentSidebar() {
 			label: "My Leads",
 			href: "/agent/leads",
 			icon: FileText,
-			enabled: false,
+			enabled: true,
 			submenu: [
 				{ label: "All Leads", href: "/agent/leads" },
 				{ label: "Active", href: "/agent/leads/active" },
@@ -165,7 +178,7 @@ const isActive = (href: string) => {
 				{!effectiveCollapsed && (
 					<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center">
 						<Link href="/agent">
-							<LogoSVG width={220} height={52} variant="light" />
+							<LogoSVG width={280} height={66} variant="light" />
 						</Link>
 					</motion.div>
 				)}

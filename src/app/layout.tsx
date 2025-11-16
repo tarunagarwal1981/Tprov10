@@ -25,8 +25,17 @@ export const metadata: Metadata = {
   title: 'TravelSelBuy - AI-Powered Travel Booking Platform',
   description: 'AI-Powered Travel Booking Platform for Small Travel Agents. Generate leads, manage customers, and book packages—all in one intelligent platform.',
   icons: {
-    icon: '/logo-icon.svg',
-    apple: '/logo-icon.svg',
+    icon: [
+      { url: '/logo-icon.svg', sizes: 'any' },
+      { url: '/logo-icon.svg', sizes: '48x48', type: 'image/svg+xml' },
+      { url: '/logo-icon.svg', sizes: '64x64', type: 'image/svg+xml' },
+      { url: '/logo-icon.svg', sizes: '96x96', type: 'image/svg+xml' },
+      { url: '/logo-icon.svg', sizes: '128x128', type: 'image/svg+xml' },
+    ],
+    apple: [
+      { url: '/logo-icon.svg', sizes: '180x180', type: 'image/svg+xml' },
+      { url: '/logo-icon.svg', sizes: '192x192', type: 'image/svg+xml' },
+    ],
   },
   appleWebApp: {
     capable: true,

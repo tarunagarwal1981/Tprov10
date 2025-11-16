@@ -377,7 +377,7 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
                 redirectUrl = '/operator/dashboard';
                 break;
               case 'TRAVEL_AGENT':
-                redirectUrl = '/agent/dashboard';
+                redirectUrl = '/agent';
                 break;
               default:
                 redirectUrl = '/';
@@ -567,7 +567,7 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
           redirectUrl = '/operator/dashboard';
           break;
         case 'TRAVEL_AGENT':
-          redirectUrl = '/agent/dashboard';
+          redirectUrl = '/agent';
           break;
         default:
           redirectUrl = '/';
@@ -837,8 +837,8 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         dashboardUrl = '/operator/dashboard';
         break;
       case 'TRAVEL_AGENT':
-        console.log('🎯 Travel agent role - redirect to /agent/dashboard');
-        dashboardUrl = '/agent/dashboard';
+        console.log('🎯 Travel agent role - redirect to /agent');
+        dashboardUrl = '/agent';
         break;
       default:
         console.warn('⚠️ Unknown role:', role, '- redirect to /');

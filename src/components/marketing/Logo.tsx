@@ -26,7 +26,7 @@ const LogoSVG: React.FC<{ width: number; height: number; className?: string; var
   
   return (
     <svg 
-      viewBox={`0 0 420 ${viewBoxHeight}`} 
+      viewBox={`0 0 450 ${viewBoxHeight}`} 
       xmlns="http://www.w3.org/2000/svg"
       width={width}
       height={height}
@@ -61,21 +61,23 @@ const LogoSVG: React.FC<{ width: number; height: number; className?: string; var
         x="75" 
         y="58" 
         fontFamily="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" 
-        fontSize="32" 
+        fontSize="36" 
         fontWeight="600" 
         fill={variant === 'dark' ? '#FFFFFF' : '#004E89'}
+        letterSpacing="0.5"
       >
         Travel
       </text>
       
       {/* Wordmark - "SelBuy" in orange or yellow based on variant */}
       <text 
-        x="161" 
+        x="175" 
         y="58" 
         fontFamily="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" 
-        fontSize="32" 
+        fontSize="36" 
         fontWeight="600" 
         fill={variant === 'dark' ? '#FFB800' : '#FF6B35'}
+        letterSpacing="0.5"
       >
         SelBuy
       </text>

@@ -346,11 +346,11 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
 
   return (
     <div className={cn("space-y-4", className)}>
-      {/* Upload Zone */}
-      <Card
+      {/* Upload Zone - Compact */}
+      <div
         ref={dropZoneRef}
         className={cn(
-          "border-2 border-dashed transition-colors duration-200",
+          "border-2 border-dashed rounded-lg transition-all duration-200 cursor-pointer hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-900/10",
           state.isDragOver && !disabled
             ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
             : "border-gray-300 dark:border-gray-600",
@@ -359,43 +359,47 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
+        onClick={handleBrowseClick}
       >
-        <CardContent className="p-6">
-          <div className="text-center">
-            <FaUpload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
-              Upload Images
-            </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              Drag and drop images here, or click to browse
-            </p>
-            <div className="flex flex-col sm:flex-row gap-2 justify-center">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleBrowseClick}
-                disabled={disabled || state.isUploading}
-                className="package-button-fix"
-              >
-                <FaImage className="h-4 w-4 mr-2" />
-                Browse Files
-              </Button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple={allowMultiple}
-                accept={acceptedTypes.join(',')}
-                onChange={handleFileInputChange}
-                className="hidden"
-                disabled={disabled}
-              />
+        <div className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+              <FaUpload className="h-4 w-4 text-white" />
             </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-              Supported: {acceptedTypes.join(', ')} • Max size: {formatFileSize(maxFileSize)} • Max files: {maxImages}
-            </p>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+              Upload Images
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Drag & drop or click to browse • Max {formatFileSize(maxFileSize)} • {maxImages} files max
+              </p>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleBrowseClick();
+              }}
+              disabled={disabled || state.isUploading}
+              className="flex-shrink-0"
+            >
+              <FaImage className="h-3 w-3 mr-1.5" />
+              Browse
+            </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple={allowMultiple}
+              accept={acceptedTypes.join(',')}
+              onChange={handleFileInputChange}
+              className="hidden"
+              disabled={disabled}
+            />
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Upload Progress */}
       <AnimatePresence>
@@ -446,11 +450,13 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
 
       {/* Image Gallery */}
       {images.length > 0 && (
-        <div className="space-y-4">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">
             Images ({images.length}/{maxImages})
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            </h4>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
             {images.map((image, index) => (
               <ImageCard
                 key={image.id}
@@ -536,63 +542,60 @@ const ImageCard: React.FC<ImageCardProps> = ({
   };
 
   return (
-    <Card className="group relative overflow-hidden">
+    <div className="group relative overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
       <div className="aspect-square relative">
         <Image
           src={image.url}
           alt={image.fileName}
           fill
-          sizes="(max-width: 768px) 50vw, 25vw"
+          sizes="(max-width: 768px) 50vw, 20vw"
           className="object-cover cursor-pointer"
           onClick={onPreview}
         />
         
         {/* Cover Badge */}
         {image.isCover && (
-          <Badge className="absolute top-2 left-2 bg-blue-600 text-white">
+          <Badge className="absolute top-1.5 left-1.5 text-xs h-5 bg-blue-600 text-white">
             Cover
           </Badge>
         )}
 
         {/* Order Badge */}
-        <Badge variant="secondary" className="absolute top-2 right-2">
+        <Badge variant="secondary" className="absolute top-1.5 right-1.5 text-xs h-5">
           #{index + 1}
         </Badge>
 
         {/* Action Buttons */}
-        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-200 flex items-center justify-center opacity-0 group-hover:opacity-100">
-          <div className="flex gap-2">
+        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-60 transition-all duration-200 flex items-center justify-center opacity-0 group-hover:opacity-100">
+          <div className="flex gap-1.5">
             <Button
+              type="button"
               size="sm"
               variant="secondary"
               onClick={onPreview}
-              className="h-8 w-8 p-0"
+              className="h-7 w-7 p-0"
             >
               <FaEye className="h-3 w-3" />
             </Button>
+            {!image.isCover && (
             <Button
-              size="sm"
-              variant="secondary"
-              onClick={onEdit}
-              className="h-8 w-8 p-0"
-            >
-              <FaEdit className="h-3 w-3" />
-            </Button>
-            <Button
+                type="button"
               size="sm"
               variant="secondary"
               onClick={onSetCover}
-              disabled={image.isCover}
-              className="h-8 w-8 p-0"
+                className="h-7 w-7 p-0"
+                title="Set as cover"
             >
               <FaImage className="h-3 w-3" />
             </Button>
+            )}
             <Button
+              type="button"
               size="sm"
               variant="destructive"
               onClick={onRemove}
               disabled={disabled}
-              className="h-8 w-8 p-0"
+              className="h-7 w-7 p-0"
             >
               <FaTrash className="h-3 w-3" />
             </Button>
@@ -600,56 +603,20 @@ const ImageCard: React.FC<ImageCardProps> = ({
         </div>
       </div>
 
-      {/* Metadata */}
+      {/* Metadata - Compact */}
       {showMetadata && (
-        <CardContent className="p-3">
-          {isEditing ? (
-            <div className="space-y-2">
-              <div>
-                <Label htmlFor={`fileName-${image.id}`} className="text-xs">
-                  File Name
-                </Label>
-                <Input
-                  id={`fileName-${image.id}`}
-                  value={editForm.fileName}
-                  onChange={(e) => setEditForm(prev => ({ ...prev, fileName: e.target.value }))}
-                  className="h-8 text-xs"
-                />
-              </div>
-              <div className="flex gap-1">
-                <Button
-                  size="sm"
-                  onClick={handleSaveEdit}
-                  className="h-6 px-2 text-xs"
-                >
-                  <FaCheck className="h-3 w-3" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={onCancelEdit}
-                  className="h-6 px-2 text-xs"
-                >
-                  <FaTimes className="h-3 w-3" />
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-1">
-              <p className="text-xs font-medium text-gray-900 dark:text-gray-100 truncate">
-                {image.fileName}
-              </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                {formatFileSize(image.fileSize)}
-              </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                {new Date(image.uploadedAt).toLocaleDateString()}
-              </p>
-            </div>
-          )}
-        </CardContent>
+        <div className="p-2">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-medium text-gray-900 dark:text-gray-100 truncate flex-1 mr-2">
+              {image.fileName}
+            </p>
+            <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">
+              {formatFileSize(image.fileSize)}
+            </span>
+          </div>
+        </div>
       )}
-    </Card>
+    </div>
   );
 };
 

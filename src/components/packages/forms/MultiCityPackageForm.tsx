@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useMemo, useRef, useState } from "react";
+import React, { useMemo, useRef, useState, useCallback } from "react";
 import { useForm, FormProvider, useFieldArray, useFormContext } from "react-hook-form";
+import Image from "next/image";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,10 +10,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { FaPlus, FaTrash, FaArrowUp, FaArrowDown, FaPlane, FaTrain, FaBus, FaCar, FaClock, FaCheckCircle, FaEye, FaInfoCircle, FaMapMarkerAlt, FaDollarSign, FaShieldAlt, FaSpinner, FaCopy } from "react-icons/fa";
+import { FaPlus, FaTrash, FaArrowUp, FaArrowDown, FaClock, FaCheckCircle, FaEye, FaInfoCircle, FaDollarSign, FaSpinner, FaCopy } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 
 // Minimal UI shadcn-compatible components from project
@@ -22,19 +22,35 @@ import { motion, AnimatePresence } from "framer-motion";
 type TransportType = "FLIGHT" | "TRAIN" | "BUS" | "CAR";
 type TransportClass = "ECONOMY" | "BUSINESS" | "FIRST" | "STANDARD";
 
-type MultiCityActivity = {
-  time: string;
-  description: string;
+type Flight = {
+  id: string;
+  departureCity: string;
+  departureTime: string;
+  arrivalCity: string;
+  arrivalTime: string;
+  airline: string;
+  flightNumber: string;
+};
+
+type TimeSlot = {
+  time: string; // HH:MM format
+  activities: string[];
+  transfers: string[];
 };
 
 type DayPlan = {
   cityId: string;
-  morning: MultiCityActivity[];
-  afternoon: MultiCityActivity[];
-  evening: MultiCityActivity[];
-  meals: { breakfast: boolean; lunch: boolean; dinner: boolean };
-  accommodationType?: string;
-  notes?: string;
+  cityName?: string;
+  title?: string;
+  description?: string;
+  photoUrl?: string;
+  hasFlights?: boolean;
+  flights?: Flight[];
+  timeSlots?: {
+    morning: TimeSlot;
+    afternoon: TimeSlot;
+    evening: TimeSlot;
+  };
 };
 
 type CityStop = {
@@ -62,7 +78,6 @@ type InclusionCategory = "Transport" | "Activities" | "Meals" | "Guide Services"
 
 type InclusionItem = { id: string; category: InclusionCategory; text: string };
 type ExclusionItem = { id: string; text: string };
-type AddOn = { id: string; name: string; description?: string; price?: number };
 
 type PricingMode = "FIXED" | "PER_PERSON" | "GROUP_TIERED";
 
@@ -93,34 +108,68 @@ type Policies = {
   terms?: string;
 };
 
+type PricingPackageType = 'SIC' | 'PRIVATE_PACKAGE';
+
+type PricingRow = {
+  id: string;
+  numberOfAdults: number;
+  numberOfChildren: number;
+  totalPrice: number;
+};
+
+type PrivatePackageRow = {
+  id: string;
+  numberOfAdults: number;
+  numberOfChildren: number;
+  carType: string;
+  vehicleCapacity: number;
+  totalPrice: number;
+};
+
+type PricingData = {
+  pricingType: PricingPackageType;
+  // Tabular pricing rows (for SIC pricing)
+  pricingRows: PricingRow[];
+  // Private package pricing rows (for PRIVATE_PACKAGE pricing)
+  privatePackageRows: PrivatePackageRow[];
+  // Child age restriction (optional checkbox)
+  hasChildAgeRestriction: boolean;
+  childMinAge?: number;
+  childMaxAge?: number;
+};
+
 export type MultiCityPackageFormData = {
   basic: {
     title: string;
     shortDescription: string;
     destinationRegion?: string;
+    packageValidityDate?: string;
     imageGallery: string[];
   };
   cities: CityStop[];
-  includeIntercityTransport: boolean;
   connections: Connection[];
-  days: DayPlan[]; // computed from cities.nights but user-editable
+  days: DayPlan[];
   inclusions: InclusionItem[];
   exclusions: ExclusionItem[];
-  addOns: AddOn[];
-  pricing: PricingDates;
+  pricing: PricingData;
   policies: Policies;
 };
 
 const DEFAULT_DATA: MultiCityPackageFormData = {
-  basic: { title: "", shortDescription: "", destinationRegion: "", imageGallery: [] },
+  basic: { title: "", shortDescription: "", destinationRegion: "", packageValidityDate: "", imageGallery: [] },
   cities: [],
-  includeIntercityTransport: false,
   connections: [],
   days: [],
   inclusions: [],
   exclusions: [],
-  addOns: [],
-  pricing: { mode: "FIXED", fixedPrice: 0, departures: [] },
+  pricing: { 
+    pricingType: "SIC",
+    pricingRows: [],
+    privatePackageRows: [],
+    hasChildAgeRestriction: false,
+    childMinAge: undefined,
+    childMaxAge: undefined,
+  },
   policies: { cancellation: [], insuranceRequirement: "OPTIONAL" },
 };
 
@@ -139,17 +188,21 @@ const useFormValidation = (data: MultiCityPackageFormData): FormValidation => {
     if (!data.basic.title.trim()) errors.push({ tab: "basic", field: "title", message: "Title is required", severity: "error" });
     if (!data.basic.shortDescription.trim()) errors.push({ tab: "basic", field: "shortDescription", message: "Short description is required", severity: "error" });
 
-    if (data.cities.length === 0) errors.push({ tab: "destinations", field: "cities", message: "Add at least one city", severity: "error" });
-    if (data.cities.some(c => c.nights <= 0)) errors.push({ tab: "destinations", field: "nights", message: "Each city must have at least 1 night", severity: "error" });
-
-    if (data.includeIntercityTransport && data.cities.length > 1) {
-      const expected = data.cities.length - 1;
-      if ((data.connections || []).length < expected) warnings.push({ tab: "transport", field: "connections", message: "Some connections are missing details" });
-    }
+    if (data.cities.length === 0) errors.push({ tab: "basic", field: "cities", message: "Add at least one city", severity: "error" });
+    if (data.cities.some(c => c.nights <= 0)) errors.push({ tab: "basic", field: "nights", message: "Each city must have at least 1 night", severity: "error" });
 
     if (data.days.length === 0) warnings.push({ tab: "itinerary", field: "days", message: "No days generated yet" });
 
-    if (data.pricing.mode === "FIXED" && !(data.pricing.fixedPrice && data.pricing.fixedPrice > 0)) errors.push({ tab: "pricing", field: "fixedPrice", message: "Enter a fixed price", severity: "error" });
+    // Pricing validation
+    if (data.pricing.pricingType === "SIC" && data.pricing.pricingRows.length === 0) {
+      errors.push({ tab: "pricing", field: "pricingRows", message: "Add at least one pricing row", severity: "error" });
+    }
+    if (data.pricing.pricingType === "SIC" && data.pricing.hasChildAgeRestriction && (!data.pricing.childMinAge || !data.pricing.childMaxAge)) {
+      errors.push({ tab: "pricing", field: "childAge", message: "Child min and max age are required when age restriction is enabled", severity: "error" });
+    }
+    if (data.pricing.pricingType === "PRIVATE_PACKAGE" && data.pricing.privatePackageRows.length === 0) {
+      errors.push({ tab: "pricing", field: "privatePackageRows", message: "Add at least one private package pricing row", severity: "error" });
+    }
 
     return { isValid: errors.length === 0, errors, warnings };
   }, [data]);
@@ -191,7 +244,102 @@ const useAutoSave = (data: MultiCityPackageFormData, onSave?: (d: MultiCityPacka
 
 // SUB-COMPONENTS
 const BasicInformationTab: React.FC = () => {
-  const { register } = useFormContext<MultiCityPackageFormData>();
+  const { register, control, setValue, watch } = useFormContext<MultiCityPackageFormData>();
+  const { fields, append, remove, move } = useFieldArray({ control, name: "cities" });
+
+  const addCity = useCallback(() => {
+    append({ id: generateId(), name: "", country: "", nights: 2, highlights: [], activitiesIncluded: [], expanded: true });
+  }, [append]);
+
+  // Keep days in sync when cities change
+  const cities = watch("cities");
+  const days = watch("days");
+  
+  React.useEffect(() => {
+    // Auto-generate days based on cities and nights
+    // For each city with N nights: create N+1 days (arrival + N full days with nights + departure)
+    // For intermediate cities, the departure day is also the arrival day of the next city (counted once)
+    // Example: City 1 (2 nights) + City 2 (2 nights) = 5 days total
+    // Day 1: Arrival City 1, Night 1 City 1
+    // Day 2: Full day City 1, Night 2 City 1
+    // Day 3: Departure City 1 + Arrival City 2, Night 1 City 2
+    // Day 4: Full day City 2, Night 2 City 2
+    // Day 5: Departure City 2
+    if (!cities || cities.length === 0) {
+      setValue("days", []);
+      return;
+    }
+    
+    const newDays: DayPlan[] = [];
+    let globalDayNumber = 1;
+    
+    cities.forEach((city, cityIndex) => {
+      const nights = city.nights || 1;
+      const isLastCity = cityIndex === cities.length - 1;
+      const isFirstCity = cityIndex === 0;
+      
+      // For each city, create nights + 1 days
+      // For intermediate cities, the last day (departure) is also the arrival of next city
+      // So we create: nights + 1 days for first city, nights days for intermediate cities, nights + 1 for last city
+      const daysToCreate = isFirstCity || isLastCity ? nights + 1 : nights;
+      
+      for (let i = 0; i < daysToCreate; i++) {
+        const isArrivalDay = isFirstCity && i === 0;
+        const isDepartureDay = (isLastCity && i === nights) || (!isLastCity && i === nights);
+        
+        // Determine the day type label - always use the current city name
+        let dayTitle = "";
+        if (isArrivalDay) {
+          dayTitle = `Arrival - ${city.name || 'City ' + (cityIndex + 1)}`;
+        } else if (isDepartureDay && !isLastCity) {
+          dayTitle = `Departure ${city.name || 'City ' + (cityIndex + 1)} / Arrival ${cities[cityIndex + 1]?.name || 'City ' + (cityIndex + 2)}`;
+        } else if (isDepartureDay && isLastCity) {
+          dayTitle = `Departure - ${city.name || 'City ' + (cityIndex + 1)}`;
+        } else {
+          dayTitle = `Day ${globalDayNumber} - ${city.name || 'City ' + (cityIndex + 1)} (Night ${globalDayNumber})`;
+        }
+        
+        newDays.push({
+          cityId: city.id,
+          cityName: city.name || '', // Always set cityName, even if empty
+          title: dayTitle,
+          description: isArrivalDay 
+            ? `Arrival in ${city.name || 'City ' + (cityIndex + 1)}. Check-in and orientation. Overnight stay (Night 1).`
+            : isDepartureDay && !isLastCity
+            ? `Departure from ${city.name || 'City ' + (cityIndex + 1)} and arrival in ${cities[cityIndex + 1]?.name || 'City ' + (cityIndex + 2)}. Overnight stay in ${cities[cityIndex + 1]?.name || 'City ' + (cityIndex + 2)} (Night 1).`
+            : isDepartureDay && isLastCity
+            ? `Final day in ${city.name || 'City ' + (cityIndex + 1)}. Check-out and departure.`
+            : `Full day in ${city.name || 'City ' + (cityIndex + 1)}. Overnight stay (Night ${globalDayNumber}).`,
+          photoUrl: "",
+          hasFlights: false,
+          flights: [],
+        });
+        
+        globalDayNumber++;
+      }
+    });
+    
+    // Always update days when cities change - compare based on city IDs, names, and nights
+    const currentDaysKey = JSON.stringify(
+      (days || []).map((d: DayPlan) => ({ cityId: d.cityId, cityName: d.cityName || '' }))
+    );
+    const newDaysKey = JSON.stringify(
+      newDays.map(d => ({ cityId: d.cityId, cityName: d.cityName || '' }))
+    );
+    
+    // Update if structure changed, city names changed, or number of days changed
+    if (currentDaysKey !== newDaysKey || newDays.length !== (days?.length || 0)) {
+      setValue("days", newDays, { shouldDirty: true });
+    }
+  }, [cities, days, setValue]);
+
+  // Initialize with one empty city by default
+  React.useEffect(() => {
+    if (fields.length === 0) {
+      addCity();
+    }
+  }, [fields.length, addCity]);
+
   return (
     <div className="space-y-4">
       <Card className="package-selector-glass package-shadow-fix">
@@ -207,174 +355,130 @@ const BasicInformationTab: React.FC = () => {
             <label className="text-sm font-medium">Short Description</label>
             <Textarea {...register("basic.shortDescription")} placeholder="A curated journey across multiple cities with handpicked experiences." />
           </div>
-          <div>
-            <label className="text-sm font-medium">Destination Region</label>
-            <Input {...register("basic.destinationRegion")} placeholder="Europe, Southeast Asia, etc." />
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-};
-
-const DestinationsTab: React.FC = () => {
-  const { control, setValue, watch } = useFormContext<MultiCityPackageFormData>();
-  const { fields, append, remove, move } = useFieldArray({ control, name: "cities" });
-  const [open, setOpen] = useState(false);
-  const [newCity, setNewCity] = useState({ name: "", country: "", nights: 2 });
-
-  const addCity = () => {
-    if (!newCity.name.trim()) return;
-    append({ id: generateId(), name: newCity.name.trim(), country: newCity.country, nights: newCity.nights, highlights: [], activitiesIncluded: [], expanded: true });
-    setOpen(false);
-    setNewCity({ name: "", country: "", nights: 2 });
-  };
-
-  // Keep days in sync when cities change (simple heuristic)
-  const cities = watch("cities");
-  const days = watch("days");
-  
-  React.useEffect(() => {
-    // Only auto-generate if days are empty
-    if (days && days.length > 0) return;
-    
-    const totalNights = cities.reduce((sum, c) => sum + (c.nights || 0), 0);
-    if (totalNights > 0 && cities.length > 0) {
-      setValue(
-        "days",
-        Array.from({ length: totalNights }).map(() => ({ 
-          cityId: cities[0]?.id || "", 
-          morning: [], 
-          afternoon: [], 
-          evening: [], 
-          meals: { breakfast: false, lunch: false, dinner: false } 
-        }))
-      );
-    }
-  }, [cities, days, setValue]);
-
-  const includeTransport = watch("includeIntercityTransport");
-
-  return (
-    <div className="space-y-4">
-      {/* Intercity Transport Toggle */}
-      <Card className="package-selector-glass package-shadow-fix">
-        <CardContent className="flex items-center justify-between p-4">
-          <div className="space-y-1">
-            <div className="font-medium">Include Inter-city Transport</div>
-            <div className="text-sm text-gray-500">Add transport details between each city</div>
-          </div>
-          <Switch 
-            checked={includeTransport} 
-            onCheckedChange={(val) => setValue("includeIntercityTransport", Boolean(val))} 
-          />
-        </CardContent>
-      </Card>
-
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">City Stops</h3>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button className="package-button-fix"><FaPlus className="mr-2" /> Add City</Button>
-          </DialogTrigger>
-          <DialogContent className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-            <DialogHeader>
-              <DialogTitle>Add City Stop</DialogTitle>
-              <DialogDescription>Enter city name and number of nights to stay</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium mb-1 block">City Name *</label>
-                <Input 
-                  placeholder="e.g. Paris, Rome, Tokyo" 
-                  value={newCity.name} 
-                  onChange={(e) => setNewCity(s => ({ ...s, name: e.target.value }))}
-                  className="package-text-fix"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium mb-1 block">Country (Optional)</label>
-                <Input 
-                  placeholder="e.g. France, Italy, Japan" 
-                  value={newCity.country} 
-                  onChange={(e) => setNewCity(s => ({ ...s, country: e.target.value }))}
-                  className="package-text-fix"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium mb-1 block">Number of Nights *</label>
-                <Input 
-                  type="number" 
-                  min={1} 
-                  value={newCity.nights} 
-                  onChange={(e) => setNewCity(s => ({ ...s, nights: Number(e.target.value || 1) }))}
-                  className="package-text-fix"
-                />
-              </div>
-              <div className="flex justify-end gap-2 pt-2">
-                <Button 
-                  variant="outline" 
-                  onClick={() => {
-                    setOpen(false);
-                    setNewCity({ name: "", country: "", nights: 2 });
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  onClick={addCity}
-                  disabled={!newCity.name.trim()}
-                  className="package-button-fix"
-                >
-                  Add City
-                </Button>
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium">Destination Region</label>
+              <Input {...register("basic.destinationRegion")} placeholder="Europe, Southeast Asia, etc." />
             </div>
-          </DialogContent>
-        </Dialog>
-      </div>
+            <div>
+              <label className="text-sm font-medium">Package Validity Date</label>
+              <Input 
+                type="date" 
+                {...register("basic.packageValidityDate")} 
+                placeholder="Last date for bookings"
+                className="package-text-fix"
+              />
+              <p className="text-xs text-gray-500 mt-1">Last date this package is valid for bookings</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-      <div className="space-y-3">
-        {fields.map((field, idx) => (
-          <Card key={field.id} className="package-selector-glass package-shadow-fix">
-            <CardHeader className="flex flex-row items-center justify-between gap-2">
-              <CardTitle className="flex items-center gap-2">
-                <Badge variant="outline">{idx + 1}</Badge>
-                <span>{field.name}</span>
-                {field.country && <span className="text-xs text-gray-500">{field.country}</span>}
-              </CardTitle>
-              <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon" onClick={() => move(idx, Math.max(0, idx - 1))}><FaArrowUp /></Button>
-                <Button variant="ghost" size="icon" onClick={() => move(idx, Math.min(fields.length - 1, idx + 1))}><FaArrowDown /></Button>
-                <Button variant="destructive" size="icon" onClick={() => remove(idx)}><FaTrash /></Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div>
-                  <label className="text-sm font-medium">Nights</label>
-                  <Input type="number" min={1} defaultValue={field.nights} onChange={(e) => (e.target.value) && ( (field as any).nights = Number(e.target.value))} />
+      {/* City Stops Section */}
+      <Card className="package-selector-glass package-shadow-fix">
+        <CardHeader>
+          <CardTitle>City Stops</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* City Rows */}
+          <div className="space-y-3">
+            {fields.map((field, idx) => (
+              <div key={field.id} className="space-y-3 p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+                {/* Basic City Info Row */}
+                <div className="flex items-start gap-3">
+                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-r from-[#FF6B35] to-[#FF4B8C] text-white font-semibold flex-shrink-0 mt-6">
+                    {idx + 1}
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 flex-1">
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">City Name *</label>
+                      <Input 
+                        placeholder="e.g. Paris, Rome, Tokyo" 
+                        defaultValue={field.name}
+                        onChange={(e) => setValue(`cities.${idx}.name`, e.target.value)}
+                        className="package-text-fix"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">Country</label>
+                      <Input 
+                        placeholder="e.g. France, Italy, Japan" 
+                        defaultValue={field.country}
+                        onChange={(e) => setValue(`cities.${idx}.country`, e.target.value)}
+                        className="package-text-fix"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">Nights *</label>
+                      <Input 
+                        type="number" 
+                        min={1} 
+                        defaultValue={field.nights}
+                        onChange={(e) => setValue(`cities.${idx}.nights`, Number(e.target.value || 1))}
+                        className="package-text-fix"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0 mt-6">
+                    <Button 
+                      type="button"
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => move(idx, Math.max(0, idx - 1))}
+                      disabled={idx === 0}
+                    >
+                      <FaArrowUp />
+                    </Button>
+                    <Button 
+                      type="button"
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => move(idx, Math.min(fields.length - 1, idx + 1))}
+                      disabled={idx === fields.length - 1}
+                    >
+                      <FaArrowDown />
+                    </Button>
+                    <Button 
+                      type="button"
+                      variant="destructive" 
+                      size="icon" 
+                      onClick={() => remove(idx)}
+                    >
+                      <FaTrash />
+                    </Button>
+                  </div>
                 </div>
-                <div className="md:col-span-2">
-                  <label className="text-sm font-medium">Highlights</label>
+
+                {/* Highlights Section */}
+                <div>
+                  <label className="text-sm font-medium mb-1 block">Highlights</label>
                   <HighlightsEditor fieldIndex={idx} />
                 </div>
-              </div>
 
-              <div>
-                <label className="text-sm font-medium">Activities Included</label>
-                <ActivitiesIncludedEditor fieldIndex={idx} />
+                {/* Activities Included Section */}
+                <div>
+                  <label className="text-sm font-medium mb-1 block">Activities Included</label>
+                  <ActivitiesIncludedEditor fieldIndex={idx} />
+                </div>
               </div>
-            </CardContent>
-          </Card>
-        ))}
-        {fields.length === 0 && (
-          <p className="text-sm text-gray-500">No cities added yet. Click &quot;Add City&quot; to begin.</p>
-        )}
-      </div>
+            ))}
+          </div>
+
+          {/* Add City Button */}
+          <Button 
+            type="button"
+            onClick={addCity}
+            className="package-button-fix w-full"
+            variant="outline"
+          >
+            <FaPlus className="mr-2" /> Add City
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 };
+
 
 const HighlightsEditor: React.FC<{ fieldIndex: number }> = ({ fieldIndex }) => {
   const { control } = useFormContext<MultiCityPackageFormData>();
@@ -420,362 +524,331 @@ const ActivitiesIncludedEditor: React.FC<{ fieldIndex: number }> = ({ fieldIndex
   );
 };
 
-const TransportTab: React.FC = () => {
-  const { register, control, watch, setValue } = useFormContext<MultiCityPackageFormData>();
-  const include = watch("includeIntercityTransport");
-  const cities = watch("cities");
-  const connections = watch("connections");
-  const { fields, append, remove, replace } = useFieldArray({ control, name: "connections" });
+// Time Slot Editor Component
+const TimeSlotEditor: React.FC<{ 
+  dayIndex: number; 
+  slotName: "morning" | "afternoon" | "evening";
+  slot: TimeSlot;
+  days: DayPlan[];
+  setValue: any;
+  isFirstOrLastDay: boolean;
+}> = ({ dayIndex, slotName, slot, days, setValue, isFirstOrLastDay }) => {
+  const [activityText, setActivityText] = useState("");
+  const [transferText, setTransferText] = useState("");
 
-  const cityPairs = useMemo(() => {
-    const pairs: Array<{ from: CityStop; to: CityStop }> = [];
-    if (Array.isArray(cities) && cities.length >= 2) {
-      for (let i = 0; i < cities.length - 1; i++) {
-        const from = cities[i]!;
-        const to = cities[i + 1]!;
-        pairs.push({ from, to });
-      }
+  const updateTimeSlot = (updates: Partial<TimeSlot>) => {
+    const d = [...days];
+    if (!d[dayIndex]) return;
+    if (!d[dayIndex]!.timeSlots) {
+      d[dayIndex]!.timeSlots = {
+        morning: { time: "", activities: [], transfers: [] },
+        afternoon: { time: "", activities: [], transfers: [] },
+        evening: { time: "", activities: [], transfers: [] },
+      };
     }
-    return pairs;
-  }, [cities]);
+    d[dayIndex]!.timeSlots![slotName] = { ...d[dayIndex]!.timeSlots![slotName], ...updates };
+    setValue("days", d);
+  };
 
-  // Ensure connections only when city pairs change
-  React.useEffect(() => {
-    if (!include || cityPairs.length === 0) return;
-    
-    // Only update if the number of connections doesn't match city pairs
-    if (connections.length !== cityPairs.length) {
-      const newConnections: Connection[] = cityPairs.map((p, idx) => {
-        const existing = connections[idx];
-        if (existing && existing.fromCityId === p.from.id && existing.toCityId === p.to.id) {
-          return existing;
-        }
-        return {
-          fromCityId: p.from.id,
-          toCityId: p.to.id,
-          transportType: "FLIGHT" as TransportType,
-          transportClass: "ECONOMY" as TransportClass,
-        };
-      });
-      replace(newConnections as any);
+  const addActivity = () => {
+    if (activityText.trim()) {
+      updateTimeSlot({ activities: [...slot.activities, activityText.trim()] });
+      setActivityText("");
     }
-  }, [include, cityPairs, connections, replace]);
+  };
 
-  const iconForType = (t: TransportType) => t === "FLIGHT" ? <FaPlane /> : t === "TRAIN" ? <FaTrain /> : t === "BUS" ? <FaBus /> : <FaCar />;
+  const removeActivity = (index: number) => {
+    const newActivities = slot.activities.filter((_, i) => i !== index);
+    updateTimeSlot({ activities: newActivities });
+  };
+
+  const addTransfer = () => {
+    if (transferText.trim()) {
+      updateTimeSlot({ transfers: [...slot.transfers, transferText.trim()] });
+      setTransferText("");
+    }
+  };
+
+  const removeTransfer = (index: number) => {
+    const newTransfers = slot.transfers.filter((_, i) => i !== index);
+    updateTimeSlot({ transfers: newTransfers });
+  };
+
+  const slotLabels = {
+    morning: "Morning",
+    afternoon: "Afternoon",
+    evening: "Evening",
+  };
 
   return (
-    <div className="space-y-4">
-      {/* Not Enabled Message */}
-      {!include && (
-        <Card className="package-selector-glass package-shadow-fix">
-          <CardContent className="p-8 text-center">
-            <div className="flex flex-col items-center gap-4">
-              <FaPlane className="h-16 w-16 text-gray-400" />
-              <div>
-                <h3 className="text-lg font-semibold mb-2">Inter-city Transport Not Included</h3>
-                <p className="text-sm text-gray-500 mb-4">
-                  This package does not include transport between cities. Enable it in the <strong>Destinations</strong> tab to add transport details.
-                </p>
+    <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+      <div className="flex items-center gap-3 mb-3">
+        <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 min-w-[100px]">
+          {slotLabels[slotName]}
+        </h4>
+        <Input
+          type="time"
+          value={slot.time}
+          onChange={(e) => updateTimeSlot({ time: e.target.value })}
+          className="package-text-fix text-sm w-32"
+          placeholder="HH:MM"
+        />
+      </div>
+
+      {/* Activities Section */}
+      <div className="mb-3">
+        <label className="text-xs font-medium mb-1 block text-gray-600 dark:text-gray-400">Activities</label>
+        <div className="flex gap-2 mb-2">
+          <Input
+            placeholder="Add activity..."
+            value={activityText}
+            onChange={(e) => setActivityText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                addActivity();
+              }
+            }}
+            className="package-text-fix text-sm flex-1"
+            disabled={isFirstOrLastDay}
+          />
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={addActivity}
+            disabled={isFirstOrLastDay || !activityText.trim()}
+            className="package-button-fix"
+          >
+            <FaPlus className="h-3 w-3" />
+          </Button>
+        </div>
+        {slot.activities.length > 0 && (
+          <div className="space-y-1">
+            {slot.activities.map((activity, idx) => (
+              <div key={idx} className="flex items-center gap-2 p-2 bg-white dark:bg-gray-900 rounded text-sm">
+                <span className="flex-1">{activity}</span>
                 <Button
-                  variant="outline"
-                  onClick={() => {
-                    setValue("includeIntercityTransport", true);
-                  }}
-                  className="package-button-fix"
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => removeActivity(idx)}
+                  className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                  disabled={isFirstOrLastDay}
                 >
-                  <FaPlane className="mr-2" />
-                  Enable Inter-city Transport
+                  <FaTrash className="h-3 w-3" />
                 </Button>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Need More Cities Message */}
-      {include && cities.length < 2 && (
-        <Card className="package-selector-glass package-shadow-fix">
-          <CardContent className="p-8 text-center">
-            <div className="flex flex-col items-center gap-4">
-              <FaMapMarkerAlt className="h-16 w-16 text-gray-400" />
-              <div>
-                <h3 className="text-lg font-semibold mb-2">Add More Cities</h3>
-                <p className="text-sm text-gray-500 mb-2">
-                  You need at least <strong>2 cities</strong> to configure transport connections.
-                </p>
-                <p className="text-xs text-gray-400">
-                  Currently: {cities.length} {cities.length === 1 ? 'city' : 'cities'}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Transport Connections */}
-      {include && cities.length >= 2 && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold">Transport Connections</h3>
-            <Badge variant="outline">{cityPairs.length} connection(s)</Badge>
+            ))}
           </div>
+        )}
+      </div>
 
-          {cityPairs.length === 0 && (
-            <p className="text-sm text-gray-500 text-center py-4">Generating connections...</p>
-          )}
-
-          {cityPairs.map((pair, i) => {
-            const connection = fields[i];
-            return (
-              <Card key={pair.from.id + pair.to.id} className="package-selector-glass package-shadow-fix">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Badge variant="secondary">{i + 1}</Badge>
-                    <Badge variant="outline">{pair.from.name}</Badge>
-                    <span className="text-xs text-gray-500">→</span>
-                    <Badge variant="outline">{pair.to.name}</Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div>
-                    <label className="text-sm font-medium mb-1 block">Transport Type *</label>
-                    <Select 
-                      defaultValue={connection?.transportType || "FLIGHT"}
-                      onValueChange={(v) => setValue(`connections.${i}.transportType`, v as TransportType)}
-                    >
-                      <SelectTrigger className="package-text-fix">
-                        <SelectValue placeholder="Select type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="FLIGHT">✈️ Flight</SelectItem>
-                        <SelectItem value="TRAIN">🚂 Train</SelectItem>
-                        <SelectItem value="BUS">🚌 Bus</SelectItem>
-                        <SelectItem value="CAR">🚗 Car</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium mb-1 block">Class *</label>
-                    <Select 
-                      defaultValue={connection?.transportClass || "ECONOMY"}
-                      onValueChange={(v) => setValue(`connections.${i}.transportClass`, v as TransportClass)}
-                    >
-                      <SelectTrigger className="package-text-fix">
-                        <SelectValue placeholder="Select class" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="ECONOMY">Economy</SelectItem>
-                        <SelectItem value="BUSINESS">Business</SelectItem>
-                        <SelectItem value="FIRST">First Class</SelectItem>
-                        <SelectItem value="STANDARD">Standard</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium mb-1 block">Provider / Airline</label>
-                    <Input 
-                      placeholder="e.g. Emirates, Amtrak" 
-                      defaultValue={connection?.provider || ""}
-                      onChange={(e) => setValue(`connections.${i}.provider`, e.target.value)}
-                      className="package-text-fix"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="text-sm font-medium mb-1 block">Hours</label>
-                      <Input 
-                        type="number" 
-                        min={0} 
-                        placeholder="0"
-                        defaultValue={connection?.durationHours || 0}
-                        onChange={(e) => setValue(`connections.${i}.durationHours`, Number(e.target.value || 0))}
-                        className="package-text-fix"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium mb-1 block">Mins</label>
-                      <Input 
-                        type="number" 
-                        min={0} 
-                        max={59} 
-                        placeholder="0"
-                        defaultValue={connection?.durationMinutes || 0}
-                        onChange={(e) => setValue(`connections.${i}.durationMinutes`, Number(e.target.value || 0))}
-                        className="package-text-fix"
-                      />
-                    </div>
-                  </div>
-                  <div className="md:col-span-2 lg:col-span-4">
-                    <label className="text-sm font-medium mb-1 block">Layover / Notes</label>
-                    <Input 
-                      placeholder="Optional: e.g. 2 hour layover in Dubai"
-                      defaultValue={connection?.layoverNotes || ""}
-                      onChange={(e) => setValue(`connections.${i}.layoverNotes`, e.target.value)}
-                      className="package-text-fix"
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+      {/* Transfers Section */}
+      <div>
+        <label className="text-xs font-medium mb-1 block text-gray-600 dark:text-gray-400">Transfers</label>
+        <div className="flex gap-2 mb-2">
+          <Input
+            placeholder="Add transfer..."
+            value={transferText}
+            onChange={(e) => setTransferText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                addTransfer();
+              }
+            }}
+            className="package-text-fix text-sm flex-1"
+            disabled={isFirstOrLastDay}
+          />
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={addTransfer}
+            disabled={isFirstOrLastDay || !transferText.trim()}
+            className="package-button-fix"
+          >
+            <FaPlus className="h-3 w-3" />
+          </Button>
         </div>
-      )}
+        {slot.transfers.length > 0 && (
+          <div className="space-y-1">
+            {slot.transfers.map((transfer, idx) => (
+              <div key={idx} className="flex items-center gap-2 p-2 bg-white dark:bg-gray-900 rounded text-sm">
+                <span className="flex-1">{transfer}</span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => removeTransfer(idx)}
+                  className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                  disabled={isFirstOrLastDay}
+                >
+                  <FaTrash className="h-3 w-3" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
 
 const ItineraryTab: React.FC = () => {
-  const { watch, setValue } = useFormContext<MultiCityPackageFormData>();
-  const days = watch("days");
-  const cities = watch("cities");
+  const { watch, setValue, control } = useFormContext<MultiCityPackageFormData>();
+  const days = watch("days") || [];
 
-  const moveActivity = (fromDay: number, toDay: number, period: keyof DayPlan) => {
+  const handlePhotoUpload = (dayIndex: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    // For now, we'll store the file name or create an object URL
+    // In production, you'd upload to storage and get a URL
+    const photoUrl = URL.createObjectURL(file);
     const d = [...days];
-    if (fromDay < 0 || toDay < 0 || fromDay >= d.length || toDay >= d.length) return;
-    const fromDayObj = d[fromDay];
-    const toDayObj = d[toDay];
-    if (!fromDayObj || !toDayObj) return;
-    const fromList = fromDayObj[period] as MultiCityActivity[] | undefined;
-    if (!fromList || fromList.length === 0) return;
-    const item = fromList.pop();
-    if (!item) return;
-    (toDayObj[period] as MultiCityActivity[]).push(item);
-    setValue("days", d);
+    if (d[dayIndex]) {
+      d[dayIndex]!.photoUrl = photoUrl;
+      setValue("days", d);
+    }
   };
 
-  const addNewDay = () => {
-    const newDay: DayPlan = {
-      cityId: cities[0]?.id || "",
-      morning: [],
-      afternoon: [],
-      evening: [],
-      meals: { breakfast: false, lunch: false, dinner: false },
-    };
-    setValue("days", [...days, newDay]);
-  };
-
-  const removeDay = (index: number) => {
+  // Initialize time slots for days that don't have them
+  React.useEffect(() => {
     const d = [...days];
-    d.splice(index, 1);
-    setValue("days", d);
-  };
+    let updated = false;
+    d.forEach((day, idx) => {
+      if (!day.timeSlots) {
+        d[idx]!.timeSlots = {
+          morning: { time: "", activities: [], transfers: [] },
+          afternoon: { time: "", activities: [], transfers: [] },
+          evening: { time: "", activities: [], transfers: [] },
+        };
+        updated = true;
+      }
+    });
+    if (updated) {
+      setValue("days", d);
+    }
+  }, [days.length, setValue]);
 
   return (
     <div className="space-y-4">
-      {/* Header with Timeline and Add Button */}
+      {/* Header */}
       <Card className="package-selector-glass package-shadow-fix">
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <FaClock /> Day-by-Day Itinerary
-            </CardTitle>
-            <Button
-              type="button"
-              onClick={addNewDay}
-              disabled={cities.length === 0}
-              className="package-button-fix"
-            >
-              <FaPlus className="mr-2" />
-              Add Day
-            </Button>
-          </div>
+          <CardTitle className="flex items-center gap-2">
+            <FaClock /> Day-by-Day Itinerary
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {days.length > 0 ? (
             <div className="w-full overflow-x-auto">
-              <div className="flex items-center gap-4 min-w-max p-2">
-                {days.map((_, i) => (
-                  <div key={i} className="flex flex-col items-center">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-r from-[#FF6B35] to-[#FF4B8C] text-white flex items-center justify-center font-semibold">
-                      {i + 1}
+              <div className="flex items-center gap-2 min-w-max p-2">
+                {days.map((day, i) => (
+                  <React.Fragment key={i}>
+                    <div className="flex flex-col items-center">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-r from-[#FF6B35] to-[#FF4B8C] text-white flex items-center justify-center font-semibold text-sm">
+                        {i + 1}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">{day.cityName}</div>
                     </div>
-                    {i < days.length - 1 && <div className="w-24 h-1 bg-orange-200" />}
-                  </div>
+                    {i < days.length - 1 && <div className="w-16 h-0.5 bg-orange-200 mb-4" />}
+                  </React.Fragment>
                 ))}
               </div>
             </div>
           ) : (
             <div className="text-center py-8 text-gray-500">
               <FaClock className="h-12 w-12 mx-auto mb-3 text-gray-400" />
-              <p className="font-medium mb-1">No Days Added Yet</p>
-              <p className="text-sm">Click &quot;Add Day&quot; to start building your itinerary</p>
+              <p className="font-medium mb-1">No Days Yet</p>
+              <p className="text-sm">Add cities in the Basic Info tab to auto-generate days</p>
             </div>
           )}
         </CardContent>
       </Card>
 
-      <div className="space-y-3">
-        {days.map((day, i) => (
-          <Card key={i} className="package-selector-glass package-shadow-fix">
+      {/* Day Cards */}
+      <div className="space-y-4">
+        {days.map((day, dayIndex) => (
+          <Card key={dayIndex} className="package-selector-glass package-shadow-fix">
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Badge variant="secondary">Day {i + 1}</Badge>
-                  {cities.find(c => c.id === day.cityId)?.name && (
-                    <span className="text-sm text-gray-500">• {cities.find(c => c.id === day.cityId)?.name}</span>
-                  )}
-                </CardTitle>
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const d = [...days];
-                      d.splice(i + 1, 0, {
-                        cityId: day.cityId,
-                        morning: [],
-                        afternoon: [],
-                        evening: [],
-                        meals: { breakfast: false, lunch: false, dinner: false },
-                      });
-                      setValue("days", d);
-                    }}
-                  >
-                    <FaCopy className="mr-1" /> Clone
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => removeDay(i)}
-                  >
-                    <FaTrash />
-                  </Button>
-                </div>
-              </div>
+              <CardTitle className="flex items-center gap-2">
+                <Badge variant="secondary" className="text-base px-3 py-1">Day {dayIndex + 1}</Badge>
+                <span className="text-base font-semibold text-gray-700 dark:text-gray-300">{day.cityName || "—"}</span>
+              </CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {["morning", "afternoon", "evening"].map((period) => (
-                <div key={period}>
-                  <div className="font-medium capitalize">{period}</div>
-                  <ActivityList dayIndex={i} period={period as keyof DayPlan} />
-                </div>
-              ))}
-              <div className="md:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div>
-                  <div className="font-medium">Meals Included</div>
-                  <div className="flex gap-3 text-sm">
-                    {(["breakfast", "lunch", "dinner"] as const).map(k => (
-                      <label key={k} className="flex items-center gap-2">
-                        <input type="checkbox" checked={day.meals[k]} onChange={(e) => {
-                          const d = [...days];
-                          const ref = d[i];
-                          if (!ref || !ref.meals) return;
-                          ref.meals[k] = !!e.target.checked;
-                          setValue("days", d);
-                        }} /> {k}
-                      </label>
-                    ))}
+            <CardContent className="space-y-4">
+              {/* Title Field */}
+              <div>
+                <label className="text-sm font-medium mb-1 block">Title</label>
+                <Input
+                  placeholder="Enter a title for this day..."
+                  defaultValue={day.title}
+                  onChange={(e) => {
+                    const d = [...days];
+                    if (d[dayIndex]) {
+                      d[dayIndex]!.title = e.target.value;
+                      setValue("days", d);
+                    }
+                  }}
+                  className="package-text-fix"
+                />
+              </div>
+
+              {/* First/Last Day Suggestion */}
+              {(dayIndex === 0 || dayIndex === days.length - 1) && (
+                <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <FaInfoCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+                    <div className="text-sm text-amber-800 dark:text-amber-200">
+                      <p className="font-medium mb-1">
+                        {dayIndex === 0 ? "First Day - Arrival" : "Last Day - Departure"}
+                      </p>
+                      <p className="text-xs">
+                        {dayIndex === 0 
+                          ? "Travel/flight timings may vary on arrival day. It's recommended not to add activities or transfers for this day."
+                          : "Travel/flight timings may vary on departure day. It's recommended not to add activities or transfers for this day."
+                        }
+                      </p>
+                    </div>
                   </div>
                 </div>
-                <div>
-                  <div className="font-medium">Accommodation Type</div>
-                  <Input placeholder="e.g., 4-star hotel" onChange={(e) => { const d = [...days]; const ref = d[i]; if (!ref) return; ref.accommodationType = e.target.value; setValue("days", d); }} />
-                </div>
-                <div>
-                  <div className="font-medium">Special Notes</div>
-                  <Input placeholder="Notes" onChange={(e) => { const d = [...days]; const ref = d[i]; if (!ref) return; ref.notes = e.target.value; setValue("days", d); }} />
+              )}
+
+              {/* Time Slots Section */}
+              <div>
+                <label className="text-sm font-medium mb-3 block">Activities & Transfers by Time Slots</label>
+                <div className="space-y-3">
+                  {day.timeSlots && (
+                    <>
+                      <TimeSlotEditor
+                        dayIndex={dayIndex}
+                        slotName="morning"
+                        slot={day.timeSlots.morning}
+                        days={days}
+                        setValue={setValue}
+                        isFirstOrLastDay={dayIndex === 0 || dayIndex === days.length - 1}
+                      />
+                      <TimeSlotEditor
+                        dayIndex={dayIndex}
+                        slotName="afternoon"
+                        slot={day.timeSlots.afternoon}
+                        days={days}
+                        setValue={setValue}
+                        isFirstOrLastDay={dayIndex === 0 || dayIndex === days.length - 1}
+                      />
+                      <TimeSlotEditor
+                        dayIndex={dayIndex}
+                        slotName="evening"
+                        slot={day.timeSlots.evening}
+                        days={days}
+                        setValue={setValue}
+                        isFirstOrLastDay={dayIndex === 0 || dayIndex === days.length - 1}
+                      />
+                    </>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -786,137 +859,185 @@ const ItineraryTab: React.FC = () => {
   );
 };
 
-const ActivityList: React.FC<{ dayIndex: number; period: keyof DayPlan }> = ({ dayIndex, period }) => {
-  const { watch, setValue } = useFormContext<MultiCityPackageFormData>();
-  const days = watch("days");
-  const list = days[dayIndex]?.[period] as MultiCityActivity[];
-  const [time, setTime] = useState("09:00");
-  const [desc, setDesc] = useState("");
-  const add = () => {
-    const d = [...days];
-    // Ensure the day exists; if not, initialize a sensible default shell
-    if (!d[dayIndex]) {
-      d[dayIndex] = { cityId: "", morning: [], afternoon: [], evening: [], meals: { breakfast: false, lunch: false, dinner: false } } as any;
-    }
-    const dayRef = d[dayIndex] as any;
-    // Ensure the target period list exists and is an array
-    if (!Array.isArray(dayRef[period])) {
-      dayRef[period] = [];
-    }
-    dayRef[period] = [...(dayRef[period] as MultiCityActivity[]), { time, description: desc || "Activity" }];
-    setValue("days", d);
-    setDesc("");
-  };
-  const remove = (idx: number) => {
-    const d = [...days];
-    const dayRef = d[dayIndex] as any;
-    const arr = dayRef?.[period] as MultiCityActivity[] | undefined;
-    if (!Array.isArray(arr)) return;
-    const next = arr.slice();
-    next.splice(idx, 1);
-    dayRef[period] = next;
-    setValue("days", d);
-  };
-  return (
-    <div className="space-y-2">
-      <div className="flex gap-2">
-        <Input value={time} onChange={(e) => setTime(e.target.value)} className="w-24" />
-        <Input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Description" />
-        <Button type="button" onClick={add}><FaPlus className="mr-1" /> Add</Button>
-      </div>
-      <div className="space-y-1">
-        {list?.map((a, i) => (
-          <div key={i} className="flex items-center justify-between text-sm bg-gray-50 dark:bg-gray-800 rounded px-2 py-1">
-            <span className="text-gray-600">{a.time}</span>
-            <span className="flex-1 ml-3">{a.description}</span>
-            <Button type="button" variant="ghost" size="icon" onClick={() => remove(i)}><FaTrash /></Button>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
 
 const InclusionsExclusionsTab: React.FC = () => {
-  const { control } = useFormContext<MultiCityPackageFormData>();
+  const { control, watch, setValue } = useFormContext<MultiCityPackageFormData>();
   const inc = useFieldArray({ control, name: "inclusions" });
   const exc = useFieldArray({ control, name: "exclusions" });
-  const addons = useFieldArray({ control, name: "addOns" });
   const [incText, setIncText] = useState("");
   const [incCat, setIncCat] = useState<InclusionCategory>("Transport");
   const [excText, setExcText] = useState("");
-  const [addOn, setAddOn] = useState({ name: "", description: "", price: 0 });
+
+  // Standard inclusions for multi-city tours
+  const standardInclusions = [
+    { id: "accommodation", text: "Accommodation", category: "Transport" as InclusionCategory },
+    { id: "breakfast", text: "Daily Breakfast", category: "Meals" as InclusionCategory },
+    { id: "all_meals", text: "All Meals (Breakfast, Lunch, Dinner)", category: "Meals" as InclusionCategory },
+    { id: "airport_transfer", text: "Airport Transfers", category: "Transport" as InclusionCategory },
+    { id: "intercity_transport", text: "Intercity Transportation", category: "Transport" as InclusionCategory },
+    { id: "tour_guide", text: "Professional Tour Guide", category: "Guide Services" as InclusionCategory },
+    { id: "local_guide", text: "Local Guides", category: "Guide Services" as InclusionCategory },
+    { id: "entry_fees", text: "Entry Fees to Attractions", category: "Entry Fees" as InclusionCategory },
+    { id: "travel_insurance", text: "Travel Insurance", category: "Insurance" as InclusionCategory },
+    { id: "visa_assistance", text: "Visa Assistance", category: "Activities" as InclusionCategory },
+    { id: "welcome_dinner", text: "Welcome Dinner", category: "Meals" as InclusionCategory },
+    { id: "farewell_dinner", text: "Farewell Dinner", category: "Meals" as InclusionCategory },
+    { id: "city_tours", text: "City Tours", category: "Activities" as InclusionCategory },
+    { id: "baggage_handling", text: "Baggage Handling", category: "Transport" as InclusionCategory },
+    { id: "tour_manager", text: "Tour Manager", category: "Guide Services" as InclusionCategory },
+  ];
+
+  // Standard exclusions for multi-city tours
+  const standardExclusions = [
+    { id: "international_flights", text: "International Flights" },
+    { id: "domestic_flights", text: "Domestic Flights" },
+    { id: "personal_expenses", text: "Personal Expenses" },
+    { id: "tips_gratuities", text: "Tips and Gratuities" },
+    { id: "optional_activities", text: "Optional Activities" },
+    { id: "travel_insurance", text: "Travel Insurance" },
+    { id: "visa_fees", text: "Visa Fees" },
+    { id: "airport_taxes", text: "Airport Taxes" },
+    { id: "laundry", text: "Laundry Services" },
+    { id: "phone_calls", text: "Phone Calls and Internet" },
+    { id: "beverages", text: "Beverages (unless specified)" },
+    { id: "porterage", text: "Porterage Fees" },
+    { id: "single_supplement", text: "Single Room Supplement" },
+  ];
+
+  const inclusions = watch("inclusions");
+  const exclusions = watch("exclusions");
+
+  const toggleStandardInclusion = (item: typeof standardInclusions[0]) => {
+    const existingIndex = inclusions.findIndex(
+      (inc: InclusionItem) => inc.text === item.text
+    );
+    
+    if (existingIndex >= 0) {
+      inc.remove(existingIndex);
+    } else {
+      inc.append({ id: generateId(), category: item.category, text: item.text });
+    }
+  };
+
+  const toggleStandardExclusion = (item: typeof standardExclusions[0]) => {
+    const existingIndex = exclusions.findIndex(
+      (exc: ExclusionItem) => exc.text === item.text
+    );
+    
+    if (existingIndex >= 0) {
+      exc.remove(existingIndex);
+    } else {
+      exc.append({ id: generateId(), text: item.text });
+    }
+  };
+
+  const isInclusionSelected = (text: string) => {
+    return inclusions.some((inc: InclusionItem) => inc.text === text);
+  };
+
+  const isExclusionSelected = (text: string) => {
+    return exclusions.some((exc: ExclusionItem) => exc.text === text);
+  };
+
   return (
     <div className="space-y-6">
       <Card className="package-selector-glass package-shadow-fix">
         <CardHeader><CardTitle>What&apos;s Included</CardTitle></CardHeader>
-        <CardContent className="space-y-3">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
-            <Select onValueChange={(v) => setIncCat(v as InclusionCategory)}>
-              <SelectTrigger><SelectValue placeholder="Category" /></SelectTrigger>
-              <SelectContent>
-                {["Transport","Activities","Meals","Guide Services","Entry Fees","Insurance"].map(c => (
-                  <SelectItem key={c} value={c}>{c}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <div className="md:col-span-3 flex gap-2">
-              <Input value={incText} onChange={(e) => setIncText(e.target.value)} placeholder="Add inclusion" />
-              <Button type="button" onClick={() => { if (incText.trim()) { inc.append({ id: generateId(), category: incCat, text: incText.trim() }); setIncText(""); } }}>Add</Button>
+        <CardContent className="space-y-4">
+          {/* Standard Inclusions */}
+          <div>
+            <h3 className="text-sm font-medium mb-3">Standard Inclusions</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              {standardInclusions.map((item) => (
+                <label key={item.id} className="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-800">
+                  <input
+                    type="checkbox"
+                    checked={isInclusionSelected(item.text)}
+                    onChange={() => toggleStandardInclusion(item)}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-sm">{item.text}</span>
+                </label>
+              ))}
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {inc.fields.map((f, i) => (
-              <Badge key={f.id} variant="outline" className="flex items-center gap-2">
-                <span className="text-xs">{(f as any).category}:</span>
-                <span>{(f as any).text}</span>
-                <button type="button" onClick={() => inc.remove(i)} aria-label="remove" className="text-xs">×</button>
-              </Badge>
-            ))}
+
+          {/* Custom Inclusions */}
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+            <h3 className="text-sm font-medium mb-3">Custom Inclusions</h3>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+              <Select onValueChange={(v) => setIncCat(v as InclusionCategory)}>
+                <SelectTrigger><SelectValue placeholder="Category" /></SelectTrigger>
+                <SelectContent>
+                  {["Transport","Activities","Meals","Guide Services","Entry Fees","Insurance"].map(c => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <div className="md:col-span-3 flex gap-2">
+                <Input value={incText} onChange={(e) => setIncText(e.target.value)} placeholder="Add custom inclusion" />
+                <Button type="button" onClick={() => { if (incText.trim()) { inc.append({ id: generateId(), category: incCat, text: incText.trim() }); setIncText(""); } }}>Add</Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Selected Inclusions */}
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+            <h3 className="text-sm font-medium mb-3">Selected Inclusions ({inclusions.length})</h3>
+            <div className="flex flex-wrap gap-2">
+              {inc.fields.map((f, i) => (
+                <Badge key={f.id} variant="outline" className="flex items-center gap-2">
+                  <span className="text-xs">{(f as any).category}:</span>
+                  <span>{(f as any).text}</span>
+                  <button type="button" onClick={() => inc.remove(i)} aria-label="remove" className="text-xs">×</button>
+                </Badge>
+              ))}
+            </div>
           </div>
         </CardContent>
       </Card>
 
       <Card className="package-selector-glass package-shadow-fix">
         <CardHeader><CardTitle>What&apos;s Not Included</CardTitle></CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex gap-2">
-            <Input value={excText} onChange={(e) => setExcText(e.target.value)} placeholder="Add exclusion" />
-            <Button type="button" onClick={() => { if (excText.trim()) { exc.append({ id: generateId(), text: excText.trim() }); setExcText(""); } }}>Add</Button>
+        <CardContent className="space-y-4">
+          {/* Standard Exclusions */}
+          <div>
+            <h3 className="text-sm font-medium mb-3">Standard Exclusions</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              {standardExclusions.map((item) => (
+                <label key={item.id} className="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-800">
+                  <input
+                    type="checkbox"
+                    checked={isExclusionSelected(item.text)}
+                    onChange={() => toggleStandardExclusion(item)}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-sm">{item.text}</span>
+                </label>
+              ))}
+            </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {exc.fields.map((f, i) => (
-              <Badge key={f.id} variant="secondary" className="flex items-center gap-2">
-                <span>{(f as any).text}</span>
-                <button type="button" onClick={() => exc.remove(i)} aria-label="remove" className="text-xs">×</button>
-              </Badge>
-            ))}
-          </div>
-      </CardContent>
-      </Card>
 
-      <Card className="package-selector-glass package-shadow-fix">
-        <CardHeader><CardTitle>Optional Add-ons</CardTitle></CardHeader>
-        <CardContent className="space-y-3">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-            <Input placeholder="Name" value={addOn.name} onChange={(e) => setAddOn(s => ({ ...s, name: e.target.value }))} />
-            <Input placeholder="Description" value={addOn.description} onChange={(e) => setAddOn(s => ({ ...s, description: e.target.value }))} />
-            <Input type="number" placeholder="Price" value={addOn.price} onChange={(e) => setAddOn(s => ({ ...s, price: Number(e.target.value || 0) }))} />
+          {/* Custom Exclusions */}
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+            <h3 className="text-sm font-medium mb-3">Custom Exclusions</h3>
+            <div className="flex gap-2">
+              <Input value={excText} onChange={(e) => setExcText(e.target.value)} placeholder="Add custom exclusion" />
+              <Button type="button" onClick={() => { if (excText.trim()) { exc.append({ id: generateId(), text: excText.trim() }); setExcText(""); } }}>Add</Button>
+            </div>
           </div>
-          <Button type="button" onClick={() => { if (addOn.name.trim()) { addons.append({ id: generateId(), ...addOn }); setAddOn({ name: "", description: "", price: 0 }); } }}>Add Add-on</Button>
-          <div className="space-y-2">
-            {addons.fields.map((f, i) => (
-              <div key={f.id} className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 rounded px-3 py-2">
-                <div>
-                  <div className="font-medium">{(f as any).name}</div>
-                  <div className="text-xs text-gray-500">{(f as any).description || ""}</div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="text-sm font-semibold">${Number((f as any).price || 0).toFixed(2)}</div>
-                  <Button variant="destructive" size="icon" onClick={() => addons.remove(i)}><FaTrash /></Button>
-                </div>
-              </div>
-            ))}
+
+          {/* Selected Exclusions */}
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+            <h3 className="text-sm font-medium mb-3">Selected Exclusions ({exclusions.length})</h3>
+            <div className="flex flex-wrap gap-2">
+              {exc.fields.map((f, i) => (
+                <Badge key={f.id} variant="secondary" className="flex items-center gap-2">
+                  <span>{(f as any).text}</span>
+                  <button type="button" onClick={() => exc.remove(i)} aria-label="remove" className="text-xs">×</button>
+                </Badge>
+              ))}
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -927,174 +1048,363 @@ const InclusionsExclusionsTab: React.FC = () => {
 const PricingDatesTab: React.FC = () => {
   const { watch, setValue } = useFormContext<MultiCityPackageFormData>();
   const pricing = watch("pricing");
-  const [dep, setDep] = useState({ date: "", seats: 0, price: 0, cutoff: "" });
+
+  // Initialize with one default pricing row when SIC pricing is selected
+  React.useEffect(() => {
+    if (pricing.pricingType === "SIC" && pricing.pricingRows.length === 0) {
+      const defaultRow: PricingRow = {
+        id: generateId(),
+        numberOfAdults: 1,
+        numberOfChildren: 0,
+        totalPrice: 0,
+      };
+      setValue("pricing.pricingRows", [defaultRow]);
+    }
+  }, [pricing.pricingType, pricing.pricingRows.length, setValue]);
+
+  // Initialize with one default private package row when PRIVATE_PACKAGE pricing is selected
+  React.useEffect(() => {
+    if (pricing.pricingType === "PRIVATE_PACKAGE" && pricing.privatePackageRows.length === 0) {
+      const defaultRow: PrivatePackageRow = {
+        id: generateId(),
+        numberOfAdults: 1,
+        numberOfChildren: 0,
+        carType: "",
+        vehicleCapacity: 4,
+        totalPrice: 0,
+      };
+      setValue("pricing.privatePackageRows", [defaultRow]);
+    }
+  }, [pricing.pricingType, pricing.privatePackageRows.length, setValue]);
+
+  const addPricingRow = () => {
+    const newRow: PricingRow = {
+      id: generateId(),
+      numberOfAdults: 1,
+      numberOfChildren: 0,
+      totalPrice: 0,
+    };
+    setValue("pricing.pricingRows", [...pricing.pricingRows, newRow]);
+  };
+
+  const removePricingRow = (index: number) => {
+    const rows = pricing.pricingRows.filter((_, i) => i !== index);
+    setValue("pricing.pricingRows", rows);
+  };
+
+  const updatePricingRow = (index: number, field: keyof PricingRow, value: number) => {
+    const rows = [...pricing.pricingRows];
+    const currentRow = rows[index];
+    if (currentRow) {
+      rows[index] = { 
+        id: currentRow.id,
+        numberOfAdults: currentRow.numberOfAdults,
+        numberOfChildren: currentRow.numberOfChildren,
+        totalPrice: currentRow.totalPrice,
+        [field]: value 
+      } as PricingRow;
+      setValue("pricing.pricingRows", rows);
+    }
+  };
+
+  const addPrivatePackageRow = () => {
+    const newRow: PrivatePackageRow = {
+      id: generateId(),
+      numberOfAdults: 1,
+      numberOfChildren: 0,
+      carType: "",
+      vehicleCapacity: 4,
+      totalPrice: 0,
+    };
+    setValue("pricing.privatePackageRows", [...pricing.privatePackageRows, newRow]);
+  };
+
+  const removePrivatePackageRow = (index: number) => {
+    const rows = pricing.privatePackageRows.filter((_, i) => i !== index);
+    setValue("pricing.privatePackageRows", rows);
+  };
+
+  const updatePrivatePackageRow = (index: number, field: keyof PrivatePackageRow, value: number | string) => {
+    const rows = [...pricing.privatePackageRows];
+    const currentRow = rows[index];
+    if (currentRow) {
+      rows[index] = { 
+        id: currentRow.id,
+        numberOfAdults: currentRow.numberOfAdults,
+        numberOfChildren: currentRow.numberOfChildren,
+        carType: currentRow.carType,
+        vehicleCapacity: currentRow.vehicleCapacity,
+        totalPrice: currentRow.totalPrice,
+        [field]: value 
+      } as PrivatePackageRow;
+      setValue("pricing.privatePackageRows", rows);
+    }
+  };
+
   return (
     <div className="space-y-6">
+      {/* Pricing Type Selector */}
       <Card className="package-selector-glass package-shadow-fix">
-        <CardHeader><CardTitle>Package Pricing Options</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Pricing Model</CardTitle></CardHeader>
         <CardContent className="space-y-3">
-          <div className="flex flex-wrap gap-3 text-sm">
-            {(["FIXED", "PER_PERSON", "GROUP_TIERED"] as PricingMode[]).map(m => (
-              <label key={m} className="flex items-center gap-2">
-                <input type="radio" name="pricing-mode" checked={pricing.mode === m} onChange={() => setValue("pricing.mode", m)} /> {m.replace("_"," ")}
-              </label>
-            ))}
+          <div className="flex gap-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="pricing-type"
+                checked={pricing.pricingType === "SIC"}
+                onChange={() => setValue("pricing.pricingType", "SIC")}
+                className="w-4 h-4"
+              />
+              <div>
+                <div className="font-medium">SIC Pricing</div>
+                <div className="text-xs text-gray-500">Tabular pricing format</div>
+              </div>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="pricing-type"
+                checked={pricing.pricingType === "PRIVATE_PACKAGE"}
+                onChange={() => setValue("pricing.pricingType", "PRIVATE_PACKAGE")}
+                className="w-4 h-4"
+              />
+              <div>
+                <div className="font-medium">Private Package</div>
+                <div className="text-xs text-gray-500">Tabular pricing with vehicle details</div>
+              </div>
+            </label>
           </div>
-          {pricing.mode === "FIXED" && (
-            <div>
-              <label className="text-sm font-medium">Fixed Price</label>
-              <Input type="number" defaultValue={pricing.fixedPrice} onChange={(e) => setValue("pricing.fixedPrice", Number(e.target.value || 0))} />
-            </div>
-          )}
-          {pricing.mode === "PER_PERSON" && (
-            <div>
-              <label className="text-sm font-medium">Per Person Price</label>
-              <Input type="number" defaultValue={pricing.perPersonPrice} onChange={(e) => setValue("pricing.perPersonPrice", Number(e.target.value || 0))} />
-            </div>
-          )}
-          {pricing.mode === "GROUP_TIERED" && (
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="text-sm font-medium">Min Group Size</label>
-                <Input type="number" defaultValue={pricing.groupMin} onChange={(e) => setValue("pricing.groupMin", Number(e.target.value || 0))} />
-              </div>
-              <div>
-                <label className="text-sm font-medium">Max Group Size</label>
-                <Input type="number" defaultValue={pricing.groupMax} onChange={(e) => setValue("pricing.groupMax", Number(e.target.value || 0))} />
-              </div>
-            </div>
-          )}
         </CardContent>
       </Card>
 
+      {/* SIC Pricing: Tabular Format */}
+      {pricing.pricingType === "SIC" && (
       <Card className="package-selector-glass package-shadow-fix">
-        <CardHeader><CardTitle>Available Dates</CardTitle></CardHeader>
-        <CardContent className="space-y-3">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
-            <Input type="date" value={dep.date} onChange={(e) => setDep(s => ({ ...s, date: e.target.value }))} />
-            <Input type="number" placeholder="Seats" value={dep.seats} onChange={(e) => setDep(s => ({ ...s, seats: Number(e.target.value || 0) }))} />
-            <Input type="number" placeholder="Price" value={dep.price} onChange={(e) => setDep(s => ({ ...s, price: Number(e.target.value || 0) }))} />
-            <Input type="date" value={dep.cutoff} onChange={(e) => setDep(s => ({ ...s, cutoff: e.target.value }))} />
-          </div>
-          <Button type="button" onClick={() => {
-            if (!dep.date) return;
-            const next = [...pricing.departures, { id: generateId(), date: dep.date, availableSeats: dep.seats, price: dep.price, cutoffDate: dep.cutoff }];
-            setValue("pricing.departures", next);
-            setDep({ date: "", seats: 0, price: 0, cutoff: "" });
-          }}>Add Departure Date</Button>
+        <CardHeader>
+            <CardTitle>SIC Pricing</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+            {/* Pricing Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-sm">
+                <thead>
+                  <tr className="border-b border-gray-200 dark:border-gray-700">
+                    <th className="text-left py-2 px-3 font-medium text-xs">No. of Adults</th>
+                    <th className="text-left py-2 px-3 font-medium text-xs">No. of Children</th>
+                    <th className="text-left py-2 px-3 font-medium text-xs">Total Price (Adult + Child)</th>
+                    <th className="text-left py-2 px-3 font-medium text-xs w-16">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pricing.pricingRows.map((row, index) => (
+                    <tr key={row.id} className="border-b border-gray-200 dark:border-gray-700">
+                      <td className="py-2 px-3">
+              <Input
+                type="number"
+                min={0}
+                          value={row.numberOfAdults}
+                          onChange={(e) => updatePricingRow(index, "numberOfAdults", Number(e.target.value || 0))}
+                          className="package-text-fix w-20 h-8 text-sm"
+                        />
+                      </td>
+                      <td className="py-2 px-3">
+              <Input
+                type="number"
+                min={0}
+                          value={row.numberOfChildren}
+                          onChange={(e) => updatePricingRow(index, "numberOfChildren", Number(e.target.value || 0))}
+                          className="package-text-fix w-20 h-8 text-sm"
+                        />
+                      </td>
+                      <td className="py-2 px-3">
+                        <Input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          value={row.totalPrice}
+                          onChange={(e) => updatePricingRow(index, "totalPrice", Number(e.target.value || 0))}
+                          className="package-text-fix w-28 h-8 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          placeholder="0.00"
+                        />
+                      </td>
+                      <td className="py-2 px-3">
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => removePricingRow(index)}
+                          className="h-8 w-8 p-0"
+                          disabled={pricing.pricingRows.length === 1}
+                        >
+                          <FaTrash className="h-3 w-3" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
-          <div className="space-y-2">
-            {pricing.departures.map((d, i) => (
-              <div key={d.id} className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 rounded px-3 py-2">
-                <div className="text-sm">
-                  <span className="font-medium">{d.date}</span> • Seats: {d.availableSeats ?? "-"} • ${Number(d.price || 0).toFixed(2)}
-                  {d.cutoffDate ? <span className="text-xs text-gray-500"> • Cutoff: {d.cutoffDate}</span> : null}
+            {/* Add Pricing Row Button */}
+            <div className="flex justify-end">
+              <Button type="button" onClick={addPricingRow} className="package-button-fix">
+                <FaPlus className="mr-2" /> Add Pricing Row
+              </Button>
+            </div>
+
+            {/* Child Age Restriction (at the end) */}
+            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex items-center gap-2 mb-3">
+                <input
+                  type="checkbox"
+                  id="child-age-restriction"
+                  checked={pricing.hasChildAgeRestriction}
+                  onChange={(e) => {
+                    setValue("pricing.hasChildAgeRestriction", e.target.checked);
+                    if (!e.target.checked) {
+                      setValue("pricing.childMinAge", undefined);
+                      setValue("pricing.childMaxAge", undefined);
+                    }
+                  }}
+                  className="w-4 h-4"
+                />
+                <label htmlFor="child-age-restriction" className="text-xs font-medium cursor-pointer">
+                  Child Age Restriction
+                </label>
+              </div>
+              
+              {pricing.hasChildAgeRestriction && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 ml-6">
+                  <div>
+                    <label className="text-xs font-medium mb-1 block">Child Min Age *</label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={pricing.childMinAge || ""}
+                      onChange={(e) => setValue("pricing.childMinAge", Number(e.target.value || 0))}
+                      className="package-text-fix h-8 text-sm"
+                      placeholder="e.g., 3"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium mb-1 block">Child Max Age *</label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={pricing.childMaxAge || ""}
+                      onChange={(e) => setValue("pricing.childMaxAge", Number(e.target.value || 0))}
+                      className="package-text-fix h-8 text-sm"
+                      placeholder="e.g., 12"
+                    />
+                  </div>
                 </div>
-                <Button variant="destructive" size="icon" onClick={() => {
-                  const next = pricing.departures.slice(); next.splice(i,1); setValue("pricing.departures", next);
-                }}><FaTrash /></Button>
-              </div>
-            ))}
-          </div>
+              )}
+            </div>
         </CardContent>
       </Card>
+      )}
 
-      <Card className="package-selector-glass package-shadow-fix">
-        <CardHeader><CardTitle>Validity & Seasonal Variations</CardTitle></CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div>
-            <label className="text-sm font-medium">Validity Start</label>
-            <Input type="date" defaultValue={pricing.validityStart} onChange={(e) => setValue("pricing.validityStart", e.target.value)} />
-          </div>
-          <div>
-            <label className="text-sm font-medium">Validity End</label>
-            <Input type="date" defaultValue={pricing.validityEnd} onChange={(e) => setValue("pricing.validityEnd", e.target.value)} />
-          </div>
-          <div className="md:col-span-3">
-            <label className="text-sm font-medium">Seasonal Pricing Notes</label>
-            <Textarea defaultValue={pricing.seasonalNotes} onChange={(e) => setValue("pricing.seasonalNotes", e.target.value)} />
-          </div>
-        </CardContent>
-      </Card>
+      {/* Private Package Pricing: Tabular Format */}
+      {pricing.pricingType === "PRIVATE_PACKAGE" && (
+        <Card className="package-selector-glass package-shadow-fix">
+          <CardHeader>
+            <CardTitle>Private Package Pricing</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Pricing Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-sm">
+                <thead>
+                  <tr className="border-b border-gray-200 dark:border-gray-700">
+                    <th className="text-left py-2 px-3 font-medium text-xs">No. of Adults</th>
+                    <th className="text-left py-2 px-3 font-medium text-xs">No. of Children</th>
+                    <th className="text-left py-2 px-3 font-medium text-xs">Type of Car</th>
+                    <th className="text-left py-2 px-3 font-medium text-xs">Vehicle Capacity</th>
+                    <th className="text-left py-2 px-3 font-medium text-xs">Total Price</th>
+                    <th className="text-left py-2 px-3 font-medium text-xs w-16">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pricing.privatePackageRows.map((row, index) => (
+                    <tr key={row.id} className="border-b border-gray-200 dark:border-gray-700">
+                      <td className="py-2 px-3">
+                        <Input
+                          type="number"
+                          min={0}
+                          value={row.numberOfAdults}
+                          onChange={(e) => updatePrivatePackageRow(index, "numberOfAdults", Number(e.target.value || 0))}
+                          className="package-text-fix w-20 h-8 text-sm"
+                        />
+                      </td>
+                      <td className="py-2 px-3">
+                        <Input
+                          type="number"
+                          min={0}
+                          value={row.numberOfChildren}
+                          onChange={(e) => updatePrivatePackageRow(index, "numberOfChildren", Number(e.target.value || 0))}
+                          className="package-text-fix w-20 h-8 text-sm"
+                        />
+                      </td>
+                      <td className="py-2 px-3">
+                        <Input
+                          placeholder="e.g., Sedan, SUV"
+                          value={row.carType}
+                          onChange={(e) => updatePrivatePackageRow(index, "carType", e.target.value)}
+                          className="package-text-fix w-24 h-8 text-sm"
+                        />
+                      </td>
+                      <td className="py-2 px-3">
+                        <Input
+                          type="number"
+                          min={1}
+                          value={row.vehicleCapacity}
+                          onChange={(e) => updatePrivatePackageRow(index, "vehicleCapacity", Number(e.target.value || 1))}
+                          className="package-text-fix w-20 h-8 text-sm"
+                        />
+                      </td>
+                      <td className="py-2 px-3">
+                        <Input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          value={row.totalPrice}
+                          onChange={(e) => updatePrivatePackageRow(index, "totalPrice", Number(e.target.value || 0))}
+                          className="package-text-fix w-28 h-8 text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          placeholder="0.00"
+                        />
+                      </td>
+                      <td className="py-2 px-3">
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => removePrivatePackageRow(index)}
+                          className="h-8 w-8 p-0"
+                          disabled={pricing.privatePackageRows.length === 1}
+                        >
+                          <FaTrash className="h-3 w-3" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Add Pricing Row Button */}
+            <div className="flex justify-end">
+              <Button type="button" onClick={addPrivatePackageRow} className="package-button-fix">
+                <FaPlus className="mr-2" /> Add Pricing Row
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };
 
-const PoliciesTab: React.FC = () => {
-  const { watch, setValue, control } = useFormContext<MultiCityPackageFormData>();
-  const { fields, append, remove } = useFieldArray({ control, name: "policies.cancellation" });
-  const policies = watch("policies");
-  const [tier, setTier] = useState({ days: 30, refund: 100 });
-  return (
-    <div className="space-y-6">
-      <Card className="package-selector-glass package-shadow-fix">
-        <CardHeader><CardTitle>Cancellation Policy (tiered)</CardTitle></CardHeader>
-        <CardContent className="space-y-3">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-            <Input type="number" placeholder="Days before" value={tier.days} onChange={(e) => setTier(s => ({ ...s, days: Number(e.target.value || 0) }))} />
-            <Input type="number" placeholder="Refund %" value={tier.refund} onChange={(e) => setTier(s => ({ ...s, refund: Number(e.target.value || 0) }))} />
-            <Button type="button" onClick={() => append({ id: generateId(), daysBefore: tier.days, refundPercent: tier.refund })}>Add tier</Button>
-          </div>
-          <div className="space-y-2">
-            {fields.map((f, i) => (
-              <div key={f.id} className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 rounded px-3 py-2 text-sm">
-                <div>{(f as any).daysBefore} days before: {(f as any).refundPercent}% refund</div>
-                <Button variant="destructive" size="icon" onClick={() => remove(i)}><FaTrash /></Button>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="package-selector-glass package-shadow-fix">
-        <CardHeader><CardTitle>Payment Terms</CardTitle></CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div>
-            <label className="text-sm font-medium">Deposit required (%)</label>
-            <Input type="number" defaultValue={policies.depositPercent} onChange={(e) => setValue("policies.depositPercent", Number(e.target.value || 0))} />
-          </div>
-          <div>
-            <label className="text-sm font-medium">Balance due (days before)</label>
-            <Input type="number" defaultValue={policies.balanceDueDays} onChange={(e) => setValue("policies.balanceDueDays", Number(e.target.value || 0))} />
-          </div>
-          <div className="md:col-span-3">
-            <label className="text-sm font-medium">Payment methods</label>
-            <Input placeholder="e.g., Credit Card, Bank Transfer" defaultValue={(policies.paymentMethods || []).join(", ")} onChange={(e) => setValue("policies.paymentMethods", e.target.value.split(",").map(s => s.trim()).filter(Boolean))} />
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="package-selector-glass package-shadow-fix">
-        <CardHeader><CardTitle>Other Requirements</CardTitle></CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div>
-            <label className="text-sm font-medium">Visa Requirements</label>
-            <Textarea defaultValue={policies.visaRequirements} onChange={(e) => setValue("policies.visaRequirements", e.target.value)} />
-          </div>
-          <div>
-            <label className="text-sm font-medium">Insurance</label>
-            <Select defaultValue={policies.insuranceRequirement || "OPTIONAL"} onValueChange={(v) => setValue("policies.insuranceRequirement", v as any)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="REQUIRED">Required</SelectItem>
-                <SelectItem value="OPTIONAL">Optional</SelectItem>
-                <SelectItem value="NA">Not Applicable</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="md:col-span-2">
-            <label className="text-sm font-medium">Health Requirements</label>
-            <Textarea defaultValue={policies.healthRequirements} onChange={(e) => setValue("policies.healthRequirements", e.target.value)} />
-          </div>
-          <div className="md:col-span-2">
-            <label className="text-sm font-medium">Terms & Conditions</label>
-            <Textarea defaultValue={policies.terms} onChange={(e) => setValue("policies.terms", e.target.value)} />
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-};
 
 const ReviewPublishTab: React.FC<{ onPreview?: () => void }> = ({ onPreview }) => {
   const { watch } = useFormContext<MultiCityPackageFormData>();
@@ -1108,8 +1418,23 @@ const ReviewPublishTab: React.FC<{ onPreview?: () => void }> = ({ onPreview }) =
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
           <div><span className="font-medium">Title:</span> {data.basic.title || "—"}</div>
+          <div><span className="font-medium">Region:</span> {data.basic.destinationRegion || "—"}</div>
           <div><span className="font-medium">Cities:</span> {data.cities.length} • <span className="font-medium">Nights:</span> {totalNights}</div>
-          <div><span className="font-medium">Pricing Mode:</span> {data.pricing.mode}</div>
+          <div><span className="font-medium">Pricing Type:</span> {data.pricing.pricingType === "SIC" ? "SIC (Tabular)" : "Private Package (Tabular)"}</div>
+          {data.pricing.pricingType === "SIC" && (
+            <>
+              <div><span className="font-medium">Pricing Rows:</span> {data.pricing.pricingRows.length}</div>
+              {data.pricing.hasChildAgeRestriction && (
+                <div><span className="font-medium">Child Age:</span> {data.pricing.childMinAge}-{data.pricing.childMaxAge} years</div>
+              )}
+            </>
+          )}
+          {data.pricing.pricingType === "PRIVATE_PACKAGE" && (
+            <div><span className="font-medium">Private Package Rows:</span> {data.pricing.privatePackageRows.length}</div>
+          )}
+          {data.basic.packageValidityDate && (
+            <div><span className="font-medium">Valid Until:</span> {data.basic.packageValidityDate}</div>
+          )}
         </CardContent>
       </Card>
 
@@ -1118,10 +1443,11 @@ const ReviewPublishTab: React.FC<{ onPreview?: () => void }> = ({ onPreview }) =
         <CardContent>
           <div className="w-full overflow-x-auto">
             <div className="flex items-center gap-4 min-w-max p-2">
-              {data.days.map((_, i) => (
+              {data.days.map((day, i) => (
                 <div key={i} className="flex flex-col items-center">
-                  <div className="w-8 h-8 rounded-full bg-green-600 text-white flex items-center justify-center text-xs">{i + 1}</div>
-                  <div className="w-16 h-1 bg-green-200" />
+                  <div className="w-10 h-10 rounded-full bg-green-600 text-white flex items-center justify-center text-sm font-semibold">{i + 1}</div>
+                  <div className="text-xs text-gray-500 mt-1">{day.cityName}</div>
+                  {i < data.days.length - 1 && <div className="w-16 h-1 bg-green-200" />}
                 </div>
               ))}
             </div>
@@ -1158,12 +1484,9 @@ export const MultiCityPackageForm: React.FC<{
 
   const tabs = [
     { id: "basic", label: "Basic Info", icon: <FaInfoCircle className="h-4 w-4" />, badge: validation.errors.filter(e => e.tab === "basic").length, hasErrors: validation.errors.some(e => e.tab === "basic") },
-    { id: "destinations", label: "Destinations", icon: <FaMapMarkerAlt className="h-4 w-4" />, badge: validation.errors.filter(e => e.tab === "destinations").length, hasErrors: validation.errors.some(e => e.tab === "destinations") },
-    { id: "transport", label: "Transport", icon: <FaPlane className="h-4 w-4" />, badge: validation.errors.filter(e => e.tab === "transport").length, hasErrors: validation.errors.some(e => e.tab === "transport") },
     { id: "itinerary", label: "Itinerary", icon: <FaClock className="h-4 w-4" />, badge: validation.errors.filter(e => e.tab === "itinerary").length, hasErrors: validation.errors.some(e => e.tab === "itinerary") },
     { id: "inclusions", label: "Inclusions", icon: <FaCheckCircle className="h-4 w-4" />, badge: 0, hasErrors: false },
     { id: "pricing", label: "Pricing", icon: <FaDollarSign className="h-4 w-4" />, badge: validation.errors.filter(e => e.tab === "pricing").length, hasErrors: validation.errors.some(e => e.tab === "pricing") },
-    { id: "policies", label: "Policies", icon: <FaShieldAlt className="h-4 w-4" />, badge: 0, hasErrors: false },
     { id: "review", label: "Review", icon: <FaEye className="h-4 w-4" />, badge: validation.errors.length, hasErrors: !validation.isValid },
   ];
 
@@ -1227,12 +1550,9 @@ export const MultiCityPackageForm: React.FC<{
 
           <div className="min-h-[600px]">
             <TabsContent value="basic"><BasicInformationTab /></TabsContent>
-            <TabsContent value="destinations"><DestinationsTab /></TabsContent>
-            <TabsContent value="transport"><TransportTab /></TabsContent>
             <TabsContent value="itinerary"><ItineraryTab /></TabsContent>
             <TabsContent value="inclusions"><InclusionsExclusionsTab /></TabsContent>
             <TabsContent value="pricing"><PricingDatesTab /></TabsContent>
-            <TabsContent value="policies"><PoliciesTab /></TabsContent>
             <TabsContent value="review"><ReviewPublishTab onPreview={() => onPreview?.(formData)} /></TabsContent>
           </div>
         </Tabs>

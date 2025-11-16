@@ -30,23 +30,23 @@ const step2Schema = z.object({
 });
 
 const step3OperatorSchema = z.object({
-  companyName: z.string().min(2, 'Company name is required'),
-  businessRegistrationNumber: z.string().min(1, 'Business registration number is required'),
+  companyName: z.string().optional(),
+  businessRegistrationNumber: z.string().optional(),
   websiteUrl: z.string().url().optional().or(z.literal('')),
-  phoneNumber: z.string().min(10, 'Phone number is required'),
-  businessAddress: z.string().min(5, 'Business address is required'),
-  companyDescription: z.string().max(500, 'Description must be less than 500 characters'),
+  phoneNumber: z.string().optional(),
+  businessAddress: z.string().optional(),
+  companyDescription: z.string().max(500, 'Description must be less than 500 characters').optional(),
   businessLicense: z.any().optional(),
   termsAccepted: z.boolean().refine(val => val === true, 'You must accept the terms and conditions'),
 });
 
 const step3AgentSchema = z.object({
-  agencyName: z.string().min(2, 'Agency name is required'),
-  agencyRegistrationNumber: z.string().min(1, 'Agency registration number is required'),
-  phoneNumber: z.string().min(10, 'Phone number is required'),
-  officeAddress: z.string().min(5, 'Office address is required'),
-  specialization: z.array(z.string()).min(1, 'Please select at least one specialization'),
-  yearsOfExperience: z.string().min(1, 'Please select years of experience'),
+  agencyName: z.string().optional(),
+  agencyRegistrationNumber: z.string().optional(),
+  phoneNumber: z.string().optional(),
+  officeAddress: z.string().optional(),
+  specialization: z.array(z.string()).optional(),
+  yearsOfExperience: z.string().optional(),
   termsAccepted: z.boolean().refine(val => val === true, 'You must accept the terms and conditions'),
 });
 
@@ -356,10 +356,10 @@ const RegisterPageWithSearchParams: React.FC = () => {
         
         // Show success message
         const { toast } = await import('sonner');
-        toast.success('Account created successfully! Welcome to TravelSelBuy.');
+        toast.success('Account created successfully! Please login to continue.');
         
-        // Redirect to the appropriate dashboard based on role
-        router.push(redirectUrl);
+        // Redirect to login page after account creation
+        router.push('/login');
       } else {
         // Registration failed - error is already set in the auth context
         const { toast } = await import('sonner');
@@ -387,24 +387,8 @@ const RegisterPageWithSearchParams: React.FC = () => {
   };
 
   const validateStep3Operator = () => {
-    const companyName = step3OperatorForm.watch('companyName') || '';
-    const businessRegistrationNumber = step3OperatorForm.watch('businessRegistrationNumber') || '';
-    const phoneNumber = step3OperatorForm.watch('phoneNumber') || '';
-    const businessAddress = step3OperatorForm.watch('businessAddress') || '';
     const termsAccepted = step3OperatorForm.watch('termsAccepted') || false;
     
-    if (companyName.length < 2) {
-      return { valid: false, message: 'Company name must be at least 2 characters' };
-    }
-    if (businessRegistrationNumber.length < 1) {
-      return { valid: false, message: 'Business registration number is required' };
-    }
-    if (phoneNumber.length < 10) {
-      return { valid: false, message: 'Phone number must be at least 10 digits' };
-    }
-    if (businessAddress.length < 5) {
-      return { valid: false, message: 'Business address must be at least 5 characters' };
-    }
     if (!termsAccepted) {
       return { valid: false, message: 'You must accept the terms and conditions' };
     }
@@ -413,32 +397,8 @@ const RegisterPageWithSearchParams: React.FC = () => {
   };
 
   const validateStep3Agent = () => {
-    const agencyName = step3AgentForm.watch('agencyName') || '';
-    const agencyRegistrationNumber = step3AgentForm.watch('agencyRegistrationNumber') || '';
-    const phoneNumber = step3AgentForm.watch('phoneNumber') || '';
-    const officeAddress = step3AgentForm.watch('officeAddress') || '';
-    const specialization = step3AgentForm.watch('specialization') || [];
-    const yearsOfExperience = step3AgentForm.watch('yearsOfExperience') || '';
     const termsAccepted = step3AgentForm.watch('termsAccepted') || false;
     
-    if (agencyName.length < 2) {
-      return { valid: false, message: 'Agency name must be at least 2 characters' };
-    }
-    if (agencyRegistrationNumber.length < 1) {
-      return { valid: false, message: 'Agency registration number is required' };
-    }
-    if (phoneNumber.length < 10) {
-      return { valid: false, message: 'Phone number must be at least 10 digits' };
-    }
-    if (officeAddress.length < 5) {
-      return { valid: false, message: 'Office address must be at least 5 characters' };
-    }
-    if (specialization.length < 1) {
-      return { valid: false, message: 'Please select at least one specialization' };
-    }
-    if (yearsOfExperience.length < 1) {
-      return { valid: false, message: 'Please select years of experience' };
-    }
     if (!termsAccepted) {
       return { valid: false, message: 'You must accept the terms and conditions' };
     }
@@ -447,35 +407,13 @@ const RegisterPageWithSearchParams: React.FC = () => {
   };
 
   const isStep3OperatorValid = () => {
-    const companyName = step3OperatorForm.watch('companyName') || '';
-    const businessRegistrationNumber = step3OperatorForm.watch('businessRegistrationNumber') || '';
-    const phoneNumber = step3OperatorForm.watch('phoneNumber') || '';
-    const businessAddress = step3OperatorForm.watch('businessAddress') || '';
     const termsAccepted = step3OperatorForm.watch('termsAccepted') || false;
-    
-    return companyName.length >= 2 &&
-           businessRegistrationNumber.length >= 1 &&
-           phoneNumber.length >= 10 &&
-           businessAddress.length >= 5 &&
-           termsAccepted === true;
+    return termsAccepted === true;
   };
 
   const isStep3AgentValid = () => {
-    const agencyName = step3AgentForm.watch('agencyName') || '';
-    const agencyRegistrationNumber = step3AgentForm.watch('agencyRegistrationNumber') || '';
-    const phoneNumber = step3AgentForm.watch('phoneNumber') || '';
-    const officeAddress = step3AgentForm.watch('officeAddress') || '';
-    const specialization = step3AgentForm.watch('specialization') || [];
-    const yearsOfExperience = step3AgentForm.watch('yearsOfExperience') || '';
     const termsAccepted = step3AgentForm.watch('termsAccepted') || false;
-    
-    return agencyName.length >= 2 &&
-           agencyRegistrationNumber.length >= 1 &&
-           phoneNumber.length >= 10 &&
-           officeAddress.length >= 5 &&
-           specialization.length >= 1 &&
-           yearsOfExperience.length >= 1 &&
-           termsAccepted === true;
+    return termsAccepted === true;
   };
 
   const renderStep1 = () => (
@@ -500,18 +438,21 @@ const RegisterPageWithSearchParams: React.FC = () => {
               type="text"
               value={step1Form.watch('fullName') || ''}
               onChange={(e) => step1Form.setValue('fullName', e.target.value)}
-              className="w-full px-4 py-3 pl-12 pr-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/20 bg-white dark:bg-gray-700 transition-all duration-200"
+              style={{ paddingLeft: '3.5rem', paddingRight: step1Form.watch('fullName') ? '3rem' : '3rem' }}
+              className="w-full py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/20 bg-white dark:bg-gray-700 transition-all duration-200"
               placeholder="Enter your full name"
               autoComplete="name"
             />
-            <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <div className="absolute left-3 top-0 bottom-0 flex items-center pointer-events-none">
+              <User className="h-4 w-4 text-gray-400" />
+            </div>
             {step1Form.watch('fullName') && (
               <motion.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center justify-center"
+                className="absolute right-3 top-0 bottom-0 flex items-center justify-center"
               >
-                <span className="text-green-500 text-lg">✓</span>
+                <span className="text-green-500 text-lg leading-none">✓</span>
               </motion.div>
             )}
           </motion.div>
@@ -533,18 +474,21 @@ const RegisterPageWithSearchParams: React.FC = () => {
               type="email"
               value={step1Form.watch('email') || ''}
               onChange={(e) => step1Form.setValue('email', e.target.value)}
-              className="w-full px-4 py-3 pl-12 pr-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/20 bg-white dark:bg-gray-700 transition-all duration-200"
+              style={{ paddingLeft: '3.5rem', paddingRight: step1Form.watch('email') ? '3rem' : '3rem' }}
+              className="w-full py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/20 bg-white dark:bg-gray-700 transition-all duration-200"
               placeholder="Enter your email"
               autoComplete="email"
             />
-            <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <div className="absolute left-3 top-0 bottom-0 flex items-center pointer-events-none">
+              <Mail className="h-4 w-4 text-gray-400" />
+            </div>
             {step1Form.watch('email') && (
               <motion.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center justify-center"
+                className="absolute right-3 top-0 bottom-0 flex items-center justify-center"
               >
-                <span className="text-green-500 text-lg">✓</span>
+                <span className="text-green-500 text-lg leading-none">✓</span>
               </motion.div>
             )}
           </motion.div>
@@ -566,15 +510,18 @@ const RegisterPageWithSearchParams: React.FC = () => {
               type={showPassword ? 'text' : 'password'}
               value={step1Form.watch('password') || ''}
               onChange={(e) => step1Form.setValue('password', e.target.value)}
-              className="w-full px-4 py-3 pl-12 pr-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/20 bg-white dark:bg-gray-700 transition-all duration-200"
+              style={{ paddingLeft: '3.5rem', paddingRight: step1Form.watch('password') ? '4.5rem' : '3rem' }}
+              className="w-full py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/20 bg-white dark:bg-gray-700 transition-all duration-200"
               placeholder="Create a password"
               autoComplete="new-password"
             />
-            <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <div className="absolute left-3 top-0 bottom-0 flex items-center pointer-events-none">
+              <Lock className="h-4 w-4 text-gray-400" />
+            </div>
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+              className="absolute right-3 top-0 bottom-0 flex items-center justify-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors z-10"
               aria-label={showPassword ? 'Hide password' : 'Show password'}
             >
               {showPassword ? (
@@ -587,9 +534,9 @@ const RegisterPageWithSearchParams: React.FC = () => {
               <motion.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
-                className="absolute right-10 top-1/2 transform -translate-y-1/2 flex items-center justify-center"
+                className="absolute right-11 top-0 bottom-0 flex items-center justify-center"
               >
-                <span className="text-green-500 text-lg">✓</span>
+                <span className="text-green-500 text-lg leading-none">✓</span>
               </motion.div>
             )}
           </motion.div>
@@ -612,15 +559,18 @@ const RegisterPageWithSearchParams: React.FC = () => {
               type={showConfirmPassword ? 'text' : 'password'}
               value={step1Form.watch('confirmPassword') || ''}
               onChange={(e) => step1Form.setValue('confirmPassword', e.target.value)}
-              className="w-full px-4 py-3 pl-12 pr-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/20 bg-white dark:bg-gray-700 transition-all duration-200"
+              style={{ paddingLeft: '3.5rem', paddingRight: step1Form.watch('confirmPassword') && step1Form.watch('password') === step1Form.watch('confirmPassword') ? '4.5rem' : '3rem' }}
+              className="w-full py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/20 bg-white dark:bg-gray-700 transition-all duration-200"
               placeholder="Confirm your password"
               autoComplete="new-password"
             />
-            <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <div className="absolute left-3 top-0 bottom-0 flex items-center pointer-events-none">
+              <Lock className="h-4 w-4 text-gray-400" />
+            </div>
             <button
               type="button"
               onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+              className="absolute right-3 top-0 bottom-0 flex items-center justify-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors z-10"
               aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
             >
               {showConfirmPassword ? (
@@ -633,9 +583,9 @@ const RegisterPageWithSearchParams: React.FC = () => {
               <motion.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
-                className="absolute right-10 top-1/2 transform -translate-y-1/2 flex items-center justify-center"
+                className="absolute right-11 top-0 bottom-0 flex items-center justify-center"
               >
-                <span className="text-green-500 text-lg">✓</span>
+                <span className="text-green-500 text-lg leading-none">✓</span>
               </motion.div>
             )}
           </motion.div>
@@ -761,7 +711,7 @@ const RegisterPageWithSearchParams: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Company Name *
+                  Company Name
                 </label>
                 <motion.div
                   className="relative"
@@ -772,18 +722,21 @@ const RegisterPageWithSearchParams: React.FC = () => {
                     type="text"
                   value={step3OperatorForm.watch('companyName') || ''}
                   onChange={(e) => step3OperatorForm.setValue('companyName', e.target.value)}
-                  className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/20 bg-white dark:bg-gray-700 transition-all duration-200"
+                  style={{ paddingLeft: '3.5rem', paddingRight: step3OperatorForm.watch('companyName') ? '3rem' : '3rem' }}
+                  className="w-full py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/20 bg-white dark:bg-gray-700 transition-all duration-200"
                   placeholder="Your company name"
                     autoComplete="organization"
                   />
-                  <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <div className="absolute left-3 top-0 bottom-0 flex items-center pointer-events-none">
+                    <Building className="h-4 w-4 text-gray-400" />
+                  </div>
                   {step3OperatorForm.watch('companyName') && (
                     <motion.div
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                      className="absolute right-3 top-0 bottom-0 flex items-center justify-center"
                     >
-                      <span className="text-green-500 text-lg">✓</span>
+                      <span className="text-green-500 text-lg leading-none">✓</span>
                     </motion.div>
                   )}
                 </motion.div>
@@ -794,7 +747,7 @@ const RegisterPageWithSearchParams: React.FC = () => {
 
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Business Registration Number *
+                  Business Registration Number
                 </label>
                 <motion.div
                   className="relative"
@@ -805,18 +758,21 @@ const RegisterPageWithSearchParams: React.FC = () => {
                     type="text"
                   value={step3OperatorForm.watch('businessRegistrationNumber') || ''}
                   onChange={(e) => step3OperatorForm.setValue('businessRegistrationNumber', e.target.value)}
-                  className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/20 bg-white dark:bg-gray-700 transition-all duration-200"
+                  style={{ paddingLeft: '3.5rem', paddingRight: step3OperatorForm.watch('businessRegistrationNumber') ? '3rem' : '3rem' }}
+                  className="w-full py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/20 bg-white dark:bg-gray-700 transition-all duration-200"
                   placeholder="Registration number"
                     autoComplete="off"
                   />
-                  <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <div className="absolute left-3 top-0 bottom-0 flex items-center pointer-events-none">
+                    <Building className="h-4 w-4 text-gray-400" />
+                  </div>
                   {step3OperatorForm.watch('businessRegistrationNumber') && (
                     <motion.div
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                      className="absolute right-3 top-0 bottom-0 flex items-center justify-center"
                     >
-                      <span className="text-green-500 text-lg">✓</span>
+                      <span className="text-green-500 text-lg leading-none">✓</span>
                     </motion.div>
                   )}
                 </motion.div>
@@ -839,18 +795,21 @@ const RegisterPageWithSearchParams: React.FC = () => {
                   type="url"
                   value={step3OperatorForm.watch('websiteUrl') || ''}
                   onChange={(e) => step3OperatorForm.setValue('websiteUrl', e.target.value)}
-                  className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/20 bg-white dark:bg-gray-700 transition-all duration-200"
+                  style={{ paddingLeft: '3.5rem', paddingRight: '3rem' }}
+                  className="w-full py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/20 bg-white dark:bg-gray-700 transition-all duration-200"
                   placeholder="https://yourwebsite.com"
                   autoComplete="url"
                 />
-                <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <div className="absolute left-3 top-0 bottom-0 flex items-center pointer-events-none">
+                  <Building className="h-4 w-4 text-gray-400" />
+                </div>
               </motion.div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Phone Number *
+                  Phone Number
                 </label>
                 <motion.div
                   className="relative"
@@ -861,18 +820,21 @@ const RegisterPageWithSearchParams: React.FC = () => {
                     type="tel"
                   value={step3OperatorForm.watch('phoneNumber') || ''}
                   onChange={(e) => step3OperatorForm.setValue('phoneNumber', e.target.value)}
-                  className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/20 bg-white dark:bg-gray-700 transition-all duration-200"
+                  style={{ paddingLeft: '3.5rem', paddingRight: step3OperatorForm.watch('phoneNumber') ? '3rem' : '3rem' }}
+                  className="w-full py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/20 bg-white dark:bg-gray-700 transition-all duration-200"
                   placeholder="+1 (555) 123-4567"
                     autoComplete="tel"
                   />
-                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <div className="absolute left-3 top-0 bottom-0 flex items-center pointer-events-none">
+                    <Phone className="h-4 w-4 text-gray-400" />
+                  </div>
                   {step3OperatorForm.watch('phoneNumber') && (
                     <motion.div
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                      className="absolute right-3 top-0 bottom-0 flex items-center justify-center"
                     >
-                      <span className="text-green-500 text-lg">✓</span>
+                      <span className="text-green-500 text-lg leading-none">✓</span>
                     </motion.div>
                   )}
                 </motion.div>
@@ -883,7 +845,7 @@ const RegisterPageWithSearchParams: React.FC = () => {
 
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Business Address *
+                  Business Address
                 </label>
                 <motion.div
                   className="relative"
@@ -894,18 +856,21 @@ const RegisterPageWithSearchParams: React.FC = () => {
                     type="text"
                   value={step3OperatorForm.watch('businessAddress') || ''}
                   onChange={(e) => step3OperatorForm.setValue('businessAddress', e.target.value)}
-                  className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/20 bg-white dark:bg-gray-700 transition-all duration-200"
+                  style={{ paddingLeft: '3.5rem', paddingRight: step3OperatorForm.watch('businessAddress') ? '3rem' : '3rem' }}
+                  className="w-full py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/20 bg-white dark:bg-gray-700 transition-all duration-200"
                   placeholder="123 Main St, City, State"
                     autoComplete="street-address"
                   />
-                  <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <div className="absolute left-3 top-0 bottom-0 flex items-center pointer-events-none">
+                    <MapPin className="h-4 w-4 text-gray-400" />
+                  </div>
                   {step3OperatorForm.watch('businessAddress') && (
                     <motion.div
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                      className="absolute right-3 top-0 bottom-0 flex items-center justify-center"
                     >
-                      <span className="text-green-500 text-lg">✓</span>
+                      <span className="text-green-500 text-lg leading-none">✓</span>
                     </motion.div>
                   )}
                 </motion.div>
@@ -1031,7 +996,7 @@ const RegisterPageWithSearchParams: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Agency Name *
+                Agency Name
               </label>
               <motion.div
                 className="relative"
@@ -1042,18 +1007,21 @@ const RegisterPageWithSearchParams: React.FC = () => {
                   type="text"
                   value={step3AgentForm.watch('agencyName') || ''}
                   onChange={(e) => step3AgentForm.setValue('agencyName', e.target.value)}
-                  className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/20 bg-white dark:bg-gray-700 transition-all duration-200"
+                  style={{ paddingLeft: '3.5rem', paddingRight: step3AgentForm.watch('agencyName') ? '3rem' : '3rem' }}
+                  className="w-full py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/20 bg-white dark:bg-gray-700 transition-all duration-200"
                   placeholder="Your agency name"
                   autoComplete="organization"
                 />
-                <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <div className="absolute left-3 top-0 bottom-0 flex items-center pointer-events-none">
+                  <Building className="h-4 w-4 text-gray-400" />
+                </div>
                 {step3AgentForm.watch('agencyName') && (
                   <motion.div
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                    className="absolute right-3 top-0 bottom-0 flex items-center justify-center"
                   >
-                    <span className="text-green-500 text-lg">✓</span>
+                    <span className="text-green-500 text-lg leading-none">✓</span>
                   </motion.div>
                 )}
               </motion.div>
@@ -1064,7 +1032,7 @@ const RegisterPageWithSearchParams: React.FC = () => {
 
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Agency Registration Number *
+                Agency Registration Number
               </label>
               <motion.div
                 className="relative"
@@ -1075,18 +1043,21 @@ const RegisterPageWithSearchParams: React.FC = () => {
                   type="text"
                   value={step3AgentForm.watch('agencyRegistrationNumber') || ''}
                   onChange={(e) => step3AgentForm.setValue('agencyRegistrationNumber', e.target.value)}
-                  className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/20 bg-white dark:bg-gray-700 transition-all duration-200"
+                  style={{ paddingLeft: '3.5rem', paddingRight: step3AgentForm.watch('agencyRegistrationNumber') ? '3rem' : '3rem' }}
+                  className="w-full py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/20 bg-white dark:bg-gray-700 transition-all duration-200"
                   placeholder="Registration number"
                   autoComplete="off"
                 />
-                <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <div className="absolute left-3 top-0 bottom-0 flex items-center pointer-events-none">
+                  <Building className="h-4 w-4 text-gray-400" />
+                </div>
                 {step3AgentForm.watch('agencyRegistrationNumber') && (
                   <motion.div
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                    className="absolute right-3 top-0 bottom-0 flex items-center justify-center"
                   >
-                    <span className="text-green-500 text-lg">✓</span>
+                    <span className="text-green-500 text-lg leading-none">✓</span>
                   </motion.div>
                 )}
               </motion.div>
@@ -1099,7 +1070,7 @@ const RegisterPageWithSearchParams: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Phone Number *
+                Phone Number
               </label>
               <motion.div
                 className="relative"
@@ -1110,18 +1081,21 @@ const RegisterPageWithSearchParams: React.FC = () => {
                   type="tel"
                   value={step3AgentForm.watch('phoneNumber') || ''}
                   onChange={(e) => step3AgentForm.setValue('phoneNumber', e.target.value)}
-                  className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/20 bg-white dark:bg-gray-700 transition-all duration-200"
+                  style={{ paddingLeft: '3.5rem', paddingRight: step3AgentForm.watch('phoneNumber') ? '3rem' : '3rem' }}
+                  className="w-full py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/20 bg-white dark:bg-gray-700 transition-all duration-200"
                   placeholder="+1 (555) 123-4567"
                   autoComplete="tel"
                 />
-                <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <div className="absolute left-3 top-0 bottom-0 flex items-center pointer-events-none">
+                  <Phone className="h-4 w-4 text-gray-400" />
+                </div>
                 {step3AgentForm.watch('phoneNumber') && (
                   <motion.div
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                    className="absolute right-3 top-0 bottom-0 flex items-center justify-center"
                   >
-                    <span className="text-green-500 text-lg">✓</span>
+                    <span className="text-green-500 text-lg leading-none">✓</span>
                   </motion.div>
                 )}
               </motion.div>
@@ -1132,7 +1106,7 @@ const RegisterPageWithSearchParams: React.FC = () => {
 
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Office Address *
+                Office Address
               </label>
               <motion.div
                 className="relative"
@@ -1143,18 +1117,21 @@ const RegisterPageWithSearchParams: React.FC = () => {
                   type="text"
                   value={step3AgentForm.watch('officeAddress') || ''}
                   onChange={(e) => step3AgentForm.setValue('officeAddress', e.target.value)}
-                  className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/20 bg-white dark:bg-gray-700 transition-all duration-200"
+                  style={{ paddingLeft: '3.5rem', paddingRight: step3AgentForm.watch('officeAddress') ? '3rem' : '3rem' }}
+                  className="w-full py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/20 bg-white dark:bg-gray-700 transition-all duration-200"
                   placeholder="123 Main St, City, State"
                   autoComplete="street-address"
                 />
-                <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <div className="absolute left-3 top-0 bottom-0 flex items-center pointer-events-none">
+                  <MapPin className="h-4 w-4 text-gray-400" />
+                </div>
                 {step3AgentForm.watch('officeAddress') && (
                   <motion.div
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                    className="absolute right-3 top-0 bottom-0 flex items-center justify-center"
                   >
-                    <span className="text-green-500 text-lg">✓</span>
+                    <span className="text-green-500 text-lg leading-none">✓</span>
                   </motion.div>
                 )}
               </motion.div>
@@ -1166,7 +1143,7 @@ const RegisterPageWithSearchParams: React.FC = () => {
 
           <div className="space-y-2">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Specialization *
+              Specialization
             </label>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               {['Honeymoon', 'Adventure', 'Luxury', 'Family', 'Business', 'Cultural'].map((spec) => (
@@ -1201,7 +1178,7 @@ const RegisterPageWithSearchParams: React.FC = () => {
 
           <div className="space-y-2">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Years of Experience *
+              Years of Experience
             </label>
             <motion.div
               className="relative"
