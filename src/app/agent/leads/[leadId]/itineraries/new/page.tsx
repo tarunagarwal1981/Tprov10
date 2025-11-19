@@ -271,7 +271,7 @@ export default function CreateItineraryPage() {
 
       // Generate days based on query destinations
       const daysToInsert: any[] = [];
-      let currentDate = new Date(startDate);
+      const currentDate = new Date(startDate);
       let dayNumber = 1;
 
       for (const destination of query.destinations) {
