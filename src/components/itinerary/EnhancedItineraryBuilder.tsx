@@ -530,7 +530,7 @@ export function EnhancedItineraryBuilder({
           </CardHeader>
           <CardContent className="p-6">
             <p className="text-sm text-gray-600 mb-4">
-              These packages have been added to your itinerary but haven't been assigned to a specific day yet.
+              These packages have been added to your itinerary but haven&apos;t been assigned to a specific day yet.
             </p>
             <div className="space-y-3">
               {unassignedItems.map((item) => (

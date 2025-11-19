@@ -266,7 +266,7 @@ export function PackageConfigModal({
             .order('city_order', { ascending: true });
 
           const cityIds = (cities as any[])?.map((c: any) => c.id) || [];
-          let hotelsByCity: Record<string, any[]> = {};
+          const hotelsByCity: Record<string, any[]> = {};
 
           if (cityIds.length > 0) {
             const { data: hotels } = await supabase

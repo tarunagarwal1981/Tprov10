@@ -139,7 +139,7 @@ export default function MultiCityPackagePage() {
 
       // Insert cities FIRST (before day plans) so we can map form city IDs to database city IDs
       console.log("[MultiCity] Inserting cities...");
-      let cityIdMap: Record<string, string> = {}; // Maps form city ID -> database city ID
+      const cityIdMap: Record<string, string> = {}; // Maps form city ID -> database city ID
       
       if (data.cities && data.cities.length > 0) {
         console.log("[MultiCity] Cities to insert:", data.cities.length);
