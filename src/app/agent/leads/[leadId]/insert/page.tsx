@@ -10,9 +10,8 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/context/CognitoAuthContext';
 import { useToast } from '@/hooks/useToast';
-import { queryService } from '@/lib/services/queryService';
 import { createClient } from '@/lib/supabase/client';
-import { ItineraryService } from '@/lib/services/itineraryService';
+// queryService and itineraryService now accessed via API routes
 
 interface MultiCityPackage {
   id: string;
@@ -58,9 +57,16 @@ export default function InsertItineraryPage() {
 
   const fetchQueryData = async () => {
     try {
-      const query = await queryService.getQueryByLeadId(leadId);
+      const response = await fetch(`/api/queries/${leadId}`);
+      if (!response.ok) {
+        toast.error('Failed to load query data');
+        router.push(`/agent/leads/${leadId}`);
+        return;
+      }
+      
+      const { query } = await response.json();
       if (query && query.destinations.length > 0) {
-        const cities = query.destinations.map(d => d.city);
+        const cities = query.destinations.map((d: any) => d.city);
         setQueryDestinations(cities);
         fetchPackages(cities);
       } else {
@@ -317,14 +323,21 @@ export default function InsertItineraryPage() {
       }
 
       // Check if itinerary exists for this lead
-      const itineraryService = new ItineraryService();
-      const existingItineraries = await itineraryService.getLeadItineraries(actualLeadId);
+      const itinerariesResponse = await fetch(`/api/itineraries/leads/${actualLeadId}`);
+      const existingItineraries = itinerariesResponse.ok 
+        ? (await itinerariesResponse.json()).itineraries 
+        : [];
       
       let itineraryId: string;
       
       if (existingItineraries.length === 0) {
         // Create new itinerary
-        const query = await queryService.getQueryByLeadId(leadId);
+        const queryResponse = await fetch(`/api/queries/${leadId}`);
+        if (!queryResponse.ok) {
+          toast.error('Query not found. Please create a query first.');
+          return;
+        }
+        const { query } = await queryResponse.json();
         if (!query) {
           toast.error('Query not found. Please create a query first.');
           return;
