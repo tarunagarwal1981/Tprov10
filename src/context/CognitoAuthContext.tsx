@@ -6,7 +6,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo, useRef } from 'react';
-import { signIn, signUp, signOut, getUser, refreshToken, decodeToken, getUserIdFromToken, getUserEmailFromToken } from '@/lib/aws/cognito';
+import { signOut, getUser, refreshToken, decodeToken, getUserIdFromToken, getUserEmailFromToken } from '@/lib/aws/cognito';
 import type { User, UserRole, UserProfile } from '@/lib/types';
 import { toast } from 'sonner';
 
@@ -199,7 +199,19 @@ export const CognitoAuthProvider: React.FC<{ children: React.ReactNode }> = ({ c
       
       console.log('🔐 Starting login process for:', email);
       
-      const authResult = await signIn(email, password);
+      // Call API route for login (server-side)
+      const loginResponse = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!loginResponse.ok) {
+        const error = await loginResponse.json();
+        throw new Error(error.message || error.error || 'Login failed');
+      }
+
+      const authResult = await loginResponse.json();
       
       // Store tokens
       storeTokens(authResult.accessToken, authResult.idToken, authResult.refreshToken);
@@ -265,12 +277,26 @@ export const CognitoAuthProvider: React.FC<{ children: React.ReactNode }> = ({ c
       
       console.log('📝 Starting registration process for:', userData.email);
       
-      // Sign up with Cognito
-      const signUpResult = await signUp(userData.email, userData.password, {
-        name: userData.name,
-        'custom:role': userData.role,
-        ...(userData.phone && { phone: userData.phone }),
+      // Call API route for registration (server-side)
+      const registerResponse = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: userData.email,
+          password: userData.password,
+          name: userData.name,
+          phone: userData.phone,
+          role: userData.role,
+          profile: userData.profile,
+        }),
       });
+
+      if (!registerResponse.ok) {
+        const error = await registerResponse.json();
+        throw new Error(error.message || error.error || 'Registration failed');
+      }
+
+      const signUpResult = await registerResponse.json();
       
       // Note: In Cognito, user needs to verify email before they can login
       // For now, we'll create the user profile in the database

@@ -8,7 +8,7 @@
 import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
-const s3 = new S3Client({ region: process.env.AWS_REGION || 'us-east-1' });
+const s3 = new S3Client({ region: process.env.DEPLOYMENT_REGION || process.env.REGION || 'us-east-1' });
 const BUCKET_NAME = process.env.S3_BUCKET_NAME!;
 const CLOUDFRONT_DOMAIN = process.env.CLOUDFRONT_DOMAIN;
 
@@ -63,7 +63,7 @@ export async function uploadFile(
   // Generate public URL (CloudFront or S3)
   const publicUrl = CLOUDFRONT_DOMAIN
     ? `https://${CLOUDFRONT_DOMAIN}/${key}`
-    : `https://${BUCKET_NAME}.s3.${process.env.AWS_REGION || 'us-east-1'}.amazonaws.com/${key}`;
+    : `https://${BUCKET_NAME}.s3.${process.env.DEPLOYMENT_REGION || process.env.REGION || 'us-east-1'}.amazonaws.com/${key}`;
 
   return {
     path: key,
@@ -122,7 +122,7 @@ export function getPublicUrl(key: string): string {
   if (CLOUDFRONT_DOMAIN) {
     return `https://${CLOUDFRONT_DOMAIN}/${key}`;
   }
-  return `https://${BUCKET_NAME}.s3.${process.env.AWS_REGION || 'us-east-1'}.amazonaws.com/${key}`;
+  return `https://${BUCKET_NAME}.s3.${process.env.DEPLOYMENT_REGION || process.env.REGION || 'us-east-1'}.amazonaws.com/${key}`;
 }
 
 /**
