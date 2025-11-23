@@ -21,10 +21,13 @@ const client = new CognitoIdentityProviderClient({
   region: process.env.DEPLOYMENT_REGION || process.env.REGION || 'us-east-1' 
 });
 
+// Only check environment variables in server-side (Node.js) environment
+// In browser, these will be undefined but that's OK - API routes handle auth
 const USER_POOL_ID = process.env.COGNITO_USER_POOL_ID;
 const CLIENT_ID = process.env.COGNITO_CLIENT_ID;
 
-if (!USER_POOL_ID || !CLIENT_ID) {
+// Only validate in server-side environment (not in browser)
+if (typeof window === 'undefined' && (!USER_POOL_ID || !CLIENT_ID)) {
   console.error('❌ Missing Cognito configuration:');
   console.error('  COGNITO_USER_POOL_ID:', USER_POOL_ID ? '✅ Set' : '❌ Missing');
   console.error('  COGNITO_CLIENT_ID:', CLIENT_ID ? '✅ Set' : '❌ Missing');
