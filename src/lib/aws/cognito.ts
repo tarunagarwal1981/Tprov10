@@ -18,7 +18,7 @@ import {
 } from "@aws-sdk/client-cognito-identity-provider";
 
 const client = new CognitoIdentityProviderClient({ 
-  region: process.env.AWS_REGION || 'us-east-1' 
+  region: process.env.DEPLOYMENT_REGION || process.env.REGION || 'us-east-1' 
 });
 
 const USER_POOL_ID = process.env.COGNITO_USER_POOL_ID!;

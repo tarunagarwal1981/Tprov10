@@ -16,7 +16,7 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 const S3_BASE_URL = process.env.S3_BUCKET_NAME 
-  ? `https://${process.env.S3_BUCKET_NAME}.s3.${process.env.AWS_REGION || 'us-east-1'}.amazonaws.com`
+  ? `https://${process.env.S3_BUCKET_NAME}.s3.${process.env.DEPLOYMENT_REGION || process.env.REGION || 'us-east-1'}.amazonaws.com`
   : 'https://travel-app-storage-1769.s3.us-east-1.amazonaws.com';
 
 const SUPABASE_STORAGE_URL = 'https://megmjzszmqnmzdxwzigt.supabase.co/storage/v1/object/public';
