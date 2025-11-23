@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
-import { SmartItineraryFilter, TransferPackage } from '@/lib/services/smartItineraryFilter';
+import type { TransferPackage } from '@/lib/services/smartItineraryFilter';
 
 interface TransferSelectorModalProps {
   isOpen: boolean;
@@ -25,7 +25,7 @@ export function TransferSelectorModal({
   operatorId,
   onSelect,
 }: TransferSelectorModalProps) {
-  const filterService = new SmartItineraryFilter();
+  // filterService now accessed via API routes
   const [transfers, setTransfers] = useState<TransferPackage[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -39,8 +39,10 @@ export function TransferSelectorModal({
   const fetchTransfers = async () => {
     setLoading(true);
     try {
-      // Fetch all published transfers from all operators for this route
-      const routeTransfers = await filterService.getTransfersForRoute(fromCity, toCity);
+      // Fetch all published transfers from all operators for this route via API
+      const response = await fetch(`/api/itinerary-filter/transfers?from=${encodeURIComponent(fromCity)}&to=${encodeURIComponent(toCity)}`);
+      if (!response.ok) throw new Error('Failed to fetch transfers');
+      const { transfers: routeTransfers } = await response.json();
       setTransfers(routeTransfers);
     } catch (err) {
       console.error('Error fetching transfers:', err);
