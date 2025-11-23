@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/context/CognitoAuthContext';
 import { useToast } from '@/hooks/useToast';
 import { createClient } from '@/lib/supabase/client';
-import { queryService } from '@/lib/services/queryService';
+// queryService now accessed via API routes
 
 interface LeadDetails {
   id: string;
@@ -55,8 +55,14 @@ export default function CreateItineraryPage() {
 
       try {
         // Fetch query data first (required for Create Itinerary)
-        const queryData = await queryService.getQueryByLeadId(leadId);
+        const queryResponse = await fetch(`/api/queries/${leadId}`);
+        if (!queryResponse.ok) {
+          toast.error('Failed to load query data');
+          router.push(`/agent/leads/${leadId}`);
+          return;
+        }
         
+        const { query: queryData } = await queryResponse.json();
         if (!queryData || !queryData.destinations || queryData.destinations.length === 0) {
           toast.error('Please create a query with destinations first');
           router.push(`/agent/leads/${leadId}`);

@@ -18,7 +18,7 @@ import { FaPlane, FaHiking, FaUmbrellaBeach, FaPaw, FaGem, FaMoneyBillWave, FaUs
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MarketplaceService } from '@/lib/services/marketplaceService';
+// MarketplaceService now accessed via API routes
 import type { LeadPurchase } from '@/lib/types/marketplace';
 import { TripType } from '@/lib/types/marketplace';
 import { useAuth } from '@/context/CognitoAuthContext';
@@ -291,7 +291,9 @@ export default function MyLeadsPage() {
     setError(null);
     
     try {
-      const data = await MarketplaceService.getAgentPurchasedLeads(user.id);
+      const response = await fetch(`/api/marketplace/purchased?agentId=${user.id}`);
+      if (!response.ok) throw new Error('Failed to fetch purchased leads');
+      const { purchases: data } = await response.json();
       setPurchases(data);
     } catch (err) {
       console.error('Error fetching purchased leads:', err);

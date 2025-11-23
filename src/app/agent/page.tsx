@@ -18,7 +18,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/context/CognitoAuthContext';
-import { MarketplaceService } from '@/lib/services/marketplaceService';
 import type { MarketplaceLead } from '@/lib/types/marketplace';
 import { TripType } from '@/lib/types/marketplace';
 import Link from 'next/link';
@@ -158,7 +157,9 @@ export default function AgentDashboardPage() {
       if (!user?.id) return;
       
       try {
-        const marketplaceStats = await MarketplaceService.getMarketplaceStats(user.id);
+        const response = await fetch(`/api/marketplace/stats?agentId=${user.id}`);
+        if (!response.ok) throw new Error('Failed to fetch stats');
+        const { stats: marketplaceStats } = await response.json();
         
         setStats({
           availableLeads: marketplaceStats.totalAvailable,
@@ -180,7 +181,9 @@ export default function AgentDashboardPage() {
   useEffect(() => {
     const fetchFeaturedLeads = async () => {
       try {
-        const leads = await MarketplaceService.getFeaturedLeads(3);
+        const response = await fetch('/api/marketplace/featured?limit=3');
+        if (!response.ok) throw new Error('Failed to fetch featured leads');
+        const { leads } = await response.json();
         setFeaturedLeads(leads);
       } catch (error) {
         console.error('Error fetching featured leads:', error);

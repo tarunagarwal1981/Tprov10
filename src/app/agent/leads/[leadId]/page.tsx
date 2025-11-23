@@ -168,12 +168,19 @@ export default function LeadDetailPage() {
       setLead(leadData);
 
       // Fetch query
-      const queryData = await queryService.getQueryByLeadId(leadId);
-      setQuery(queryData);
+      // Fetch query
+      const queryResponse = await fetch(`/api/queries/${leadId}`);
+      if (queryResponse.ok) {
+        const { query: queryData } = await queryResponse.json();
+        setQuery(queryData);
+      }
 
       // Fetch itineraries
-      const itinerariesData = await itineraryService.getLeadItineraries(leadId);
-      setItineraries(itinerariesData);
+      const itinerariesResponse = await fetch(`/api/itineraries/leads/${leadId}`);
+      if (itinerariesResponse.ok) {
+        const { itineraries: itinerariesData } = await itinerariesResponse.json();
+        setItineraries(itinerariesData);
+      }
     } catch (err) {
       console.error('Error fetching lead data:', err);
       toast.error('Failed to load lead data');
@@ -196,18 +203,27 @@ export default function LeadDetailPage() {
 
     setQueryLoading(true);
     try {
-      const savedQuery = await queryService.upsertQuery({
-        lead_id: leadId,
-        agent_id: user.id,
-        destinations: data.destinations,
-        leaving_from: data.leaving_from,
-        nationality: data.nationality,
-        leaving_on: data.leaving_on,
-        travelers: data.travelers,
-        star_rating: data.star_rating,
-        add_transfers: data.add_transfers,
+      const response = await fetch(`/api/queries/${leadId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          agent_id: user.id,
+          destinations: data.destinations,
+          leaving_from: data.leaving_from,
+          nationality: data.nationality,
+          leaving_on: data.leaving_on,
+          travelers: data.travelers,
+          star_rating: data.star_rating,
+          add_transfers: data.add_transfers,
+        }),
       });
 
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.details || 'Failed to save query');
+      }
+
+      const { query: savedQuery } = await response.json();
       setQuery(savedQuery);
       toast.success('Query updated successfully!');
       setQueryModalOpen(false);
