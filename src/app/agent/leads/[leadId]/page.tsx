@@ -22,7 +22,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { useAuth } from '@/context/SupabaseAuthContext';
+import { useAuth } from '@/context/CognitoAuthContext';
 import { useToast } from '@/hooks/useToast';
 import { queryService, type ItineraryQuery } from '@/lib/services/queryService';
 import { itineraryService, type Itinerary } from '@/lib/services/itineraryService';

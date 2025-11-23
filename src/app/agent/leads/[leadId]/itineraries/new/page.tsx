@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { useAuth } from '@/context/SupabaseAuthContext';
+import { useAuth } from '@/context/CognitoAuthContext';
 import { useToast } from '@/hooks/useToast';
 import { createClient } from '@/lib/supabase/client';
 import { queryService } from '@/lib/services/queryService';

@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useAuth } from '@/context/SupabaseAuthContext';
+import { useAuth } from '@/context/CognitoAuthContext';
 import { useToast } from '@/hooks/useToast';
 import { queryService } from '@/lib/services/queryService';
 import { createClient } from '@/lib/supabase/client';

@@ -21,7 +21,7 @@ import { Badge } from '@/components/ui/badge';
 import { MarketplaceService } from '@/lib/services/marketplaceService';
 import type { LeadPurchase } from '@/lib/types/marketplace';
 import { TripType } from '@/lib/types/marketplace';
-import { useAuth } from '@/context/SupabaseAuthContext';
+import { useAuth } from '@/context/CognitoAuthContext';
 import { useToast } from '@/hooks/useToast';
 import { queryService } from '@/lib/services/queryService';
 import { QueryModal } from '@/components/agent/QueryModal';

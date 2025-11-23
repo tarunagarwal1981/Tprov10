@@ -18,7 +18,7 @@ import { LeadCard, LeadFilters, PurchaseConfirmationModal } from '@/components/m
 import { MarketplaceService } from '@/lib/services/marketplaceService';
 import type { MarketplaceLead, LeadFilters as LeadFiltersType } from '@/lib/types/marketplace';
 import { LeadStatus } from '@/lib/types/marketplace';
-import { useAuth } from '@/context/SupabaseAuthContext';
+import { useAuth } from '@/context/CognitoAuthContext';
 import { useToast } from '@/hooks/useToast';
 
 // Loading skeleton component

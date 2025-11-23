@@ -17,7 +17,7 @@ import { FaPlane, FaHiking, FaUmbrellaBeach, FaPaw, FaGem, FaMoneyBillWave, FaHe
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { useAuth } from '@/context/SupabaseAuthContext';
+import { useAuth } from '@/context/CognitoAuthContext';
 import { MarketplaceService } from '@/lib/services/marketplaceService';
 import type { MarketplaceLead } from '@/lib/types/marketplace';
 import { TripType } from '@/lib/types/marketplace';

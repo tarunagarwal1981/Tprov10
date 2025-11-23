@@ -4,7 +4,8 @@
  */
 
 import { createSupabaseBrowserClient, withErrorHandling, SupabaseError } from './client';
-import { uploadImageFiles, base64ToFile } from './file-upload';
+// Migrated to S3
+import { uploadImageFiles, base64ToFile } from '@/lib/aws/file-upload';
 import type { TransferPackageFormData } from '../types/transfer-package';
 
 // ============================================================================

@@ -6,7 +6,7 @@ import { useForm, useFormContext } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { useAuth } from '@/context/SupabaseAuthContext';
+import { useAuth } from '@/context/CognitoAuthContext';
 import type { UserRole } from '@/lib/types';
 import AuthLayout from '@/components/shared/AuthLayout';
 import { Input } from '@/components/ui/input';

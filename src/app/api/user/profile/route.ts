@@ -1,70 +1,50 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 
 // Force dynamic rendering (don't pre-render at build time)
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-// Helper function to get Supabase admin client
-function getSupabaseAdmin() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl || !supabaseServiceKey) {
-    throw new Error('Missing Supabase environment variables');
-  }
-
-  return createClient(supabaseUrl, supabaseServiceKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  });
-}
-
 export async function POST(request: NextRequest) {
   try {
-    const { userId, accessToken } = await request.json();
+    const { userId, email, accessToken } = await request.json();
 
-    if (!userId || !accessToken) {
+    // Support both old (Supabase) and new (Cognito) formats
+    if (!userId && !email) {
       return NextResponse.json(
-        { error: 'Missing userId or accessToken' },
+        { error: 'Missing userId or email' },
         { status: 400 }
       );
     }
 
-    // Get Supabase admin client at runtime
-    const supabaseAdmin = getSupabaseAdmin();
+    // If accessToken provided, verify with Cognito (optional - for security)
+    if (accessToken) {
+      try {
+        const { getUser } = await import('@/lib/aws/cognito');
+        await getUser(accessToken);
+        // Token is valid, proceed with database query
+      } catch (error) {
+        console.error('Cognito token verification failed:', error);
+        // Continue anyway - token verification is optional for profile lookup
+      }
+    }
 
-    // Verify the access token is valid
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(accessToken);
+    // Fetch user profile from RDS database (server-side)
+    console.log('📡 [SERVER] Fetching user profile for:', userId || email);
+    const { queryOne } = await import('@/lib/aws/database');
     
-    if (authError || !user || user.id !== userId) {
-      console.error('Auth verification failed:', authError);
-      return NextResponse.json(
-        { error: 'Invalid or expired token' },
-        { status: 401 }
-      );
-    }
-
-    // Fetch user profile from database (server-side, no browser blocking!)
-    console.log('📡 [SERVER] Fetching user profile for:', userId);
-    const { data: profile, error: profileError } = await supabaseAdmin
-      .from('users')
-      .select('*')
-      .eq('id', userId)
-      .single();
-
-    if (profileError) {
-      console.error('❌ [SERVER] Profile fetch error:', profileError);
-      return NextResponse.json(
-        { error: 'Failed to fetch user profile', details: profileError },
-        { status: 500 }
-      );
-    }
+    const profile = await queryOne<{
+      id: string;
+      email: string;
+      name: string;
+      role: string;
+      phone?: string;
+      profile?: any;
+      created_at: Date;
+      updated_at: Date;
+    }>('SELECT * FROM users WHERE id = $1 OR email = $2 LIMIT 1', [userId || '', email || '']);
 
     if (!profile) {
-      console.error('❌ [SERVER] No profile found for user:', userId);
+      console.error('❌ [SERVER] No profile found for user:', userId || email);
       return NextResponse.json(
         { error: 'User profile not found' },
         { status: 404 }

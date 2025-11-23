@@ -1,4 +1,11 @@
-import { createClient } from '@/lib/supabase/client';
+/**
+ * Itinerary Service
+ * Service layer for itinerary operations
+ * 
+ * MIGRATED: Now uses PostgreSQL directly via AWS RDS
+ */
+
+import { query, queryOne, queryMany } from '@/lib/aws/database';
 
 export interface Itinerary {
   id: string;
@@ -57,18 +64,18 @@ export interface OperatorInfo {
 }
 
 export class ItineraryService {
-  private supabase = createClient();
-
   // Get all itineraries for a lead
   async getLeadItineraries(leadId: string): Promise<Itinerary[]> {
-    const { data, error } = await this.supabase
-      .from('itineraries' as any)
-      .select('*')
-      .eq('lead_id', leadId)
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-    return (data || []) as unknown as Itinerary[];
+    try {
+      const result = await query<Itinerary>(
+        'SELECT * FROM itineraries WHERE lead_id = $1 ORDER BY created_at DESC',
+        [leadId]
+      );
+      return result.rows;
+    } catch (error) {
+      console.error('Error fetching lead itineraries:', error);
+      throw error;
+    }
   }
 
   // Get itinerary with all details
@@ -77,227 +84,250 @@ export class ItineraryService {
     days: ItineraryDay[];
     items: ItineraryItem[];
   }> {
-    const { data: itinerary, error: itineraryError } = await this.supabase
-      .from('itineraries' as any)
-      .select('*')
-      .eq('id', itineraryId)
-      .single();
+    try {
+      // Get itinerary
+      const itinerary = await queryOne<Itinerary>(
+        'SELECT * FROM itineraries WHERE id = $1',
+        [itineraryId]
+      );
 
-    if (itineraryError) throw itineraryError;
+      if (!itinerary) {
+        throw new Error('Itinerary not found');
+      }
 
-    const itineraryTyped = itinerary as unknown as Itinerary;
+      // Get days
+      const daysResult = await query<ItineraryDay>(
+        'SELECT * FROM itinerary_days WHERE itinerary_id = $1 ORDER BY day_number ASC',
+        [itineraryId]
+      );
 
-    const { data: days, error: daysError } = await this.supabase
-      .from('itinerary_days' as any)
-      .select('*')
-      .eq('itinerary_id', itineraryId)
-      .order('day_number', { ascending: true });
+      // Get items
+      const itemsResult = await query<ItineraryItem>(
+        'SELECT * FROM itinerary_items WHERE itinerary_id = $1 ORDER BY display_order ASC',
+        [itineraryId]
+      );
 
-    if (daysError) throw daysError;
-
-    const daysTyped = (days || []) as unknown as ItineraryDay[];
-
-    const { data: items, error: itemsError } = await this.supabase
-      .from('itinerary_items' as any)
-      .select('*')
-      .eq('itinerary_id', itineraryId)
-      .order('display_order', { ascending: true });
-
-    if (itemsError) throw itemsError;
-
-    return {
-      itinerary: itineraryTyped,
-      days: daysTyped,
-      items: (items || []) as unknown as ItineraryItem[],
-    };
+      return {
+        itinerary,
+        days: daysResult.rows,
+        items: itemsResult.rows,
+      };
+    } catch (error) {
+      console.error('Error fetching itinerary details:', error);
+      throw error;
+    }
   }
 
   // Get lead details for itinerary
   async getLeadDetails(leadId: string) {
-    const { data, error } = await this.supabase
-      .from('leads' as any)
-      .select('*')
-      .eq('id', leadId)
-      .single();
+    try {
+      const lead = await queryOne(
+        'SELECT * FROM leads WHERE id = $1',
+        [leadId]
+      );
 
-    if (error) throw error;
-    return data as unknown as any;
+      if (!lead) {
+        throw new Error('Lead not found');
+      }
+
+      return lead;
+    } catch (error) {
+      console.error('Error fetching lead details:', error);
+      throw error;
+    }
   }
 
   // Get consolidated operator information
   async getOperatorsInfo(itineraryId: string): Promise<OperatorInfo[]> {
-    const { data: items, error } = await this.supabase
-      .from('itinerary_items' as any)
-      .select('operator_id')
-      .eq('itinerary_id', itineraryId);
-
-    if (error) throw error;
-
-    const itemsTyped = (items || []) as unknown as Array<{ operator_id: string }>;
-    const uniqueOperatorIds = [...new Set(itemsTyped.map(item => item.operator_id))];
-
-    // Get all items with operator info
-    const { data: allItems, error: itemsError } = await this.supabase
-      .from('itinerary_items' as any)
-      .select('*')
-      .eq('itinerary_id', itineraryId);
-
-    if (itemsError) throw itemsError;
-
-    // Get operator profiles - try profiles table, fallback to auth.users
-    let profileMap = new Map<string, { name: string; email: string | null; phone: string | null }>();
-    
     try {
-      const { data: profiles } = await this.supabase
-        .from('profiles' as any)
-        .select('id, company_name, email, phone')
-        .in('id', uniqueOperatorIds);
+      // Get all items for this itinerary
+      const itemsResult = await query<ItineraryItem>(
+        'SELECT * FROM itinerary_items WHERE itinerary_id = $1',
+        [itineraryId]
+      );
 
-      if (profiles) {
-        const profilesTyped = profiles as unknown as Array<{ id: string; company_name?: string; email?: string; phone?: string }>;
-        profileMap = new Map(
-          profilesTyped.map(p => [p.id, { 
-            name: p.company_name || 'Unknown Operator', 
-            email: p.email || null, 
-            phone: p.phone || null 
-          }])
+      const items = itemsResult.rows;
+      const uniqueOperatorIds = [...new Set(items.map(item => item.operator_id))];
+
+      if (uniqueOperatorIds.length === 0) {
+        return [];
+      }
+
+      // Get operator profiles
+      const profileMap = new Map<string, { name: string; email: string | null; phone: string | null }>();
+      
+      try {
+        const placeholders = uniqueOperatorIds.map((_, i) => `$${i + 1}`).join(', ');
+        const profilesResult = await query<{
+          id: string;
+          company_name?: string;
+          email?: string;
+          phone?: string;
+        }>(
+          `SELECT id, company_name, email, phone FROM profiles WHERE id IN (${placeholders})`,
+          uniqueOperatorIds
         );
+
+        profilesResult.rows.forEach(p => {
+          profileMap.set(p.id, {
+            name: p.company_name || 'Unknown Operator',
+            email: p.email || null,
+            phone: p.phone || null,
+          });
+        });
+      } catch (err) {
+        console.warn('Profiles table not found or error fetching profiles:', err);
       }
-    } catch (err) {
-      // Profiles table might not exist, try to get from auth.users metadata
-      console.warn('Profiles table not found, trying auth.users');
+
+      // Fill missing operators with defaults
+      uniqueOperatorIds.forEach(id => {
+        if (!profileMap.has(id)) {
+          profileMap.set(id, { name: 'Unknown Operator', email: null, phone: null });
+        }
+      });
+
+      // Group items by operator
+      const operatorMap = new Map<string, ItineraryItem[]>();
+      items.forEach(item => {
+        if (!operatorMap.has(item.operator_id)) {
+          operatorMap.set(item.operator_id, []);
+        }
+        operatorMap.get(item.operator_id)!.push(item);
+      });
+
+      // Build operator info array
+      return Array.from(operatorMap.entries()).map(([operatorId, packages]) => {
+        const profile = profileMap.get(operatorId);
+        return {
+          operator_id: operatorId,
+          operator_name: profile?.name || 'Unknown Operator',
+          operator_email: profile?.email || null,
+          operator_phone: profile?.phone || null,
+          packages,
+        };
+      });
+    } catch (error) {
+      console.error('Error fetching operators info:', error);
+      throw error;
     }
-
-    // Fill missing operators with defaults
-    uniqueOperatorIds.forEach(id => {
-      if (!profileMap.has(id)) {
-        profileMap.set(id, { name: 'Unknown Operator', email: null, phone: null });
-      }
-    });
-
-    // Group items by operator
-    const operatorMap = new Map<string, ItineraryItem[]>();
-
-    const allItemsTyped = (allItems || []) as unknown as ItineraryItem[];
-    allItemsTyped.forEach((item: ItineraryItem) => {
-      if (!operatorMap.has(item.operator_id)) {
-        operatorMap.set(item.operator_id, []);
-      }
-      operatorMap.get(item.operator_id)!.push(item as ItineraryItem);
-    });
-
-    // Build operator info array
-    return Array.from(operatorMap.entries()).map(([operatorId, packages]) => {
-      const profile = profileMap.get(operatorId);
-      return {
-        operator_id: operatorId,
-        operator_name: profile?.name || 'Unknown Operator',
-        operator_email: profile?.email || null,
-        operator_phone: profile?.phone || null,
-        packages,
-      };
-    });
   }
 
   // Duplicate itinerary
   async duplicateItinerary(itineraryId: string, newName: string): Promise<Itinerary> {
-    const { itinerary, days, items } = await this.getItineraryDetails(itineraryId);
+    try {
+      const { itinerary, days, items } = await this.getItineraryDetails(itineraryId);
 
-    // Create new itinerary
-    const { data: newItinerary, error: itineraryError } = await this.supabase
-      .from('itineraries' as any)
-      .insert({
-        lead_id: itinerary.lead_id,
-        agent_id: itinerary.agent_id,
-        name: newName,
-        status: 'draft',
-        adults_count: itinerary.adults_count,
-        children_count: itinerary.children_count,
-        infants_count: itinerary.infants_count,
-        start_date: itinerary.start_date,
-        end_date: itinerary.end_date,
-        total_price: 0,
-        currency: itinerary.currency,
-        lead_budget_min: itinerary.lead_budget_min,
-        lead_budget_max: itinerary.lead_budget_max,
-        notes: itinerary.notes,
-      })
-      .select()
-      .single();
+      // Create new itinerary
+      const newItineraryResult = await query<Itinerary>(
+        `INSERT INTO itineraries (
+          lead_id, agent_id, name, status, adults_count, children_count,
+          infants_count, start_date, end_date, total_price, currency,
+          lead_budget_min, lead_budget_max, notes
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        RETURNING *`,
+        [
+          itinerary.lead_id,
+          itinerary.agent_id,
+          newName,
+          'draft',
+          itinerary.adults_count,
+          itinerary.children_count,
+          itinerary.infants_count,
+          itinerary.start_date,
+          itinerary.end_date,
+          0,
+          itinerary.currency,
+          itinerary.lead_budget_min,
+          itinerary.lead_budget_max,
+          itinerary.notes,
+        ]
+      );
 
-    if (itineraryError) throw itineraryError;
+      if (!newItineraryResult.rows || newItineraryResult.rows.length === 0) {
+        throw new Error('Failed to create duplicate itinerary');
+      }
 
-    const newItineraryTyped = newItinerary as unknown as Itinerary;
+      const newItinerary = newItineraryResult.rows[0];
+      if (!newItinerary) {
+        throw new Error('Failed to create duplicate itinerary - no data returned');
+      }
 
-    // Duplicate days
-    const dayIdMap = new Map<string, string>();
-    const daysTyped = days as unknown as Array<{ id: string; day_number: number; date: string | null; city_name: string | null; notes: string | null; display_order?: number }>;
-    
-    for (const day of daysTyped) {
-      const { data: newDay, error: dayError } = await this.supabase
-        .from('itinerary_days' as any)
-        .insert({
-          itinerary_id: newItineraryTyped.id,
-          day_number: day.day_number,
-          date: day.date,
-          city_name: day.city_name,
-          notes: day.notes,
-          display_order: day.display_order ?? day.day_number,
-        })
-        .select()
-        .single();
+      // Duplicate days
+      const dayIdMap = new Map<string, string>();
+      for (const day of days) {
+        const newDayResult = await query<ItineraryDay>(
+          `INSERT INTO itinerary_days (
+            itinerary_id, day_number, date, city_name, notes, display_order
+          ) VALUES ($1, $2, $3, $4, $5, $6)
+          RETURNING *`,
+          [
+            newItinerary.id,
+            day.day_number,
+            day.date,
+            day.city_name,
+            day.notes,
+            day.display_order ?? day.day_number,
+          ]
+        );
 
-      if (dayError) throw dayError;
-      const newDayTyped = newDay as unknown as ItineraryDay;
-      dayIdMap.set(day.id, newDayTyped.id);
+        if (newDayResult.rows && newDayResult.rows.length > 0 && newDayResult.rows[0]) {
+          dayIdMap.set(day.id, newDayResult.rows[0].id);
+        }
+      }
+
+      // Duplicate items
+      for (const item of items) {
+        const newDayId = item.day_id ? dayIdMap.get(item.day_id) || null : null;
+
+        await query(
+          `INSERT INTO itinerary_items (
+            itinerary_id, day_id, package_type, package_id, operator_id,
+            package_title, package_image_url, configuration, unit_price,
+            quantity, total_price, display_order, notes
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+          [
+            newItinerary.id,
+            newDayId,
+            item.package_type,
+            item.package_id,
+            item.operator_id,
+            item.package_title,
+            item.package_image_url,
+            typeof item.configuration === 'object' ? JSON.stringify(item.configuration) : item.configuration,
+            item.unit_price,
+            item.quantity,
+            item.total_price,
+            item.display_order,
+            item.notes,
+          ]
+        );
+      }
+
+      return newItinerary;
+    } catch (error) {
+      console.error('Error duplicating itinerary:', error);
+      throw error;
     }
-
-    // Duplicate items
-    const itemsTyped = items as unknown as ItineraryItem[];
-    for (const item of itemsTyped) {
-      const newDayId = item.day_id ? dayIdMap.get(item.day_id) || null : null;
-
-      const { error: itemError } = await this.supabase
-        .from('itinerary_items' as any)
-        .insert({
-          itinerary_id: newItineraryTyped.id,
-          day_id: newDayId,
-          package_type: item.package_type,
-          package_id: item.package_id,
-          operator_id: item.operator_id,
-          package_title: item.package_title,
-          package_image_url: item.package_image_url,
-          configuration: item.configuration,
-          unit_price: item.unit_price,
-          quantity: item.quantity,
-          total_price: item.total_price,
-          display_order: item.display_order,
-          notes: item.notes,
-        });
-
-      if (itemError) throw itemError;
-    }
-
-    return newItineraryTyped;
   }
 
   // Update itinerary status
   async updateItineraryStatus(itineraryId: string, status: Itinerary['status']): Promise<void> {
-    const updateData: any = {
-      status,
-      updated_at: new Date().toISOString(),
-    };
-
-    if (status === 'sent') {
-      updateData.sent_at = new Date().toISOString();
+    try {
+      if (status === 'sent') {
+        await query(
+          'UPDATE itineraries SET status = $1, updated_at = NOW(), sent_at = NOW() WHERE id = $2',
+          [status, itineraryId]
+        );
+      } else {
+        await query(
+          'UPDATE itineraries SET status = $1, updated_at = NOW() WHERE id = $2',
+          [status, itineraryId]
+        );
+      }
+    } catch (error) {
+      console.error('Error updating itinerary status:', error);
+      throw error;
     }
-
-    const { error } = await this.supabase
-      .from('itineraries' as any)
-      .update(updateData)
-      .eq('id', itineraryId);
-
-    if (error) throw error;
   }
 }
 
