@@ -10,10 +10,10 @@ export const runtime = 'nodejs';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { leadId: string } }
+  { params }: { params: Promise<{ leadId: string }> }
 ) {
   try {
-    const { leadId } = params;
+    const { leadId } = await params;
     const query = await queryService.getQueryByLeadId(leadId);
     
     return NextResponse.json({ query });
@@ -32,10 +32,10 @@ export async function GET(
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { leadId: string } }
+  { params }: { params: Promise<{ leadId: string }> }
 ) {
   try {
-    const { leadId } = params;
+    const { leadId } = await params;
     const body = await request.json();
     const query = await queryService.upsertQuery({
       ...body,

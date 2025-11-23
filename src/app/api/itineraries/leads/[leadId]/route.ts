@@ -10,10 +10,10 @@ export const runtime = 'nodejs';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { leadId: string } }
+  { params }: { params: Promise<{ leadId: string }> }
 ) {
   try {
-    const { leadId } = params;
+    const { leadId } = await params;
     const itineraries = await itineraryService.getLeadItineraries(leadId);
     
     return NextResponse.json({ itineraries });
