@@ -27,9 +27,10 @@ export async function POST(request: NextRequest) {
     });
     
     return NextResponse.json({ 
-      userId: result.userId,
-      email: result.email,
-      requiresConfirmation: result.requiresConfirmation,
+      userId: result.userSub,
+      email: email,
+      requiresConfirmation: !!result.codeDeliveryDetails,
+      codeDeliveryDetails: result.codeDeliveryDetails,
     });
   } catch (error: any) {
     console.error('Registration error:', error);
