@@ -10,6 +10,22 @@ export const runtime = 'nodejs';
  */
 export async function POST(request: NextRequest) {
   try {
+    // Check if Cognito is configured
+    if (!process.env.COGNITO_CLIENT_ID || !process.env.COGNITO_USER_POOL_ID) {
+      console.error('❌ Cognito not configured:', {
+        hasClientId: !!process.env.COGNITO_CLIENT_ID,
+        hasUserPoolId: !!process.env.COGNITO_USER_POOL_ID,
+      });
+      return NextResponse.json(
+        { 
+          error: 'Authentication service not configured',
+          message: 'Cognito environment variables are missing. Please contact the administrator.',
+          details: 'COGNITO_CLIENT_ID and COGNITO_USER_POOL_ID must be set in environment variables.'
+        },
+        { status: 500 }
+      );
+    }
+
     const { email, password } = await request.json();
 
     if (!email || !password) {

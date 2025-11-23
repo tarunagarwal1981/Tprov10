@@ -21,8 +21,15 @@ const client = new CognitoIdentityProviderClient({
   region: process.env.DEPLOYMENT_REGION || process.env.REGION || 'us-east-1' 
 });
 
-const USER_POOL_ID = process.env.COGNITO_USER_POOL_ID!;
-const CLIENT_ID = process.env.COGNITO_CLIENT_ID!;
+const USER_POOL_ID = process.env.COGNITO_USER_POOL_ID;
+const CLIENT_ID = process.env.COGNITO_CLIENT_ID;
+
+if (!USER_POOL_ID || !CLIENT_ID) {
+  console.error('❌ Missing Cognito configuration:');
+  console.error('  COGNITO_USER_POOL_ID:', USER_POOL_ID ? '✅ Set' : '❌ Missing');
+  console.error('  COGNITO_CLIENT_ID:', CLIENT_ID ? '✅ Set' : '❌ Missing');
+  throw new Error('Cognito environment variables are not configured. Please set COGNITO_USER_POOL_ID and COGNITO_CLIENT_ID in your environment variables.');
+}
 
 export interface AuthResult {
   accessToken: string;
