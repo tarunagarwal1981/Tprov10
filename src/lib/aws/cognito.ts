@@ -53,6 +53,11 @@ export interface UserAttributes {
  * Sign in with email and password
  */
 export async function signIn(email: string, password: string): Promise<AuthResult> {
+  // Validate CLIENT_ID at function call time (not module load time)
+  if (!CLIENT_ID) {
+    throw new Error('COGNITO_CLIENT_ID is not configured. Please set it in your environment variables.');
+  }
+
   const command = new InitiateAuthCommand({
     AuthFlow: 'USER_PASSWORD_AUTH',
     ClientId: CLIENT_ID,
