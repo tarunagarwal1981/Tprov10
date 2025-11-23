@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useId } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/context/SupabaseAuthContext';
+import { useAuth } from '@/context/CognitoAuthContext';
 import AuthLayout from '@/components/shared/AuthLayout';
 
 interface DemoAccount {

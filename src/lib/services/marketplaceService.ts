@@ -2,10 +2,12 @@
  * Marketplace Service
  * Service layer for lead marketplace operations
  * Handles all database interactions for the lead marketplace feature
+ * 
+ * MIGRATED: Now uses PostgreSQL directly via AWS RDS
+ * NOTE: This service should be called from API routes for client-side access
  */
 
-import { createSupabaseBrowserClient, SupabaseError } from '@/lib/supabase/client';
-import type { SupabaseClientType } from '@/lib/supabase/client';
+import { query, queryOne, queryMany } from '@/lib/aws/database';
 import {
   MarketplaceLead,
   LeadPurchase,
@@ -29,67 +31,65 @@ export class MarketplaceService {
    * @returns Promise with array of available marketplace leads
    */
   static async getAvailableLeads(filters?: LeadFilters): Promise<MarketplaceLead[]> {
-    const supabase = createSupabaseBrowserClient();
-
     try {
-      // Start with base query for available leads
-      let query = supabase
-        .from('lead_marketplace')
-        .select('*')
-        .eq('status', LeadStatus.AVAILABLE)
-        .gt('expires_at', new Date().toISOString())
-        .order('lead_quality_score', { ascending: false })
-        .order('posted_at', { ascending: false });
+      let sql = `
+        SELECT * FROM lead_marketplace
+        WHERE status = $1 AND expires_at > $2
+      `;
+      const params: any[] = [LeadStatus.AVAILABLE, new Date().toISOString()];
+      let paramIndex = 3;
 
       // Apply filters if provided
       if (filters) {
         if (filters.destination) {
-          query = query.ilike('destination', `%${filters.destination}%`);
+          sql += ` AND destination ILIKE $${paramIndex}`;
+          params.push(`%${filters.destination}%`);
+          paramIndex++;
         }
 
         if (filters.tripType) {
-          query = query.eq('trip_type', filters.tripType);
+          sql += ` AND trip_type = $${paramIndex}`;
+          params.push(filters.tripType);
+          paramIndex++;
         }
 
         if (filters.budgetMin !== undefined) {
-          query = query.gte('budget_max', filters.budgetMin);
+          sql += ` AND budget_max >= $${paramIndex}`;
+          params.push(filters.budgetMin);
+          paramIndex++;
         }
 
         if (filters.budgetMax !== undefined) {
-          query = query.lte('budget_min', filters.budgetMax);
+          sql += ` AND budget_min <= $${paramIndex}`;
+          params.push(filters.budgetMax);
+          paramIndex++;
         }
 
         if (filters.durationMin !== undefined) {
-          query = query.gte('duration_days', filters.durationMin);
+          sql += ` AND duration_days >= $${paramIndex}`;
+          params.push(filters.durationMin);
+          paramIndex++;
         }
 
         if (filters.durationMax !== undefined) {
-          query = query.lte('duration_days', filters.durationMax);
+          sql += ` AND duration_days <= $${paramIndex}`;
+          params.push(filters.durationMax);
+          paramIndex++;
         }
 
         if (filters.minQualityScore !== undefined) {
-          query = query.gte('lead_quality_score', filters.minQualityScore);
+          sql += ` AND lead_quality_score >= $${paramIndex}`;
+          params.push(filters.minQualityScore);
+          paramIndex++;
         }
       }
 
-      const { data, error } = await query;
+      sql += ` ORDER BY lead_quality_score DESC, posted_at DESC`;
 
-      if (error) {
-        console.error('[MarketplaceService] Error fetching available leads:', error);
-        throw new SupabaseError(
-          'Failed to fetch available leads',
-          error.code,
-          error.message,
-          error.hint
-        );
-      }
-
-      if (!data) {
-        return [];
-      }
+      const result = await query<MarketplaceLeadDB>(sql, params);
 
       // Map database results to client format, hiding sensitive data
-      return data.map((dbLead: MarketplaceLeadDB) => {
+      return result.rows.map((dbLead: MarketplaceLeadDB) => {
         const lead = mapMarketplaceLeadFromDB(dbLead);
         // Ensure sensitive fields are not exposed for unpurchased leads
         return {
@@ -114,34 +114,21 @@ export class MarketplaceService {
    * @returns Promise with lead details
    */
   static async getLeadDetails(leadId: string, agentId: string): Promise<MarketplaceLead> {
-    const supabase = createSupabaseBrowserClient();
-
     try {
       // Check if agent has purchased this lead
       const hasPurchased = await this.hasAgentPurchased(leadId, agentId);
 
       // Fetch lead details
-      const { data, error } = await supabase
-        .from('lead_marketplace')
-        .select('*')
-        .eq('id', leadId)
-        .single();
+      const dbLead = await queryOne<MarketplaceLeadDB>(
+        'SELECT * FROM lead_marketplace WHERE id = $1',
+        [leadId]
+      );
 
-      if (error) {
-        console.error('[MarketplaceService] Error fetching lead details:', error);
-        throw new SupabaseError(
-          'Failed to fetch lead details',
-          error.code,
-          error.message,
-          error.hint
-        );
+      if (!dbLead) {
+        throw new Error('Lead not found');
       }
 
-      if (!data) {
-        throw new SupabaseError('Lead not found', 'NOT_FOUND');
-      }
-
-      const lead = mapMarketplaceLeadFromDB(data as MarketplaceLeadDB);
+      const lead = mapMarketplaceLeadFromDB(dbLead);
 
       // If not purchased, hide sensitive information
       if (!hasPurchased) {
@@ -170,72 +157,56 @@ export class MarketplaceService {
    * @returns Promise with purchase details
    */
   static async purchaseLead(leadId: string, agentId: string): Promise<LeadPurchase> {
-    const supabase = createSupabaseBrowserClient();
-
     try {
       // First, verify the lead is available
-      const { data: leadData, error: leadError } = await supabase
-        .from('lead_marketplace')
-        .select('id, status, expires_at, lead_price')
-        .eq('id', leadId)
-        .single();
+      const leadData = await queryOne<{
+        id: string;
+        status: string;
+        expires_at: string;
+        lead_price: number;
+      }>(
+        'SELECT id, status, expires_at, lead_price FROM lead_marketplace WHERE id = $1',
+        [leadId]
+      );
 
-      if (leadError || !leadData) {
-        throw new SupabaseError(
-          'Lead not found or unavailable',
-          leadError?.code,
-          leadError?.message
-        );
+      if (!leadData) {
+        throw new Error('Lead not found or unavailable');
       }
 
       // Check if lead is available
       if (leadData.status !== LeadStatus.AVAILABLE) {
-        throw new SupabaseError(
-          'Lead is no longer available for purchase',
-          'LEAD_UNAVAILABLE'
-        );
+        throw new Error('Lead is no longer available for purchase');
       }
 
       // Check if lead has expired
       if (new Date(leadData.expires_at) <= new Date()) {
-        throw new SupabaseError('Lead has expired', 'LEAD_EXPIRED');
+        throw new Error('Lead has expired');
       }
 
       // Check if agent has already purchased this lead
       const alreadyPurchased = await this.hasAgentPurchased(leadId, agentId);
       if (alreadyPurchased) {
-        throw new SupabaseError(
-          'You have already purchased this lead',
-          'ALREADY_PURCHASED'
-        );
+        throw new Error('You have already purchased this lead');
       }
 
       // Create purchase record (trigger will update lead status)
-      const { data: purchaseData, error: purchaseError } = await supabase
-        .from('lead_purchases')
-        .insert({
-          lead_id: leadId,
-          agent_id: agentId,
-          purchase_price: leadData.lead_price,
-        })
-        .select()
-        .single();
+      const purchaseResult = await query<LeadPurchaseDB>(
+        `INSERT INTO lead_purchases (lead_id, agent_id, purchase_price)
+         VALUES ($1, $2, $3)
+         RETURNING *`,
+        [leadId, agentId, leadData.lead_price]
+      );
 
-      if (purchaseError) {
-        console.error('[MarketplaceService] Error creating purchase:', purchaseError);
-        throw new SupabaseError(
-          'Failed to purchase lead',
-          purchaseError.code,
-          purchaseError.message,
-          purchaseError.hint
-        );
+      if (!purchaseResult.rows || purchaseResult.rows.length === 0) {
+        throw new Error('Purchase failed - no data returned');
       }
 
-      if (!purchaseData) {
-        throw new SupabaseError('Purchase failed - no data returned', 'PURCHASE_FAILED');
+      const purchase = purchaseResult.rows[0];
+      if (!purchase) {
+        throw new Error('Purchase failed - no data returned');
       }
 
-      return mapLeadPurchaseFromDB(purchaseData as LeadPurchaseDB);
+      return mapLeadPurchaseFromDB(purchase);
     } catch (error) {
       console.error('[MarketplaceService] Error in purchaseLead:', error);
       throw error;
@@ -248,37 +219,42 @@ export class MarketplaceService {
    * @returns Promise with array of purchased leads with full details
    */
   static async getAgentPurchasedLeads(agentId: string): Promise<LeadPurchase[]> {
-    const supabase = createSupabaseBrowserClient();
-
     try {
-      const { data, error } = await supabase
-        .from('lead_purchases')
-        .select(`
-          *,
-          lead:lead_marketplace (*)
-        `)
-        .eq('agent_id', agentId)
-        .order('purchased_at', { ascending: false });
-
-      if (error) {
-        console.error('[MarketplaceService] Error fetching purchased leads:', error);
-        throw new SupabaseError(
-          'Failed to fetch purchased leads',
-          error.code,
-          error.message,
-          error.hint
-        );
-      }
-
-      if (!data) {
-        return [];
-      }
+      // Get purchases with lead details using JOIN
+      const result = await query<LeadPurchaseDB & { lead: MarketplaceLeadDB }>(
+        `SELECT 
+          lp.*,
+          jsonb_build_object(
+            'id', lm.id,
+            'title', lm.title,
+            'destination', lm.destination,
+            'trip_type', lm.trip_type,
+            'budget_min', lm.budget_min,
+            'budget_max', lm.budget_max,
+            'duration_days', lm.duration_days,
+            'lead_price', lm.lead_price,
+            'lead_quality_score', lm.lead_quality_score,
+            'status', lm.status,
+            'posted_at', lm.posted_at,
+            'expires_at', lm.expires_at,
+            'customer_name', lm.customer_name,
+            'customer_email', lm.customer_email,
+            'customer_phone', lm.customer_phone,
+            'special_requirements', lm.special_requirements,
+            'detailed_requirements', lm.detailed_requirements
+          ) as lead
+        FROM lead_purchases lp
+        JOIN lead_marketplace lm ON lp.lead_id = lm.id
+        WHERE lp.agent_id = $1
+        ORDER BY lp.purchased_at DESC`,
+        [agentId]
+      );
 
       // Map purchases and include full lead details
-      return data.map((item: any) => {
-        const purchase = mapLeadPurchaseFromDB(item as LeadPurchaseDB);
-        if (item.lead) {
-          purchase.lead = mapMarketplaceLeadFromDB(item.lead as MarketplaceLeadDB);
+      return result.rows.map((row: any) => {
+        const purchase = mapLeadPurchaseFromDB(row as LeadPurchaseDB);
+        if (row.lead) {
+          purchase.lead = mapMarketplaceLeadFromDB(row.lead as MarketplaceLeadDB);
         }
         return purchase;
       });
@@ -295,23 +271,13 @@ export class MarketplaceService {
    * @returns Promise with boolean indicating if purchased
    */
   static async hasAgentPurchased(leadId: string, agentId: string): Promise<boolean> {
-    const supabase = createSupabaseBrowserClient();
-
     try {
-      const { data, error } = await supabase
-        .from('lead_purchases')
-        .select('id')
-        .eq('lead_id', leadId)
-        .eq('agent_id', agentId)
-        .maybeSingle();
+      const result = await queryOne<{ id: string }>(
+        'SELECT id FROM lead_purchases WHERE lead_id = $1 AND agent_id = $2 LIMIT 1',
+        [leadId, agentId]
+      );
 
-      if (error) {
-        console.error('[MarketplaceService] Error checking purchase status:', error);
-        // Don't throw here, return false on error
-        return false;
-      }
-
-      return !!data;
+      return !!result;
     } catch (error) {
       console.error('[MarketplaceService] Error in hasAgentPurchased:', error);
       return false;
@@ -332,63 +298,50 @@ export class MarketplaceService {
     thisMonth: number;
     totalSpent: number;
   }> {
-    const supabase = createSupabaseBrowserClient();
-
     try {
-      // Get total available leads
-      const { count: availableCount, error: availableError } = await supabase
-        .from('lead_marketplace')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', LeadStatus.AVAILABLE)
-        .gt('expires_at', new Date().toISOString());
+      // Get all stats in parallel
+      const [availableResult, purchasedResult, thisMonthResult, spentResult] = await Promise.all([
+        // Total available leads
+        query<{ count: string }>(
+          `SELECT COUNT(*) as count FROM lead_marketplace 
+           WHERE status = $1 AND expires_at > $2`,
+          [LeadStatus.AVAILABLE, new Date().toISOString()]
+        ),
+        // Agent's total purchases
+        query<{ count: string }>(
+          'SELECT COUNT(*) as count FROM lead_purchases WHERE agent_id = $1',
+          [agentId]
+        ),
+        // This month's purchases
+        (async () => {
+          const startOfMonth = new Date();
+          startOfMonth.setDate(1);
+          startOfMonth.setHours(0, 0, 0, 0);
+          return query<{ count: string }>(
+            `SELECT COUNT(*) as count FROM lead_purchases 
+             WHERE agent_id = $1 AND purchased_at >= $2`,
+            [agentId, startOfMonth.toISOString()]
+          );
+        })(),
+        // Total spent
+        query<{ purchase_price: number }>(
+          'SELECT purchase_price FROM lead_purchases WHERE agent_id = $1',
+          [agentId]
+        ),
+      ]);
 
-      if (availableError) {
-        console.error('[MarketplaceService] Error counting available leads:', availableError);
-      }
-
-      // Get agent's total purchases
-      const { count: purchasedCount, error: purchasedError } = await supabase
-        .from('lead_purchases')
-        .select('*', { count: 'exact', head: true })
-        .eq('agent_id', agentId);
-
-      if (purchasedError) {
-        console.error('[MarketplaceService] Error counting purchases:', purchasedError);
-      }
-
-      // Get this month's purchases
-      const startOfMonth = new Date();
-      startOfMonth.setDate(1);
-      startOfMonth.setHours(0, 0, 0, 0);
-
-      const { count: thisMonthCount, error: thisMonthError } = await supabase
-        .from('lead_purchases')
-        .select('*', { count: 'exact', head: true })
-        .eq('agent_id', agentId)
-        .gte('purchased_at', startOfMonth.toISOString());
-
-      if (thisMonthError) {
-        console.error('[MarketplaceService] Error counting this month purchases:', thisMonthError);
-      }
-
-      // Get total spent
-      const { data: purchaseData, error: spentError } = await supabase
-        .from('lead_purchases')
-        .select('purchase_price')
-        .eq('agent_id', agentId);
-
-      if (spentError) {
-        console.error('[MarketplaceService] Error calculating total spent:', spentError);
-      }
-
-      const totalSpent = purchaseData
-        ? purchaseData.reduce((sum, p) => sum + (Number(p.purchase_price) || 0), 0)
-        : 0;
+      const totalAvailable = parseInt(availableResult.rows[0]?.count || '0', 10);
+      const purchased = parseInt(purchasedResult.rows[0]?.count || '0', 10);
+      const thisMonth = parseInt(thisMonthResult.rows[0]?.count || '0', 10);
+      const totalSpent = spentResult.rows.reduce(
+        (sum, p) => sum + (Number(p.purchase_price) || 0),
+        0
+      );
 
       return {
-        totalAvailable: availableCount || 0,
-        purchased: purchasedCount || 0,
-        thisMonth: thisMonthCount || 0,
+        totalAvailable,
+        purchased,
+        thisMonth,
         totalSpent,
       };
     } catch (error) {
@@ -414,62 +367,52 @@ export class MarketplaceService {
     searchTerm: string,
     filters?: LeadFilters
   ): Promise<MarketplaceLead[]> {
-    const supabase = createSupabaseBrowserClient();
-
     try {
-      let query = supabase
-        .from('lead_marketplace')
-        .select('*')
-        .eq('status', LeadStatus.AVAILABLE)
-        .gt('expires_at', new Date().toISOString());
+      let sql = `
+        SELECT * FROM lead_marketplace
+        WHERE status = $1 AND expires_at > $2
+      `;
+      const params: any[] = [LeadStatus.AVAILABLE, new Date().toISOString()];
+      let paramIndex = 3;
 
       // Add search term if provided
       if (searchTerm && searchTerm.trim()) {
         const term = searchTerm.trim();
-        query = query.or(
-          `title.ilike.%${term}%,destination.ilike.%${term}%,special_requirements.ilike.%${term}%`
-        );
+        sql += ` AND (title ILIKE $${paramIndex} OR destination ILIKE $${paramIndex} OR special_requirements ILIKE $${paramIndex})`;
+        params.push(`%${term}%`);
+        paramIndex++;
       }
 
       // Apply additional filters
       if (filters) {
         if (filters.tripType) {
-          query = query.eq('trip_type', filters.tripType);
+          sql += ` AND trip_type = $${paramIndex}`;
+          params.push(filters.tripType);
+          paramIndex++;
         }
         if (filters.budgetMin !== undefined) {
-          query = query.gte('budget_max', filters.budgetMin);
+          sql += ` AND budget_max >= $${paramIndex}`;
+          params.push(filters.budgetMin);
+          paramIndex++;
         }
         if (filters.budgetMax !== undefined) {
-          query = query.lte('budget_min', filters.budgetMax);
+          sql += ` AND budget_min <= $${paramIndex}`;
+          params.push(filters.budgetMax);
+          paramIndex++;
         }
         if (filters.minQualityScore !== undefined) {
-          query = query.gte('lead_quality_score', filters.minQualityScore);
+          sql += ` AND lead_quality_score >= $${paramIndex}`;
+          params.push(filters.minQualityScore);
+          paramIndex++;
         }
       }
 
-      query = query
-        .order('lead_quality_score', { ascending: false })
-        .order('posted_at', { ascending: false })
-        .limit(50);
+      sql += ` ORDER BY lead_quality_score DESC, posted_at DESC LIMIT 50`;
 
-      const { data, error } = await query;
-
-      if (error) {
-        console.error('[MarketplaceService] Error searching leads:', error);
-        throw new SupabaseError(
-          'Failed to search leads',
-          error.code,
-          error.message,
-          error.hint
-        );
-      }
-
-      if (!data) {
-        return [];
-      }
+      const result = await query<MarketplaceLeadDB>(sql, params);
 
       // Map and hide sensitive data
-      return data.map((dbLead: MarketplaceLeadDB) => {
+      return result.rows.map((dbLead: MarketplaceLeadDB) => {
         const lead = mapMarketplaceLeadFromDB(dbLead);
         return {
           ...lead,
@@ -492,35 +435,17 @@ export class MarketplaceService {
    * @returns Promise with array of high-quality leads
    */
   static async getFeaturedLeads(limit: number = 10): Promise<MarketplaceLead[]> {
-    const supabase = createSupabaseBrowserClient();
-
     try {
-      const { data, error } = await supabase
-        .from('lead_marketplace')
-        .select('*')
-        .eq('status', LeadStatus.AVAILABLE)
-        .gt('expires_at', new Date().toISOString())
-        .gte('lead_quality_score', 80)
-        .order('lead_quality_score', { ascending: false })
-        .order('posted_at', { ascending: false })
-        .limit(limit);
-
-      if (error) {
-        console.error('[MarketplaceService] Error fetching featured leads:', error);
-        throw new SupabaseError(
-          'Failed to fetch featured leads',
-          error.code,
-          error.message,
-          error.hint
-        );
-      }
-
-      if (!data) {
-        return [];
-      }
+      const result = await query<MarketplaceLeadDB>(
+        `SELECT * FROM lead_marketplace
+         WHERE status = $1 AND expires_at > $2 AND lead_quality_score >= 80
+         ORDER BY lead_quality_score DESC, posted_at DESC
+         LIMIT $3`,
+        [LeadStatus.AVAILABLE, new Date().toISOString(), limit]
+      );
 
       // Map and hide sensitive data
-      return data.map((dbLead: MarketplaceLeadDB) => {
+      return result.rows.map((dbLead: MarketplaceLeadDB) => {
         const lead = mapMarketplaceLeadFromDB(dbLead);
         return {
           ...lead,
@@ -542,36 +467,21 @@ export class MarketplaceService {
    * @returns Promise with array of expiring leads
    */
   static async getExpiringSoonLeads(): Promise<MarketplaceLead[]> {
-    const supabase = createSupabaseBrowserClient();
-
     try {
       const now = new Date();
       const twentyFourHoursLater = new Date(now.getTime() + 24 * 60 * 60 * 1000);
 
-      const { data, error } = await supabase
-        .from('lead_marketplace')
-        .select('*')
-        .eq('status', LeadStatus.AVAILABLE)
-        .gt('expires_at', now.toISOString())
-        .lt('expires_at', twentyFourHoursLater.toISOString())
-        .order('expires_at', { ascending: true });
-
-      if (error) {
-        console.error('[MarketplaceService] Error fetching expiring leads:', error);
-        throw new SupabaseError(
-          'Failed to fetch expiring leads',
-          error.code,
-          error.message,
-          error.hint
-        );
-      }
-
-      if (!data) {
-        return [];
-      }
+      const result = await query<MarketplaceLeadDB>(
+        `SELECT * FROM lead_marketplace
+         WHERE status = $1 
+           AND expires_at > $2 
+           AND expires_at < $3
+         ORDER BY expires_at ASC`,
+        [LeadStatus.AVAILABLE, now.toISOString(), twentyFourHoursLater.toISOString()]
+      );
 
       // Map and hide sensitive data
-      return data.map((dbLead: MarketplaceLeadDB) => {
+      return result.rows.map((dbLead: MarketplaceLeadDB) => {
         const lead = mapMarketplaceLeadFromDB(dbLead);
         return {
           ...lead,

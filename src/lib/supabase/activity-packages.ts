@@ -4,7 +4,9 @@
  */
 
 import { createSupabaseBrowserClient, withErrorHandling, SupabaseError } from './client';
-import { uploadImageFiles, base64ToFile, deleteFile } from './file-upload';
+// TODO: Migrate to S3 - temporarily keeping Supabase for compatibility
+// import { uploadImageFiles, base64ToFile, deleteFile } from './file-upload';
+import { uploadImageFiles, base64ToFile, deleteFile } from '@/lib/aws/file-upload';
 import type {
   ActivityPackage,
   ActivityPackageInsert,
@@ -747,40 +749,29 @@ export async function uploadActivityPackageImage(
       throw new Error('Authentication required for image upload. Please log in again.');
     }
 
-    // Generate unique filename
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-    const filePath = `${packageId}/${fileName}`;
+    const userId = session.user.id;
 
-    // Upload file to storage
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('activity-package-images')
-      .upload(filePath, file, {
-        cacheControl: '3600',
-        upsert: false,
-      });
+    // Upload file to S3 using AWS file upload service
+    const { uploadFile } = await import('@/lib/aws/file-upload');
+    const uploadResult = await uploadFile({
+      bucket: 'activity-package-images',
+      folder: packageId,
+      file,
+      userId,
+    });
 
-    if (uploadError) {
-      // Handle specific authentication errors
-      if (uploadError.message?.includes('Invalid Refresh Token') || uploadError.message?.includes('JWT')) {
-        throw new Error('Your session has expired. Please refresh the page and log in again.');
-      }
-      throw uploadError;
+    if (uploadResult.error || !uploadResult.data) {
+      throw uploadResult.error || new Error('Upload failed');
     }
 
-    // Get public URL
-    const { data: urlData } = supabase.storage
-      .from('activity-package-images')
-      .getPublicUrl(filePath);
-
-    // Create image record
+    // Create image record in database (using RDS via Supabase client for now)
     const imageData: ActivityPackageImageInsert = {
       package_id: packageId,
       file_name: file.name,
       file_size: file.size,
       mime_type: file.type,
-      storage_path: filePath,
-      public_url: urlData.publicUrl,
+      storage_path: uploadResult.data.path,
+      public_url: uploadResult.data.publicUrl,
       alt_text: metadata?.alt_text,
       caption: metadata?.caption,
       is_cover: metadata?.is_cover || false,
@@ -796,9 +787,8 @@ export async function uploadActivityPackageImage(
 
     if (imageError) {
       // Clean up uploaded file if database insert fails
-      await supabase.storage
-        .from('activity-package-images')
-        .remove([filePath]);
+      const { deleteFile } = await import('@/lib/aws/file-upload');
+      await deleteFile('activity-package-images', uploadResult.data.path);
       throw imageError;
     }
 
@@ -830,13 +820,12 @@ export async function deleteActivityPackageImage(
       return { data: null, error: new Error('Image not found') };
     }
 
-    // Delete from storage
-    const { error: storageError } = await supabase.storage
-      .from('activity-package-images')
-      .remove([image.storage_path]);
+    // Delete from S3 storage
+    const { deleteFile } = await import('@/lib/aws/file-upload');
+    const deleteResult = await deleteFile('activity-package-images', image.storage_path);
 
-    if (storageError) {
-      return { data: null, error: storageError };
+    if (deleteResult.error) {
+      return { data: null, error: deleteResult.error };
     }
 
     // Delete from database

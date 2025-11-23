@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useAuth, useRBAC } from '@/context/SupabaseAuthContext';
+import { useAuth, useRBAC } from '@/context/CognitoAuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import type { UserRole } from '@/lib/types';
