@@ -45,14 +45,26 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('Login error:', error);
-    return NextResponse.json(
-      { 
-        error: error.name || 'Login failed', 
-        message: error.message || 'Unknown error',
-        details: error.toString()
-      },
-      { status: 400 }
-    );
+    
+    // Ensure we always return JSON, not HTML
+    const errorResponse = {
+      error: error.name || 'Login failed',
+      message: error.message || 'Unknown error',
+      details: error.toString(),
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+    };
+    
+    // Determine status code based on error type
+    let statusCode = 400;
+    if (error.name === 'NotAuthorizedException') {
+      statusCode = 401;
+    } else if (error.name === 'UserNotFoundException') {
+      statusCode = 404;
+    } else if (error.message?.includes('not configured')) {
+      statusCode = 500;
+    }
+    
+    return NextResponse.json(errorResponse, { status: statusCode });
   }
 }
 
