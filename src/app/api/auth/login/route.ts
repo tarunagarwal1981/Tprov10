@@ -9,24 +9,49 @@ export const runtime = 'nodejs';
  * Sign in with email and password
  */
 export async function POST(request: NextRequest) {
+  // Wrap everything in try-catch to ensure we always return JSON
   try {
     // Check if Cognito is configured
     if (!process.env.COGNITO_CLIENT_ID || !process.env.COGNITO_USER_POOL_ID) {
-      console.error('❌ Cognito not configured:', {
+      const errorDetails = {
         hasClientId: !!process.env.COGNITO_CLIENT_ID,
         hasUserPoolId: !!process.env.COGNITO_USER_POOL_ID,
-      });
+        clientIdValue: process.env.COGNITO_CLIENT_ID ? 'SET' : 'MISSING',
+        userPoolIdValue: process.env.COGNITO_USER_POOL_ID ? 'SET' : 'MISSING',
+        allEnvKeys: Object.keys(process.env).filter(k => k.includes('COGNITO')),
+        deploymentRegion: process.env.DEPLOYMENT_REGION || 'NOT SET',
+      };
+      
+      console.error('❌ Cognito not configured:', JSON.stringify(errorDetails, null, 2));
+      
       return NextResponse.json(
         { 
           error: 'Authentication service not configured',
           message: 'Cognito environment variables are missing. Please contact the administrator.',
-          details: 'COGNITO_CLIENT_ID and COGNITO_USER_POOL_ID must be set in environment variables.'
+          details: 'COGNITO_CLIENT_ID and COGNITO_USER_POOL_ID must be set in environment variables.',
+          debug: errorDetails,
         },
         { status: 500 }
       );
     }
 
-    const { email, password } = await request.json();
+    // Parse request body
+    let email: string;
+    let password: string;
+    
+    try {
+      const body = await request.json();
+      email = body.email;
+      password = body.password;
+    } catch (parseError) {
+      console.error('❌ Failed to parse request body:', parseError);
+      return NextResponse.json(
+        { error: 'Invalid request body', message: 'Request body must be valid JSON' },
+        { status: 400 }
+      );
+    }
+    
+    console.log('🔐 Login attempt:', { email, hasPassword: !!password });
 
     if (!email || !password) {
       return NextResponse.json(
@@ -35,7 +60,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.log('🔐 Calling signIn...');
     const authResult = await signIn(email, password);
+    console.log('✅ SignIn successful');
     
     return NextResponse.json({ 
       accessToken: authResult.accessToken,
