@@ -9,15 +9,18 @@ export const runtime = 'nodejs';
  * Sign in with email and password
  */
 export async function POST(request: NextRequest) {
-  // Wrap everything in try-catch to ensure we always return JSON
+  // Ensure we always return JSON, even for unexpected errors
   try {
     // Check if Cognito is configured
-    if (!process.env.COGNITO_CLIENT_ID || !process.env.COGNITO_USER_POOL_ID) {
+    const clientId = process.env.COGNITO_CLIENT_ID;
+    const userPoolId = process.env.COGNITO_USER_POOL_ID;
+    
+    if (!clientId || !userPoolId) {
       const errorDetails = {
-        hasClientId: !!process.env.COGNITO_CLIENT_ID,
-        hasUserPoolId: !!process.env.COGNITO_USER_POOL_ID,
-        clientIdValue: process.env.COGNITO_CLIENT_ID ? 'SET' : 'MISSING',
-        userPoolIdValue: process.env.COGNITO_USER_POOL_ID ? 'SET' : 'MISSING',
+        hasClientId: !!clientId,
+        hasUserPoolId: !!userPoolId,
+        clientIdValue: clientId ? 'SET' : 'MISSING',
+        userPoolIdValue: userPoolId ? 'SET' : 'MISSING',
         allEnvKeys: Object.keys(process.env).filter(k => k.includes('COGNITO')),
         deploymentRegion: process.env.DEPLOYMENT_REGION || 'NOT SET',
       };
@@ -29,9 +32,14 @@ export async function POST(request: NextRequest) {
           error: 'Authentication service not configured',
           message: 'Cognito environment variables are missing. Please contact the administrator.',
           details: 'COGNITO_CLIENT_ID and COGNITO_USER_POOL_ID must be set in environment variables.',
-          debug: errorDetails,
+          debug: process.env.NODE_ENV === 'development' ? errorDetails : undefined,
         },
-        { status: 500 }
+        { 
+          status: 500,
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        }
       );
     }
 
@@ -71,27 +79,42 @@ export async function POST(request: NextRequest) {
       expiresIn: authResult.expiresIn,
     });
   } catch (error: any) {
-    console.error('Login error:', error);
+    console.error('❌ Login error:', {
+      name: error?.name,
+      message: error?.message,
+      code: error?.code,
+      stack: error?.stack,
+    });
     
     // Ensure we always return JSON, not HTML
     const errorResponse = {
-      error: error.name || 'Login failed',
-      message: error.message || 'Unknown error',
-      details: error.toString(),
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+      error: error?.name || 'Login failed',
+      message: error?.message || 'Unknown error occurred',
+      details: error?.toString() || 'An unexpected error occurred',
+      ...(process.env.NODE_ENV === 'development' && { stack: error?.stack }),
     };
     
     // Determine status code based on error type
-    let statusCode = 400;
-    if (error.name === 'NotAuthorizedException') {
+    let statusCode = 500; // Default to 500 for server errors
+    if (error?.name === 'NotAuthorizedException') {
       statusCode = 401;
-    } else if (error.name === 'UserNotFoundException') {
+    } else if (error?.name === 'UserNotFoundException') {
       statusCode = 404;
-    } else if (error.message?.includes('not configured')) {
+    } else if (error?.name === 'InvalidParameterException') {
+      statusCode = 400;
+    } else if (error?.message?.includes('not configured') || error?.message?.includes('Missing')) {
       statusCode = 500;
     }
     
-    return NextResponse.json(errorResponse, { status: statusCode });
+    return NextResponse.json(
+      errorResponse, 
+      { 
+        status: statusCode,
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      }
+    );
   }
 }
 
