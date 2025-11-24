@@ -113,7 +113,40 @@ export const CognitoAuthProvider: React.FC<{ children: React.ReactNode }> = ({ c
       });
 
       if (!response.ok) {
-        throw new Error('Failed to load user profile');
+        const errorData = await response.json().catch(() => ({}));
+        
+        // Handle database unavailable error gracefully
+        if (response.status === 503 && errorData.message?.includes('Database unavailable')) {
+          console.warn('⚠️  Database unavailable in local development. Using minimal profile from Cognito.');
+          
+          // Return a minimal user profile from Cognito info
+          const minimalUser: User = {
+            id: userId,
+            email: email,
+            name: email.split('@')[0] || 'User',
+            role: 'agent', // Default role
+            profile: {
+              timezone: 'UTC',
+              language: 'en',
+              currency: 'USD',
+              notification_preferences: {
+                email: true,
+                sms: false,
+                push: true,
+                marketing: false,
+              },
+            },
+            preferences: {},
+            created_at: new Date(),
+            updated_at: new Date(),
+          };
+          
+          setUser(minimalUser);
+          setProfile(minimalUser.profile);
+          return minimalUser;
+        }
+        
+        throw new Error(errorData.message || 'Failed to load user profile');
       }
 
       const { profile: userProfile } = await response.json();
