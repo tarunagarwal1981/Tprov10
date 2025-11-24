@@ -27,11 +27,12 @@ const USER_POOL_ID = process.env.COGNITO_USER_POOL_ID;
 const CLIENT_ID = process.env.COGNITO_CLIENT_ID;
 
 // Only validate in server-side environment (not in browser)
+// Don't throw at module load time - let the functions handle it gracefully
 if (typeof window === 'undefined' && (!USER_POOL_ID || !CLIENT_ID)) {
-  console.error('❌ Missing Cognito configuration:');
-  console.error('  COGNITO_USER_POOL_ID:', USER_POOL_ID ? '✅ Set' : '❌ Missing');
-  console.error('  COGNITO_CLIENT_ID:', CLIENT_ID ? '✅ Set' : '❌ Missing');
-  throw new Error('Cognito environment variables are not configured. Please set COGNITO_USER_POOL_ID and COGNITO_CLIENT_ID in your environment variables.');
+  console.warn('⚠️  Missing Cognito configuration:');
+  console.warn('  COGNITO_USER_POOL_ID:', USER_POOL_ID ? '✅ Set' : '❌ Missing');
+  console.warn('  COGNITO_CLIENT_ID:', CLIENT_ID ? '✅ Set' : '❌ Missing');
+  // Don't throw - let individual functions handle missing config gracefully
 }
 
 export interface AuthResult {
@@ -55,7 +56,9 @@ export interface UserAttributes {
 export async function signIn(email: string, password: string): Promise<AuthResult> {
   // Validate CLIENT_ID at function call time (not module load time)
   if (!CLIENT_ID) {
-    throw new Error('COGNITO_CLIENT_ID is not configured. Please set it in your environment variables.');
+    const error = new Error('COGNITO_CLIENT_ID is not configured. Please set it in your environment variables.');
+    (error as any).name = 'ConfigurationError';
+    throw error;
   }
 
   const command = new InitiateAuthCommand({

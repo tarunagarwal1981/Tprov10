@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { signIn } from '@/lib/aws/cognito';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
+
+// Import signIn inside the function to avoid module-level errors
+// This prevents import-time errors from causing HTML error pages
 
 /**
  * POST /api/auth/login
@@ -69,6 +71,8 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('🔐 Calling signIn...');
+    // Import signIn dynamically to avoid module-level errors
+    const { signIn } = await import('@/lib/aws/cognito');
     const authResult = await signIn(email, password);
     console.log('✅ SignIn successful');
     
