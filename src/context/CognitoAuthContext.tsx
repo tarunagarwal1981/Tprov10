@@ -124,7 +124,7 @@ export const CognitoAuthProvider: React.FC<{ children: React.ReactNode }> = ({ c
             id: userId,
             email: email,
             name: email.split('@')[0] || 'User',
-            role: 'agent', // Default role
+            role: 'TRAVEL_AGENT', // Default role
             profile: {
               timezone: 'UTC',
               language: 'en',
