@@ -67,14 +67,20 @@ export async function POST(request: NextRequest) {
             const { getUser } = await import('@/lib/aws/cognito');
             const cognitoUser = await getUser(accessToken);
             
+            // Extract user attributes
+            const userSub = cognitoUser.attributes['sub'] || cognitoUser.username || userId || '';
+            const userName = cognitoUser.attributes['name'] || email.split('@')[0] || 'User';
+            const userRole = cognitoUser.attributes['custom:role'] || 'agent';
+            const userPhone = cognitoUser.attributes['phone_number'];
+            
             // Return a minimal profile from Cognito
             return NextResponse.json({
               profile: {
-                id: userId || cognitoUser.sub || '',
+                id: userId || userSub,
                 email: email,
-                name: cognitoUser.name || email.split('@')[0] || 'User',
-                role: cognitoUser['custom:role'] || 'agent', // Default role
-                phone: cognitoUser.phone_number,
+                name: userName,
+                role: userRole,
+                phone: userPhone,
                 profile: {},
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
