@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
             // Extract user attributes
             const userSub = cognitoUser.attributes['sub'] || cognitoUser.username || userId || '';
             const userName = cognitoUser.attributes['name'] || email.split('@')[0] || 'User';
-            const userRole = cognitoUser.attributes['custom:role'] || 'agent';
+            const userRole = cognitoUser.attributes['custom:role'] || 'TRAVEL_AGENT';
             const userPhone = cognitoUser.attributes['phone_number'];
             
             // Return a minimal profile from Cognito
