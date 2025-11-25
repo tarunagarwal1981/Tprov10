@@ -17,6 +17,17 @@ export async function POST(request: NextRequest) {
     const clientId = process.env.COGNITO_CLIENT_ID;
     const userPoolId = process.env.COGNITO_USER_POOL_ID;
     
+    // Log all environment variables for debugging (in production too, since this is critical)
+    console.log('🔍 Environment check:', {
+      hasClientId: !!clientId,
+      hasUserPoolId: !!userPoolId,
+      clientIdLength: clientId?.length || 0,
+      userPoolIdLength: userPoolId?.length || 0,
+      allCognitoKeys: Object.keys(process.env).filter(k => k.includes('COGNITO')),
+      deploymentRegion: process.env.DEPLOYMENT_REGION,
+      nodeEnv: process.env.NODE_ENV,
+    });
+    
     if (!clientId || !userPoolId) {
       const errorDetails = {
         hasClientId: !!clientId,
@@ -25,6 +36,8 @@ export async function POST(request: NextRequest) {
         userPoolIdValue: userPoolId ? 'SET' : 'MISSING',
         allEnvKeys: Object.keys(process.env).filter(k => k.includes('COGNITO')),
         deploymentRegion: process.env.DEPLOYMENT_REGION || 'NOT SET',
+        // Include all env var keys for debugging
+        allEnvVarKeys: Object.keys(process.env).sort(),
       };
       
       console.error('❌ Cognito not configured:', JSON.stringify(errorDetails, null, 2));
@@ -34,7 +47,7 @@ export async function POST(request: NextRequest) {
           error: 'Authentication service not configured',
           message: 'Cognito environment variables are missing. Please contact the administrator.',
           details: 'COGNITO_CLIENT_ID and COGNITO_USER_POOL_ID must be set in environment variables.',
-          debug: process.env.NODE_ENV === 'development' ? errorDetails : undefined,
+          debug: errorDetails, // Always include debug info to help diagnose
         },
         { 
           status: 500,
