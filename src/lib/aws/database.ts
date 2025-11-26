@@ -84,22 +84,6 @@ export async function getPool(): Promise<Pool> {
   return initializePool();
 }
 
-// Export pool getter for backward compatibility
-export const pool = new Proxy({} as Pool, {
-  get: (target, prop) => {
-    if (!pool) {
-      throw new Error('Database pool not initialized. Call getPool() first or use query() functions.');
-    }
-    return (pool as any)[prop];
-  },
-});
-
-// Handle pool errors
-pool.on('error', (err) => {
-  console.error('Unexpected error on idle database client', err);
-  process.exit(-1);
-});
-
 /**
  * Execute a database query
  * @param text - SQL query text
@@ -137,7 +121,8 @@ export async function queryOne<T extends QueryResultRow = any>(
   text: string,
   params?: any[]
 ): Promise<T | null> {
-  const result = await pool.query<T>(text, params);
+  const dbPool = await getPool();
+  const result = await dbPool.query<T>(text, params);
   return result.rows[0] || null;
 }
 
@@ -151,7 +136,8 @@ export async function queryMany<T extends QueryResultRow = any>(
   text: string,
   params?: any[]
 ): Promise<T[]> {
-  const result = await pool.query<T>(text, params);
+  const dbPool = await getPool();
+  const result = await dbPool.query<T>(text, params);
   return result.rows;
 }
 
@@ -190,7 +176,4 @@ export async function testConnection(): Promise<boolean> {
     return false;
   }
 }
-
-// Export pool for advanced usage
-export { pool as default };
 
