@@ -3,32 +3,96 @@
  * 
  * This module provides a connection pool for PostgreSQL database queries
  * replacing Supabase client calls with direct PostgreSQL queries.
+ * 
+ * Uses AWS Secrets Manager for secure password storage.
  */
 
 import { Pool, PoolConfig, QueryResult, QueryResultRow } from 'pg';
+import { getSecret } from './secrets';
 
-// Database connection configuration
-const poolConfig: PoolConfig = {
-  host: process.env.RDS_HOSTNAME || process.env.RDS_HOST,
-  port: parseInt(process.env.RDS_PORT || '5432'),
-  database: process.env.RDS_DATABASE || 'postgres',
-  user: process.env.RDS_USERNAME,
-  password: process.env.RDS_PASSWORD,
-  ssl: process.env.RDS_SSL === 'true' ? {
-    rejectUnauthorized: false, // For RDS, use proper certificate in production
-  } : undefined,
-  max: parseInt(process.env.DB_POOL_MAX || '20'), // Maximum number of clients in the pool
-  idleTimeoutMillis: parseInt(process.env.DB_POOL_IDLE_TIMEOUT || '30000'), // Close idle clients after 30 seconds
-  connectionTimeoutMillis: parseInt(process.env.DB_POOL_CONNECTION_TIMEOUT || '30000'), // Return an error after 30 seconds if connection could not be established
-};
+// Lazy-initialized connection pool
+let pool: Pool | null = null;
+let poolInitializationPromise: Promise<Pool> | null = null;
 
-// Validate required environment variables
-if (!poolConfig.host || !poolConfig.user || !poolConfig.password) {
-  console.warn('⚠️  Missing RDS database configuration. Set RDS_HOSTNAME, RDS_USERNAME, and RDS_PASSWORD');
+/**
+ * Initialize the database connection pool with secrets from Secrets Manager
+ */
+async function initializePool(): Promise<Pool> {
+  if (pool) {
+    return pool;
+  }
+
+  if (poolInitializationPromise) {
+    return poolInitializationPromise;
+  }
+
+  poolInitializationPromise = (async () => {
+    try {
+      // Fetch RDS password from Secrets Manager
+      const rdsPassword = await getSecret('travel-app/dev/secrets', 'RDS_PASSWORD').catch(() => {
+        // Fallback to environment variable for local development
+        return process.env.RDS_PASSWORD || process.env.RDS_PASSWORDNAME || '';
+      });
+
+      // Database connection configuration
+      const poolConfig: PoolConfig = {
+        host: process.env.RDS_HOSTNAME || process.env.RDS_HOST,
+        port: parseInt(process.env.RDS_PORT || '5432'),
+        database: process.env.RDS_DATABASE || process.env.RDS_DB || 'postgres',
+        user: process.env.RDS_USERNAME || process.env.RDS_USER,
+        password: rdsPassword,
+        ssl: process.env.RDS_SSL === 'true' ? {
+          rejectUnauthorized: false, // For RDS, use proper certificate in production
+        } : undefined,
+        max: parseInt(process.env.DB_POOL_MAX || '20'), // Maximum number of clients in the pool
+        idleTimeoutMillis: parseInt(process.env.DB_POOL_IDLE_TIMEOUT || '30000'), // Close idle clients after 30 seconds
+        connectionTimeoutMillis: parseInt(process.env.DB_POOL_CONNECTION_TIMEOUT || '30000'), // Return an error after 30 seconds if connection could not be established
+      };
+
+      // Validate required configuration
+      if (!poolConfig.host || !poolConfig.user || !poolConfig.password) {
+        console.warn('⚠️  Missing RDS database configuration. Set RDS_HOST, RDS_USER, and RDS_PASSWORD (or use Secrets Manager)');
+      }
+
+      // Create connection pool
+      pool = new Pool(poolConfig);
+
+      // Handle pool errors
+      pool.on('error', (err) => {
+        console.error('Unexpected error on idle database client', err);
+        // Don't exit in production - just log the error
+        if (process.env.NODE_ENV === 'development') {
+          process.exit(-1);
+        }
+      });
+
+      return pool;
+    } catch (error) {
+      console.error('Failed to initialize database pool:', error);
+      poolInitializationPromise = null;
+      throw error;
+    }
+  })();
+
+  return poolInitializationPromise;
 }
 
-// Create connection pool
-export const pool = new Pool(poolConfig);
+/**
+ * Get the database connection pool (initializes if needed)
+ */
+export async function getPool(): Promise<Pool> {
+  return initializePool();
+}
+
+// Export pool getter for backward compatibility
+export const pool = new Proxy({} as Pool, {
+  get: (target, prop) => {
+    if (!pool) {
+      throw new Error('Database pool not initialized. Call getPool() first or use query() functions.');
+    }
+    return (pool as any)[prop];
+  },
+});
 
 // Handle pool errors
 pool.on('error', (err) => {
@@ -48,7 +112,8 @@ export async function query<T extends QueryResultRow = any>(
 ): Promise<QueryResult<T>> {
   const start = Date.now();
   try {
-    const result = await pool.query<T>(text, params);
+    const dbPool = await getPool();
+    const result = await dbPool.query<T>(text, params);
     const duration = Date.now() - start;
     
     if (process.env.NODE_ENV === 'development') {
@@ -98,7 +163,8 @@ export async function queryMany<T extends QueryResultRow = any>(
 export async function transaction<T>(
   callback: (client: any) => Promise<T>
 ): Promise<T> {
-  const client = await pool.connect();
+  const dbPool = await getPool();
+  const client = await dbPool.connect();
   try {
     await client.query('BEGIN');
     const result = await callback(client);
