@@ -56,55 +56,47 @@ export async function POST(request: NextRequest) {
       console.log('✅ [SERVER] Profile fetched successfully:', profile.email);
       return NextResponse.json({ profile });
     } catch (dbError: any) {
-      // Handle database connection errors (common in local development when RDS is in private subnet)
-      if (dbError.code === 'ETIMEDOUT' || dbError.message?.includes('timeout') || dbError.message?.includes('Connection terminated')) {
-        console.warn('⚠️  [SERVER] Database connection timeout - RDS may be in private subnet');
-        console.warn('   This is expected in local development. Using Cognito user info as fallback.');
+      // Log full database error for debugging in CloudWatch
+      console.error('❌ [SERVER] Database error while loading user profile:', {
+        code: dbError?.code,
+        name: dbError?.name,
+        message: dbError?.message,
+      });
+
+      // Handle database connection errors (common if RDS network/Security Group/VPC is misconfigured)
+      if (
+        dbError.code === 'ETIMEDOUT' ||
+        dbError.message?.includes('timeout') ||
+        dbError.message?.includes('Connection terminated')
+      ) {
+        console.warn('⚠️  [SERVER] Database connection timeout / network issue');
         
-        // Fallback: Use Cognito user info if database is unavailable
-        if (accessToken && email) {
-          try {
-            const { getUser } = await import('@/lib/aws/cognito');
-            const cognitoUser = await getUser(accessToken);
-            
-            // Extract user attributes
-            const userSub = cognitoUser.attributes['sub'] || cognitoUser.username || userId || '';
-            const userName = cognitoUser.attributes['name'] || email.split('@')[0] || 'User';
-            const userRole = cognitoUser.attributes['custom:role'] || 'TRAVEL_AGENT';
-            const userPhone = cognitoUser.attributes['phone_number'];
-            
-            // Return a minimal profile from Cognito
-            return NextResponse.json({
-              profile: {
-                id: userId || userSub,
-                email: email,
-                name: userName,
-                role: userRole,
-                phone: userPhone,
-                profile: {},
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-              }
-            });
-          } catch (cognitoError) {
-            console.error('❌ [SERVER] Cognito fallback also failed:', cognitoError);
-          }
-        }
-        
-        // If no fallback available, return error but with helpful message
         return NextResponse.json(
           { 
             error: 'Database unavailable',
-            message: 'RDS database is not accessible from local development. This is expected if RDS is in a private subnet.',
-            details: 'For local development, ensure RDS is publicly accessible or use a VPN/bastion host.',
-            fallback: 'Try deploying to Amplify where VPC access is available.'
+            message: 'Failed to connect to RDS database (timeout or network issue).',
+            dbError: {
+              code: dbError.code,
+              name: dbError.name,
+              message: dbError.message,
+            }
           },
           { status: 503 } // Service Unavailable
         );
       }
       
-      // Re-throw other database errors
-      throw dbError;
+      // Other database errors – surface details to help debugging in dev
+      return NextResponse.json(
+        {
+          error: 'Database query failed',
+          dbError: {
+            code: dbError.code,
+            name: dbError.name,
+            message: dbError.message,
+          },
+        },
+        { status: 500 }
+      );
     }
 
   } catch (error) {
