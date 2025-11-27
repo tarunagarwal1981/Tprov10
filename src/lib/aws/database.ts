@@ -8,7 +8,7 @@
  */
 
 import { Pool, PoolConfig, QueryResult, QueryResultRow } from 'pg';
-import { getSecret } from './secrets';
+import { getSecret, getSecrets } from './secrets';
 
 // Lazy-initialized connection pool
 let pool: Pool | null = null;
@@ -28,19 +28,48 @@ async function initializePool(): Promise<Pool> {
 
   poolInitializationPromise = (async () => {
     try {
-      // Fetch RDS password from Secrets Manager
-      const rdsPassword = await getSecret('travel-app/dev/secrets', 'RDS_PASSWORD').catch(() => {
-        // Fallback to environment variable for local development
-        return process.env.RDS_PASSWORD || process.env.RDS_PASSWORDNAME || '';
-      });
+      // Fetch all RDS configuration from Secrets Manager (more secure)
+      // Falls back to environment variables for local development
+      const secretName = process.env.SECRETS_MANAGER_SECRET_NAME || 'travel-app/dev/secrets';
+      
+      let rdsConfig: {
+        host?: string;
+        port?: string;
+        database?: string;
+        user?: string;
+        password?: string;
+      } = {};
+
+      try {
+        // Try to fetch all RDS config from Secrets Manager at once
+        const secrets = await getSecrets(secretName);
+        rdsConfig = {
+          host: secrets.RDS_HOST || secrets.RDS_HOSTNAME,
+          port: secrets.RDS_PORT,
+          database: secrets.RDS_DATABASE || secrets.RDS_DB,
+          user: secrets.RDS_USERNAME || secrets.RDS_USER,
+          password: secrets.RDS_PASSWORD,
+        };
+        console.log('[Database] Loaded RDS config from Secrets Manager');
+      } catch (error) {
+        console.warn('[Database] Failed to load from Secrets Manager, using env vars:', error);
+        // Fallback to environment variables
+        rdsConfig = {
+          host: process.env.RDS_HOSTNAME || process.env.RDS_HOST,
+          port: process.env.RDS_PORT,
+          database: process.env.RDS_DATABASE || process.env.RDS_DB,
+          user: process.env.RDS_USERNAME || process.env.RDS_USER,
+          password: process.env.RDS_PASSWORD || process.env.RDS_PASSWORDNAME,
+        };
+      }
 
       // Database connection configuration
       const poolConfig: PoolConfig = {
-        host: process.env.RDS_HOSTNAME || process.env.RDS_HOST,
-        port: parseInt(process.env.RDS_PORT || '5432'),
-        database: process.env.RDS_DATABASE || process.env.RDS_DB || 'postgres',
-        user: process.env.RDS_USERNAME || process.env.RDS_USER,
-        password: rdsPassword,
+        host: rdsConfig.host,
+        port: parseInt(rdsConfig.port || '5432'),
+        database: rdsConfig.database || 'postgres',
+        user: rdsConfig.user,
+        password: rdsConfig.password,
         ssl: process.env.RDS_SSL === 'true' ? {
           rejectUnauthorized: false, // For RDS, use proper certificate in production
         } : undefined,
