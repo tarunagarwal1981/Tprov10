@@ -32,7 +32,8 @@ export async function POST(request: NextRequest) {
     console.log('📡 [SERVER] Fetching user profile for:', userId || email);
     
     try {
-      const { queryOne } = await import('@/lib/aws/database');
+      // Use Lambda database service for reliable VPC access
+      const { queryOne } = await import('@/lib/aws/lambda-database');
       
       const profile = await queryOne<{
         id: string;
