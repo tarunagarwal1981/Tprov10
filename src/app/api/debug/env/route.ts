@@ -24,11 +24,11 @@ export async function GET(request: NextRequest) {
     // List all env vars that contain COGNITO
     allCognitoVars: Object.keys(process.env)
       .filter(k => k.includes('COGNITO'))
-      .map(k => ({ key: k, set: !!process.env[k] })),
+      .map(k => ({ key: k, set: !!process.env[k], value: process.env[k] ? `${process.env[k].substring(0, 20)}...` : 'NOT SET' })),
     // List all env vars that contain RDS
     allRdsVars: Object.keys(process.env)
       .filter(k => k.includes('RDS'))
-      .map(k => ({ key: k, set: !!process.env[k] })),
+      .map(k => ({ key: k, set: !!process.env[k], value: process.env[k] ? `${process.env[k].substring(0, 20)}...` : 'NOT SET' })),
   };
 
   return NextResponse.json({
