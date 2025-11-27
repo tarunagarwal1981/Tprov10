@@ -9,9 +9,12 @@ const nextConfig = {
     // Non-sensitive configuration
     DEPLOYMENT_REGION: process.env.DEPLOYMENT_REGION || process.env.REGION || 'us-east-1',
     RDS_HOST: process.env.RDS_HOST,
+    RDS_HOSTNAME: process.env.RDS_HOSTNAME, // Amplify uses RDS_HOSTNAME
     RDS_PORT: process.env.RDS_PORT,
     RDS_USER: process.env.RDS_USER,
+    RDS_USERNAME: process.env.RDS_USERNAME, // Support both variants
     RDS_DB: process.env.RDS_DB,
+    RDS_DATABASE: process.env.RDS_DATABASE, // Support both variants
     S3_BUCKET_NAME: process.env.S3_BUCKET_NAME,
     // Cognito IDs are not secrets (they're public identifiers)
     COGNITO_CLIENT_ID: process.env.COGNITO_CLIENT_ID,
