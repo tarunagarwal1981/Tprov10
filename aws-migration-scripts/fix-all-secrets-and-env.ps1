@@ -18,6 +18,8 @@ $CORRECT_RDS_USER = "postgres"
 $CORRECT_DEPLOYMENT_REGION = "us-east-1"
 $CORRECT_COGNITO_DOMAIN = "travel-app-auth-2285.auth.us-east-1.amazoncognito.com"
 
+# Note: RDS_PASSWORD should already be in the secret - we'll preserve it
+
 Write-Host "=== Comprehensive Secrets & Environment Variables Fix ===" -ForegroundColor Cyan
 Write-Host ""
 
@@ -92,8 +94,9 @@ $amplifyNeedsUpdate = $false
 $rdsHostInSecret = $secretData.RDS_HOST -or $secretData.RDS_HOSTNAME
 $rdsHostInAmplify = $amplifyEnvVars.RDS_HOST -or $amplifyEnvVars.RDS_HOSTNAME
 
-if ($rdsHostInSecret -ne $CORRECT_RDS_HOST) {
-    $issues += "[ERROR] Secret: RDS_HOST is '$rdsHostInSecret' (should be '$CORRECT_RDS_HOST')"
+# Ensure all RDS config is in Secrets Manager (for security)
+if ($secretData.RDS_HOST -ne $CORRECT_RDS_HOST -and $secretData.RDS_HOSTNAME -ne $CORRECT_RDS_HOST) {
+    $issues += "[ERROR] Secret: RDS_HOST/RDS_HOSTNAME missing or wrong (should be '$CORRECT_RDS_HOST')"
     $secretData.RDS_HOST = $CORRECT_RDS_HOST
     $secretData.RDS_HOSTNAME = $CORRECT_RDS_HOST
     $secretNeedsUpdate = $true
