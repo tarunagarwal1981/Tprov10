@@ -25,12 +25,19 @@ async function invokeLambda(action: string, query?: string, params?: any[]): Pro
   try {
     const { LambdaClient, InvokeCommand } = await import('@aws-sdk/client-lambda');
     
-    // In Amplify/Lambda environments, credentials are automatically provided by the execution role
-    // The SDK will use the default credential provider chain which includes:
-    // 1. Environment variables (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY)
-    // 2. IAM role credentials (for Lambda/Amplify)
-    // 3. Instance profile credentials
-    // Don't specify credentials explicitly - let the SDK use the default chain
+    // Log environment info for debugging
+    console.log(`[Lambda Client] Environment check:`, {
+      AWS_EXECUTION_ENV: process.env.AWS_EXECUTION_ENV,
+      AWS_LAMBDA_FUNCTION_NAME: process.env.AWS_LAMBDA_FUNCTION_NAME,
+      AWS_REGION: process.env.AWS_REGION,
+      AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID ? 'SET' : 'NOT SET',
+      AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY ? 'SET' : 'NOT SET',
+      AWS_SESSION_TOKEN: process.env.AWS_SESSION_TOKEN ? 'SET' : 'NOT SET',
+    });
+    
+    // In Amplify, API routes run in Lambda environment
+    // The SDK should automatically use the execution role's credentials
+    // Don't specify credentials - let the SDK use the default provider chain
     const client = new LambdaClient({ 
       region: AWS_REGION,
     });
