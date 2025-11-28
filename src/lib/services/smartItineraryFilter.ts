@@ -6,7 +6,8 @@
  * MIGRATED: Now uses PostgreSQL directly via AWS RDS
  */
 
-import { query, queryMany } from '@/lib/aws/database';
+// Use Lambda database service for reliable VPC access
+import { query, queryMany } from '@/lib/aws/lambda-database';
 
 export type TimeSlot = 'morning' | 'afternoon' | 'evening';
 

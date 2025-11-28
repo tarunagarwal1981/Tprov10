@@ -6,7 +6,8 @@
  * MIGRATED: Now uses PostgreSQL directly via AWS RDS
  */
 
-import { query, queryOne } from '@/lib/aws/database';
+// Use Lambda database service for reliable VPC access
+import { query, queryOne } from '@/lib/aws/lambda-database';
 
 export interface Destination {
   city: string;

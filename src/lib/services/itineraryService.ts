@@ -5,7 +5,8 @@
  * MIGRATED: Now uses PostgreSQL directly via AWS RDS
  */
 
-import { query, queryOne, queryMany } from '@/lib/aws/database';
+// Use Lambda database service for reliable VPC access
+import { query, queryOne, queryMany } from '@/lib/aws/lambda-database';
 
 export interface Itinerary {
   id: string;
