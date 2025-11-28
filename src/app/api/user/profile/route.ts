@@ -30,10 +30,13 @@ export async function POST(request: NextRequest) {
 
     // Fetch user profile from RDS database (server-side)
     console.log('📡 [SERVER] Fetching user profile for:', userId || email);
+    console.log('📡 [SERVER] DATABASE_LAMBDA_NAME:', process.env.DATABASE_LAMBDA_NAME || 'NOT SET');
     
     try {
       // Use Lambda database service for reliable VPC access
+      console.log('📡 [SERVER] Importing Lambda database client...');
       const { queryOne } = await import('@/lib/aws/lambda-database');
+      console.log('📡 [SERVER] Lambda database client imported, calling queryOne...');
       
       const profile = await queryOne<{
         id: string;
@@ -62,6 +65,7 @@ export async function POST(request: NextRequest) {
         code: dbError?.code,
         name: dbError?.name,
         message: dbError?.message,
+        stack: dbError?.stack,
       });
 
       // Handle database connection errors (common if RDS network/Security Group/VPC is misconfigured)
