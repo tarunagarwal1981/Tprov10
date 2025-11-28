@@ -26,7 +26,28 @@ async function getPool() {
         if (!secretResponse.SecretString) {
             throw new Error('Secret has no SecretString');
         }
-        const secrets = JSON.parse(secretResponse.SecretString);
+        // Remove BOM (Byte Order Mark) if present
+        // The BOM can appear as:
+        // 1. Unicode character U+FEFF
+        // 2. UTF-8 bytes EF BB BF interpreted as characters (ï»¿)
+        // 3. Literal string "ï»¿"
+        let secretString = secretResponse.SecretString;
+        // Remove Unicode BOM character (U+FEFF)
+        if (secretString.charCodeAt(0) === 0xFEFF) {
+            secretString = secretString.substring(1);
+        }
+        // Remove literal BOM characters "ï»¿" (UTF-8 BOM bytes interpreted as text)
+        if (secretString.startsWith('ï»¿')) {
+            secretString = secretString.substring(3);
+        }
+        // Remove any remaining BOM characters using regex
+        secretString = secretString.replace(/^[\uFEFF\u200B]+/, '').trim();
+        // Final check: if still starts with non-JSON characters, find first {
+        const firstBrace = secretString.indexOf('{');
+        if (firstBrace > 0) {
+            secretString = secretString.substring(firstBrace);
+        }
+        const secrets = JSON.parse(secretString);
         pool = new pg_1.Pool({
             host: secrets.RDS_HOST || secrets.RDS_HOSTNAME,
             port: parseInt(secrets.RDS_PORT || '5432'),
