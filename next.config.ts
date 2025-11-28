@@ -28,6 +28,8 @@ const nextConfig = {
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     // Secrets Manager secret name (not the secret itself)
     SECRETS_MANAGER_SECRET_NAME: process.env.SECRETS_MANAGER_SECRET_NAME || 'travel-app/dev/secrets',
+    // Database Lambda Name (for invoking database Lambda)
+    DATABASE_LAMBDA_NAME: process.env.DATABASE_LAMBDA_NAME || 'travel-app-database-service',
   },
   
   // Enable experimental features

@@ -12,8 +12,12 @@ const AWS_REGION = process.env.DEPLOYMENT_REGION || process.env.REGION || 'us-ea
  * Invoke the database Lambda function
  */
 async function invokeLambda(action: string, query?: string, params?: any[]): Promise<any> {
-  // In Amplify/Lambda environment, use AWS SDK
-  if (typeof window === 'undefined' && process.env.AWS_EXECUTION_ENV) {
+  // In server-side environment (Amplify/Lambda), use AWS SDK
+  // Check for AWS execution environment OR if we're in a server context (not browser)
+  const isServerSide = typeof window === 'undefined';
+  const isAWSEnv = process.env.AWS_EXECUTION_ENV || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.AMPLIFY_ENV;
+  
+  if (isServerSide && (isAWSEnv || LAMBDA_FUNCTION_NAME)) {
     const { LambdaClient, InvokeCommand } = await import('@aws-sdk/client-lambda');
     
     const client = new LambdaClient({ region: AWS_REGION });
