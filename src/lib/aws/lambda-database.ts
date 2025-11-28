@@ -15,18 +15,31 @@ async function invokeLambda(action: string, query?: string, params?: any[]): Pro
   // In server-side environment (Amplify/Lambda), use AWS SDK
   // Check for AWS execution environment OR if we're in a server context (not browser)
   const isServerSide = typeof window === 'undefined';
-  const isAWSEnv = process.env.AWS_EXECUTION_ENV || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.AMPLIFY_ENV;
   
-  if (isServerSide && (isAWSEnv || LAMBDA_FUNCTION_NAME)) {
+  // In Amplify, we should always try to use Lambda if we're server-side
+  // Amplify API routes run in Lambda, so we can use the SDK
+  if (!isServerSide) {
+    throw new Error('Lambda client can only be used server-side');
+  }
+  
+  try {
     const { LambdaClient, InvokeCommand } = await import('@aws-sdk/client-lambda');
     
-    const client = new LambdaClient({ region: AWS_REGION });
+    // In Amplify/Lambda environments, the SDK automatically uses the execution role's credentials
+    // Don't specify credentials explicitly - let the SDK use the default provider chain
+    const client = new LambdaClient({ 
+      region: AWS_REGION,
+      // credentials will be automatically provided by the execution role
+    });
     
     const payload = {
       action,
       query,
       params,
     };
+    
+    console.log(`[Lambda Client] Invoking ${LAMBDA_FUNCTION_NAME} with action: ${action}`);
+    console.log(`[Lambda Client] Region: ${AWS_REGION}`);
     
     const command = new InvokeCommand({
       FunctionName: LAMBDA_FUNCTION_NAME,
@@ -43,16 +56,28 @@ async function invokeLambda(action: string, query?: string, params?: any[]): Pro
     
     if (result.statusCode !== 200) {
       const errorBody = typeof result.body === 'string' ? JSON.parse(result.body) : result.body;
+      console.error(`[Lambda Client] Lambda returned error:`, errorBody);
       throw new Error(errorBody.message || errorBody.error || 'Lambda invocation failed');
     }
     
     const body = typeof result.body === 'string' ? JSON.parse(result.body) : result.body;
+    console.log(`[Lambda Client] Lambda invocation successful for action: ${action}`);
     return body;
+  } catch (error: any) {
+    console.error(`[Lambda Client] Error invoking Lambda:`, error);
+    
+    // If it's a permission error, provide helpful message
+    if (error.name === 'AccessDeniedException' || error.message?.includes('AccessDenied')) {
+      throw new Error(`Lambda invoke permission denied. Please grant Amplify service role permission to invoke ${LAMBDA_FUNCTION_NAME}`);
+    }
+    
+    // If Lambda not found
+    if (error.name === 'ResourceNotFoundException') {
+      throw new Error(`Lambda function ${LAMBDA_FUNCTION_NAME} not found. Please check DATABASE_LAMBDA_NAME environment variable.`);
+    }
+    
+    throw error;
   }
-  
-  // For local development, fall back to direct database connection
-  // (This won't work if RDS is in private subnet, but allows local testing)
-  throw new Error('Database Lambda not available. Use direct connection for local development.');
 }
 
 /**
