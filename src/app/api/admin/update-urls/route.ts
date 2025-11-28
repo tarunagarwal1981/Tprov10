@@ -10,7 +10,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { query } from '@/lib/aws/database';
+// Use Lambda database service for reliable VPC access
+import { query } from '@/lib/aws/lambda-database';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';

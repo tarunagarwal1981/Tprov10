@@ -6,7 +6,8 @@
  */
 
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/aws/database';
+// Use Lambda database service for reliable VPC access
+import { query } from '@/lib/aws/lambda-database';
 
 export async function GET() {
   try {

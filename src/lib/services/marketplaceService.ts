@@ -7,7 +7,8 @@
  * NOTE: This service should be called from API routes for client-side access
  */
 
-import { query, queryOne, queryMany } from '@/lib/aws/database';
+// Use Lambda database service for reliable VPC access
+import { query, queryOne, queryMany } from '@/lib/aws/lambda-database';
 import {
   MarketplaceLead,
   LeadPurchase,
