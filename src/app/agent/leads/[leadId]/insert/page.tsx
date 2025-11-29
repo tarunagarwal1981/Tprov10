@@ -83,13 +83,10 @@ export default function InsertItineraryPage() {
   const fetchPackages = async (cities: string[]) => {
     setLoading(true);
     try {
-      // Fetch operators info
-      const { data: operatorsData } = await supabase
-        .from('users' as any)
-        .select('id, name, email')
-        .in('role', ['TOUR_OPERATOR', 'ADMIN', 'SUPER_ADMIN']);
-
-      if (operatorsData) {
+      // Fetch operators info from AWS API
+      const operatorsResponse = await fetch('/api/operators');
+      if (operatorsResponse.ok) {
+        const { operators: operatorsData } = await operatorsResponse.json();
         const operatorsMap: Record<string, OperatorInfo> = {};
         operatorsData.forEach((op: any) => {
           operatorsMap[op.id] = {
@@ -101,142 +98,25 @@ export default function InsertItineraryPage() {
         setOperators(operatorsMap);
       }
 
-      // Fetch Multi-City Packages matching destinations
-      const multiCityQuery = supabase
-        .from('multi_city_packages' as any)
-        .select(`
-          id,
-          title,
-          destination_region,
-          operator_id,
-          base_price,
-          adult_price,
-          currency,
-          total_nights,
-          total_cities,
-          status,
-          multi_city_package_images!inner(public_url, is_cover)
-        `)
-        .eq('status', 'published');
-
-      // Filter by cities - check if any city in package matches query cities
-      // We'll need to join with multi_city_package_cities
-      const { data: multiCityData } = await supabase
-        .from('multi_city_packages' as any)
-        .select(`
-          id,
-          title,
-          destination_region,
-          operator_id,
-          base_price,
-          per_person_price,
-          fixed_price,
-          pricing_mode,
-          currency,
-          total_nights,
-          total_cities,
-          status
-        `)
-        .eq('status', 'published')
-        .limit(50);
-
-      // Fetch cities for each package and filter
-      if (multiCityData) {
-        const packageIds = multiCityData.map((p: any) => p.id);
-        const { data: citiesData } = await supabase
-          .from('multi_city_package_cities' as any)
-          .select('package_id, name, nights')
-          .in('package_id', packageIds);
-
-        // Filter packages that have at least one matching city
-        const matchingPackages = multiCityData.filter((pkg: any) => {
-          const pkgCities = citiesData?.filter((c: any) => c.package_id === pkg.id).map((c: any) => c.name.toLowerCase()) || [];
-          return cities.some(queryCity => 
-            pkgCities.some((pkgCity: string) => 
-              pkgCity.includes(queryCity.toLowerCase()) || queryCity.toLowerCase().includes(pkgCity)
-            )
-          );
-        });
-
-        // Fetch images for matching packages
-        const matchingPackageIds = matchingPackages.map((p: any) => p.id);
-        const { data: imagesData } = await supabase
-          .from('multi_city_package_images' as any)
-          .select('package_id, public_url, is_cover')
-          .in('package_id', matchingPackageIds)
-          .eq('is_cover', true);
-
-        const packagesWithImages = matchingPackages.map((pkg: any) => {
-          const image = imagesData?.find((img: any) => img.package_id === pkg.id) as { public_url?: string } | undefined;
-          return {
-            ...pkg,
-            featured_image_url: image?.public_url || undefined,
-            cities: citiesData?.filter((c: any) => c.package_id === pkg.id).map((c: any) => ({
-              name: c.name,
-              nights: c.nights || 1,
-            })),
-          };
-        });
-
-        setMultiCityPackages(packagesWithImages as MultiCityPackage[]);
+      // Fetch Multi-City Packages from AWS API
+      const citiesParam = cities.join(',');
+      const multiCityResponse = await fetch(`/api/packages/multi-city?cities=${encodeURIComponent(citiesParam)}`);
+      if (multiCityResponse.ok) {
+        const { packages: multiCityPackages } = await multiCityResponse.json();
+        setMultiCityPackages(multiCityPackages as MultiCityPackage[]);
+      } else {
+        console.error('Failed to fetch multi-city packages:', await multiCityResponse.text());
+        setMultiCityPackages([]);
       }
 
-      // Fetch Multi-City Hotel Packages
-      const { data: multiCityHotelData } = await supabase
-        .from('multi_city_hotel_packages' as any)
-        .select(`
-          id,
-          title,
-          destination_region,
-          operator_id,
-          base_price,
-          adult_price,
-          currency,
-          total_nights,
-          total_cities,
-          status
-        `)
-        .eq('status', 'published')
-        .limit(50);
-
-      if (multiCityHotelData) {
-        const hotelPackageIds = multiCityHotelData.map((p: any) => p.id);
-        const { data: hotelCitiesData } = await supabase
-          .from('multi_city_hotel_package_cities' as any)
-          .select('package_id, name, nights')
-          .in('package_id', hotelPackageIds);
-
-        // Filter packages that have at least one matching city
-        const matchingHotelPackages = multiCityHotelData.filter((pkg: any) => {
-          const pkgCities = hotelCitiesData?.filter((c: any) => c.package_id === pkg.id).map((c: any) => c.name.toLowerCase()) || [];
-          return cities.some(queryCity => 
-            pkgCities.some((pkgCity: string) => 
-              pkgCity.includes(queryCity.toLowerCase()) || queryCity.toLowerCase().includes(pkgCity)
-            )
-          );
-        });
-
-        // Fetch images
-        const matchingHotelPackageIds = matchingHotelPackages.map((p: any) => p.id);
-        const { data: hotelImagesData } = await supabase
-          .from('multi_city_hotel_package_images' as any)
-          .select('package_id, public_url, is_cover')
-          .in('package_id', matchingHotelPackageIds)
-          .eq('is_cover', true);
-
-        const hotelPackagesWithImages = matchingHotelPackages.map((pkg: any) => {
-          const image = hotelImagesData?.find((img: any) => img.package_id === pkg.id) as { public_url?: string } | undefined;
-          return {
-            ...pkg,
-            featured_image_url: image?.public_url || undefined,
-            cities: hotelCitiesData?.filter((c: any) => c.package_id === pkg.id).map((c: any) => ({
-              name: c.name,
-              nights: c.nights || 1,
-            })),
-          };
-        });
-
-        setMultiCityHotelPackages(hotelPackagesWithImages as MultiCityPackage[]);
+      // Fetch Multi-City Hotel Packages from AWS API
+      const multiCityHotelResponse = await fetch(`/api/packages/multi-city-hotel?cities=${encodeURIComponent(citiesParam)}`);
+      if (multiCityHotelResponse.ok) {
+        const { packages: multiCityHotelPackages } = await multiCityHotelResponse.json();
+        setMultiCityHotelPackages(multiCityHotelPackages as MultiCityPackage[]);
+      } else {
+        console.error('Failed to fetch multi-city hotel packages:', await multiCityHotelResponse.text());
+        setMultiCityHotelPackages([]);
       }
     } catch (err) {
       console.error('Error fetching packages:', err);
@@ -316,56 +196,39 @@ export default function InsertItineraryPage() {
 
       // For multi-city packages, create itinerary_item immediately and navigate to configure page
       if (packageType === 'multi_city' || packageType === 'multi_city_hotel') {
-        // Fetch package details to get operator_id and base price
-        const packageTable = packageType === 'multi_city' 
-          ? 'multi_city_packages' 
-          : 'multi_city_hotel_packages';
+        // Fetch package details from AWS API
+        const packageResponse = await fetch(`/api/packages/${packageId}?type=${packageType}`);
         
-        const { data: pkgData, error: pkgError } = await supabase
-          .from(packageTable as any)
-          .select('id, title, operator_id, base_price, currency')
-          .eq('id', packageId)
-          .single();
-
-        if (pkgError) {
-          console.error('Error fetching package:', pkgError);
-          toast.error('Failed to load package details');
+        if (!packageResponse.ok) {
+          const error = await packageResponse.json();
+          toast.error(error.error || 'Failed to load package details');
           return;
         }
 
-        // Fetch package image
-        const imageTable = packageType === 'multi_city'
-          ? 'multi_city_package_images'
-          : 'multi_city_hotel_package_images';
-        const { data: imageData } = await supabase
-          .from(imageTable as any)
-          .select('public_url')
-          .eq('package_id', packageId)
-          .eq('is_cover', true)
-          .limit(1)
-          .maybeSingle();
+        const { package: pkgData } = await packageResponse.json();
 
         // Get itinerary info for default pricing
-        const { data: itineraryInfo } = await supabase
-          .from('itineraries' as any)
-          .select('adults_count, children_count, infants_count')
-          .eq('id', itineraryId)
-          .single();
+        const itineraryResponse = await fetch(`/api/itineraries/${itineraryId}?agentId=${user.id}`);
+        let itineraryInfo = null;
+        if (itineraryResponse.ok) {
+          const { itinerary } = await itineraryResponse.json();
+          itineraryInfo = itinerary;
+        }
 
         // Calculate default price (use base_price or 0)
-        const defaultPrice = (pkgData as any).base_price || 0;
+        const defaultPrice = pkgData.base_price || 0;
 
-        // Create itinerary_item with default configuration
-        const { data: newItem, error: itemError } = await supabase
-          .from('itinerary_items' as any)
-          .insert({
-            itinerary_id: itineraryId,
-            day_id: null, // Unassigned initially
-            package_type: packageType,
-            package_id: packageId,
-            operator_id: (pkgData as any).operator_id,
-            package_title: (pkgData as any).title,
-            package_image_url: (imageData as any)?.public_url || null,
+        // Create itinerary_item with default configuration via API
+        const createItemResponse = await fetch(`/api/itineraries/${itineraryId}/items/create`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            dayId: null, // Unassigned initially
+            packageType: packageType,
+            packageId: packageId,
+            operatorId: pkgData.operator_id,
+            packageTitle: pkgData.title,
+            packageImageUrl: pkgData.image_url || null,
             configuration: {
               pricingType: 'SIC',
               selectedPricingRowId: null,
@@ -375,22 +238,24 @@ export default function InsertItineraryPage() {
               activities: [],
               transfers: [],
             },
-            unit_price: defaultPrice,
+            unitPrice: defaultPrice,
             quantity: 1,
-            total_price: defaultPrice,
-            display_order: 0,
-          })
-          .select('id')
-          .single();
+            displayOrder: 0,
+            notes: null,
+          }),
+        });
 
-        if (itemError) {
-          console.error('Error creating itinerary item:', itemError);
-          toast.error('Failed to create itinerary item');
+        if (!createItemResponse.ok) {
+          const error = await createItemResponse.json();
+          console.error('Error creating itinerary item:', error);
+          toast.error(error.error || 'Failed to create itinerary item');
           return;
         }
 
+        const { item: newItem } = await createItemResponse.json();
+
         // Navigate directly to configure page
-        router.push(`/agent/itineraries/${itineraryId}/configure/${(newItem as any).id}`);
+        router.push(`/agent/itineraries/${itineraryId}/configure/${newItem.id}`);
       } else {
         // For other packages, navigate to builder (keep existing flow)
         router.push(`/agent/itineraries/${itineraryId}/builder?packageId=${packageId}&packageType=${packageType}`);

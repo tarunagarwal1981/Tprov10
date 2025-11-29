@@ -97,15 +97,16 @@ export async function POST(request: NextRequest) {
       ]
     );
 
-    if (!insertResult.rows || insertResult.rows.length === 0) {
+    if (!insertResult.rows || insertResult.rows.length === 0 || !insertResult.rows[0]) {
       return NextResponse.json(
         { error: 'Failed to create lead' },
         { status: 500 }
       );
     }
 
+    const createdLead = insertResult.rows[0];
     return NextResponse.json({ 
-      leadId: insertResult.rows[0].id,
+      leadId: createdLead.id,
       created: true 
     });
   } catch (error) {
