@@ -246,7 +246,7 @@ export class MarketplaceService {
           ) as lead
         FROM lead_purchases lp
         JOIN lead_marketplace lm ON lp.lead_id = lm.id
-        WHERE lp.agent_id = $1
+        WHERE lp.agent_id = $1::uuid
         ORDER BY lp.purchased_at DESC`,
         [agentId]
       );
@@ -261,6 +261,19 @@ export class MarketplaceService {
       });
     } catch (error) {
       console.error('[MarketplaceService] Error in getAgentPurchasedLeads:', error);
+
+      // If the lead_purchases table doesn't exist (e.g. RDS schema not migrated yet),
+      // fail gracefully by returning an empty list instead of a 500 error.
+      const message =
+        error instanceof Error ? error.message : typeof error === 'string' ? error : '';
+
+      if (message.includes('relation "lead_purchases" does not exist')) {
+        console.warn(
+          '[MarketplaceService] lead_purchases table missing in RDS – returning empty purchases list.'
+        );
+        return [];
+      }
+
       throw error;
     }
   }
@@ -274,7 +287,7 @@ export class MarketplaceService {
   static async hasAgentPurchased(leadId: string, agentId: string): Promise<boolean> {
     try {
       const result = await queryOne<{ id: string }>(
-        'SELECT id FROM lead_purchases WHERE lead_id = $1 AND agent_id = $2 LIMIT 1',
+        'SELECT id FROM lead_purchases WHERE lead_id = $1::uuid AND agent_id = $2::uuid LIMIT 1',
         [leadId, agentId]
       );
 
@@ -310,23 +323,23 @@ export class MarketplaceService {
         ),
         // Agent's total purchases
         query<{ count: string }>(
-          'SELECT COUNT(*) as count FROM lead_purchases WHERE agent_id = $1',
+          'SELECT COUNT(*) as count FROM lead_purchases WHERE agent_id = $1::uuid',
           [agentId]
         ),
         // This month's purchases
         (async () => {
-          const startOfMonth = new Date();
-          startOfMonth.setDate(1);
-          startOfMonth.setHours(0, 0, 0, 0);
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
           return query<{ count: string }>(
             `SELECT COUNT(*) as count FROM lead_purchases 
-             WHERE agent_id = $1 AND purchased_at >= $2`,
+             WHERE agent_id = $1::uuid AND purchased_at >= $2`,
             [agentId, startOfMonth.toISOString()]
           );
         })(),
         // Total spent
         query<{ purchase_price: number }>(
-          'SELECT purchase_price FROM lead_purchases WHERE agent_id = $1',
+          'SELECT purchase_price FROM lead_purchases WHERE agent_id = $1::uuid',
           [agentId]
         ),
       ]);
