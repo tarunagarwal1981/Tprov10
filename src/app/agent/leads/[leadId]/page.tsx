@@ -28,7 +28,7 @@ import { queryService, type ItineraryQuery } from '@/lib/services/queryService';
 import { itineraryService, type Itinerary } from '@/lib/services/itineraryService';
 import { MarketplaceService } from '@/lib/services/marketplaceService';
 import { QueryModal } from '@/components/agent/QueryModal';
-import { createClient } from '@/lib/supabase/client';
+// Removed Supabase import - now using AWS API routes
 
 interface LeadDetails {
   id: string;
@@ -47,7 +47,7 @@ export default function LeadDetailPage() {
   const router = useRouter();
   const { user } = useAuth();
   const toast = useToast();
-  const supabase = createClient();
+  // Removed Supabase client - now using AWS API routes
 
   const leadId = params.leadId as string;
 
@@ -80,84 +80,23 @@ export default function LeadDetailPage() {
   }, [leadId, user?.id]);
 
   const fetchLeadData = async () => {
+    if (!user?.id) return;
+    
     setLoading(true);
     try {
-      // Fetch lead details
-      const { data: purchaseData } = await supabase
-        .from('lead_purchases' as any)
-        .select('lead_id')
-        .eq('lead_id', leadId)
-        .eq('agent_id', user?.id)
-        .maybeSingle();
-
-      let leadData: LeadDetails | null = null;
-
-      if (purchaseData) {
-        // Fetch from marketplace
-        const { data: marketplaceLead } = await supabase
-          .from('lead_marketplace' as any)
-          .select('id, destination, customer_name, customer_email, customer_phone, budget_min, budget_max, duration_days, travelers_count')
-          .eq('id', leadId)
-          .single();
-
-        if (marketplaceLead) {
-          const lead = marketplaceLead as unknown as {
-            id: string;
-            destination: string;
-            customer_name?: string | null;
-            customer_email?: string | null;
-            customer_phone?: string | null;
-            budget_min?: number | null;
-            budget_max?: number | null;
-            duration_days?: number | null;
-            travelers_count?: number | null;
-          };
-          leadData = {
-            id: lead.id,
-            destination: lead.destination,
-            customerName: lead.customer_name || undefined,
-            customerEmail: lead.customer_email || undefined,
-            customerPhone: lead.customer_phone || undefined,
-            budgetMin: lead.budget_min || undefined,
-            budgetMax: lead.budget_max || undefined,
-            durationDays: lead.duration_days || undefined,
-            travelersCount: lead.travelers_count || undefined,
-          };
+      // Fetch lead details from AWS API route
+      const response = await fetch(`/api/leads/${leadId}?agentId=${user.id}`);
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          toast.error('Lead not found');
+          router.push('/agent/leads');
+          return;
         }
-      } else {
-        // Fetch from leads table
-        const { data: regularLead } = await supabase
-          .from('leads' as any)
-          .select('id, destination, customer_name, customer_email, customer_phone, budget_min, budget_max, duration_days, travelers_count')
-          .eq('id', leadId)
-          .eq('agent_id', user?.id)
-          .maybeSingle();
-
-        if (regularLead) {
-          const lead = regularLead as unknown as {
-            id: string;
-            destination: string;
-            customer_name?: string | null;
-            customer_email?: string | null;
-            customer_phone?: string | null;
-            budget_min?: number | null;
-            budget_max?: number | null;
-            duration_days?: number | null;
-            travelers_count?: number | null;
-          };
-          leadData = {
-            id: lead.id,
-            destination: lead.destination,
-            customerName: lead.customer_name || undefined,
-            customerEmail: lead.customer_email || undefined,
-            customerPhone: lead.customer_phone || undefined,
-            budgetMin: lead.budget_min || undefined,
-            budgetMax: lead.budget_max || undefined,
-            durationDays: lead.duration_days || undefined,
-            travelersCount: lead.travelers_count || undefined,
-          };
-        }
+        throw new Error('Failed to fetch lead details');
       }
+
+      const { lead: leadData } = await response.json();
 
       if (!leadData) {
         toast.error('Lead not found');

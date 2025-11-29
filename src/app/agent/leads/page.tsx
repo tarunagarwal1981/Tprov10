@@ -451,7 +451,12 @@ export default function MyLeadsPage() {
                   </div>
                   <div className="text-right">
                     <p className="text-2xl font-bold text-gray-900">
-                      ${purchases.reduce((sum, p) => sum + p.purchasePrice, 0).toLocaleString()}
+                      ${purchases.reduce((sum, p) => {
+                        const price = typeof p.purchasePrice === 'number' 
+                          ? p.purchasePrice 
+                          : parseFloat(String(p.purchasePrice)) || 0;
+                        return sum + price;
+                      }, 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                     <p className="text-sm text-gray-600 mt-1">Total Spent</p>
                   </div>
