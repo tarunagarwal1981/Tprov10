@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/context/CognitoAuthContext';
 import { useToast } from '@/hooks/useToast';
-import { createClient } from '@/lib/supabase/client';
+// Removed Supabase import - now using AWS API routes
 // queryService now accessed via API routes
 
 interface LeadDetails {
@@ -28,7 +28,7 @@ export default function CreateItineraryPage() {
   const router = useRouter();
   const { user } = useAuth();
   const toast = useToast();
-  const supabase = createClient();
+  // Removed Supabase client - now using AWS API routes
 
   const leadId = params.leadId as string;
 
@@ -71,70 +71,31 @@ export default function CreateItineraryPage() {
 
         setQuery(queryData);
 
-        // Fetch lead details
-        // First check if this is a purchased marketplace lead
-        const { data: purchaseData, error: purchaseError } = await supabase
-          .from('lead_purchases' as any)
-          .select('lead_id')
-          .eq('lead_id', leadId)
-          .eq('agent_id', user.id)
-          .maybeSingle();
-
-        if (purchaseError && purchaseError.code !== 'PGRST116') {
-          throw purchaseError;
+        // Fetch lead details from AWS API route
+        const leadResponse = await fetch(`/api/leads/${leadId}?agentId=${user.id}`);
+        
+        if (!leadResponse.ok) {
+          if (leadResponse.status === 404) {
+            throw new Error('Lead not found or you do not have access to it');
+          }
+          throw new Error('Failed to fetch lead details');
         }
 
-        let leadData: LeadDetails | null = null;
+        const { lead: leadDataRaw } = await leadResponse.json();
 
-        // If it's a purchased marketplace lead, fetch from lead_marketplace
-        if (purchaseData) {
-          const { data: marketplaceLeadRaw, error: marketplaceError } = await supabase
-            .from('lead_marketplace' as any)
-            .select('id, destination, budget_min, budget_max, duration_days, travelers_count')
-            .eq('id', leadId)
-            .single();
-
-          if (marketplaceError) throw marketplaceError;
-          const marketplaceLead = marketplaceLeadRaw as unknown as {
-            id: string;
-            destination: string;
-            budget_min?: number | null;
-            budget_max?: number | null;
-            duration_days?: number | null;
-            travelers_count?: number | null;
-          } | null;
-
-          if (marketplaceLead) {
-            leadData = {
-              id: marketplaceLead.id,
-              destination: marketplaceLead.destination,
-              budget_min: marketplaceLead.budget_min ?? undefined,
-              budget_max: marketplaceLead.budget_max ?? undefined,
-              duration_days: marketplaceLead.duration_days ?? undefined,
-              travelers_count: marketplaceLead.travelers_count ?? undefined,
-            };
-          }
-        } else {
-          // Otherwise, try fetching from leads table
-          const { data: regularLead, error: leadsError } = await supabase
-          .from('leads' as any)
-          .select('id, destination, budget_min, budget_max, duration_days, travelers_count')
-          .eq('id', leadId)
-          .eq('agent_id', user.id)
-            .maybeSingle();
-
-          if (leadsError && leadsError.code !== 'PGRST116') {
-            throw leadsError;
-          }
-
-          if (regularLead) {
-            leadData = regularLead as unknown as LeadDetails;
-          }
-        }
-
-        if (!leadData) {
+        if (!leadDataRaw) {
           throw new Error('Lead not found or you do not have access to it');
         }
+
+        // Map to LeadDetails format
+        const leadData: LeadDetails = {
+          id: leadDataRaw.id,
+          destination: leadDataRaw.destination,
+          budget_min: leadDataRaw.budgetMin ?? undefined,
+          budget_max: leadDataRaw.budgetMax ?? undefined,
+          duration_days: leadDataRaw.durationDays ?? undefined,
+          travelers_count: leadDataRaw.travelersCount ?? undefined,
+        };
 
         setLead(leadData);
         
