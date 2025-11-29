@@ -246,7 +246,7 @@ export class MarketplaceService {
           ) as lead
         FROM lead_purchases lp
         JOIN lead_marketplace lm ON lp.lead_id = lm.id
-        WHERE lp.agent_id = $1::uuid
+        WHERE lp.agent_id::text = $1
         ORDER BY lp.purchased_at DESC`,
         [agentId]
       );
@@ -287,7 +287,7 @@ export class MarketplaceService {
   static async hasAgentPurchased(leadId: string, agentId: string): Promise<boolean> {
     try {
       const result = await queryOne<{ id: string }>(
-        'SELECT id FROM lead_purchases WHERE lead_id = $1::uuid AND agent_id = $2::uuid LIMIT 1',
+        'SELECT id FROM lead_purchases WHERE lead_id::text = $1 AND agent_id::text = $2 LIMIT 1',
         [leadId, agentId]
       );
 
@@ -323,7 +323,7 @@ export class MarketplaceService {
         ),
         // Agent's total purchases
         query<{ count: string }>(
-          'SELECT COUNT(*) as count FROM lead_purchases WHERE agent_id = $1::uuid',
+          'SELECT COUNT(*) as count FROM lead_purchases WHERE agent_id::text = $1',
           [agentId]
         ),
         // This month's purchases
@@ -333,13 +333,13 @@ export class MarketplaceService {
       startOfMonth.setHours(0, 0, 0, 0);
           return query<{ count: string }>(
             `SELECT COUNT(*) as count FROM lead_purchases 
-             WHERE agent_id = $1::uuid AND purchased_at >= $2`,
+             WHERE agent_id::text = $1 AND purchased_at >= $2`,
             [agentId, startOfMonth.toISOString()]
           );
         })(),
         // Total spent
         query<{ purchase_price: number }>(
-          'SELECT purchase_price FROM lead_purchases WHERE agent_id = $1::uuid',
+          'SELECT purchase_price FROM lead_purchases WHERE agent_id::text = $1',
           [agentId]
         ),
       ]);
