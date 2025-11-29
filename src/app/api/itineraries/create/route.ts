@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
       [leadId, agentId]
     );
 
-    if (existingResult.rows && existingResult.rows.length > 0) {
+    if (existingResult.rows && existingResult.rows.length > 0 && existingResult.rows[0]) {
       return NextResponse.json({
         itinerary: { id: existingResult.rows[0].id },
         created: false,
@@ -66,15 +66,16 @@ export async function POST(request: NextRequest) {
       ]
     );
 
-    if (!insertResult.rows || insertResult.rows.length === 0) {
+    if (!insertResult.rows || insertResult.rows.length === 0 || !insertResult.rows[0]) {
       return NextResponse.json(
         { error: 'Failed to create itinerary' },
         { status: 500 }
       );
     }
 
+    const createdItinerary = insertResult.rows[0];
     return NextResponse.json({
-      itinerary: { id: insertResult.rows[0].id },
+      itinerary: { id: createdItinerary.id },
       created: true,
     });
   } catch (error) {

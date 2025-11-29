@@ -202,62 +202,44 @@ export default function ItineraryBuilderPage() {
     if (packageId && packageType && !selectedPackage) {
       const fetchPackageForModal = async () => {
         try {
-          let query: any;
-          
-          if (packageType === 'multi_city') {
-            query = supabase
-              .from('multi_city_packages' as any)
-              .select('id, title, destination_region, operator_id, base_price, currency')
-              .eq('id', packageId)
-              .single();
-          } else if (packageType === 'multi_city_hotel') {
-            query = supabase
-              .from('multi_city_hotel_packages' as any)
-              .select('id, title, destination_region, operator_id, base_price, currency')
-              .eq('id', packageId)
-              .single();
-          } else {
+          if (packageType !== 'multi_city' && packageType !== 'multi_city_hotel') {
             return;
           }
 
-          const { data, error } = await query;
+          // Fetch package details from AWS API
+          const packageResponse = await fetch(`/api/packages/${packageId}?type=${packageType}`);
           
-          if (error) throw error;
+          if (!packageResponse.ok) {
+            throw new Error('Failed to fetch package');
+          }
+
+          const { package: pkgData } = await packageResponse.json();
           
-          if (data) {
-            // Fetch operator name
-            const { data: operatorData } = await supabase
-              .from('users' as any)
-              .select('name')
-              .eq('id', data.operator_id)
-              .single();
+          if (pkgData) {
+            // Fetch operator name from AWS API
+            const operatorsResponse = await fetch('/api/operators');
+            let operatorName: string | undefined;
+            
+            if (operatorsResponse.ok) {
+              const { operators } = await operatorsResponse.json();
+              const operator = operators.find((op: any) => op.id === pkgData.operator_id);
+              operatorName = operator?.name;
+            }
 
-            // Fetch cover image
-            const imageTable = packageType === 'multi_city' 
-              ? 'multi_city_package_images' 
-              : 'multi_city_hotel_package_images';
-            const { data: imageData } = await supabase
-              .from(imageTable as any)
-              .select('public_url')
-              .eq('package_id', packageId)
-              .eq('is_cover', true)
-              .limit(1)
-              .maybeSingle();
-
-            const operatorTyped = operatorData as unknown as { name?: string } | null;
-            const imageTyped = imageData as unknown as { public_url?: string } | null;
+            const operatorTyped = operatorName ? { name: operatorName } : null;
+            const imageTyped = pkgData.image_url ? { public_url: pkgData.image_url } : null;
 
             setSelectedPackage({
-              id: data.id,
-              title: data.title,
-              destination_country: data.destination_region || '',
+              id: pkgData.id,
+              title: pkgData.title,
+              destination_country: pkgData.destination_region || '',
               destination_city: '',
               package_type: packageType,
-              operator_id: data.operator_id,
+              operator_id: pkgData.operator_id,
               operator_name: operatorTyped?.name || 'Unknown Operator',
               featured_image_url: imageTyped?.public_url || undefined,
-              base_price: data.base_price || undefined,
-              currency: data.currency || 'USD',
+              base_price: pkgData.base_price || undefined,
+              currency: pkgData.currency || 'USD',
             });
 
             // Clear URL params
@@ -282,19 +264,22 @@ export default function ItineraryBuilderPage() {
     const newDayNumber = days.length > 0 ? Math.max(...days.map(d => d.day_number)) + 1 : 1;
 
     try {
-      const { data, error } = await supabase
-        .from('itinerary_days' as any)
-        .insert({
-          itinerary_id: itinerary.id,
-          day_number: newDayNumber,
-          display_order: newDayNumber,
-        })
-        .select()
-        .single();
+      const response = await fetch(`/api/itineraries/${itinerary.id}/days/create`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          dayNumber: newDayNumber,
+          displayOrder: newDayNumber,
+        }),
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to add day');
+      }
 
-      setDays(prev => [...prev, data as unknown as ItineraryDay]);
+      const { day } = await response.json();
+      setDays(prev => [...prev, day as ItineraryDay]);
       toast.success('Day added successfully');
     } catch (err) {
       console.error('Error adding day:', err);
@@ -364,11 +349,17 @@ export default function ItineraryBuilderPage() {
             compact
             onSave={async () => {
               try {
-                const { error } = await supabase
-                  .from('itineraries' as any)
-                  .update({ status: 'completed', updated_at: new Date().toISOString() })
-                  .eq('id', itinerary.id);
-                if (error) throw error;
+                const response = await fetch(`/api/itineraries/${itinerary.id}/update`, {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ status: 'completed' }),
+                });
+
+                if (!response.ok) {
+                  const error = await response.json();
+                  throw new Error(error.error || 'Failed to save itinerary');
+                }
+
                 setItinerary(prev => prev ? { ...prev, status: 'completed' } : null);
                 toast.success('Itinerary saved successfully');
               } catch (err) {
@@ -456,12 +447,16 @@ export default function ItineraryBuilderPage() {
                 compact
                 onSave={async () => {
                   try {
-                    const { error } = await supabase
-                      .from('itineraries' as any)
-                      .update({ status: 'completed', updated_at: new Date().toISOString() })
-                      .eq('id', itinerary.id);
+                    const response = await fetch(`/api/itineraries/${itinerary.id}/update`, {
+                      method: 'PATCH',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ status: 'completed' }),
+                    });
 
-                    if (error) throw error;
+                    if (!response.ok) {
+                      const error = await response.json();
+                      throw new Error(error.error || 'Failed to save itinerary');
+                    }
 
                     setItinerary(prev => prev ? { ...prev, status: 'completed' } : null);
                     toast.success('Itinerary saved successfully');
