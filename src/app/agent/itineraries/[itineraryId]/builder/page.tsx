@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/context/CognitoAuthContext';
 import { useToast } from '@/hooks/useToast';
-import { createClient } from '@/lib/supabase/client';
+// Removed Supabase import - now using AWS API routes
 import { PackageSearchPanel } from '@/components/itinerary/PackageSearchPanel';
 import { ItineraryBuilderPanel } from '@/components/itinerary/ItineraryBuilderPanel';
 import { EnhancedItineraryBuilder } from '@/components/itinerary/EnhancedItineraryBuilder';
@@ -83,7 +83,7 @@ export default function ItineraryBuilderPage() {
   const searchParams = useSearchParams();
   const { user } = useAuth();
   const toast = useToast();
-  const supabase = createClient();
+  // Removed Supabase client - now using AWS API routes
 
   const itineraryId = params.itineraryId as string;
 
@@ -114,76 +114,64 @@ export default function ItineraryBuilderPage() {
       if (!itineraryId || !user?.id) return;
 
       try {
-        // Fetch itinerary
-        const { data: itineraryData, error: itineraryError } = await supabase
-          .from('itineraries' as any)
-          .select('*')
-          .eq('id', itineraryId)
-          .eq('agent_id', user.id)
-          .single();
+        // Fetch itinerary, days, and items in parallel
+        const [itineraryResponse, daysResponse, itemsResponse] = await Promise.all([
+          fetch(`/api/itineraries/${itineraryId}?agentId=${user.id}`),
+          fetch(`/api/itineraries/${itineraryId}/days`),
+          fetch(`/api/itineraries/${itineraryId}/items`),
+        ]);
 
-        if (itineraryError) throw itineraryError;
+        if (!itineraryResponse.ok) {
+          if (itineraryResponse.status === 404) {
+            throw new Error('Itinerary not found');
+          }
+          throw new Error('Failed to fetch itinerary');
+        }
+
+        const { itinerary: itineraryData } = await itineraryResponse.json();
 
         if (itineraryData && isMounted) {
-          setItinerary(itineraryData as unknown as Itinerary);
+          setItinerary(itineraryData as Itinerary);
 
           // Fetch lead destination
-          const { data: leadData } = await supabase
-            .from('leads' as any)
-            .select('destination')
-            .eq('id', (itineraryData as unknown as Itinerary).lead_id)
-            .single();
-
-          if (isMounted) {
-            const lead = leadData as unknown as { destination?: string };
-            if (lead?.destination) {
-              setSelectedDestination((prev) => prev || lead.destination || '');
+          const leadResponse = await fetch(`/api/leads/${itineraryData.lead_id}?agentId=${user.id}`);
+          if (leadResponse.ok) {
+            const { lead: leadData } = await leadResponse.json();
+            if (isMounted && leadData?.destination) {
+              setSelectedDestination((prev) => prev || leadData.destination || '');
             }
           }
 
-          // Fetch days with all new fields
-          const { data: daysData, error: daysError } = await supabase
-            .from('itinerary_days' as any)
-            .select('*')
-            .eq('itinerary_id', itineraryId)
-            .order('day_number', { ascending: true });
-
-          if (daysError) throw daysError;
-          if (isMounted) {
-            // Ensure time_slots exists for each day
-            const daysWithTimeSlots = (daysData || []).map((day: any) => ({
-              ...day,
-              time_slots: day.time_slots || {
-                morning: { time: '', activities: [], transfers: [] },
-                afternoon: { time: '', activities: [], transfers: [] },
-                evening: { time: '', activities: [], transfers: [] },
-              },
-            }));
-            setDays(daysWithTimeSlots as unknown as ItineraryDay[]);
+          // Fetch days
+          if (daysResponse.ok) {
+            const { days: daysData } = await daysResponse.json();
+            if (isMounted) {
+              setDays(daysData as ItineraryDay[]);
+            }
+          } else {
+            console.error('Failed to fetch days:', await daysResponse.text());
           }
 
           // Fetch items
-          const { data: itemsData, error: itemsError } = await supabase
-            .from('itinerary_items' as any)
-            .select('*')
-            .eq('itinerary_id', itineraryId)
-            .order('display_order', { ascending: true });
-
-          if (itemsError) throw itemsError;
-          if (isMounted) {
-            setItems((itemsData || []) as unknown as ItineraryItem[]);
-            
-            // Check if any multi-city packages need configuration
-            const multiCityItems = (itemsData || []).filter(
-              (item: any) => 
-                (item.package_type === 'multi_city' || item.package_type === 'multi_city_hotel') &&
-                (!item.configuration?.selectedHotels && !item.configuration?.activities && !item.configuration?.transfers)
-            );
-            
-            // If there are unconfigured multi-city packages, show a notification
-            if (multiCityItems.length > 0) {
-              toast.info(`${multiCityItems.length} package(s) need configuration. Click to configure.`);
+          if (itemsResponse.ok) {
+            const { items: itemsData } = await itemsResponse.json();
+            if (isMounted) {
+              setItems((itemsData || []) as ItineraryItem[]);
+              
+              // Check if any multi-city packages need configuration
+              const multiCityItems = (itemsData || []).filter(
+                (item: any) => 
+                  (item.package_type === 'multi_city' || item.package_type === 'multi_city_hotel') &&
+                  (!item.configuration?.selectedHotels && !item.configuration?.activities && !item.configuration?.transfers)
+              );
+              
+              // If there are unconfigured multi-city packages, show a notification
+              if (multiCityItems.length > 0) {
+                toast.info(`${multiCityItems.length} package(s) need configuration. Click to configure.`);
+              }
             }
+          } else {
+            console.error('Failed to fetch items:', await itemsResponse.text());
           }
         }
       } catch (err) {

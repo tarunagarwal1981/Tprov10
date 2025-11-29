@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/context/CognitoAuthContext';
 import { useToast } from '@/hooks/useToast';
-import { createClient } from '@/lib/supabase/client';
+// Removed Supabase import - now using AWS API routes
 // queryService and itineraryService now accessed via API routes
 
 interface MultiCityPackage {
@@ -38,7 +38,7 @@ export default function InsertItineraryPage() {
   const router = useRouter();
   const { user } = useAuth();
   const toast = useToast();
-  const supabase = createClient();
+  // Removed Supabase client - now using AWS API routes
 
   const leadId = params.leadId as string;
   const [activeTab, setActiveTab] = useState<'multi_city' | 'multi_city_hotel'>('multi_city');
@@ -250,77 +250,20 @@ export default function InsertItineraryPage() {
     if (!user?.id) return;
 
     try {
-      // First, ensure the lead exists in the leads table (for foreign key constraint)
-      let actualLeadId = leadId;
-      
-      const { data: existingLead, error: checkError } = await supabase
-        .from('leads' as any)
-        .select('id')
-        .or(`id.eq.${leadId},marketplace_lead_id.eq.${leadId}`)
-        .eq('agent_id', user.id)
-        .maybeSingle();
+      // Ensure the lead exists in the leads table (create if needed from marketplace)
+      const ensureResponse = await fetch('/api/leads/ensure', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ leadId, agentId: user.id }),
+      });
 
-      if (checkError && checkError.code !== 'PGRST116') {
-        throw checkError;
+      if (!ensureResponse.ok) {
+        const error = await ensureResponse.json();
+        toast.error(error.error || 'Failed to ensure lead exists');
+        return;
       }
 
-      // If lead doesn't exist in leads table, create it (for marketplace leads)
-      if (!existingLead) {
-        // Get purchase info and marketplace lead details
-        const [purchaseResult, marketplaceLeadResult] = await Promise.all([
-          supabase
-            .from('lead_purchases' as any)
-            .select('id')
-            .eq('lead_id', leadId)
-            .eq('agent_id', user.id)
-            .maybeSingle(),
-          supabase
-            .from('lead_marketplace' as any)
-            .select('customer_name, customer_email, customer_phone, special_requirements, destination')
-            .eq('id', leadId)
-            .single(),
-        ]);
-
-        const purchase = (purchaseResult.data as unknown as { id: string } | null) || null;
-        const marketplaceLead = marketplaceLeadResult.data as unknown as {
-          customer_name?: string | null;
-          customer_email?: string | null;
-          customer_phone?: string | null;
-          special_requirements?: string | null;
-          destination?: string | null;
-        } | null;
-
-        if (!marketplaceLead) {
-          toast.error('Lead not found');
-          return;
-        }
-
-        // Create lead entry in leads table
-        const { data: newLead, error: leadError } = await supabase
-          .from('leads' as any)
-          .insert({
-            agent_id: user.id,
-            marketplace_lead_id: leadId,
-            customer_name: marketplaceLead.customer_name,
-            customer_email: marketplaceLead.customer_email,
-            customer_phone: marketplaceLead.customer_phone,
-            destination: marketplaceLead.destination,
-            special_requirements: marketplaceLead.special_requirements,
-            status: 'active',
-          })
-          .select('id')
-          .single();
-
-        if (leadError) {
-          console.error('Error creating lead:', leadError);
-          toast.error('Failed to create lead entry');
-          return;
-        }
-
-        actualLeadId = (newLead as unknown as { id: string }).id;
-      } else {
-        actualLeadId = (existingLead as unknown as { id: string }).id;
-      }
+      const { leadId: actualLeadId } = await ensureResponse.json();
 
       // Check if itinerary exists for this lead
       const itinerariesResponse = await fetch(`/api/itineraries/leads/${actualLeadId}`);
@@ -343,46 +286,29 @@ export default function InsertItineraryPage() {
           return;
         }
 
-        // Create itinerary with query data
-        const { data: newItinerary, error: itineraryError } = await supabase
-          .from('itineraries' as any)
-          .insert({
-            lead_id: actualLeadId,
-            agent_id: user.id,
+        // Create itinerary with query data via API route
+        const createItineraryResponse = await fetch('/api/itineraries/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            leadId: actualLeadId,
+            agentId: user.id,
             name: 'Itinerary #1',
-            adults_count: query.travelers?.adults || 2,
-            children_count: query.travelers?.children || 0,
-            infants_count: query.travelers?.infants || 0,
-            start_date: query.leaving_on || null,
-            end_date: null,
-            status: 'draft',
-          })
-          .select('id')
-          .single();
+            adultsCount: query.travelers?.adults || 2,
+            childrenCount: query.travelers?.children || 0,
+            infantsCount: query.travelers?.infants || 0,
+            startDate: query.leaving_on || null,
+            endDate: null,
+          }),
+        });
 
-        if (itineraryError) {
-          // If it's a conflict (409), try to get existing itinerary
-          if (itineraryError.code === '23505' || (itineraryError as any).status === 409) {
-            const { data: existingItinerary } = await supabase
-              .from('itineraries' as any)
-              .select('id')
-              .eq('lead_id', actualLeadId)
-              .eq('agent_id', user.id)
-              .order('created_at', { ascending: false })
-              .limit(1)
-              .single();
-            
-            if (existingItinerary) {
-              itineraryId = (existingItinerary as unknown as { id: string }).id;
-            } else {
-              throw itineraryError;
-            }
-          } else {
-            throw itineraryError;
-          }
-        } else {
-          itineraryId = (newItinerary as unknown as { id: string }).id;
+        if (!createItineraryResponse.ok) {
+          const error = await createItineraryResponse.json();
+          throw new Error(error.error || 'Failed to create itinerary');
         }
+
+        const { itinerary: newItinerary } = await createItineraryResponse.json();
+        itineraryId = newItinerary.id;
       } else {
         // Use first existing itinerary
         itineraryId = existingItineraries[0]!.id;
