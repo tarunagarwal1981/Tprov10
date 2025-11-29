@@ -161,8 +161,19 @@ export default function MarketplacePage() {
       if (!response.ok) throw new Error('Failed to fetch leads');
       const { leads: data } = await response.json();
       
+      // Convert date strings to Date objects for sorting
+      const leadsWithDates = data.map((lead: any) => ({
+        ...lead,
+        postedAt: lead.postedAt ? new Date(lead.postedAt) : new Date(),
+        expiresAt: lead.expiresAt ? new Date(lead.expiresAt) : new Date(),
+        createdAt: lead.createdAt ? new Date(lead.createdAt) : new Date(),
+        updatedAt: lead.updatedAt ? new Date(lead.updatedAt) : new Date(),
+        travelDateStart: lead.travelDateStart ? new Date(lead.travelDateStart) : undefined,
+        travelDateEnd: lead.travelDateEnd ? new Date(lead.travelDateEnd) : undefined,
+      }));
+      
       // Sort leads based on selected sort option
-      const sortedData = [...data];
+      const sortedData = [...leadsWithDates];
       switch (sortBy) {
         case 'newest':
           sortedData.sort((a, b) => b.postedAt.getTime() - a.postedAt.getTime());
@@ -200,7 +211,13 @@ export default function MarketplacePage() {
       const { stats: marketplaceStats } = await statsResponse.json();
       const { purchases: purchasedLeads } = await purchasedResponse.json();
       
-      const totalSpent = purchasedLeads.reduce((sum: number, purchase: any) => sum + purchase.purchasePrice, 0);
+      // Calculate total spent safely, handling both number and string values
+      const totalSpent = purchasedLeads.reduce((sum: number, purchase: any) => {
+        const price = typeof purchase.purchasePrice === 'number' 
+          ? purchase.purchasePrice 
+          : parseFloat(purchase.purchasePrice) || 0;
+        return sum + price;
+      }, 0);
       
       setStats({
         availableLeads: marketplaceStats.totalAvailable,
