@@ -245,7 +245,7 @@ export class MarketplaceService {
             'detailed_requirements', lm.detailed_requirements
           ) as lead
         FROM lead_purchases lp
-        JOIN lead_marketplace lm ON lp.lead_id = lm.id
+        JOIN lead_marketplace lm ON lp.lead_id::text = lm.id::text
         WHERE lp.agent_id::text = $1
         ORDER BY lp.purchased_at DESC`,
         [agentId]
