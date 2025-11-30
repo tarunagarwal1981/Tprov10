@@ -11,15 +11,29 @@ import { Client } from 'pg';
 import * as fs from 'fs';
 import * as path from 'path';
 
-// Configuration
-const SUPABASE_URL = 'https://megmjzszmqnmzdxwzigt.supabase.co';
-const SUPABASE_SERVICE_ROLE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1lZ21qenN6bXFubXpkeHd6aWd0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1OTU1MTc4NiwiZXhwIjoyMDc1MTI3Nzg2fQ.i2kYiW0n-1uuJuTK5HH6sc0W7Vpjrl4SEXBq8TwL-KA';
+// Configuration - Use environment variables for security
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-const RDS_ENDPOINT = 'travel-app-db.c61sa44wsvgz.us-east-1.rds.amazonaws.com';
-const RDS_PORT = 5432;
-const RDS_USER = 'postgres';
-const RDS_PASSWORD = 'ju3vrLHJUW8PqDG4';
-const RDS_DATABASE = 'postgres';
+const RDS_ENDPOINT = process.env.RDS_HOST || process.env.RDS_HOSTNAME;
+const RDS_PORT = parseInt(process.env.RDS_PORT || '5432');
+const RDS_USER = process.env.RDS_USER || process.env.RDS_USERNAME || 'postgres';
+const RDS_PASSWORD = process.env.RDS_PASSWORD;
+const RDS_DATABASE = process.env.RDS_DB || process.env.RDS_DATABASE || 'postgres';
+
+// Validate required environment variables
+if (!SUPABASE_URL) {
+  throw new Error('SUPABASE_URL or NEXT_PUBLIC_SUPABASE_URL environment variable is required');
+}
+if (!SUPABASE_SERVICE_ROLE_KEY) {
+  throw new Error('SUPABASE_SERVICE_ROLE_KEY environment variable is required');
+}
+if (!RDS_ENDPOINT) {
+  throw new Error('RDS_HOST or RDS_HOSTNAME environment variable is required');
+}
+if (!RDS_PASSWORD) {
+  throw new Error('RDS_PASSWORD environment variable is required');
+}
 
 /**
  * Get all tables from Supabase

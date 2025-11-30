@@ -18,22 +18,22 @@
 
 ### **Step 2: Add These Variables NOW**
 
-**Copy and paste these EXACTLY:**
+**Copy and paste these EXACTLY (replace placeholders with your actual values):**
 
 ```bash
 COGNITO_USER_POOL_ID=us-east-1_XXXXXXXXX
-COGNITO_CLIENT_ID=20t43em6vuke645ka10s4slgl9
-NEXT_PUBLIC_COGNITO_CLIENT_ID=20t43em6vuke645ka10s4slgl9
-NEXT_PUBLIC_COGNITO_DOMAIN=travel-app-auth-2285.auth.us-east-1.amazoncognito.com
+COGNITO_CLIENT_ID=[YOUR_COGNITO_CLIENT_ID]
+NEXT_PUBLIC_COGNITO_CLIENT_ID=[YOUR_COGNITO_CLIENT_ID]
+NEXT_PUBLIC_COGNITO_DOMAIN=[YOUR_COGNITO_DOMAIN].auth.us-east-1.amazoncognito.com
 DEPLOYMENT_REGION=us-east-1
-RDS_HOST=travel-app-db.c61sa44wsvgz.us-east-1.rds.amazonaws.com
+RDS_HOST=[YOUR_RDS_ENDPOINT].us-east-1.rds.amazonaws.com
 RDS_PORT=5432
 RDS_DB=postgres
 RDS_USER=postgres
-RDS_PASSWORD=ju3vrLHJUW8PqDG4
-S3_BUCKET_NAME=travel-app-storage-1769
-NEXT_PUBLIC_SUPABASE_URL=https://megmjzszmqnmzdxwzigt.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key_here
+RDS_PASSWORD=[YOUR_RDS_PASSWORD]
+S3_BUCKET_NAME=[YOUR_S3_BUCKET_NAME]
+NEXT_PUBLIC_SUPABASE_URL=https://[YOUR_PROJECT].supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=[YOUR_SUPABASE_ANON_KEY]
 ```
 
 ### **Step 3: Find Your User Pool ID**
@@ -85,4 +85,3 @@ Once deployment completes:
 ---
 
 **DO THIS NOW:** Add the environment variables in Amplify! 🚀
-

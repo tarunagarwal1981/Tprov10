@@ -46,16 +46,30 @@ export async function GET(request: NextRequest) {
       activityImages = imagesResult.rows || [];
     }
 
-    // Fetch pricing for activity packages
+    // Fetch pricing for activity packages (optional - table may not exist yet)
     let activityPricing: any[] = [];
     if (activityPackageIds.length > 0) {
-      const pricingResult = await query<any>(
-        `SELECT package_id, adult_price
-         FROM activity_pricing_packages
-         WHERE package_id::text = ANY($1::text[])`,
-        [activityPackageIds]
-      );
-      activityPricing = pricingResult.rows || [];
+      try {
+        // Use proper array syntax for PostgreSQL - convert array to comma-separated string for ANY()
+        const pricingResult = await query<any>(
+          `SELECT package_id, adult_price
+           FROM activity_pricing_packages
+           WHERE package_id::text = ANY($1::text[])`,
+          [activityPackageIds]
+        );
+        activityPricing = pricingResult.rows || [];
+      } catch (error: any) {
+        // Table may not exist yet - that's okay, just skip pricing
+        // Check if it's a "relation does not exist" error (PostgreSQL error code 42P01)
+        if (error.message?.includes('does not exist') || error.code === '42P01' || error.message?.includes('activity_pricing_packages')) {
+          console.warn('activity_pricing_packages table not found, skipping pricing data');
+          activityPricing = [];
+        } else {
+          // For other errors, log but still continue
+          console.warn('Error fetching pricing packages (non-fatal):', error.message);
+          activityPricing = [];
+        }
+      }
     }
 
     // Fetch transfer packages
