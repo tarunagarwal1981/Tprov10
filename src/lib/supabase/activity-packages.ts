@@ -136,94 +136,41 @@ export async function createActivityPackage(
       finalImages.push(...alreadyUploadedImages);
     }
 
-    // Start a transaction-like operation
-    const { data: packageData, error: packageError } = await supabase
-      .from('activity_packages')
-      .insert(data.package)
-      .select()
-      .single();
+    // Use API route for database operations instead of Supabase
+    const response = await fetch('/api/operator/packages/activity/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        package: data.package,
+        images: finalImages,
+        time_slots: data.time_slots,
+        variants: data.variants,
+        faqs: data.faqs,
+      }),
+    });
 
-    if (packageError) {
-      throw packageError;
+    if (!response.ok) {
+      const errorData = await response.json();
+      const errorMessage = errorData.error || 'Failed to create package';
+      throw new Error(errorMessage);
     }
 
-    const packageId = packageData.id;
+    const apiResult = await response.json();
+    const packageId = apiResult.data?.id;
+
+    if (!packageId) {
+      throw new Error('Failed to get package ID from API');
+    }
+
+    // Return a result structure compatible with the expected format
     const result: ActivityPackageWithRelations = {
-      ...packageData,
-      images: [],
-      time_slots: [],
-      variants: [],
-      faqs: [],
-    };
-
-    // Insert related data if provided
-    if (finalImages.length > 0) {
-      const imagesWithPackageId = finalImages.map(img => ({
-        ...img,
-        package_id: packageId,
-      }));
-
-      const { data: imagesData, error: imagesError } = await supabase
-        .from('activity_package_images')
-        .insert(imagesWithPackageId)
-        .select();
-
-      if (imagesError) {
-        throw imagesError;
-      }
-      result.images = imagesData || [];
-    }
-
-    if (data.time_slots && data.time_slots.length > 0) {
-      const timeSlotsWithPackageId = data.time_slots.map(slot => ({
-        ...slot,
-        package_id: packageId,
-      }));
-
-      const { data: timeSlotsData, error: timeSlotsError } = await supabase
-        .from('activity_package_time_slots')
-        .insert(timeSlotsWithPackageId)
-        .select();
-
-      if (timeSlotsError) {
-        throw timeSlotsError;
-      }
-      result.time_slots = timeSlotsData || [];
-    }
-
-    if (data.variants && data.variants.length > 0) {
-      const variantsWithPackageId = data.variants.map(variant => ({
-        ...variant,
-        package_id: packageId,
-      }));
-
-      const { data: variantsData, error: variantsError } = await supabase
-        .from('activity_package_variants')
-        .insert(variantsWithPackageId)
-        .select();
-
-      if (variantsError) {
-        throw variantsError;
-      }
-      result.variants = variantsData || [];
-    }
-
-    if (data.faqs && data.faqs.length > 0) {
-      const faqsWithPackageId = data.faqs.map(faq => ({
-        ...faq,
-        package_id: packageId,
-      }));
-
-      const { data: faqsData, error: faqsError } = await supabase
-        .from('activity_package_faqs')
-        .insert(faqsWithPackageId)
-        .select();
-
-      if (faqsError) {
-        throw faqsError;
-      }
-      result.faqs = faqsData || [];
-    }
+      id: packageId,
+      ...data.package,
+      images: finalImages as any,
+      time_slots: data.time_slots || [],
+      variants: data.variants || [],
+      faqs: data.faqs || [],
+    } as any;
 
     return { data: result, error: null };
   });
@@ -305,14 +252,17 @@ export async function updateActivityPackage(
   });
   
   return withErrorHandling(async () => {
-    // Get the operator ID from the package
-    const { data: existingPackage } = await supabase
-      .from('activity_packages')
-      .select('operator_id')
-      .eq('id', id)
-      .single();
-    
-    const userId = existingPackage?.operator_id || '';
+    // Get the operator ID from the package (using API route)
+    let userId = '';
+    try {
+      const getResponse = await fetch(`/api/operator/packages/activity/${id}`);
+      if (getResponse.ok) {
+        const existing = await getResponse.json();
+        userId = existing.data?.operator_id || '';
+      }
+    } catch (e) {
+      console.warn('Could not fetch operator_id for image uploads:', e);
+    }
 
     // Process images first - upload any base64 images to storage
     const finalImages: ActivityPackageImageInsert[] = [];
@@ -392,172 +342,36 @@ export async function updateActivityPackage(
       });
     }
 
-    // Update the main package
-    const { data: packageData, error: packageError } = await supabase
-      .from('activity_packages')
-      .update(data.package)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (packageError) {
-      throw packageError;
-    }
-
-    if (!packageData) {
-      return { data: null, error: null };
-    }
-
-    const result: ActivityPackageWithRelations = {
-      ...packageData,
-      images: [],
-      time_slots: [],
-      variants: [],
-      faqs: [],
-    };
-
-    // Update related data if provided
-    if (finalImages.length > 0) {
-      console.log('💾 [updateActivityPackage] Deleting old images and inserting new ones', {
+    // Use API route for database operations instead of Supabase
+    const response = await fetch('/api/operator/packages/activity/update', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         packageId: id,
-        imageCount: finalImages.length
-      });
-      
-      // Delete existing images and insert new ones
-      await supabase
-        .from('activity_package_images')
-        .delete()
-        .eq('package_id', id);
+        package: data.package,
+        images: finalImages.length > 0 ? finalImages : data.images, // Use finalImages if we processed any, otherwise use provided images
+        time_slots: data.time_slots,
+        variants: data.variants,
+        faqs: data.faqs,
+      }),
+    });
 
-        const { data: imagesData, error: imagesError } = await supabase
-          .from('activity_package_images')
-        .insert(finalImages)
-          .select();
-
-        if (imagesError) {
-        console.error('❌ [updateActivityPackage] Error inserting images', imagesError);
-          throw imagesError;
-        }
-      
-      console.log('✅ [updateActivityPackage] Images saved to database', {
-        savedCount: imagesData?.length || 0,
-        savedImages: imagesData?.map(img => ({
-          id: img.id,
-          file_name: img.file_name,
-          public_url: img.public_url?.substring(0, 50) + '...',
-          is_cover: img.is_cover
-        }))
-      });
-      
-        result.images = imagesData || [];
-    } else if (!data.images) {
-      // Keep existing images only if no images were provided in the update
-      const { data: imagesData } = await supabase
-        .from('activity_package_images')
-        .select('*')
-        .eq('package_id', id)
-        .order('display_order');
-      result.images = imagesData || [];
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to update package');
     }
 
-    if (data.time_slots) {
-      // Delete existing time slots and insert new ones
-      await supabase
-        .from('activity_package_time_slots')
-        .delete()
-        .eq('package_id', id);
-
-      if (data.time_slots.length > 0) {
-        const timeSlotsWithPackageId = data.time_slots.map(slot => ({
-          ...slot,
-          package_id: id,
-        }));
-
-        const { data: timeSlotsData, error: timeSlotsError } = await supabase
-          .from('activity_package_time_slots')
-          .insert(timeSlotsWithPackageId)
-          .select();
-
-        if (timeSlotsError) {
-          throw timeSlotsError;
-        }
-        result.time_slots = timeSlotsData || [];
-      }
-    } else {
-      // Keep existing time slots
-      const { data: timeSlotsData } = await supabase
-        .from('activity_package_time_slots')
-        .select('*')
-        .eq('package_id', id)
-        .order('start_time');
-      result.time_slots = timeSlotsData || [];
-    }
-
-    if (data.variants) {
-      // Delete existing variants and insert new ones
-      await supabase
-        .from('activity_package_variants')
-        .delete()
-        .eq('package_id', id);
-
-      if (data.variants.length > 0) {
-        const variantsWithPackageId = data.variants.map(variant => ({
-          ...variant,
-          package_id: id,
-        }));
-
-        const { data: variantsData, error: variantsError } = await supabase
-          .from('activity_package_variants')
-          .insert(variantsWithPackageId)
-          .select();
-
-        if (variantsError) {
-          throw variantsError;
-        }
-        result.variants = variantsData || [];
-      }
-    } else {
-      // Keep existing variants
-      const { data: variantsData } = await supabase
-        .from('activity_package_variants')
-        .select('*')
-        .eq('package_id', id)
-        .order('display_order');
-      result.variants = variantsData || [];
-    }
-
-    if (data.faqs) {
-      // Delete existing FAQs and insert new ones
-      await supabase
-        .from('activity_package_faqs')
-        .delete()
-        .eq('package_id', id);
-
-      if (data.faqs.length > 0) {
-        const faqsWithPackageId = data.faqs.map(faq => ({
-          ...faq,
-          package_id: id,
-        }));
-
-        const { data: faqsData, error: faqsError } = await supabase
-          .from('activity_package_faqs')
-          .insert(faqsWithPackageId)
-          .select();
-
-        if (faqsError) {
-          throw faqsError;
-        }
-        result.faqs = faqsData || [];
-      }
-    } else {
-      // Keep existing FAQs
-      const { data: faqsData } = await supabase
-        .from('activity_package_faqs')
-        .select('*')
-        .eq('package_id', id)
-        .order('display_order');
-      result.faqs = faqsData || [];
-    }
+    const apiResult = await response.json();
+    
+    // Return a result structure compatible with the expected format
+    const result: ActivityPackageWithRelations = {
+      id,
+      ...data.package,
+      images: finalImages.length > 0 ? finalImages as any : (data.images || []),
+      time_slots: data.time_slots || [],
+      variants: data.variants || [],
+      faqs: data.faqs || [],
+    } as any;
 
     return { data: result, error: null };
   });

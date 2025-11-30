@@ -5,12 +5,13 @@ import { ActivityPackageForm } from "@/components/packages/forms/ActivityPackage
 import { ActivityPackageFormData } from "@/lib/types/activity-package";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/context/CognitoAuthContext";
 import { formDataToDatabase, createActivityPackage, updateActivityPackage } from "@/lib/supabase/activity-packages";
 
 export default function CreateActivityPackagePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   
   // Get package ID from URL params for edit mode
@@ -33,11 +34,7 @@ export default function CreateActivityPackagePage() {
       });
       setLoading(true);
       
-      const supabase = createClient();
-      
-      // Get current user
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) {
+      if (!user?.id) {
         throw new Error('User not authenticated');
       }
 
@@ -118,11 +115,7 @@ export default function CreateActivityPackagePage() {
       });
       setLoading(true);
       
-      const supabase = createClient();
-      
-      // Get current user
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) {
+      if (!user?.id) {
         throw new Error('User not authenticated');
       }
 

@@ -5,13 +5,14 @@ import { TransferPackageForm } from "@/components/packages/forms/TransferPackage
 import { TransferPackageFormData } from "@/lib/types/transfer-package";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/context/CognitoAuthContext";
 import { formDataToDatabase, createTransferPackage, updateTransferPackage, getTransferPackage, databaseToFormData } from "@/lib/supabase/transfer-packages";
 import { TransferPackageInsert } from "@/lib/supabase/types";
 
 export default function CreateTransferPackagePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user } = useAuth();
   const packageId = searchParams.get('id');
   const isViewMode = searchParams.get('view') === 'true';
   
@@ -56,11 +57,7 @@ export default function CreateTransferPackagePage() {
     try {
       console.log("Saving transfer package draft:", data);
       
-      const supabase = createClient();
-      
-      // Get current user
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) {
+      if (!user?.id) {
         throw new Error('User not authenticated');
       }
 
@@ -104,11 +101,7 @@ export default function CreateTransferPackagePage() {
     try {
       console.log("Publishing transfer package:", data);
       
-      const supabase = createClient();
-      
-      // Get current user
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) {
+      if (!user?.id) {
         throw new Error('User not authenticated');
       }
 

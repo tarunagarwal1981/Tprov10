@@ -32,8 +32,6 @@ import {
 	DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/context/CognitoAuthContext';
-import { createClient } from '@/lib/supabase/client';
-import { deleteTransferPackage } from '@/lib/supabase/transfer-packages';
 import { toast } from 'sonner';
 import { FaCar } from 'react-icons/fa';
 import { TransferPackageCard, TransferPackageCardData } from '@/components/packages/TransferPackageCard';
@@ -309,99 +307,37 @@ export default function PackagesPage() {
 
 	const handleDuplicatePackage = async (pkg: Package) => {
 		try {
-			const supabase = createClient();
-			const { data: { user } } = await supabase.auth.getUser();
-			
-			if (!user) {
+			if (!user?.id) {
 				toast.error('Please log in to duplicate packages');
 				return;
 			}
 
 			toast.info('Duplicating package...');
 
-			// Determine the table name based on package type
-			const tableName = pkg.type === 'Activity' 
-				? 'activity_packages'
-				: pkg.type === 'Transfer'
-				? 'transfer_packages'
-				: pkg.type === 'Multi-City'
-				? 'multi_city_packages'
-				: null;
+			const response = await fetch('/api/operator/packages/duplicate', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					packageId: pkg.id,
+					packageType: pkg.type,
+					operatorId: user.id,
+				}),
+			});
 
-			if (!tableName) {
-				toast.error('Unknown package type');
-				return;
+			if (!response.ok) {
+				const error = await response.json();
+				throw new Error(error.error || 'Failed to duplicate package');
 			}
 
-			// Fetch the original package data
-			const { data: originalPackage, error: fetchError } = await supabase
-				.from(tableName)
-				.select('*')
-				.eq('id', pkg.id)
-				.single();
+			const result = await response.json();
+			toast.success(result.message || 'Package duplicated successfully');
+			
+			// Reload the page to refresh the packages
+			window.location.reload();
 
-			if (fetchError || !originalPackage) {
-				console.error('Error fetching package:', fetchError);
-				toast.error('Failed to duplicate package');
-				return;
-			}
-
-			// Create a copy with new title and reset certain fields
-			const { id, created_at, updated_at, published_at, ...packageData } = originalPackage;
-			const duplicatedPackage = {
-				...packageData,
-				title: `${originalPackage.title} (Copy)`,
-				status: 'draft' as const,
-				operator_id: user.id,
-			};
-
-			// Insert the duplicated package
-			const { data: newPackage, error: insertError } = await supabase
-				.from(tableName)
-				.insert(duplicatedPackage)
-				.select()
-				.single();
-
-			if (insertError || !newPackage) {
-				console.error('Error duplicating package:', insertError);
-				toast.error('Failed to duplicate package');
-				return;
-			}
-
-			// Copy images if they exist
-			const imageTableName = pkg.type === 'Activity'
-				? 'activity_package_images'
-				: pkg.type === 'Transfer'
-				? 'transfer_package_images'
-				: pkg.type === 'Multi-City'
-				? 'multi_city_package_images'
-				: null;
-
-			if (imageTableName) {
-				// All image tables use 'package_id' as the foreign key column
-				const { data: images } = await supabase
-					.from(imageTableName)
-					.select('*')
-					.eq('package_id', pkg.id);
-
-				if (images && images.length > 0) {
-					const copiedImages = images.map(({ id, created_at, updated_at, uploaded_at, ...imgData }: any) => ({
-						...imgData,
-						package_id: newPackage.id,
-					}));
-
-					await supabase.from(imageTableName).insert(copiedImages);
-				}
-			}
-
-		toast.success('Package duplicated successfully');
-		
-		// Reload the page to refresh the packages
-		window.location.reload();
-
-		} catch (error) {
+		} catch (error: any) {
 			console.error('Error duplicating package:', error);
-			toast.error('Failed to duplicate package');
+			toast.error(error.message || 'Failed to duplicate package');
 		}
 	};
 
@@ -411,58 +347,38 @@ export default function PackagesPage() {
 		}
 
 		try {
-			const supabase = createClient();
-			const { data: { user } } = await supabase.auth.getUser();
-			
-			if (!user) {
-				toast.error('Please log in to delete packages');
-				return;
-			}
-
 			toast.info('Deleting package...');
 
-			// Determine the table name based on package type
-			const tableName = pkg.type === 'Activity' 
-				? 'activity_packages'
-				: pkg.type === 'Transfer'
-				? 'transfer_packages'
-				: pkg.type === 'Multi-City'
-				? 'multi_city_packages'
-				: null;
+			const response = await fetch('/api/operator/packages/delete', {
+				method: 'DELETE',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					packageId: pkg.id,
+					packageType: pkg.type,
+				}),
+			});
 
-			if (!tableName) {
-				toast.error('Unknown package type');
-				return;
+			if (!response.ok) {
+				const error = await response.json();
+				throw new Error(error.error || 'Failed to delete package');
 			}
 
-			// Delete the package (images will be cascade deleted if foreign keys are set up)
-			const { error: deleteError } = await supabase
-				.from(tableName)
-				.delete()
-				.eq('id', pkg.id)
-				.eq('operator_id', user.id); // Ensure user owns the package
-
-			if (deleteError) {
-				console.error('Error deleting package:', deleteError);
-				toast.error('Failed to delete package');
-				return;
-			}
-
-			toast.success('Package deleted successfully');
+			const result = await response.json();
+			toast.success(result.message || 'Package deleted successfully');
 			
 			// Remove from local state
 			setPackages(prev => prev.filter(p => p.id !== pkg.id));
 			
-		// Update stats
-		setStats(prev => ({
-			...prev,
-			total: prev.total - 1,
-			active: pkg.status === 'PUBLISHED' ? prev.active - 1 : prev.active,
-		}));
+			// Update stats
+			setStats(prev => ({
+				...prev,
+				total: prev.total - 1,
+				active: pkg.status === 'PUBLISHED' ? prev.active - 1 : prev.active,
+			}));
 
-		} catch (error) {
+		} catch (error: any) {
 			console.error('Error deleting package:', error);
-			toast.error('Failed to delete package');
+			toast.error(error.message || 'Failed to delete package');
 		}
 	};
 
@@ -487,16 +403,23 @@ export default function PackagesPage() {
 
 		try {
 			toast.info('Deleting transfer package...');
-			
-			const { error } = await deleteTransferPackage(pkg.id);
-			
-			if (error) {
-				console.error('Error deleting transfer package:', error);
-				toast.error('Failed to delete transfer package');
-				return;
+
+			const response = await fetch('/api/operator/packages/delete', {
+				method: 'DELETE',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					packageId: pkg.id,
+					packageType: 'Transfer',
+				}),
+			});
+
+			if (!response.ok) {
+				const error = await response.json();
+				throw new Error(error.error || 'Failed to delete package');
 			}
 
-			toast.success('Transfer package deleted successfully');
+			const result = await response.json();
+			toast.success(result.message || 'Transfer package deleted successfully');
 			
 			// Remove from local state
 			setTransferPackages(prev => prev.filter(p => p.id !== pkg.id));
@@ -508,9 +431,9 @@ export default function PackagesPage() {
 				active: pkg.status === 'published' ? prev.active - 1 : prev.active,
 			}));
 
-		} catch (error) {
+		} catch (error: any) {
 			console.error('Error deleting transfer package:', error);
-			toast.error('Failed to delete transfer package');
+			toast.error(error.message || 'Failed to delete transfer package');
 		}
 	};
 
@@ -534,15 +457,24 @@ export default function PackagesPage() {
 		}
 
 		try {
-			const supabase = createClient();
-			const { error } = await supabase
-				.from('activity_packages')
-				.delete()
-				.eq('id', pkg.id);
-			
-			if (error) throw error;
-			
-			toast.success('Activity package deleted successfully');
+			toast.info('Deleting activity package...');
+
+			const response = await fetch('/api/operator/packages/delete', {
+				method: 'DELETE',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					packageId: pkg.id,
+					packageType: 'Activity',
+				}),
+			});
+
+			if (!response.ok) {
+				const error = await response.json();
+				throw new Error(error.error || 'Failed to delete package');
+			}
+
+			const result = await response.json();
+			toast.success(result.message || 'Activity package deleted successfully');
 			
 			// Remove from local state
 			setActivityPackages(prev => prev.filter(p => p.id !== pkg.id));
@@ -554,9 +486,9 @@ export default function PackagesPage() {
 				active: pkg.status === 'PUBLISHED' ? prev.active - 1 : prev.active,
 			}));
 
-		} catch (error) {
+		} catch (error: any) {
 			console.error('Error deleting activity package:', error);
-			toast.error('Failed to delete activity package');
+			toast.error(error.message || 'Failed to delete activity package');
 		}
 	};
 
