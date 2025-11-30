@@ -25,7 +25,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Link from 'next/link';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { UserRole } from '@/lib/types';
-import { createClient } from '@/lib/supabase/client';
+import { useAuth } from '@/context/CognitoAuthContext';
 
 const OPERATOR_ROLES: UserRole[] = ['TOUR_OPERATOR', 'ADMIN', 'SUPER_ADMIN'];
 
@@ -51,44 +51,35 @@ function OperatorDashboard() {
   ] as Array<{ title: string; value: string; change: string; trend: 'up' | 'down'; icon: any; color: string }>);
   const [overview, setOverview] = useState({ bookings: '-', revenue: '-', newAgents: '-' });
 
+  const { user } = useAuth();
+
   useEffect(() => {
     const load = async () => {
       try {
-        const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        if (!user?.id) return;
 
-        const [activityPkgs, multiCityPkgs, transferPkgs, agents] = await Promise.all([
-          supabase.from('activity_packages').select('id, status, base_price').eq('operator_id', user.id),
-          supabase.from('multi_city_packages').select('id, status, base_price').eq('operator_id', user.id),
-          supabase.from('transfer_packages').select('id, status, base_price').eq('operator_id', user.id),
-          supabase.from('users').select('id').eq('role', 'TRAVEL_AGENT'),
-        ]);
+        // Fetch operator dashboard stats from AWS API
+        const response = await fetch(`/api/operator/dashboard/stats?operatorId=${user.id}`);
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch dashboard stats');
+        }
 
-        const all = [
-          ...(activityPkgs.data || []),
-          ...(multiCityPkgs.data || []),
-          ...(transferPkgs.data || []),
-        ] as Array<{ id: string; status?: string; base_price?: number | null }>;
-
-        const totalPackages = all.length;
-        const activePackages = all.filter(p => p.status === 'published').length; // used as proxy for "Active Bookings" if none exist
-        const totalValue = all.reduce((s, p) => s + (p.base_price || 0), 0);
-        const agentsCount = (agents.data || []).length;
+        const { stats: dashboardStats } = await response.json();
 
         const fmt = (n: number | null | undefined) => (typeof n === 'number' && isFinite(n) ? n.toString() : '-');
         const fmtCurrency = (n: number | null | undefined) => (typeof n === 'number' && isFinite(n) ? `$${n.toFixed(0)}` : '-');
 
         setStats([
-          { title: 'Total Packages', value: fmt(totalPackages), change: '+0%', trend: 'up', icon: Package, color: 'blue' },
+          { title: 'Total Packages', value: fmt(dashboardStats.totalPackages), change: '+0%', trend: 'up', icon: Package, color: 'blue' },
           { title: 'Active Bookings', value: '-', change: '+0%', trend: 'up', icon: Calendar, color: 'green' },
-          { title: 'Travel Agents', value: fmt(agentsCount), change: '+0%', trend: 'up', icon: Users, color: 'purple' },
-          { title: 'Monthly Revenue', value: fmtCurrency(totalValue), change: '+0%', trend: 'up', icon: DollarSign, color: 'orange' },
+          { title: 'Travel Agents', value: fmt(dashboardStats.travelAgentsCount), change: '+0%', trend: 'up', icon: Users, color: 'purple' },
+          { title: 'Monthly Revenue', value: fmtCurrency(dashboardStats.totalValue), change: '+0%', trend: 'up', icon: DollarSign, color: 'orange' },
         ]);
 
         setOverview({
           bookings: '-',
-          revenue: fmtCurrency(totalValue),
+          revenue: fmtCurrency(dashboardStats.totalValue),
           newAgents: '-',
         });
       } catch (e) {
@@ -96,7 +87,7 @@ function OperatorDashboard() {
       }
     };
     load();
-  }, []);
+  }, [user?.id]);
 
   // Recent activities
   const recentActivities = [

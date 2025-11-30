@@ -5,20 +5,18 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import MultiCityPackageForm from "@/components/packages/forms/MultiCityPackageForm";
 import { MultiCityPackageFormData } from "@/components/packages/forms/MultiCityPackageForm";
+import { useAuth } from "@/context/CognitoAuthContext";
 import { createClient } from "@/lib/supabase/client";
 
 export default function MultiCityPackagePage() {
   const router = useRouter();
+  const { user } = useAuth();
 
   const handleSave = async (data: MultiCityPackageFormData) => {
     try {
       console.log("[MultiCity] Save draft:", data);
       
-      const supabase = createClient();
-      
-      // Get current user
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) {
+      if (!user?.id) {
         throw new Error('User not authenticated');
       }
 
@@ -48,6 +46,7 @@ export default function MultiCityPackagePage() {
         status: 'draft' as const,
       };
       
+      const supabase = createClient();
       const { data: packageResult, error: packageError } = await supabase
         .from('multi_city_packages')
         .insert(packageData)
@@ -78,13 +77,8 @@ export default function MultiCityPackagePage() {
         privatePackageRows: data.pricing.privatePackageRows?.length || 0,
       });
       
-      const supabase = createClient();
-      
-      // Get current user
-      console.log("[MultiCity] Getting user...");
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) {
-        console.error("[MultiCity] User error:", userError);
+      if (!user?.id) {
+        console.error("[MultiCity] User not authenticated");
         throw new Error('User not authenticated');
       }
       console.log("[MultiCity] User authenticated:", user.id);
@@ -117,6 +111,7 @@ export default function MultiCityPackagePage() {
       };
       
       console.log("[MultiCity] Inserting main package...");
+      const supabase = createClient();
       const { data: packageResult, error: packageError } = await supabase
         .from('multi_city_packages')
         .insert(packageData)
