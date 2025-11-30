@@ -52,9 +52,9 @@ RDS_PASSWORD=ju3vrLHJUW8PqDG4
 S3_BUCKET_NAME=travel-app-storage-1769
 CLOUDFRONT_DOMAIN=<will create in next step>
 
-# Keep Supabase for migration scripts
-SUPABASE_URL=https://megmjzszmqnmzdxwzigt.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1lZ21qenN6bXFubXpkeHd6aWd0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1OTU1MTc4NiwiZXhwIjoyMDc1MTI3Nzg2fQ.i2kYiW0n-1uuJuTK5HH6sc0W7Vpjrl4SEXBq8TwL-KA
+# Keep Supabase for migration scripts (replace with your actual values)
+SUPABASE_URL=https://[YOUR_PROJECT_REF].supabase.co
+SUPABASE_SERVICE_ROLE_KEY=[YOUR_SUPABASE_SERVICE_ROLE_KEY]
 ```
 
 ---

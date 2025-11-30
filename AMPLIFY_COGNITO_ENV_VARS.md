@@ -25,28 +25,28 @@ Add these **required** environment variables:
 ```bash
 # Cognito Configuration (REQUIRED)
 COGNITO_USER_POOL_ID=us-east-1_XXXXXXXXX
-COGNITO_CLIENT_ID=20t43em6vuke645ka10s4slgl9
+COGNITO_CLIENT_ID=[YOUR_COGNITO_CLIENT_ID]
 
 # Client-side Cognito (for OAuth)
-NEXT_PUBLIC_COGNITO_DOMAIN=travel-app-auth-2285.auth.us-east-1.amazoncognito.com
-NEXT_PUBLIC_COGNITO_CLIENT_ID=20t43em6vuke645ka10s4slgl9
+NEXT_PUBLIC_COGNITO_DOMAIN=[YOUR_COGNITO_DOMAIN].auth.us-east-1.amazoncognito.com
+NEXT_PUBLIC_COGNITO_CLIENT_ID=[YOUR_COGNITO_CLIENT_ID]
 
 # AWS Region (Note: Cannot use AWS_REGION - Amplify restriction)
 DEPLOYMENT_REGION=us-east-1
 
 # Database Configuration
-RDS_HOST=travel-app-db.c61sa44wsvgz.us-east-1.rds.amazonaws.com
+RDS_HOST=[YOUR_RDS_ENDPOINT].us-east-1.rds.amazonaws.com
 RDS_PORT=5432
 RDS_DB=postgres
 RDS_USER=postgres
-RDS_PASSWORD=ju3vrLHJUW8PqDG4
+RDS_PASSWORD=[YOUR_RDS_PASSWORD]
 
 # S3 Configuration
-S3_BUCKET_NAME=travel-app-storage-1769
+S3_BUCKET_NAME=[YOUR_S3_BUCKET_NAME]
 
-# Temporary Supabase (for migration)
-NEXT_PUBLIC_SUPABASE_URL=https://megmjzszmqnmzdxwzigt.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key_here
+# Temporary Supabase (for migration - remove after migration complete)
+NEXT_PUBLIC_SUPABASE_URL=https://[YOUR_PROJECT].supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=[YOUR_SUPABASE_ANON_KEY]
 ```
 
 ### **Step 3: Get Your Cognito User Pool ID**
@@ -93,4 +93,3 @@ Once the environment variables are set:
 ---
 
 **Quick Action:** Add the environment variables in Amplify now! 🚀
-

@@ -30,9 +30,9 @@ RDS_PASSWORD=ju3vrLHJUW8PqDG4
 # S3 Configuration
 S3_BUCKET_NAME=travel-app-storage-1769
 
-# Temporary Supabase (for migration)
-NEXT_PUBLIC_SUPABASE_URL=https://megmjzszmqnmzdxwzigt.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key_here
+# Temporary Supabase (for migration - replace with your actual values)
+NEXT_PUBLIC_SUPABASE_URL=https://[YOUR_PROJECT_REF].supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=[YOUR_SUPABASE_ANON_KEY]
 ```
 
 ### **Get Your User Pool ID:**

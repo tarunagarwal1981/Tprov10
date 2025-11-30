@@ -45,11 +45,11 @@ NEXT_PUBLIC_COGNITO_CLIENT_ID = 3uok7ddaj63n79cgk7rrpncukc
 NEXT_PUBLIC_COGNITO_DOMAIN = travel-app-auth-1769.auth.us-east-1.amazoncognito.com
 ```
 
-**Legacy Supabase Variables (for backward compatibility):**
+**Legacy Supabase Variables (for backward compatibility - replace with your actual values):**
 ```
-NEXT_PUBLIC_SUPABASE_URL = https://megmjzszmqnmzdxwzigt.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1lZ21qenN6bXFubXpkeHd6aWd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQxODg3NzksImV4cCI6MjA0OTc2NDc3OX0.cTHx9VWlBWE5-5-TN4IWZGXuVAHQbKBOgm8hcuKyJOI
-SUPABASE_SERVICE_ROLE_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1lZ21qenN6bXFubXpkeHd6aWd0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTczNDE4ODc3OSwiZXhwIjoyMDQ5NzY0Nzc5fQ.xvJNJGiSl9KZjz9Vuu_MlLpN4rzzsvfgcqxpDuWqLnw
+NEXT_PUBLIC_SUPABASE_URL = https://[YOUR_PROJECT_REF].supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY = [YOUR_SUPABASE_ANON_KEY]
+SUPABASE_SERVICE_ROLE_KEY = [YOUR_SUPABASE_SERVICE_ROLE_KEY]
 ```
 
 4. **CRITICAL:** Select "Apply to all branches" or specifically "dev" branch

@@ -33,10 +33,10 @@ Or manually create the secret:
 ```powershell
 # Create JSON with secrets
 $secrets = @{
-  RDS_PASSWORD = "ju3vrLHJUW8PqDG4"
-  SUPABASE_SERVICE_ROLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-  COGNITO_CLIENT_ID = "3uok7ddaj63n79cgk7rrpncukc"
-  COGNITO_USER_POOL_ID = "us-east-1_oF5qfa2IX"
+  RDS_PASSWORD = "[YOUR_RDS_PASSWORD]"
+  SUPABASE_SERVICE_ROLE_KEY = "[YOUR_SUPABASE_SERVICE_ROLE_KEY]"
+  COGNITO_CLIENT_ID = "[YOUR_COGNITO_CLIENT_ID]"
+  COGNITO_USER_POOL_ID = "[YOUR_COGNITO_USER_POOL_ID]"
 } | ConvertTo-Json -Compress
 
 # Create secret

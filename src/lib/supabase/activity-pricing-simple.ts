@@ -295,21 +295,26 @@ export async function savePricingPackagesWithVehicles(
     convertSimpleToPricingPackage(opt, index)
   );
   
-  // Save pricing packages first
-  const savedPackages = await savePricingPackages(packageId, pricingPackages);
-  
-  // Save vehicles for private transfer packages
-  const { saveVehiclesForPricingPackage } = await import('./activity-package-vehicles');
-  
-  for (let i = 0; i < simplePricingOptions.length; i++) {
-    const simpleOption = simplePricingOptions[i];
-    const savedPackage = savedPackages[i];
-    
-    // Save vehicles if this is a private transfer package
-    if (simpleOption.packageType === 'PRIVATE_TRANSFER' && savedPackage) {
-      const vehicles = simpleOption.vehicles || [];
-      await saveVehiclesForPricingPackage(savedPackage.id, vehicles);
-    }
+  // Prepare vehicles data
+  const vehiclesData = simplePricingOptions.map((opt, index) => ({
+    pricingPackageIndex: index,
+    vehicles: opt.packageType === 'PRIVATE_TRANSFER' ? (opt.vehicles || []) : [],
+  }));
+
+  // Use API route instead of Supabase
+  const response = await fetch('/api/operator/packages/activity/pricing', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      packageId,
+      pricingPackages,
+      vehicles: vehiclesData,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to save pricing packages');
   }
 }
 
