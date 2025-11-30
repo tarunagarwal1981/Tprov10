@@ -20,7 +20,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { UserRole } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase/client';
+import { useAuth } from '@/context/CognitoAuthContext';
 
 type StatColor = 'blue' | 'green' | 'purple' | 'orange' | 'yellow' | 'red';
 
@@ -78,6 +78,7 @@ function ActivityItem({ icon: Icon, title, time, color }: { icon: any; title: st
 }
 
 function OperatorDashboard() {
+  const { user } = useAuth();
   const [stats, setStats] = useState<Array<{ icon: any; title: string; value: string; change: string; trend: 'up' | 'down'; color: StatColor }>>([
     { icon: PackageIcon, title: 'Total Packages', value: '0', change: '+0%', trend: 'up', color: 'blue' },
     { icon: CalendarIcon, title: 'Active Bookings', value: '0', change: '+0%', trend: 'up', color: 'green' },
@@ -98,37 +99,19 @@ function OperatorDashboard() {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        
-        if (!user) {
+        if (!user?.id) {
           setLoading(false);
           return;
         }
 
-        // Fetch operator-related metrics in parallel
-        const [
-          activityPackagesRes,
-          multiCityPackagesRes,
-          transferPackagesRes,
-          travelAgentsRes,
-        ] = await Promise.all([
-          supabase.from('activity_packages').select('id, status, base_price').eq('operator_id', user.id),
-          supabase.from('multi_city_packages').select('id, status, base_price').eq('operator_id', user.id),
-          supabase.from('transfer_packages').select('id, status, base_price').eq('operator_id', user.id),
-          supabase.from('users').select('id, role').eq('role', 'TRAVEL_AGENT'),
-        ]);
+        // Fetch operator dashboard stats from AWS API
+        const response = await fetch(`/api/operator/dashboard/stats?operatorId=${user.id}`);
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch dashboard stats');
+        }
 
-        const allPackages = [
-          ...(activityPackagesRes.data || []),
-          ...(multiCityPackagesRes.data || []),
-          ...(transferPackagesRes.data || []),
-        ] as Array<{ id: string; status?: string; base_price?: number | null }>;
-
-        const totalPackages = allPackages.length;
-        const activePackages = allPackages.filter(p => p.status === 'published').length;
-        const totalValue = allPackages.reduce((sum, p) => sum + (p.base_price || 0), 0);
-        const travelAgentsCount = (travelAgentsRes.data || []).length;
+        const { stats: dashboardStats } = await response.json();
 
         const fmt = (v: number | null | undefined) => {
           if (v === null || v === undefined) return '-';
@@ -144,10 +127,10 @@ function OperatorDashboard() {
         };
 
         setStats([
-          { icon: PackageIcon, title: 'Total Packages', value: fmt(totalPackages), change: '+0%', trend: 'up', color: 'blue' },
-          { icon: CalendarIcon, title: 'Active Packages', value: fmt(activePackages), change: '+0%', trend: 'up', color: 'green' },
-          { icon: UsersIcon, title: 'Travel Agents', value: fmt(travelAgentsCount), change: '+0%', trend: 'up', color: 'purple' },
-          { icon: DollarSignIcon, title: 'Total Value', value: fmtCurrency(totalValue), change: '+0%', trend: 'up', color: 'orange' },
+          { icon: PackageIcon, title: 'Total Packages', value: fmt(dashboardStats.totalPackages), change: '+0%', trend: 'up', color: 'blue' },
+          { icon: CalendarIcon, title: 'Active Packages', value: fmt(dashboardStats.activePackages), change: '+0%', trend: 'up', color: 'green' },
+          { icon: UsersIcon, title: 'Travel Agents', value: fmt(dashboardStats.travelAgentsCount), change: '+0%', trend: 'up', color: 'purple' },
+          { icon: DollarSignIcon, title: 'Total Value', value: fmtCurrency(dashboardStats.totalValue), change: '+0%', trend: 'up', color: 'orange' },
         ]);
 
         setLoading(false);
@@ -158,7 +141,7 @@ function OperatorDashboard() {
     };
 
     fetchDashboardData();
-  }, []);
+  }, [user?.id]);
 
   return (
     <div className="space-y-4">
