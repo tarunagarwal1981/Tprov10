@@ -104,13 +104,14 @@ export default function PackagesPage() {
 				const response = await fetch(`/api/operator/packages?operatorId=${user.id}`);
 				
 				if (!response.ok) {
-					throw new Error('Failed to fetch packages');
+					const errorData = await response.json().catch(() => ({}));
+					throw new Error(errorData.error || 'Failed to fetch packages');
 				}
 
 				const data = await response.json();
-				const activityData = data?.activityPackages || [];
-				const transferData = data?.transferPackages || [];
-				const multiCityData = data?.multiCityPackages || [];
+				const activityData = Array.isArray(data?.activityPackages) ? data.activityPackages : [];
+				const transferData = Array.isArray(data?.transferPackages) ? data.transferPackages : [];
+				const multiCityData = Array.isArray(data?.multiCityPackages) ? data.multiCityPackages : [];
 
 				// Transform activity packages
 				const activityPackages: ActivityPackageCardData[] = (Array.isArray(activityData) ? activityData : []).map((pkg: any) => {
@@ -144,15 +145,19 @@ export default function PackagesPage() {
 				// Transform transfer packages (simplified - may need more fields from the API)
 				const transferPackagesWithCardData: TransferPackageCardData[] = (Array.isArray(transferData) ? transferData : []).map((pkg: any) => ({
 					id: pkg.id,
-					title: pkg.title,
-					short_description: pkg.short_description,
-					destination_city: pkg.destination_city,
-					destination_country: pkg.destination_country,
-					status: pkg.status,
-					price: pkg.base_price || 0,
-					image: pkg.imageUrl || '',
-					images: pkg.images || [],
-					created_at: new Date(pkg.created_at),
+					title: pkg.title || '',
+					short_description: pkg.short_description || null,
+					destination_city: pkg.destination_city || null,
+					destination_country: pkg.destination_country || null,
+					status: (pkg.status?.toLowerCase() || 'draft') as 'draft' | 'published' | 'archived' | 'suspended',
+					created_at: pkg.created_at ? (typeof pkg.created_at === 'string' ? pkg.created_at : new Date(pkg.created_at).toISOString()) : new Date().toISOString(),
+					images: (pkg.images || []).map((img: any) => ({
+						public_url: img.public_url || null,
+						alt_text: img.alt_text || null,
+					})),
+					vehicles: [], // Will be populated if needed from a separate API call
+					hourly_pricing: [],
+					point_to_point_pricing: [],
 				}));
 
 				// Store activity packages and transfer packages separately
