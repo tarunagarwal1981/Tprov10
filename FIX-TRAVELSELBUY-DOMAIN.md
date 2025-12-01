@@ -113,8 +113,8 @@ async function testDatabaseQuery() {
     const response = await fetch('https://megmjzszmqnmzdxwzigt.supabase.co/rest/v1/users?id=eq.0afbb77a-e2fa-4de8-8a24-2ed473ab7c2c', {
       method: 'GET',
       headers: {
-        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1lZ21qenN6bXFubXpkeHd6aWd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk1NTE3ODYsImV4cCI6MjA3NTEyNzc4Nn0.BN_tgy60e4UeRyeohwGe48P8QY9KNgFu8dw__AMxRGE',
-        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1lZ21qenN6bXFubXpkeHd6aWd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk1NTE3ODYsImV4cCI6MjA3NTEyNzc4Nn0.BN_tgy60e4UeRyeohwGe48P8QY9KNgFu8dw__AMxRGE',
+        'apikey': '[YOUR_SUPABASE_ANON_KEY]',
+        'Authorization': 'Bearer [YOUR_SUPABASE_ANON_KEY]',
         'Content-Type': 'application/json',
         'Prefer': 'return=minimal'
       }
