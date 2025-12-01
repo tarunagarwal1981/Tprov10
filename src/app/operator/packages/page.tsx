@@ -107,10 +107,13 @@ export default function PackagesPage() {
 					throw new Error('Failed to fetch packages');
 				}
 
-				const { activityPackages: activityData, transferPackages: transferData, multiCityPackages: multiCityData } = await response.json();
+				const data = await response.json();
+				const activityData = data?.activityPackages || [];
+				const transferData = data?.transferPackages || [];
+				const multiCityData = data?.multiCityPackages || [];
 
 				// Transform activity packages
-				const activityPackages: ActivityPackageCardData[] = (activityData || []).map((pkg: any) => {
+				const activityPackages: ActivityPackageCardData[] = (Array.isArray(activityData) ? activityData : []).map((pkg: any) => {
 					// Map database status to display status
 					let displayStatus: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED' = 'DRAFT';
 					if (pkg.status === 'published') {
@@ -139,7 +142,7 @@ export default function PackagesPage() {
 				});
 
 				// Transform transfer packages (simplified - may need more fields from the API)
-				const transferPackagesWithCardData: TransferPackageCardData[] = (transferData || []).map((pkg: any) => ({
+				const transferPackagesWithCardData: TransferPackageCardData[] = (Array.isArray(transferData) ? transferData : []).map((pkg: any) => ({
 					id: pkg.id,
 					title: pkg.title,
 					short_description: pkg.short_description,
@@ -157,7 +160,7 @@ export default function PackagesPage() {
 				setTransferPackages(transferPackagesWithCardData);
 
 				// Transform multi-city packages
-				const multiCityPackages: Package[] = (multiCityData || []).map((pkg: any) => {
+				const multiCityPackages: Package[] = (Array.isArray(multiCityData) ? multiCityData : []).map((pkg: any) => {
 					// Map database status to display status
 					let displayStatus: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED' = 'DRAFT';
 					if (pkg.status === 'published') {
@@ -216,6 +219,7 @@ export default function PackagesPage() {
 
 	// Filter activity packages
 	const filteredActivityPackages = useMemo(() => {
+		if (!Array.isArray(activityPackages)) return [];
 		return activityPackages
 			.filter(p => {
 				if (statusFilter === 'ALL') return true;
@@ -227,6 +231,7 @@ export default function PackagesPage() {
 	}, [activityPackages, statusFilter, searchQuery]);
 
 	const filteredMultiCityPackages = useMemo(() => {
+		if (!Array.isArray(packages)) return [];
 		return packages
 			.filter(p => p.type === 'Multi-City')
 			.filter(p => {
@@ -239,6 +244,7 @@ export default function PackagesPage() {
 	}, [packages, statusFilter, searchQuery]);
 
 	const filteredOtherPackages = useMemo(() => {
+		if (!Array.isArray(packages)) return [];
 		return packages
 			.filter(p => p.type !== 'Activity' && p.type !== 'Multi-City')
 			.filter(p => {
@@ -494,6 +500,7 @@ export default function PackagesPage() {
 
 	// Filter transfer packages
 	const filteredTransferPackages = useMemo(() => {
+		if (!Array.isArray(transferPackages)) return [];
 		return transferPackages.filter(pkg => {
 			// Status filter
 			if (statusFilter === 'ALL') return true;

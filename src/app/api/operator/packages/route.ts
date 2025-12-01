@@ -34,16 +34,27 @@ export async function GET(request: NextRequest) {
 
     const activityPackageIds = activityPackagesResult.rows?.map((p: any) => p.id) || [];
     
-    // Fetch images for activity packages
+    // Fetch images for activity packages (optional - table may not exist yet)
     let activityImages: any[] = [];
     if (activityPackageIds.length > 0) {
-      const imagesResult = await query<any>(
-        `SELECT package_id, id, public_url, is_cover
-         FROM activity_package_images
-         WHERE package_id::text = ANY($1::text[])`,
-        [activityPackageIds]
-      );
-      activityImages = imagesResult.rows || [];
+      try {
+        const imagesResult = await query<any>(
+          `SELECT package_id, id, public_url, is_cover
+           FROM activity_package_images
+           WHERE package_id::text = ANY($1::text[])`,
+          [activityPackageIds]
+        );
+        activityImages = imagesResult.rows || [];
+      } catch (error: any) {
+        // Table may not exist yet - that's okay, just skip images
+        if (error.message?.includes('does not exist') || error.code === '42P01' || error.message?.includes('activity_package_images')) {
+          console.warn('activity_package_images table not found, skipping image data');
+          activityImages = [];
+        } else {
+          console.warn('Error fetching activity images (non-fatal):', error.message);
+          activityImages = [];
+        }
+      }
     }
 
     // Fetch pricing for activity packages (optional - table may not exist yet)
@@ -85,16 +96,27 @@ export async function GET(request: NextRequest) {
 
     const transferPackageIds = transferPackagesResult.rows?.map((p: any) => p.id) || [];
     
-    // Fetch images for transfer packages
+    // Fetch images for transfer packages (optional - table may not exist yet)
     let transferImages: any[] = [];
     if (transferPackageIds.length > 0) {
-      const imagesResult = await query<any>(
-        `SELECT package_id, id, public_url, is_cover
-         FROM transfer_package_images
-         WHERE package_id::text = ANY($1::text[])`,
-        [transferPackageIds]
-      );
-      transferImages = imagesResult.rows || [];
+      try {
+        const imagesResult = await query<any>(
+          `SELECT package_id, id, public_url, is_cover
+           FROM transfer_package_images
+           WHERE package_id::text = ANY($1::text[])`,
+          [transferPackageIds]
+        );
+        transferImages = imagesResult.rows || [];
+      } catch (error: any) {
+        // Table may not exist yet - that's okay, just skip images
+        if (error.message?.includes('does not exist') || error.code === '42P01' || error.message?.includes('transfer_package_images')) {
+          console.warn('transfer_package_images table not found, skipping image data');
+          transferImages = [];
+        } else {
+          console.warn('Error fetching transfer images (non-fatal):', error.message);
+          transferImages = [];
+        }
+      }
     }
 
     // Fetch multi-city packages with images
@@ -110,16 +132,27 @@ export async function GET(request: NextRequest) {
 
     const multiCityPackageIds = multiCityPackagesResult.rows?.map((p: any) => p.id) || [];
     
-    // Fetch images for multi-city packages
+    // Fetch images for multi-city packages (optional - table may not exist yet)
     let multiCityImages: any[] = [];
     if (multiCityPackageIds.length > 0) {
-      const imagesResult = await query<any>(
-        `SELECT package_id, id, public_url, is_cover
-         FROM multi_city_package_images
-         WHERE package_id::text = ANY($1::text[])`,
-        [multiCityPackageIds]
-      );
-      multiCityImages = imagesResult.rows || [];
+      try {
+        const imagesResult = await query<any>(
+          `SELECT package_id, id, public_url, is_cover
+           FROM multi_city_package_images
+           WHERE package_id::text = ANY($1::text[])`,
+          [multiCityPackageIds]
+        );
+        multiCityImages = imagesResult.rows || [];
+      } catch (error: any) {
+        // Table may not exist yet - that's okay, just skip images
+        if (error.message?.includes('does not exist') || error.code === '42P01' || error.message?.includes('multi_city_package_images')) {
+          console.warn('multi_city_package_images table not found, skipping image data');
+          multiCityImages = [];
+        } else {
+          console.warn('Error fetching multi-city images (non-fatal):', error.message);
+          multiCityImages = [];
+        }
+      }
     }
 
     // Combine activity packages with images and pricing
