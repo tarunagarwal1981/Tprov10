@@ -6,7 +6,7 @@ export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId, email, accessToken } = await request.json();
+    let { userId, email, accessToken } = await request.json();
 
     // Support both old (Supabase) and new (Cognito) formats
     if (!userId && !email) {
@@ -17,6 +17,7 @@ export async function POST(request: NextRequest) {
     }
 
     // If accessToken provided, verify with Cognito (optional - for security)
+    // Also support phone OTP sessions
     if (accessToken) {
       try {
         const { getUser } = await import('@/lib/aws/cognito');
@@ -24,6 +25,18 @@ export async function POST(request: NextRequest) {
         // Token is valid, proceed with database query
       } catch (error) {
         console.error('Cognito token verification failed:', error);
+        // Check if it's a phone OTP session (base64 encoded JSON)
+        try {
+          const sessionData = JSON.parse(atob(accessToken));
+          if (sessionData.authMethod === 'phone_otp' && sessionData.userId) {
+            // Valid phone OTP session, use userId from session
+            if (!userId && sessionData.userId) {
+              userId = sessionData.userId;
+            }
+          }
+        } catch (e) {
+          // Not a phone OTP session, continue with original userId/email
+        }
         // Continue anyway - token verification is optional for profile lookup
       }
     }
@@ -45,9 +58,11 @@ export async function POST(request: NextRequest) {
         role: string;
         phone?: string;
         profile?: any;
+        profile_completion_percentage?: number;
+        onboarding_completed?: boolean;
         created_at: Date;
         updated_at: Date;
-      }>('SELECT * FROM users WHERE id = $1 OR email = $2 LIMIT 1', [userId || '', email || '']);
+      }>('SELECT id, email, name, role, phone, profile, profile_completion_percentage, onboarding_completed, created_at, updated_at FROM users WHERE id = $1 OR email = $2 LIMIT 1', [userId || '', email || '']);
 
       if (!profile) {
         console.error('❌ [SERVER] No profile found for user:', userId || email);

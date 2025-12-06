@@ -30,6 +30,7 @@ export interface AuthContextState {
   isInitialized: boolean;
   error: AuthError | null;
   login: (email: string, password: string, rememberMe?: boolean) => Promise<string | false>;
+  loginWithPhoneOTP: (countryCode: string, phoneNumber: string, otp: string) => Promise<string | false>;
   register: (userData: {
     email: string;
     password: string;
@@ -37,6 +38,14 @@ export interface AuthContextState {
     phone?: string;
     role: UserRole;
     profile: any;
+  }) => Promise<string | false>;
+  registerWithPhoneOTP: (userData: {
+    countryCode: string;
+    phoneNumber: string;
+    email: string;
+    name: string;
+    companyName?: string;
+    otp: string;
   }) => Promise<string | false>;
   loginWithGoogle: () => Promise<boolean>;
   loginWithGithub: () => Promise<boolean>;
@@ -388,6 +397,167 @@ export const CognitoAuthProvider: React.FC<{ children: React.ReactNode }> = ({ c
     return false;
   }, []);
 
+  const loginWithPhoneOTP = useCallback(async (
+    countryCode: string,
+    phoneNumber: string,
+    otp: string
+  ): Promise<string | false> => {
+    try {
+      setLoading('authenticating');
+      setError(null);
+
+      console.log('📱 Starting phone OTP login for:', `${countryCode}${phoneNumber}`);
+
+      const response = await fetch('/api/auth/phone/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          countryCode,
+          phoneNumber,
+          code: otp,
+          purpose: 'login',
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || error.message || 'OTP verification failed');
+      }
+
+      const result = await response.json();
+
+      if (!result.authenticated || !result.user) {
+        throw new Error('Authentication failed');
+      }
+
+      // For phone OTP, we need to handle authentication differently
+      // The verify-otp endpoint returns user info but not Cognito tokens
+      // We'll need to create a session or use a different auth mechanism
+      // For now, store user info and create a minimal session
+      if (typeof window !== 'undefined') {
+        // Store user info
+        localStorage.setItem('phoneAuthUser', JSON.stringify(result.user));
+        // Create a temporary session token (in production, use proper JWT)
+        const sessionToken = btoa(JSON.stringify({
+          userId: result.user.id,
+          email: result.user.email,
+          authMethod: 'phone_otp',
+          timestamp: Date.now(),
+        }));
+        localStorage.setItem('phoneAuthSession', sessionToken);
+      }
+
+      // Load user profile
+      const fullUser = await loadUserProfile(result.user.id, result.user.email);
+
+      if (fullUser) {
+        // Determine redirect URL based on role and profile completion
+        let redirectUrl = '/';
+        switch (fullUser.role) {
+          case 'SUPER_ADMIN':
+          case 'ADMIN':
+            redirectUrl = '/admin/dashboard';
+            break;
+          case 'TOUR_OPERATOR':
+            redirectUrl = '/operator/dashboard';
+            break;
+          case 'TRAVEL_AGENT':
+            // Check profile completion for agents
+            const userData = fullUser as any;
+            const completion = userData.profile_completion_percentage || 0;
+            const onboardingCompleted = userData.onboarding_completed || false;
+            redirectUrl = (completion < 100 || !onboardingCompleted) ? '/agent/onboarding' : '/agent';
+            break;
+          default:
+            redirectUrl = '/';
+        }
+        console.log('✅ Phone OTP login successful, redirecting to:', redirectUrl);
+        return redirectUrl;
+      }
+
+      return false;
+    } catch (err: any) {
+      console.error('❌ Phone OTP login error:', err);
+      setError({
+        type: 'login_error',
+        message: err.message || 'Phone OTP login failed',
+        timestamp: new Date()
+      });
+      return false;
+    } finally {
+      setLoading('idle');
+    }
+  }, [loadUserProfile]);
+
+  const registerWithPhoneOTP = useCallback(async (userData: {
+    countryCode: string;
+    phoneNumber: string;
+    email: string;
+    name: string;
+    companyName?: string;
+    otp: string;
+  }): Promise<string | false> => {
+    try {
+      setLoading('authenticating');
+      setError(null);
+
+      console.log('📱 Starting phone OTP registration for:', userData.email);
+
+      const response = await fetch('/api/auth/phone/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          countryCode: userData.countryCode,
+          phoneNumber: userData.phoneNumber,
+          code: userData.otp,
+          purpose: 'signup',
+          email: userData.email,
+          name: userData.name,
+          companyName: userData.companyName,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || error.message || 'OTP verification failed');
+      }
+
+      const result = await response.json();
+
+      if (!result.authenticated || !result.user) {
+        throw new Error('Registration failed');
+      }
+
+      // Store user info temporarily
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('phoneAuthUser', JSON.stringify(result.user));
+      }
+
+      // Load user profile
+      const fullUser = await loadUserProfile(result.user.id, result.user.email);
+
+      if (fullUser) {
+        // New users always go to onboarding
+        const redirectUrl = '/agent/onboarding';
+        console.log('✅ Phone OTP registration successful, redirecting to:', redirectUrl);
+        toast.success('Account created successfully! Please complete your profile.');
+        return redirectUrl;
+      }
+
+      return false;
+    } catch (err: any) {
+      console.error('❌ Phone OTP registration error:', err);
+      setError({
+        type: 'registration_error',
+        message: err.message || 'Phone OTP registration failed',
+        timestamp: new Date()
+      });
+      return false;
+    } finally {
+      setLoading('idle');
+    }
+  }, [loadUserProfile]);
+
   const logout = useCallback(async (): Promise<void> => {
     try {
       const tokens = getStoredTokens();
@@ -438,13 +608,15 @@ export const CognitoAuthProvider: React.FC<{ children: React.ReactNode }> = ({ c
     isInitialized,
     error,
     login,
+    loginWithPhoneOTP,
     register,
+    registerWithPhoneOTP,
     loginWithGoogle,
     loginWithGithub,
     logout,
     getRedirectPath,
     clearError,
-  }), [user, profile, userRole, loading, isInitialized, error, login, register, loginWithGoogle, loginWithGithub, logout, getRedirectPath, clearError]);
+  }), [user, profile, userRole, loading, isInitialized, error, login, loginWithPhoneOTP, register, registerWithPhoneOTP, loginWithGoogle, loginWithGithub, logout, getRedirectPath, clearError]);
 
   return (
     <AuthContext.Provider value={value}>

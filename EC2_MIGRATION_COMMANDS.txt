@@ -1,0 +1,29 @@
+# Commands to run on EC2 (you're already connected!)
+
+# Option 1: Check if PostgreSQL client exists
+which psql || echo "psql not found"
+
+# Option 2: Try Amazon Linux extras (if available)
+sudo amazon-linux-extras install postgresql14 -y
+
+# Option 3: If that fails, try installing from EPEL
+sudo yum install -y epel-release
+sudo yum install -y postgresql
+
+# Option 4: If still failing, try with different repo
+sudo yum --enablerepo=amzn2extra-postgresql14 install -y postgresql
+
+# Once psql is installed, run:
+export PGPASSWORD='ju3vrLHJUW8PqDG4'
+
+# Test connection
+psql -h travel-app-db.c61sa44wsvgz.us-east-1.rds.amazonaws.com -U postgres -d postgres -c "SELECT version();"
+
+# If connection works, execute migration:
+# Copy the SQL from migrations/001_phone_auth_schema.sql and paste it into psql
+
+# Or connect interactively:
+psql -h travel-app-db.c61sa44wsvgz.us-east-1.rds.amazonaws.com -U postgres -d postgres
+
+# Then paste the SQL from migrations/001_phone_auth_schema.sql
+

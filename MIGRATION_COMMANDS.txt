@@ -1,0 +1,31 @@
+EC2 Instance Created: i-0b19956872d0137f8
+Public IP: 100.26.165.84
+
+Connect via AWS Console:
+1. Go to EC2 Console → Instances
+2. Select i-0b19956872d0137f8
+3. Click "Connect" → "Session Manager" (if enabled) OR "EC2 Instance Connect"
+
+Then run these commands on EC2:
+
+# Install PostgreSQL
+sudo yum install -y postgresql15
+
+# Create migration file
+cat > /tmp/migration.sql << 'EOF'
+[PASTE CONTENTS OF migrations/001_phone_auth_schema.sql HERE]
+EOF
+
+# Run migration
+export PGPASSWORD='ju3vrLHJUW8PqDG4'
+psql -h travel-app-db.c61sa44wsvgz.us-east-1.rds.amazonaws.com \
+     -U postgres \
+     -d postgres \
+     -f /tmp/migration.sql
+
+# Verify
+psql -h travel-app-db.c61sa44wsvgz.us-east-1.rds.amazonaws.com \
+     -U postgres \
+     -d postgres \
+     -c "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('otp_codes', 'account_details', 'brand_details', 'business_details', 'documents', 'otp_rate_limits');"
+
