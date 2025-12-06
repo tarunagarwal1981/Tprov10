@@ -9,15 +9,17 @@
 - **Emails Sent (Last 24h)**: 0
 
 ### Verified Identities
-1. **Domain**: `travelselbuy.com` ✅
-2. **Email**: `tarunag.in@gmail.com` ✅
+1. **Email**: `tarunag.in@gmail.com` ✅ **VERIFIED**
+2. **Domain**: `travelselbuy.com` ⚠️ **PENDING** (needs DNS records)
 
 ---
 
 ## 🔍 What to Check in SES
 
-### 1. Verify Identity Status ✅
-**Status**: Both identities are verified
+### 1. Verify Identity Status ⚠️
+**Status**: 
+- ✅ Email `tarunag.in@gmail.com` is verified
+- ⚠️ Domain `travelselbuy.com` is **PENDING** - needs DNS configuration
 
 **Check via CLI**:
 ```bash
@@ -28,7 +30,24 @@ aws ses get-identity-verification-attributes \
 
 **Check via Console**:
 - Go to: https://console.aws.amazon.com/ses/home?region=us-east-1#/verified-identities
-- You should see both identities listed as "Verified"
+- You should see:
+  - `tarunag.in@gmail.com` - Status: **Verified** ✅
+  - `travelselbuy.com` - Status: **Pending** ⚠️
+
+**To Complete Domain Verification**:
+1. Go to: https://console.aws.amazon.com/ses/home?region=us-east-1#/verified-identities
+2. Click on `travelselbuy.com`
+3. You'll see DNS records that need to be added:
+   - **TXT record** for domain verification:
+     - Name: `_amazonses.travelselbuy.com` (or just the domain)
+     - Value: `z9FgYEeag9VFo5CPSqXmqezfTTFbiO/FuY8yV3Z2JwM=`
+   - **CNAME records** for DKIM (3 records):
+     - `zo3v2ihczrihh3r7vw6ta3lhkihgkewo._domainkey.travelselbuy.com`
+     - `ze6wxupvd45qjotznnzia2j7hpsgfbls._domainkey.travelselbuy.com`
+     - `c6oxbfldjwzxnbgtnbto2jho64jdmwaw._domainkey.travelselbuy.com`
+4. Add these records to your DNS provider (wherever `travelselbuy.com` is hosted)
+5. Wait for DNS propagation (usually 5-30 minutes)
+6. SES will automatically verify once DNS records are found
 
 ---
 

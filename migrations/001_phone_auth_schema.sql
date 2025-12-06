@@ -74,8 +74,8 @@ CREATE TABLE IF NOT EXISTS account_details (
   updated_at TIMESTAMP DEFAULT NOW(),
   created_at TIMESTAMP DEFAULT NOW()
 );
-
--- Brand Details
+  
+  -- Brand Details
 CREATE TABLE IF NOT EXISTS brand_details (
   user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
   company_name VARCHAR(255),
@@ -89,8 +89,8 @@ CREATE TABLE IF NOT EXISTS brand_details (
   updated_at TIMESTAMP DEFAULT NOW(),
   created_at TIMESTAMP DEFAULT NOW()
 );
-
--- Business Details
+  
+  -- Business Details
 CREATE TABLE IF NOT EXISTS business_details (
   user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
   product_sold VARCHAR(100),
@@ -165,8 +165,8 @@ CREATE INDEX IF NOT EXISTS idx_otp_rate_limits ON otp_rate_limits(identifier, id
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
-    NEW.updated_at = NOW();
-    RETURN NEW;
+  NEW.updated_at = NOW();
+  RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -218,7 +218,7 @@ BEGIN
   IF EXISTS (SELECT 1 FROM business_details WHERE user_id = user_uuid AND city IS NOT NULL) THEN completion_score := completion_score + 1; END IF;
   IF EXISTS (SELECT 1 FROM business_details WHERE user_id = user_uuid AND jsonb_array_length(COALESCE(international_destinations, '[]'::jsonb)) > 0) THEN completion_score := completion_score + 1; END IF;
   IF EXISTS (SELECT 1 FROM business_details WHERE user_id = user_uuid AND company_incorporation_year IS NOT NULL) THEN completion_score := completion_score + 1; END IF;
-
+  
   -- Documents (25%)
   total_fields := total_fields + 4;
   IF EXISTS (SELECT 1 FROM documents WHERE user_id = user_uuid AND document_type = 'aadhar_card' AND status = 'approved') THEN completion_score := completion_score + 1; END IF;
