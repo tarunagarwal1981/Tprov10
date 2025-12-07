@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter, useSearchParams } from 'next/navigation';
 import AuthLayout from '@/components/shared/AuthLayout';
@@ -9,7 +9,10 @@ import { useAuth } from '@/context/CognitoAuthContext';
 const OTP_LENGTH = 6;
 const OTP_RESEND_COOLDOWN = 60; // seconds
 
-const PhoneOTPPage: React.FC = () => {
+// Force dynamic rendering (don't pre-render at build time)
+export const dynamic = 'force-dynamic';
+
+const PhoneOTPPageContent: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { loginWithPhoneOTP, registerWithPhoneOTP } = useAuth();
@@ -317,6 +320,29 @@ const PhoneOTPPage: React.FC = () => {
         </div>
       </motion.div>
     </AuthLayout>
+  );
+};
+
+const PhoneOTPPage: React.FC = () => {
+  return (
+    <Suspense fallback={
+      <AuthLayout
+        title="Enter Verification Code"
+        subtitle="Loading..."
+        showTestimonials={false}
+        showFeatures={false}
+      >
+        <div className="flex items-center justify-center py-8">
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+            className="w-8 h-8 border-2 border-[#FF6B35] border-t-transparent rounded-full"
+          />
+        </div>
+      </AuthLayout>
+    }>
+      <PhoneOTPPageContent />
+    </Suspense>
   );
 };
 
