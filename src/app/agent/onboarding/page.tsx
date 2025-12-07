@@ -139,7 +139,7 @@ export default function OnboardingPage() {
           >
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Complete Your Profile</h1>
             <p className="text-gray-600">
-              Let's set up your profile to get started. Complete all sections to unlock full features.
+              Let&apos;s set up your profile to get started. Complete all sections to unlock full features.
             </p>
           </motion.div>
 

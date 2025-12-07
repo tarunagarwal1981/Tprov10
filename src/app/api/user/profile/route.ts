@@ -6,7 +6,9 @@ export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
   try {
-    let { userId, email, accessToken } = await request.json();
+    const body = await request.json();
+    let { userId } = body;
+    const { email, accessToken } = body;
 
     // Support both old (Supabase) and new (Cognito) formats
     if (!userId && !email) {

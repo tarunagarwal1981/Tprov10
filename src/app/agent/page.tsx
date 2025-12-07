@@ -1,5 +1,8 @@
 'use client';
 
+// Force dynamic rendering (don't pre-render at build time)
+export const dynamic = 'force-dynamic';
+
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
