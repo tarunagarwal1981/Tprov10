@@ -16,16 +16,15 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { countryCode, phoneNumber, recaptchaToken } = body;
 
-    console.log('📥 Received phone init request:', {
-      countryCode,
-      phoneNumber: phoneNumber ? phoneNumber.substring(0, 3) + '***' : 'missing',
-      hasRecaptchaToken: !!recaptchaToken,
-      tokenLength: recaptchaToken?.length || 0,
-      tokenPrefix: recaptchaToken?.substring(0, 20) + '...' || 'none',
-      hasSecretKey: !!process.env.RECAPTCHA_SECRET_KEY,
-      secretKeyLength: process.env.RECAPTCHA_SECRET_KEY?.length || 0,
-      secretKeyPrefix: process.env.RECAPTCHA_SECRET_KEY ? process.env.RECAPTCHA_SECRET_KEY.substring(0, 10) + '...' : 'not set',
-    });
+    console.log('📥 Received phone init request');
+    console.log('   Country code:', countryCode);
+    console.log('   Phone number:', phoneNumber ? phoneNumber.substring(0, 3) + '***' : 'missing');
+    console.log('   Has reCAPTCHA token:', !!recaptchaToken);
+    console.log('   Token length:', recaptchaToken?.length || 0);
+    console.log('   Token prefix:', recaptchaToken?.substring(0, 20) + '...' || 'none');
+    console.log('   Has secret key:', !!process.env.RECAPTCHA_SECRET_KEY);
+    console.log('   Secret key length:', process.env.RECAPTCHA_SECRET_KEY?.length || 0);
+    console.log('   Secret key prefix:', process.env.RECAPTCHA_SECRET_KEY ? process.env.RECAPTCHA_SECRET_KEY.substring(0, 10) + '...' : 'not set');
 
     if (!countryCode || !phoneNumber) {
       console.error('❌ Missing required fields:', { countryCode, phoneNumber });
@@ -41,21 +40,23 @@ export async function POST(request: NextRequest) {
                       request.headers.get('x-real-ip') ||
                       'unknown';
       
-      console.log('🔍 Verifying reCAPTCHA token...', {
-        tokenLength: recaptchaToken.length,
-        tokenPrefix: recaptchaToken.substring(0, 20) + '...',
-        hasSecretKey: !!process.env.RECAPTCHA_SECRET_KEY,
-      });
+      console.log('🔍 Verifying reCAPTCHA token...');
+      console.log('   Token length:', recaptchaToken.length);
+      console.log('   Token prefix:', recaptchaToken.substring(0, 20) + '...');
+      console.log('   Has secret key:', !!process.env.RECAPTCHA_SECRET_KEY);
       
       const recaptchaResult = await verifyRecaptcha(recaptchaToken, clientIp);
       if (!recaptchaResult.valid) {
-        console.error('❌ reCAPTCHA verification failed:', recaptchaResult.error);
+        console.error('❌ reCAPTCHA verification failed');
+        console.error('   Error:', recaptchaResult.error);
+        console.error('   Score:', recaptchaResult.score || 'N/A');
         return NextResponse.json(
           { error: 'reCAPTCHA verification failed', details: recaptchaResult.error },
           { status: 400 }
         );
       }
       console.log('✅ reCAPTCHA verification passed');
+      console.log('   Score:', recaptchaResult.score || 'N/A (v2)');
     } else if (process.env.NODE_ENV === 'production') {
       // Require reCAPTCHA in production
       return NextResponse.json(

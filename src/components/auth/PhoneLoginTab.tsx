@@ -88,11 +88,10 @@ export const PhoneLoginTab: React.FC<PhoneLoginTabProps> = ({ onError }) => {
               const widgetId = window.grecaptcha.render(recaptchaRef.current, {
                 sitekey: RECAPTCHA_SITE_KEY,
                 callback: (token: string) => {
-                  console.log('✅ reCAPTCHA token received:', {
-                    tokenLength: token.length,
-                    tokenPrefix: token.substring(0, 20) + '...',
-                    siteKey: RECAPTCHA_SITE_KEY ? RECAPTCHA_SITE_KEY.substring(0, 10) + '...' : 'not set',
-                  });
+                  console.log('✅ reCAPTCHA token received');
+                  console.log('   Token length:', token.length);
+                  console.log('   Token prefix:', token.substring(0, 20) + '...');
+                  console.log('   Site key:', RECAPTCHA_SITE_KEY ? RECAPTCHA_SITE_KEY.substring(0, 10) + '...' : 'not set');
                   setRecaptchaToken(token);
                 },
                 'expired-callback': () => {
@@ -220,14 +219,13 @@ export const PhoneLoginTab: React.FC<PhoneLoginTabProps> = ({ onError }) => {
         recaptchaToken: recaptchaToken || undefined,
       };
 
-      console.log('📤 Sending phone init request:', {
-        countryCode: requestBody.countryCode,
-        phoneNumber: requestBody.phoneNumber,
-        hasRecaptchaToken: !!requestBody.recaptchaToken,
-        tokenLength: requestBody.recaptchaToken?.length || 0,
-        tokenPrefix: requestBody.recaptchaToken?.substring(0, 20) + '...' || 'none',
-        siteKey: RECAPTCHA_SITE_KEY ? RECAPTCHA_SITE_KEY.substring(0, 10) + '...' : 'not set',
-      });
+      console.log('📤 Sending phone init request');
+      console.log('   Country code:', requestBody.countryCode);
+      console.log('   Phone number:', requestBody.phoneNumber);
+      console.log('   Has reCAPTCHA token:', !!requestBody.recaptchaToken);
+      console.log('   Token length:', requestBody.recaptchaToken?.length || 0);
+      console.log('   Token prefix:', requestBody.recaptchaToken?.substring(0, 20) + '...' || 'none');
+      console.log('   Site key:', RECAPTCHA_SITE_KEY ? RECAPTCHA_SITE_KEY.substring(0, 10) + '...' : 'not set');
 
       const response = await fetch('/api/auth/phone/init', {
         method: 'POST',
@@ -239,23 +237,29 @@ export const PhoneLoginTab: React.FC<PhoneLoginTabProps> = ({ onError }) => {
 
       const data = await response.json();
 
-      console.log('📥 Response data:', {
-        mode: data.mode,
-        userExists: data.userExists,
-        error: data.error,
-        details: data.details,
-      });
+      console.log('📥 Response data:');
+      console.log('   Mode:', data.mode || 'undefined');
+      console.log('   User exists:', data.userExists || 'undefined');
+      console.log('   Error:', data.error || 'none');
+      console.log('   Details:', data.details || 'none');
+      if (data.details) {
+        console.log('   Full error details:', JSON.stringify(data.details, null, 2));
+      }
 
       if (!response.ok) {
-        console.error('❌ Request failed:', {
-          status: response.status,
-          error: data.error,
-          details: data.details,
-        });
+        console.error('❌ Request failed');
+        console.error('   Status:', response.status);
+        console.error('   Error:', data.error || 'Unknown error');
+        console.error('   Details:', data.details || 'No details');
+        if (data.details) {
+          console.error('   Full error details:', JSON.stringify(data.details, null, 2));
+        }
         throw new Error(data.error || 'Failed to initialize');
       }
 
-      console.log('✅ Phone init successful:', data);
+      console.log('✅ Phone init successful');
+      console.log('   Mode:', data.mode);
+      console.log('   User exists:', data.userExists);
 
       const userDataObj = {
         countryCode,
