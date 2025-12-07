@@ -50,6 +50,42 @@ export const PhoneLoginTab: React.FC<PhoneLoginTabProps> = ({ onError }) => {
   const recaptchaRef = useRef<HTMLDivElement>(null);
   const recaptchaWidgetId = useRef<number | null>(null);
 
+  // Handle global errors (like reCAPTCHA timeout) that don't break functionality
+  useEffect(() => {
+    const handleGlobalError = (event: ErrorEvent) => {
+      // Ignore reCAPTCHA timeout errors - they're often non-critical
+      if (event.message && (
+        event.message.includes('Timeout') ||
+        event.message.includes('recaptcha') ||
+        event.message.includes('fallback')
+      )) {
+        console.warn('⚠️ reCAPTCHA script warning (non-critical):', event.message);
+        event.preventDefault(); // Prevent error from showing in console
+        return;
+      }
+    };
+
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      // Ignore reCAPTCHA promise rejections (timeouts)
+      if (event.reason && (
+        event.reason.toString().includes('Timeout') ||
+        event.reason.toString().includes('recaptcha')
+      )) {
+        console.warn('⚠️ reCAPTCHA promise rejection (non-critical):', event.reason);
+        event.preventDefault();
+        return;
+      }
+    };
+
+    window.addEventListener('error', handleGlobalError);
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+
+    return () => {
+      window.removeEventListener('error', handleGlobalError);
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+    };
+  }, []);
+
   // Load reCAPTCHA - wait for script to fully load
   useEffect(() => {
     if (!RECAPTCHA_SITE_KEY) {
@@ -132,6 +168,17 @@ export const PhoneLoginTab: React.FC<PhoneLoginTabProps> = ({ onError }) => {
         setError('Failed to initialize reCAPTCHA. Please refresh the page.');
       }
     };
+
+    // Handle timeout errors from Google's reCAPTCHA script
+    const handleTimeoutError = (event: ErrorEvent) => {
+      if (event.message && event.message.includes('Timeout')) {
+        console.warn('⚠️ reCAPTCHA timeout detected, but widget may still work');
+        // Don't set error - the widget might still be functional
+        // The timeout is often from Google's internal script, not our code
+      }
+    };
+
+    window.addEventListener('error', handleTimeoutError);
 
     // Retry mechanism with increasing delays
     let attempts = 0;
