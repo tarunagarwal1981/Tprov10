@@ -68,18 +68,34 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user exists with this phone number
-    const user = await queryOne<{
-      id: string;
-      email: string;
-      name: string;
-      phone_verified: boolean;
-      auth_method: string;
-    }>(
-      `SELECT id, email, name, phone_verified, auth_method 
-       FROM users 
-       WHERE country_code = $1 AND phone_number = $2`,
-      [countryCode, phoneNumber]
-    );
+    console.log('🔍 Checking if user exists in database...');
+    console.log('   Query: SELECT id, email, name, phone_verified, auth_method FROM users WHERE country_code = $1 AND phone_number = $2');
+    console.log('   Params:', { countryCode, phoneNumber });
+    
+    let user;
+    try {
+      user = await queryOne<{
+        id: string;
+        email: string;
+        name: string;
+        phone_verified: boolean;
+        auth_method: string;
+      }>(
+        `SELECT id, email, name, phone_verified, auth_method 
+         FROM users 
+         WHERE country_code = $1 AND phone_number = $2`,
+        [countryCode, phoneNumber]
+      );
+      console.log('✅ Database query completed');
+      console.log('   User found:', !!user);
+    } catch (dbError: any) {
+      console.error('❌ Database query error:', dbError);
+      console.error('   Error name:', dbError?.name);
+      console.error('   Error message:', dbError?.message);
+      console.error('   Error code:', dbError?.code);
+      console.error('   Error stack:', dbError?.stack);
+      throw dbError; // Re-throw to be caught by outer catch
+    }
 
     if (user) {
       // User exists - login flow
@@ -97,11 +113,28 @@ export async function POST(request: NextRequest) {
       });
     }
   } catch (error: any) {
-    console.error('Phone init error:', error);
+    console.error('❌ Phone init error:', error);
+    console.error('   Error name:', error?.name);
+    console.error('   Error message:', error?.message);
+    console.error('   Error stack:', error?.stack);
+    console.error('   Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+    
+    // Log specific error types
+    if (error?.code) {
+      console.error('   Error code:', error.code);
+    }
+    if (error?.errno) {
+      console.error('   Error number:', error.errno);
+    }
+    if (error?.sql) {
+      console.error('   SQL:', error.sql);
+    }
+    
     return NextResponse.json(
       {
         error: 'Failed to initialize phone authentication',
         message: error.message || 'Unknown error',
+        details: process.env.NODE_ENV === 'development' ? error.stack : undefined,
       },
       { status: 500 }
     );
