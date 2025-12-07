@@ -10,7 +10,7 @@ interface TurnstileWidgetProps {
   onError?: () => void;
   theme?: 'light' | 'dark' | 'auto';
   size?: 'normal' | 'compact';
-  mode?: 'managed' | 'non-interactive' | 'invisible';
+  // mode?: 'managed' | 'non-interactive' | 'invisible'; // Not used in current implementation
 }
 
 declare global {
@@ -38,7 +38,6 @@ export const TurnstileWidget: React.FC<TurnstileWidgetProps> = ({
   onError,
   theme = 'auto',
   size = 'normal',
-  mode = 'managed',
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
@@ -120,8 +119,7 @@ export const TurnstileWidget: React.FC<TurnstileWidgetProps> = ({
     }
   };
 
-  // Expose reset method via ref (if needed)
-  React.useImperativeHandle(React.forwardRef(() => null), () => ({ reset }));
+  // Reset method is available but not exposed via ref (can be added if needed)
 
   if (!TURNSTILE_SITE_KEY) {
     return (
