@@ -599,8 +599,8 @@ declare global {
     grecaptcha: {
       render: (container: HTMLElement, options: any) => number;
       reset: (widgetId: number) => void;
+      ready?: (callback: () => void) => void;
     };
-    onRecaptchaLoad: () => void;
   }
 }
 
