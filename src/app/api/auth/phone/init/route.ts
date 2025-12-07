@@ -25,6 +25,8 @@ export async function POST(request: NextRequest) {
     console.log('   Has secret key:', !!process.env.RECAPTCHA_SECRET_KEY);
     console.log('   Secret key length:', process.env.RECAPTCHA_SECRET_KEY?.length || 0);
     console.log('   Secret key prefix:', process.env.RECAPTCHA_SECRET_KEY ? process.env.RECAPTCHA_SECRET_KEY.substring(0, 10) + '...' : 'not set');
+    console.log('   NODE_ENV:', process.env.NODE_ENV);
+    console.log('   All env vars with RECAPTCHA:', Object.keys(process.env).filter(key => key.includes('RECAPTCHA')).join(', ') || 'none');
 
     if (!countryCode || !phoneNumber) {
       console.error('❌ Missing required fields:', { countryCode, phoneNumber });
