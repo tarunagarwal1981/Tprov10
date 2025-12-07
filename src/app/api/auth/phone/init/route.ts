@@ -130,13 +130,20 @@ export async function POST(request: NextRequest) {
       console.error('   SQL:', error.sql);
     }
     
-    return NextResponse.json(
-      {
-        error: 'Failed to initialize phone authentication',
-        message: error.message || 'Unknown error',
-        details: process.env.NODE_ENV === 'development' ? error.stack : undefined,
-      },
-      { status: 500 }
-    );
+    // Return error details (safe for client - no sensitive info)
+    const errorResponse: any = {
+      error: 'Failed to initialize phone authentication',
+      message: error.message || 'Unknown error',
+    };
+    
+    // Add more details in non-production or if it's a known safe error
+    if (process.env.NODE_ENV !== 'production' || error.message) {
+      errorResponse.details = error.message;
+      if (error.code) {
+        errorResponse.code = error.code;
+      }
+    }
+    
+    return NextResponse.json(errorResponse, { status: 500 });
   }
 }
