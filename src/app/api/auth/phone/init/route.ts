@@ -13,9 +13,22 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
-    const { countryCode, phoneNumber, recaptchaToken } = await request.json();
+    const body = await request.json();
+    const { countryCode, phoneNumber, recaptchaToken } = body;
+
+    console.log('📥 Received phone init request:', {
+      countryCode,
+      phoneNumber: phoneNumber ? phoneNumber.substring(0, 3) + '***' : 'missing',
+      hasRecaptchaToken: !!recaptchaToken,
+      tokenLength: recaptchaToken?.length || 0,
+      tokenPrefix: recaptchaToken?.substring(0, 20) + '...' || 'none',
+      hasSecretKey: !!process.env.RECAPTCHA_SECRET_KEY,
+      secretKeyLength: process.env.RECAPTCHA_SECRET_KEY?.length || 0,
+      secretKeyPrefix: process.env.RECAPTCHA_SECRET_KEY ? process.env.RECAPTCHA_SECRET_KEY.substring(0, 10) + '...' : 'not set',
+    });
 
     if (!countryCode || !phoneNumber) {
+      console.error('❌ Missing required fields:', { countryCode, phoneNumber });
       return NextResponse.json(
         { error: 'Country code and phone number are required' },
         { status: 400 }
