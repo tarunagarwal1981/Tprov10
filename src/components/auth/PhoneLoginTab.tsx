@@ -110,22 +110,22 @@ export const PhoneLoginTab: React.FC<PhoneLoginTabProps> = ({ onError }) => {
           });
         } else {
           // Direct render for v2
-          const widgetId = window.grecaptcha.render(recaptchaRef.current, {
-            sitekey: RECAPTCHA_SITE_KEY,
-            callback: (token: string) => {
+        const widgetId = window.grecaptcha.render(recaptchaRef.current, {
+          sitekey: RECAPTCHA_SITE_KEY,
+          callback: (token: string) => {
               console.log('✅ reCAPTCHA token received');
-              setRecaptchaToken(token);
-            },
-            'expired-callback': () => {
+            setRecaptchaToken(token);
+          },
+          'expired-callback': () => {
               console.warn('⚠️ reCAPTCHA token expired');
-              setRecaptchaToken(null);
-            },
-            'error-callback': () => {
+            setRecaptchaToken(null);
+          },
+          'error-callback': () => {
               console.error('❌ reCAPTCHA error occurred');
-              setRecaptchaToken(null);
-            },
-          });
-          recaptchaWidgetId.current = widgetId;
+            setRecaptchaToken(null);
+          },
+        });
+        recaptchaWidgetId.current = widgetId;
           console.log('✅ reCAPTCHA widget rendered successfully');
         }
       } catch (err) {
@@ -172,7 +172,7 @@ export const PhoneLoginTab: React.FC<PhoneLoginTabProps> = ({ onError }) => {
         if (typeof window !== 'undefined' && window.grecaptcha) {
           console.log(`✅ reCAPTCHA grecaptcha available after ${retries} retries`);
           clearInterval(checkInterval);
-          setRecaptchaLoaded(true);
+    setRecaptchaLoaded(true);
         } else if (retries >= maxRetries) {
           console.error('❌ reCAPTCHA grecaptcha still not available after max retries');
           clearInterval(checkInterval);
