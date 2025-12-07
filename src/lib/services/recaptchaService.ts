@@ -22,12 +22,14 @@ export async function verifyRecaptcha(
   remoteip?: string
 ): Promise<{ valid: boolean; score?: number; error?: string }> {
   if (!RECAPTCHA_SECRET_KEY) {
-    console.warn('⚠️  RECAPTCHA_SECRET_KEY not set. Skipping verification in development.');
+    console.error('❌ RECAPTCHA_SECRET_KEY not set in environment variables!');
+    console.error('   Check Amplify environment variables: RECAPTCHA_SECRET_KEY');
     // In development, allow requests without reCAPTCHA if key is not set
     if (process.env.NODE_ENV === 'development') {
+      console.warn('⚠️  Skipping verification in development mode only');
       return { valid: true };
     }
-    return { valid: false, error: 'reCAPTCHA not configured' };
+    return { valid: false, error: 'reCAPTCHA not configured - RECAPTCHA_SECRET_KEY missing' };
   }
 
   if (!token) {
@@ -57,11 +59,24 @@ export async function verifyRecaptcha(
 
     if (!data.success) {
       const errorCodes = data['error-codes'] || [];
+      console.error('❌ reCAPTCHA verification failed:', {
+        errorCodes,
+        hostname: data.hostname,
+        challenge_ts: data.challenge_ts,
+        hasSecretKey: !!RECAPTCHA_SECRET_KEY,
+        secretKeyLength: RECAPTCHA_SECRET_KEY?.length || 0,
+      });
       return {
         valid: false,
         error: `reCAPTCHA verification failed: ${errorCodes.join(', ')}`,
       };
     }
+
+    console.log('✅ reCAPTCHA verification successful:', {
+      hostname: data.hostname,
+      score: data.score,
+      challenge_ts: data.challenge_ts,
+    });
 
     // For v3, check score (0.0 to 1.0, higher is better)
     // Typically, scores above 0.5 are considered legitimate
