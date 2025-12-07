@@ -83,24 +83,24 @@ export const PhoneLoginTab: React.FC<PhoneLoginTabProps> = ({ onError }) => {
             });
           } else {
             // Direct render for v2
-            const widgetId = window.grecaptcha.render(recaptchaRef.current, {
-              sitekey: RECAPTCHA_SITE_KEY,
-              callback: (token: string) => {
-                setRecaptchaToken(token);
-              },
-              'expired-callback': () => {
-                setRecaptchaToken(null);
-              },
-              'error-callback': () => {
-                setRecaptchaToken(null);
-              },
-            });
-            recaptchaWidgetId.current = widgetId;
+        const widgetId = window.grecaptcha.render(recaptchaRef.current, {
+          sitekey: RECAPTCHA_SITE_KEY,
+          callback: (token: string) => {
+            setRecaptchaToken(token);
+          },
+          'expired-callback': () => {
+            setRecaptchaToken(null);
+          },
+          'error-callback': () => {
+            setRecaptchaToken(null);
+          },
+        });
+        recaptchaWidgetId.current = widgetId;
           }
-        } catch (err) {
-          console.error('reCAPTCHA render error:', err);
-        }
+      } catch (err) {
+        console.error('reCAPTCHA render error:', err);
       }
+    }
     };
 
     // Small delay to ensure DOM is ready
@@ -116,7 +116,7 @@ export const PhoneLoginTab: React.FC<PhoneLoginTabProps> = ({ onError }) => {
       // Retry after a short delay if not ready
       setTimeout(() => {
         if (typeof window !== 'undefined' && window.grecaptcha) {
-          setRecaptchaLoaded(true);
+    setRecaptchaLoaded(true);
         }
       }, 500);
     }
