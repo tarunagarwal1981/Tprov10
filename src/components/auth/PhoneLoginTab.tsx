@@ -52,73 +52,129 @@ export const PhoneLoginTab: React.FC<PhoneLoginTabProps> = ({ onError }) => {
 
   // Load reCAPTCHA - wait for script to fully load
   useEffect(() => {
-    if (!recaptchaLoaded || !RECAPTCHA_SITE_KEY) return;
+    if (!RECAPTCHA_SITE_KEY) {
+      console.error('❌ reCAPTCHA not configured: NEXT_PUBLIC_RECAPTCHA_SITE_KEY is not set');
+      setError('reCAPTCHA is not configured. Please contact support.');
+      return;
+    }
+    if (!recaptchaLoaded) {
+      console.log('⏳ Waiting for reCAPTCHA script to load...');
+      return;
+    }
 
     const renderRecaptcha = () => {
-      if (
-        typeof window !== 'undefined' &&
-        window.grecaptcha &&
-        recaptchaRef.current &&
-        !recaptchaWidgetId.current
-      ) {
-        try {
-          // Check if grecaptcha.ready exists (v3) or use directly (v2)
-          if (window.grecaptcha.ready) {
-            window.grecaptcha.ready(() => {
-              if (recaptchaRef.current && !recaptchaWidgetId.current) {
-                const widgetId = window.grecaptcha.render(recaptchaRef.current, {
-                  sitekey: RECAPTCHA_SITE_KEY,
-                  callback: (token: string) => {
-                    setRecaptchaToken(token);
-                  },
-                  'expired-callback': () => {
-                    setRecaptchaToken(null);
-                  },
-                  'error-callback': () => {
-                    setRecaptchaToken(null);
-                  },
-                });
-                recaptchaWidgetId.current = widgetId;
-              }
-            });
-          } else {
-            // Direct render for v2
-        const widgetId = window.grecaptcha.render(recaptchaRef.current, {
-          sitekey: RECAPTCHA_SITE_KEY,
-          callback: (token: string) => {
-            setRecaptchaToken(token);
-          },
-          'expired-callback': () => {
-            setRecaptchaToken(null);
-          },
-          'error-callback': () => {
-            setRecaptchaToken(null);
-          },
-        });
-        recaptchaWidgetId.current = widgetId;
-          }
-      } catch (err) {
-        console.error('reCAPTCHA render error:', err);
+      if (!recaptchaRef.current) {
+        console.warn('⚠️ reCAPTCHA container not ready yet');
+        return;
       }
-    }
+
+      if (!window.grecaptcha) {
+        console.error('❌ window.grecaptcha is not available');
+        setError('reCAPTCHA failed to load. Please refresh the page.');
+        return;
+      }
+
+      if (recaptchaWidgetId.current !== null) {
+        console.log('✅ reCAPTCHA widget already rendered');
+        return;
+      }
+
+      try {
+        console.log('🔄 Attempting to render reCAPTCHA widget...');
+        // Check if grecaptcha.ready exists (v3) or use directly (v2)
+        if (window.grecaptcha.ready) {
+          window.grecaptcha.ready(() => {
+            if (recaptchaRef.current && !recaptchaWidgetId.current) {
+              const widgetId = window.grecaptcha.render(recaptchaRef.current, {
+                sitekey: RECAPTCHA_SITE_KEY,
+                callback: (token: string) => {
+                  console.log('✅ reCAPTCHA token received');
+                  setRecaptchaToken(token);
+                },
+                'expired-callback': () => {
+                  console.warn('⚠️ reCAPTCHA token expired');
+                  setRecaptchaToken(null);
+                },
+                'error-callback': () => {
+                  console.error('❌ reCAPTCHA error occurred');
+                  setRecaptchaToken(null);
+                },
+              });
+              recaptchaWidgetId.current = widgetId;
+              console.log('✅ reCAPTCHA widget rendered (v3)');
+            }
+          });
+        } else {
+          // Direct render for v2
+          const widgetId = window.grecaptcha.render(recaptchaRef.current, {
+            sitekey: RECAPTCHA_SITE_KEY,
+            callback: (token: string) => {
+              console.log('✅ reCAPTCHA token received');
+              setRecaptchaToken(token);
+            },
+            'expired-callback': () => {
+              console.warn('⚠️ reCAPTCHA token expired');
+              setRecaptchaToken(null);
+            },
+            'error-callback': () => {
+              console.error('❌ reCAPTCHA error occurred');
+              setRecaptchaToken(null);
+            },
+          });
+          recaptchaWidgetId.current = widgetId;
+          console.log('✅ reCAPTCHA widget rendered (v2)');
+        }
+      } catch (err) {
+        console.error('❌ reCAPTCHA render error:', err);
+        setError('Failed to initialize reCAPTCHA. Please refresh the page.');
+      }
     };
 
-    // Small delay to ensure DOM is ready
-    const timer = setTimeout(renderRecaptcha, 100);
+    // Retry mechanism with increasing delays
+    let attempts = 0;
+    const maxAttempts = 5;
+    
+    const tryRender = () => {
+      attempts++;
+      if (recaptchaRef.current && window.grecaptcha && !recaptchaWidgetId.current) {
+        renderRecaptcha();
+      } else if (attempts < maxAttempts) {
+        const delay = attempts * 200; // 200ms, 400ms, 600ms, 800ms, 1000ms
+        setTimeout(tryRender, delay);
+      } else {
+        console.error('❌ Failed to render reCAPTCHA after multiple attempts');
+        setError('reCAPTCHA failed to load. Please refresh the page.');
+      }
+    };
+
+    // Initial attempt with small delay
+    const timer = setTimeout(tryRender, 100);
     return () => clearTimeout(timer);
   }, [recaptchaLoaded]);
 
   const handleRecaptchaLoad = () => {
+    console.log('📜 reCAPTCHA script loaded, checking for grecaptcha...');
     // Ensure grecaptcha is available
     if (typeof window !== 'undefined' && window.grecaptcha) {
+      console.log('✅ reCAPTCHA script loaded successfully, grecaptcha available');
       setRecaptchaLoaded(true);
     } else {
-      // Retry after a short delay if not ready
-      setTimeout(() => {
+      console.warn('⚠️ reCAPTCHA script loaded but grecaptcha not available yet, retrying...');
+      // Retry with multiple attempts
+      let retries = 0;
+      const maxRetries = 10;
+      const checkInterval = setInterval(() => {
+        retries++;
         if (typeof window !== 'undefined' && window.grecaptcha) {
-    setRecaptchaLoaded(true);
+          console.log(`✅ reCAPTCHA grecaptcha available after ${retries} retries`);
+          clearInterval(checkInterval);
+          setRecaptchaLoaded(true);
+        } else if (retries >= maxRetries) {
+          console.error('❌ reCAPTCHA grecaptcha still not available after max retries');
+          clearInterval(checkInterval);
+          setError('reCAPTCHA failed to initialize. Please refresh the page.');
         }
-      }, 500);
+      }, 200);
     }
   };
 
@@ -144,7 +200,7 @@ export const PhoneLoginTab: React.FC<PhoneLoginTabProps> = ({ onError }) => {
       return;
     }
 
-    if (process.env.NODE_ENV === 'production' && !recaptchaToken) {
+    if (!recaptchaToken) {
       const errMsg = 'Please complete the reCAPTCHA verification';
       setError(errMsg);
       onError?.(errMsg);
@@ -372,9 +428,23 @@ export const PhoneLoginTab: React.FC<PhoneLoginTabProps> = ({ onError }) => {
         </div>
 
         {/* reCAPTCHA */}
-        {RECAPTCHA_SITE_KEY && (
-          <div className="flex justify-center">
-            <div ref={recaptchaRef} id="recaptcha-container" />
+        {RECAPTCHA_SITE_KEY ? (
+          <div className="flex flex-col items-center justify-center space-y-2">
+            <div ref={recaptchaRef} id="recaptcha-container" className="min-h-[78px] flex items-center justify-center" />
+            {!recaptchaLoaded && (
+              <div className="text-xs text-gray-500 dark:text-gray-400 text-center py-2">
+                Loading security verification...
+              </div>
+            )}
+            {recaptchaLoaded && !recaptchaWidgetId.current && (
+              <div className="text-xs text-orange-600 dark:text-orange-400 text-center py-2">
+                ⚠️ reCAPTCHA widget initializing...
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="text-xs text-red-600 dark:text-red-400 text-center py-2 bg-red-50 dark:bg-red-900/20 rounded-lg px-3 border border-red-200 dark:border-red-800">
+            ❌ reCAPTCHA not configured. Please set NEXT_PUBLIC_RECAPTCHA_SITE_KEY in your environment variables and restart the server.
           </div>
         )}
 
@@ -399,19 +469,19 @@ export const PhoneLoginTab: React.FC<PhoneLoginTabProps> = ({ onError }) => {
         <motion.button
           type="button"
           onClick={handleNext}
-          disabled={!phoneNumber || !validatePhoneNumber(phoneNumber) || loading || (process.env.NODE_ENV === 'production' && !recaptchaToken)}
+          disabled={!phoneNumber || !validatePhoneNumber(phoneNumber) || loading || !recaptchaToken}
           className={`w-full py-3 px-4 rounded-xl font-medium transition-all duration-200 ${
-            phoneNumber && validatePhoneNumber(phoneNumber) && !loading && (process.env.NODE_ENV !== 'production' || recaptchaToken)
+            phoneNumber && validatePhoneNumber(phoneNumber) && !loading && recaptchaToken
               ? 'bg-[#FF6B35] hover:bg-[#E05A2A] text-white shadow-lg hover:shadow-xl'
               : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
           }`}
           whileHover={
-            phoneNumber && validatePhoneNumber(phoneNumber) && !loading && (process.env.NODE_ENV !== 'production' || recaptchaToken)
+            phoneNumber && validatePhoneNumber(phoneNumber) && !loading && recaptchaToken
               ? { scale: 1.02, y: -1 }
               : {}
           }
           whileTap={
-            phoneNumber && validatePhoneNumber(phoneNumber) && !loading && (process.env.NODE_ENV !== 'production' || recaptchaToken)
+            phoneNumber && validatePhoneNumber(phoneNumber) && !loading && recaptchaToken
               ? { scale: 0.98 }
               : {}
           }
