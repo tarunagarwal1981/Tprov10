@@ -83,7 +83,7 @@ export const TurnstileWidget: React.FC<TurnstileWidgetProps> = ({
     scriptLoadedRef.current = true;
     // Trigger re-render to create widget
     if (containerRef.current) {
-      const timer = setTimeout(() => {
+      setTimeout(() => {
         if (window.turnstile && containerRef.current && !widgetIdRef.current) {
           try {
             const id = window.turnstile.render(containerRef.current, {
@@ -109,7 +109,6 @@ export const TurnstileWidget: React.FC<TurnstileWidgetProps> = ({
           }
         }
       }, 100);
-      return () => clearTimeout(timer);
     }
   };
 
