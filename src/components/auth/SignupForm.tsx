@@ -1,0 +1,268 @@
+'use client';
+
+import React, { useState, useEffect, useRef } from 'react';
+import { motion } from 'framer-motion';
+
+const RECAPTCHA_SITE_KEY = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || '';
+
+interface SignupFormProps {
+  countryCode: string;
+  phoneNumber: string;
+  onSubmit: (data: { email: string; name: string; companyName?: string }) => void;
+  onBack: () => void;
+  loading: boolean;
+  error: string | null;
+  recaptchaToken: string | null;
+  onRecaptchaChange: (token: string | null) => void;
+}
+
+export const SignupForm: React.FC<SignupFormProps> = ({
+  countryCode,
+  phoneNumber,
+  onSubmit,
+  onBack,
+  loading,
+  error,
+  recaptchaToken,
+  onRecaptchaChange,
+}) => {
+  const [email, setEmail] = useState('');
+  const [name, setName] = useState('');
+  const [companyName, setCompanyName] = useState('');
+  const recaptchaRef = useRef<HTMLDivElement>(null);
+  const recaptchaWidgetId = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.grecaptcha && recaptchaRef.current && !recaptchaWidgetId.current) {
+      try {
+        const widgetId = window.grecaptcha.render(recaptchaRef.current, {
+          sitekey: RECAPTCHA_SITE_KEY,
+          callback: (token: string) => {
+            onRecaptchaChange(token);
+          },
+          'expired-callback': () => {
+            onRecaptchaChange(null);
+          },
+          'error-callback': () => {
+            onRecaptchaChange(null);
+          },
+        });
+        recaptchaWidgetId.current = widgetId;
+      } catch (err) {
+        console.error('reCAPTCHA render error:', err);
+      }
+    }
+  }, [onRecaptchaChange]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !name) {
+      return;
+    }
+    onSubmit({ email, name, companyName: companyName || undefined });
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6 }}
+      className="space-y-6"
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Mobile Number (Read-only) */}
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Mobile Number
+          </label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={`${countryCode} ${phoneNumber}`}
+              disabled
+              className="flex-1 py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 cursor-not-allowed"
+            />
+          </div>
+        </div>
+
+        {/* Email */}
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Email Address <span className="text-red-500">*</span>
+          </label>
+          <motion.div
+            className="relative"
+            whileFocus={{ scale: 1.02 }}
+            transition={{ duration: 0.2 }}
+          >
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              disabled={loading}
+              placeholder="abc@gmail.com"
+              style={{ paddingLeft: '3.5rem', paddingRight: '3rem' }}
+              className={`w-full py-3 border rounded-xl focus:outline-none focus:ring-2 transition-all duration-200 ${
+                loading
+                  ? 'bg-gray-100 dark:bg-gray-800 cursor-not-allowed'
+                  : 'border-gray-300 dark:border-gray-600 focus:ring-[#FF6B35]/20 bg-white dark:bg-gray-700'
+              }`}
+            />
+            <div className="absolute left-3 top-0 bottom-0 flex items-center pointer-events-none">
+              <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
+              </svg>
+            </div>
+            {email && (
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className="absolute right-3 top-0 bottom-0 flex items-center justify-center"
+              >
+                <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                </svg>
+              </motion.div>
+            )}
+          </motion.div>
+        </div>
+
+        {/* Name */}
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Enter Name <span className="text-red-500">*</span>
+          </label>
+          <motion.div
+            className="relative"
+            whileFocus={{ scale: 1.02 }}
+            transition={{ duration: 0.2 }}
+          >
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              disabled={loading}
+              placeholder="Ex: Richard Parker"
+              style={{ paddingLeft: '3.5rem', paddingRight: '3rem' }}
+              className={`w-full py-3 border rounded-xl focus:outline-none focus:ring-2 transition-all duration-200 ${
+                loading
+                  ? 'bg-gray-100 dark:bg-gray-800 cursor-not-allowed'
+                  : 'border-gray-300 dark:border-gray-600 focus:ring-[#FF6B35]/20 bg-white dark:bg-gray-700'
+              }`}
+            />
+            <div className="absolute left-3 top-0 bottom-0 flex items-center pointer-events-none">
+              <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            </div>
+            {name && (
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className="absolute right-3 top-0 bottom-0 flex items-center justify-center"
+              >
+                <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                </svg>
+              </motion.div>
+            )}
+          </motion.div>
+        </div>
+
+        {/* Company Name (Optional) */}
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Enter Company Name (Optional)
+          </label>
+          <motion.div
+            className="relative"
+            whileFocus={{ scale: 1.02 }}
+            transition={{ duration: 0.2 }}
+          >
+            <input
+              type="text"
+              value={companyName}
+              onChange={(e) => setCompanyName(e.target.value)}
+              disabled={loading}
+              placeholder="TravClan"
+              style={{ paddingLeft: '3.5rem', paddingRight: '3rem' }}
+              className={`w-full py-3 border rounded-xl focus:outline-none focus:ring-2 transition-all duration-200 ${
+                loading
+                  ? 'bg-gray-100 dark:bg-gray-800 cursor-not-allowed'
+                  : 'border-gray-300 dark:border-gray-600 focus:ring-[#FF6B35]/20 bg-white dark:bg-gray-700'
+              }`}
+            />
+            <div className="absolute left-3 top-0 bottom-0 flex items-center pointer-events-none">
+              <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              </svg>
+            </div>
+          </motion.div>
+        </div>
+
+        {/* reCAPTCHA */}
+        {RECAPTCHA_SITE_KEY && (
+          <div className="flex justify-center">
+            <div ref={recaptchaRef} id="recaptcha-container-signup" />
+          </div>
+        )}
+
+        {/* Error */}
+        {error && (
+          <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+            <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
+          </div>
+        )}
+
+        {/* Buttons */}
+        <div className="flex gap-4">
+          <motion.button
+            type="button"
+            onClick={onBack}
+            disabled={loading}
+            className="flex-1 py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            Back
+          </motion.button>
+          <motion.button
+            type="submit"
+            disabled={!email || !name || loading || (process.env.NODE_ENV === 'production' && !recaptchaToken)}
+            className={`flex-1 py-3 px-4 rounded-xl font-medium transition-all ${
+              email && name && !loading && (process.env.NODE_ENV !== 'production' || recaptchaToken)
+                ? 'bg-[#FF6B35] hover:bg-[#E05A2A] text-white'
+                : 'bg-gray-300 dark:bg-gray-600 text-gray-500 cursor-not-allowed'
+            }`}
+            whileHover={
+              email && name && !loading && (process.env.NODE_ENV !== 'production' || recaptchaToken)
+                ? { scale: 1.02, y: -1 }
+                : {}
+            }
+            whileTap={
+              email && name && !loading && (process.env.NODE_ENV !== 'production' || recaptchaToken)
+                ? { scale: 0.98 }
+                : {}
+            }
+          >
+            {loading ? (
+              <div className="flex items-center justify-center space-x-2">
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                  className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
+                />
+                <span>Creating...</span>
+              </div>
+            ) : (
+              'REQUEST OTP'
+            )}
+          </motion.button>
+        </div>
+      </form>
+    </motion.div>
+  );
+};
+
