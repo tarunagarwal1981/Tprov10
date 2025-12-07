@@ -91,11 +91,11 @@ export const SignupForm: React.FC<SignupFormProps> = ({
       return () => clearTimeout(timer);
     } else {
       // Poll for grecaptcha if not available yet
+      let renderTimer: NodeJS.Timeout | null = null;
       const checkInterval = setInterval(() => {
         if (typeof window !== 'undefined' && window.grecaptcha) {
           clearInterval(checkInterval);
-          const timer = setTimeout(renderRecaptcha, 100);
-          return () => clearTimeout(timer);
+          renderTimer = setTimeout(renderRecaptcha, 100);
         }
       }, 200);
 
@@ -107,6 +107,9 @@ export const SignupForm: React.FC<SignupFormProps> = ({
       return () => {
         clearInterval(checkInterval);
         clearTimeout(timeout);
+        if (renderTimer) {
+          clearTimeout(renderTimer);
+        }
       };
     }
   }, [onRecaptchaChange]);
