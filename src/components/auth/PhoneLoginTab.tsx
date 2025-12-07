@@ -50,31 +50,76 @@ export const PhoneLoginTab: React.FC<PhoneLoginTabProps> = ({ onError }) => {
   const recaptchaRef = useRef<HTMLDivElement>(null);
   const recaptchaWidgetId = useRef<number | null>(null);
 
-  // Load reCAPTCHA
+  // Load reCAPTCHA - wait for script to fully load
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.grecaptcha && recaptchaRef.current && !recaptchaWidgetId.current) {
-      try {
-        const widgetId = window.grecaptcha.render(recaptchaRef.current, {
-          sitekey: RECAPTCHA_SITE_KEY,
-          callback: (token: string) => {
-            setRecaptchaToken(token);
-          },
-          'expired-callback': () => {
-            setRecaptchaToken(null);
-          },
-          'error-callback': () => {
-            setRecaptchaToken(null);
-          },
-        });
-        recaptchaWidgetId.current = widgetId;
-      } catch (err) {
-        console.error('reCAPTCHA render error:', err);
+    if (!recaptchaLoaded || !RECAPTCHA_SITE_KEY) return;
+
+    const renderRecaptcha = () => {
+      if (
+        typeof window !== 'undefined' &&
+        window.grecaptcha &&
+        recaptchaRef.current &&
+        !recaptchaWidgetId.current
+      ) {
+        try {
+          // Check if grecaptcha.ready exists (v3) or use directly (v2)
+          if (window.grecaptcha.ready) {
+            window.grecaptcha.ready(() => {
+              if (recaptchaRef.current && !recaptchaWidgetId.current) {
+                const widgetId = window.grecaptcha.render(recaptchaRef.current, {
+                  sitekey: RECAPTCHA_SITE_KEY,
+                  callback: (token: string) => {
+                    setRecaptchaToken(token);
+                  },
+                  'expired-callback': () => {
+                    setRecaptchaToken(null);
+                  },
+                  'error-callback': () => {
+                    setRecaptchaToken(null);
+                  },
+                });
+                recaptchaWidgetId.current = widgetId;
+              }
+            });
+          } else {
+            // Direct render for v2
+            const widgetId = window.grecaptcha.render(recaptchaRef.current, {
+              sitekey: RECAPTCHA_SITE_KEY,
+              callback: (token: string) => {
+                setRecaptchaToken(token);
+              },
+              'expired-callback': () => {
+                setRecaptchaToken(null);
+              },
+              'error-callback': () => {
+                setRecaptchaToken(null);
+              },
+            });
+            recaptchaWidgetId.current = widgetId;
+          }
+        } catch (err) {
+          console.error('reCAPTCHA render error:', err);
+        }
       }
-    }
+    };
+
+    // Small delay to ensure DOM is ready
+    const timer = setTimeout(renderRecaptcha, 100);
+    return () => clearTimeout(timer);
   }, [recaptchaLoaded]);
 
   const handleRecaptchaLoad = () => {
-    setRecaptchaLoaded(true);
+    // Ensure grecaptcha is available
+    if (typeof window !== 'undefined' && window.grecaptcha) {
+      setRecaptchaLoaded(true);
+    } else {
+      // Retry after a short delay if not ready
+      setTimeout(() => {
+        if (typeof window !== 'undefined' && window.grecaptcha) {
+          setRecaptchaLoaded(true);
+        }
+      }, 500);
+    }
   };
 
   const resetRecaptcha = () => {
@@ -243,8 +288,12 @@ export const PhoneLoginTab: React.FC<PhoneLoginTabProps> = ({ onError }) => {
     <>
       {RECAPTCHA_SITE_KEY && (
         <Script
-          src={`https://www.google.com/recaptcha/api.js?render=explicit&onload=onRecaptchaLoad`}
+          src={`https://www.google.com/recaptcha/api.js?render=explicit`}
           onLoad={handleRecaptchaLoad}
+          onError={() => {
+            console.error('Failed to load reCAPTCHA script');
+            setError('Failed to load security verification. Please refresh the page.');
+          }}
           strategy="lazyOnload"
         />
       )}
@@ -391,8 +440,8 @@ declare global {
     grecaptcha: {
       render: (container: HTMLElement, options: any) => number;
       reset: (widgetId: number) => void;
+      ready?: (callback: () => void) => void;
     };
-    onRecaptchaLoad: () => void;
   }
 }
 

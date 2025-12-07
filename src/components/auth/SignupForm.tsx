@@ -33,24 +33,81 @@ export const SignupForm: React.FC<SignupFormProps> = ({
   const recaptchaWidgetId = useRef<number | null>(null);
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.grecaptcha && recaptchaRef.current && !recaptchaWidgetId.current) {
-      try {
-        const widgetId = window.grecaptcha.render(recaptchaRef.current, {
-          sitekey: RECAPTCHA_SITE_KEY,
-          callback: (token: string) => {
-            onRecaptchaChange(token);
-          },
-          'expired-callback': () => {
-            onRecaptchaChange(null);
-          },
-          'error-callback': () => {
-            onRecaptchaChange(null);
-          },
-        });
-        recaptchaWidgetId.current = widgetId;
-      } catch (err) {
-        console.error('reCAPTCHA render error:', err);
+    if (!RECAPTCHA_SITE_KEY) return;
+
+    const renderRecaptcha = () => {
+      if (
+        typeof window !== 'undefined' &&
+        window.grecaptcha &&
+        recaptchaRef.current &&
+        !recaptchaWidgetId.current
+      ) {
+        try {
+          // Check if grecaptcha.ready exists (v3) or use directly (v2)
+          if (window.grecaptcha.ready) {
+            window.grecaptcha.ready(() => {
+              if (recaptchaRef.current && !recaptchaWidgetId.current) {
+                const widgetId = window.grecaptcha.render(recaptchaRef.current, {
+                  sitekey: RECAPTCHA_SITE_KEY,
+                  callback: (token: string) => {
+                    onRecaptchaChange(token);
+                  },
+                  'expired-callback': () => {
+                    onRecaptchaChange(null);
+                  },
+                  'error-callback': () => {
+                    onRecaptchaChange(null);
+                  },
+                });
+                recaptchaWidgetId.current = widgetId;
+              }
+            });
+          } else {
+            // Direct render for v2
+            const widgetId = window.grecaptcha.render(recaptchaRef.current, {
+              sitekey: RECAPTCHA_SITE_KEY,
+              callback: (token: string) => {
+                onRecaptchaChange(token);
+              },
+              'expired-callback': () => {
+                onRecaptchaChange(null);
+              },
+              'error-callback': () => {
+                onRecaptchaChange(null);
+              },
+            });
+            recaptchaWidgetId.current = widgetId;
+          }
+        } catch (err) {
+          console.error('reCAPTCHA render error:', err);
+        }
       }
+    };
+
+    // Wait for grecaptcha to be available
+    if (typeof window !== 'undefined' && window.grecaptcha) {
+      // Small delay to ensure DOM is ready
+      const timer = setTimeout(renderRecaptcha, 100);
+      return () => clearTimeout(timer);
+    } else {
+      // Poll for grecaptcha if not available yet
+      const checkInterval = setInterval(() => {
+        if (typeof window !== 'undefined' && window.grecaptcha) {
+          clearInterval(checkInterval);
+          const timer = setTimeout(renderRecaptcha, 100);
+          return () => clearTimeout(timer);
+        }
+      }, 200);
+
+      // Cleanup after 10 seconds if still not loaded
+      const timeout = setTimeout(() => {
+        clearInterval(checkInterval);
+      }, 10000);
+
+      return () => {
+        clearInterval(checkInterval);
+        clearTimeout(timeout);
+      };
     }
   }, [onRecaptchaChange]);
 
