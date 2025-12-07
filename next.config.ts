@@ -30,6 +30,9 @@ const nextConfig = {
     SECRETS_MANAGER_SECRET_NAME: process.env.SECRETS_MANAGER_SECRET_NAME || 'travel-app/dev/secrets',
     // Database Lambda Name (for invoking database Lambda)
     DATABASE_LAMBDA_NAME: process.env.DATABASE_LAMBDA_NAME || 'travel-app-database-service',
+    // reCAPTCHA configuration
+    RECAPTCHA_SECRET_KEY: process.env.RECAPTCHA_SECRET_KEY,
+    RECAPTCHA_MIN_SCORE: process.env.RECAPTCHA_MIN_SCORE || '0.5',
   },
   
   // Enable experimental features
