@@ -49,6 +49,10 @@ declare global {
    - Updated `Window.grecaptcha` type to match `PhoneLoginTab.tsx`
    - Removed unused `onRecaptchaLoad` declaration
 
+2. ✅ `src/components/auth/SignupForm.tsx`
+   - Fixed `useEffect` cleanup function - removed invalid `return` statement inside `setInterval` callback
+   - Properly structured cleanup to clear both interval and timer
+
 ---
 
 ## Remaining Warnings (Non-blocking)
