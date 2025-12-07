@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { queryOne } from '@/lib/aws/database';
+import { queryOne } from '@/lib/aws/lambda-database';
 import { verifyRecaptcha } from '@/lib/services/recaptchaService';
 
 export const runtime = 'nodejs';
