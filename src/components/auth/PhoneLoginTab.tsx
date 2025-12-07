@@ -88,7 +88,11 @@ export const PhoneLoginTab: React.FC<PhoneLoginTabProps> = ({ onError }) => {
               const widgetId = window.grecaptcha.render(recaptchaRef.current, {
                 sitekey: RECAPTCHA_SITE_KEY,
                 callback: (token: string) => {
-                  console.log('✅ reCAPTCHA token received');
+                  console.log('✅ reCAPTCHA token received:', {
+                    tokenLength: token.length,
+                    tokenPrefix: token.substring(0, 20) + '...',
+                    siteKey: RECAPTCHA_SITE_KEY ? RECAPTCHA_SITE_KEY.substring(0, 10) + '...' : 'not set',
+                  });
                   setRecaptchaToken(token);
                 },
                 'expired-callback': () => {
@@ -210,21 +214,48 @@ export const PhoneLoginTab: React.FC<PhoneLoginTabProps> = ({ onError }) => {
     setLoading(true);
 
     try {
+      const requestBody = {
+        countryCode,
+        phoneNumber: phoneNumber.replace(/\D/g, ''),
+        recaptchaToken: recaptchaToken || undefined,
+      };
+
+      console.log('📤 Sending phone init request:', {
+        countryCode: requestBody.countryCode,
+        phoneNumber: requestBody.phoneNumber,
+        hasRecaptchaToken: !!requestBody.recaptchaToken,
+        tokenLength: requestBody.recaptchaToken?.length || 0,
+        tokenPrefix: requestBody.recaptchaToken?.substring(0, 20) + '...' || 'none',
+        siteKey: RECAPTCHA_SITE_KEY ? RECAPTCHA_SITE_KEY.substring(0, 10) + '...' : 'not set',
+      });
+
       const response = await fetch('/api/auth/phone/init', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          countryCode,
-          phoneNumber: phoneNumber.replace(/\D/g, ''),
-          recaptchaToken: recaptchaToken || undefined,
-        }),
+        body: JSON.stringify(requestBody),
       });
+
+      console.log('📥 Response status:', response.status, response.statusText);
 
       const data = await response.json();
 
+      console.log('📥 Response data:', {
+        mode: data.mode,
+        userExists: data.userExists,
+        error: data.error,
+        details: data.details,
+      });
+
       if (!response.ok) {
+        console.error('❌ Request failed:', {
+          status: response.status,
+          error: data.error,
+          details: data.details,
+        });
         throw new Error(data.error || 'Failed to initialize');
       }
+
+      console.log('✅ Phone init successful:', data);
 
       const userDataObj = {
         countryCode,

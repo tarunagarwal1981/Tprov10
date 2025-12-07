@@ -43,6 +43,16 @@ export async function verifyRecaptcha(
       ...(remoteip && { remoteip }),
     });
 
+    console.log('🔍 Sending reCAPTCHA verification to Google:', {
+      url: RECAPTCHA_VERIFY_URL,
+      hasSecretKey: !!RECAPTCHA_SECRET_KEY,
+      secretKeyLength: RECAPTCHA_SECRET_KEY?.length || 0,
+      secretKeyPrefix: RECAPTCHA_SECRET_KEY ? RECAPTCHA_SECRET_KEY.substring(0, 10) + '...' : 'not set',
+      tokenLength: token.length,
+      tokenPrefix: token.substring(0, 20) + '...',
+      remoteip: remoteip || 'not provided',
+    });
+
     const response = await fetch(RECAPTCHA_VERIFY_URL, {
       method: 'POST',
       headers: {
@@ -51,11 +61,27 @@ export async function verifyRecaptcha(
       body: params.toString(),
     });
 
+    console.log('📥 Google reCAPTCHA API response status:', response.status, response.statusText);
+
     if (!response.ok) {
-      return { valid: false, error: 'Failed to verify reCAPTCHA' };
+      const errorText = await response.text();
+      console.error('❌ Google reCAPTCHA API error:', {
+        status: response.status,
+        statusText: response.statusText,
+        body: errorText,
+      });
+      return { valid: false, error: `Failed to verify reCAPTCHA: ${response.status} ${response.statusText}` };
     }
 
     const data: RecaptchaVerificationResult = await response.json();
+
+    console.log('📥 Google reCAPTCHA API response:', {
+      success: data.success,
+      score: data.score,
+      hostname: data.hostname,
+      challenge_ts: data.challenge_ts,
+      errorCodes: data['error-codes'] || [],
+    });
 
     if (!data.success) {
       const errorCodes = data['error-codes'] || [];
