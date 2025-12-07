@@ -64,17 +64,27 @@ export async function getSecret(secretName: string, key?: string): Promise<strin
     
     // Try to parse as JSON (if it's a JSON secret with multiple keys)
     try {
-      // Strip BOM (Byte Order Mark) if present
+      // Remove BOM (Byte Order Mark) if present - same logic as getSecrets
       let secretString = response.SecretString;
+      
+      // Remove Unicode BOM character (U+FEFF)
       if (secretString.charCodeAt(0) === 0xFEFF) {
-        secretString = secretString.slice(1);
+        secretString = secretString.substring(1);
       }
-      // Also handle UTF-8 BOM (ï»¿)
-      if (secretString.startsWith('\uFEFF')) {
-        secretString = secretString.replace(/^\uFEFF/, '');
+      
+      // Remove literal BOM characters "ï»¿" (UTF-8 BOM bytes interpreted as text)
+      if (secretString.startsWith('ï»¿')) {
+        secretString = secretString.substring(3);
       }
-      // Handle common BOM patterns
-      secretString = secretString.replace(/^[\uFEFF\u200B\u200C\u200D\u2060]+/, '');
+      
+      // Remove any remaining BOM characters using regex
+      secretString = secretString.replace(/^[\uFEFF\u200B]+/, '').trim();
+      
+      // Final check: if still starts with non-JSON characters, find first {
+      const firstBrace = secretString.indexOf('{');
+      if (firstBrace > 0) {
+        secretString = secretString.substring(firstBrace);
+      }
       
       const parsed = JSON.parse(secretString);
       secretValue = key ? parsed[key] : response.SecretString;
@@ -128,17 +138,31 @@ export async function getSecrets(secretName: string): Promise<Record<string, str
       throw new Error(`Secret ${secretName} has no SecretString`);
     }
 
-    // Strip BOM (Byte Order Mark) if present
+    // Remove BOM (Byte Order Mark) if present
+    // The BOM can appear as:
+    // 1. Unicode character U+FEFF
+    // 2. UTF-8 bytes EF BB BF interpreted as characters (ï»¿)
+    // 3. Literal string "ï»¿"
     let secretString = response.SecretString;
+    
+    // Remove Unicode BOM character (U+FEFF)
     if (secretString.charCodeAt(0) === 0xFEFF) {
-      secretString = secretString.slice(1);
+      secretString = secretString.substring(1);
     }
-    // Also handle UTF-8 BOM (ï»¿)
-    if (secretString.startsWith('\uFEFF')) {
-      secretString = secretString.replace(/^\uFEFF/, '');
+    
+    // Remove literal BOM characters "ï»¿" (UTF-8 BOM bytes interpreted as text)
+    if (secretString.startsWith('ï»¿')) {
+      secretString = secretString.substring(3);
     }
-    // Handle common BOM patterns
-    secretString = secretString.replace(/^[\uFEFF\u200B\u200C\u200D\u2060]+/, '');
+    
+    // Remove any remaining BOM characters using regex
+    secretString = secretString.replace(/^[\uFEFF\u200B]+/, '').trim();
+    
+    // Final check: if still starts with non-JSON characters, find first {
+    const firstBrace = secretString.indexOf('{');
+    if (firstBrace > 0) {
+      secretString = secretString.substring(firstBrace);
+    }
 
     const parsed = JSON.parse(secretString);
     
