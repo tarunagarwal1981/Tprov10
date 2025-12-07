@@ -53,6 +53,11 @@ declare global {
    - Fixed `useEffect` cleanup function - removed invalid `return` statement inside `setInterval` callback
    - Properly structured cleanup to clear both interval and timer
 
+3. ✅ `src/components/auth/TurnstileWidget.tsx`
+   - Fixed `handleScriptLoad` function - removed invalid `return` statement
+   - `onLoad` callback doesn't accept return values, so removed the cleanup return
+   - Timer cleanup is handled by component unmount (no explicit cleanup needed for Script onLoad)
+
 ---
 
 ## Remaining Warnings (Non-blocking)
