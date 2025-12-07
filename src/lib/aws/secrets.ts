@@ -64,7 +64,19 @@ export async function getSecret(secretName: string, key?: string): Promise<strin
     
     // Try to parse as JSON (if it's a JSON secret with multiple keys)
     try {
-      const parsed = JSON.parse(response.SecretString);
+      // Strip BOM (Byte Order Mark) if present
+      let secretString = response.SecretString;
+      if (secretString.charCodeAt(0) === 0xFEFF) {
+        secretString = secretString.slice(1);
+      }
+      // Also handle UTF-8 BOM (ï»¿)
+      if (secretString.startsWith('\uFEFF')) {
+        secretString = secretString.replace(/^\uFEFF/, '');
+      }
+      // Handle common BOM patterns
+      secretString = secretString.replace(/^[\uFEFF\u200B\u200C\u200D\u2060]+/, '');
+      
+      const parsed = JSON.parse(secretString);
       secretValue = key ? parsed[key] : response.SecretString;
       
       if (key && !secretValue) {
@@ -116,7 +128,19 @@ export async function getSecrets(secretName: string): Promise<Record<string, str
       throw new Error(`Secret ${secretName} has no SecretString`);
     }
 
-    const parsed = JSON.parse(response.SecretString);
+    // Strip BOM (Byte Order Mark) if present
+    let secretString = response.SecretString;
+    if (secretString.charCodeAt(0) === 0xFEFF) {
+      secretString = secretString.slice(1);
+    }
+    // Also handle UTF-8 BOM (ï»¿)
+    if (secretString.startsWith('\uFEFF')) {
+      secretString = secretString.replace(/^\uFEFF/, '');
+    }
+    // Handle common BOM patterns
+    secretString = secretString.replace(/^[\uFEFF\u200B\u200C\u200D\u2060]+/, '');
+
+    const parsed = JSON.parse(secretString);
     
     // Cache all keys
     Object.keys(parsed).forEach(key => {

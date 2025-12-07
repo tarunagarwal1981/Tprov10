@@ -52,19 +52,25 @@ The error details aren't shown in the browser console for security reasons. We n
 
 ### If Amplify Logs Don't Show Enough Detail:
 
+**See detailed guide**: `HOW_TO_VIEW_CLOUDWATCH_LOGS.md`
+
+**Quick steps:**
 1. **Go to**: AWS CloudWatch Console
    - https://console.aws.amazon.com/cloudwatch
+   - Make sure you're in the correct region (us-east-1)
 
 2. **Navigate to**: **Logs** → **Log groups**
 
 3. **Look for**: Log groups starting with:
    - `/aws/amplify/your-app-name`
+   - `/aws/amplify/d2p2uq8t9xysui` (your app ID)
    - `/aws/lambda/amplify-*`
-   - Any log group related to your Amplify app
 
-4. **Click on**: The latest log stream
+4. **Click on**: The most recent log group (check "Last event time")
 
-5. **Search for**: Error messages or timestamps around when you tested
+5. **Click on**: The latest log stream
+
+6. **Search for**: Error messages (Ctrl+F → search "error" or "❌")
 
 ---
 
