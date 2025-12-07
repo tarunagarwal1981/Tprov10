@@ -7,14 +7,17 @@
 2. Click **"+"** → Create new site
 3. Settings:
    - **Label**: `TravClan Auth`
-   - **Type**: v2 → "I'm not a robot" Checkbox
+   - **Type**: ⚠️ **v2 → "I'm not a robot" Checkbox** (MUST be Checkbox, NOT v3 or Invisible!)
    - **Domains**: 
      ```
      localhost
+     127.0.0.1
      dev.travelselbuy.com
+     *.dev.travelselbuy.com
      travelselbuy.com
      *.travelselbuy.com
      ```
+   - **⚠️ CRITICAL**: If you see "Invalid key type" error, you likely have v3 key. Create a NEW site with v2 Checkbox type!
 4. Submit → Copy **Site Key** and **Secret Key**
 
 ### ✅ Step 2: Add to `.env.local` (1 min)
@@ -61,6 +64,14 @@ npm run dev
 - ✅ Verify key matches your domain
 - ✅ Check if using correct key (v2 vs v3)
 - ✅ Ensure domain is registered in admin
+
+### "Invalid key type" error ⚠️
+- ❌ **You have the WRONG key type!**
+- ✅ **Solution**: Create a NEW site in reCAPTCHA admin
+- ✅ **Must be**: v2 → "I'm not a robot" Checkbox (NOT v3!)
+- ✅ **Check**: Go to reCAPTCHA admin, verify Type column says "v2" or "Checkbox"
+- ✅ **Update**: Replace the key in Amplify environment variables
+- ✅ **See**: `RECAPTCHA_INVALID_KEY_FIX.md` for detailed steps
 
 ### Works in dev but not production
 - ✅ Verify env vars are set in production

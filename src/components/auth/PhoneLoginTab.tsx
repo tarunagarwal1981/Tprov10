@@ -58,7 +58,7 @@ export const PhoneLoginTab: React.FC<PhoneLoginTabProps> = ({ onError }) => {
       return;
     }
     if (!recaptchaLoaded) {
-      console.log('⏳ Waiting for reCAPTCHA script to load...');
+      // Script still loading, will retry when recaptchaLoaded becomes true
       return;
     }
 
@@ -101,7 +101,7 @@ export const PhoneLoginTab: React.FC<PhoneLoginTabProps> = ({ onError }) => {
                 },
               });
               recaptchaWidgetId.current = widgetId;
-              console.log('✅ reCAPTCHA widget rendered (v3)');
+              console.log('✅ reCAPTCHA widget rendered successfully');
             }
           });
         } else {
@@ -122,7 +122,7 @@ export const PhoneLoginTab: React.FC<PhoneLoginTabProps> = ({ onError }) => {
             },
           });
           recaptchaWidgetId.current = widgetId;
-          console.log('✅ reCAPTCHA widget rendered (v2)');
+          console.log('✅ reCAPTCHA widget rendered successfully');
         }
       } catch (err) {
         console.error('❌ reCAPTCHA render error:', err);

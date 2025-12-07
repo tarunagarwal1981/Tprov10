@@ -28,13 +28,21 @@ export async function POST(request: NextRequest) {
                       request.headers.get('x-real-ip') ||
                       'unknown';
       
+      console.log('🔍 Verifying reCAPTCHA token...', {
+        tokenLength: recaptchaToken.length,
+        tokenPrefix: recaptchaToken.substring(0, 20) + '...',
+        hasSecretKey: !!process.env.RECAPTCHA_SECRET_KEY,
+      });
+      
       const recaptchaResult = await verifyRecaptcha(recaptchaToken, clientIp);
       if (!recaptchaResult.valid) {
+        console.error('❌ reCAPTCHA verification failed:', recaptchaResult.error);
         return NextResponse.json(
           { error: 'reCAPTCHA verification failed', details: recaptchaResult.error },
           { status: 400 }
         );
       }
+      console.log('✅ reCAPTCHA verification passed');
     } else if (process.env.NODE_ENV === 'production') {
       // Require reCAPTCHA in production
       return NextResponse.json(
