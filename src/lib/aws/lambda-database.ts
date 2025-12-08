@@ -142,7 +142,6 @@ export async function transaction<T>(
 ): Promise<T> {
   // Collect queries from the callback
   const queries: Array<{ query: string; params?: any[] }> = [];
-  let callbackResult: T;
   
   // Mock client that collects queries instead of executing them
   const mockClient = {
@@ -157,7 +156,7 @@ export async function transaction<T>(
   };
   
   // Execute callback to collect queries
-  callbackResult = await callback(mockClient);
+  const callbackResult = await callback(mockClient);
   
   // Execute all queries in a transaction via Lambda
   if (queries.length > 0) {
