@@ -11,7 +11,12 @@ const AWS_REGION = process.env.DEPLOYMENT_REGION || process.env.REGION || 'us-ea
 /**
  * Invoke the database Lambda function
  */
-async function invokeLambda(action: string, query?: string, params?: any[]): Promise<any> {
+async function invokeLambda(
+  action: string, 
+  query?: string, 
+  params?: any[], 
+  transactionQueries?: Array<{ query: string; params?: any[] }>
+): Promise<any> {
   // In server-side environment (Amplify/Lambda), use AWS SDK
   // Check for AWS execution environment OR if we're in a server context (not browser)
   const isServerSide = typeof window === 'undefined';
