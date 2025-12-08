@@ -14,6 +14,7 @@ interface SignupFormProps {
   error: string | null;
   recaptchaToken: string | null;
   onRecaptchaChange: (token: string | null) => void;
+  recaptchaLoaded?: boolean; // Whether reCAPTCHA script has loaded
 }
 
 export const SignupForm: React.FC<SignupFormProps> = ({
@@ -25,6 +26,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({
   error,
   recaptchaToken,
   onRecaptchaChange,
+  recaptchaLoaded = false,
 }) => {
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
@@ -33,7 +35,16 @@ export const SignupForm: React.FC<SignupFormProps> = ({
   const recaptchaWidgetId = useRef<number | null>(null);
 
   useEffect(() => {
-    if (!RECAPTCHA_SITE_KEY) return;
+    if (!RECAPTCHA_SITE_KEY) {
+      console.warn('⚠️ reCAPTCHA not configured: NEXT_PUBLIC_RECAPTCHA_SITE_KEY is not set');
+      return;
+    }
+
+    // Wait for script to load before trying to render
+    if (!recaptchaLoaded) {
+      console.log('⏳ Waiting for reCAPTCHA script to load in SignupForm...');
+      return;
+    }
 
     const renderRecaptcha = () => {
       if (
@@ -43,6 +54,8 @@ export const SignupForm: React.FC<SignupFormProps> = ({
         !recaptchaWidgetId.current
       ) {
         try {
+          console.log('🔄 Attempting to render reCAPTCHA widget in SignupForm...');
+          
           // Check if grecaptcha.ready exists (v3) or use directly (v2)
           if (window.grecaptcha.ready) {
             window.grecaptcha.ready(() => {
@@ -50,37 +63,45 @@ export const SignupForm: React.FC<SignupFormProps> = ({
                 const widgetId = window.grecaptcha.render(recaptchaRef.current, {
                   sitekey: RECAPTCHA_SITE_KEY,
                   callback: (token: string) => {
+                    console.log('✅ reCAPTCHA token received in SignupForm');
                     onRecaptchaChange(token);
                   },
                   'expired-callback': () => {
+                    console.log('⚠️ reCAPTCHA token expired in SignupForm');
                     onRecaptchaChange(null);
                   },
                   'error-callback': () => {
+                    console.error('❌ reCAPTCHA error in SignupForm');
                     onRecaptchaChange(null);
                   },
                 });
                 recaptchaWidgetId.current = widgetId;
+                console.log('✅ reCAPTCHA widget rendered successfully in SignupForm');
               }
             });
           } else {
             // Direct render for v2
-        const widgetId = window.grecaptcha.render(recaptchaRef.current, {
-          sitekey: RECAPTCHA_SITE_KEY,
-          callback: (token: string) => {
-            onRecaptchaChange(token);
-          },
-          'expired-callback': () => {
-            onRecaptchaChange(null);
-          },
-          'error-callback': () => {
-            onRecaptchaChange(null);
-          },
-        });
-        recaptchaWidgetId.current = widgetId;
+            const widgetId = window.grecaptcha.render(recaptchaRef.current, {
+              sitekey: RECAPTCHA_SITE_KEY,
+              callback: (token: string) => {
+                console.log('✅ reCAPTCHA token received in SignupForm');
+                onRecaptchaChange(token);
+              },
+              'expired-callback': () => {
+                console.log('⚠️ reCAPTCHA token expired in SignupForm');
+                onRecaptchaChange(null);
+              },
+              'error-callback': () => {
+                console.error('❌ reCAPTCHA error in SignupForm');
+                onRecaptchaChange(null);
+              },
+            });
+            recaptchaWidgetId.current = widgetId;
+            console.log('✅ reCAPTCHA widget rendered successfully in SignupForm');
           }
-      } catch (err) {
-        console.error('reCAPTCHA render error:', err);
-      }
+        } catch (err) {
+          console.error('❌ reCAPTCHA render error in SignupForm:', err);
+        }
       }
     };
 
@@ -112,7 +133,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({
         }
       };
     }
-  }, [onRecaptchaChange]);
+  }, [onRecaptchaChange, recaptchaLoaded]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
