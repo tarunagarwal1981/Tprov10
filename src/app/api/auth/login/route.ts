@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
     );
     
     // Store user for error handling
-    let dbUser = user;
+    const dbUser = user;
 
     if (user) {
       console.log('   User found, auth_method:', user.auth_method);
