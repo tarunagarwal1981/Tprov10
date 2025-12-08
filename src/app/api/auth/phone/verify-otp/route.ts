@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { query, queryOne, transaction } from '@/lib/aws/database';
+import { query, queryOne, transaction } from '@/lib/aws/lambda-database';
 import { verifyOTP } from '@/lib/services/otpService';
 import { signUp, signIn } from '@/lib/aws/cognito';
 import { v4 as uuidv4 } from 'uuid';

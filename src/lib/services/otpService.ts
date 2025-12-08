@@ -3,7 +3,7 @@
  * Handles OTP generation, storage, verification, and rate limiting
  */
 
-import { query, queryOne, queryMany, transaction } from '@/lib/aws/database';
+import { query, queryOne, queryMany } from '@/lib/aws/lambda-database';
 import crypto from 'crypto';
 
 export interface OTPRequest {

@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { query, queryOne, transaction } from '@/lib/aws/database';
+import { queryOne } from '@/lib/aws/lambda-database';
 import { createOTP } from '@/lib/services/otpService';
 import { sendSMSOTP } from '@/lib/services/smsService';
 import { sendEmailOTP } from '@/lib/services/emailService';
