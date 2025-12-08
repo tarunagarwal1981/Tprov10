@@ -13,6 +13,9 @@ export const runtime = 'nodejs';
  */
 export async function POST(request: NextRequest) {
   // Ensure we always return JSON, even for unexpected errors
+  // Declare dbUser outside try block so it's accessible in catch block
+  let dbUser: { auth_method: string | null } | null = null;
+  
   try {
     // Check if Cognito is configured
     const clientId = process.env.COGNITO_CLIENT_ID;
@@ -92,7 +95,7 @@ export async function POST(request: NextRequest) {
     );
     
     // Store user for error handling
-    const dbUser = user;
+    dbUser = user;
 
     if (user) {
       console.log('   User found, auth_method:', user.auth_method);
