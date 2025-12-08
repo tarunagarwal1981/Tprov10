@@ -81,27 +81,27 @@ export const SignupForm: React.FC<SignupFormProps> = ({
             });
           } else {
             // Direct render for v2
-            const widgetId = window.grecaptcha.render(recaptchaRef.current, {
-              sitekey: RECAPTCHA_SITE_KEY,
-              callback: (token: string) => {
+        const widgetId = window.grecaptcha.render(recaptchaRef.current, {
+          sitekey: RECAPTCHA_SITE_KEY,
+          callback: (token: string) => {
                 console.log('✅ reCAPTCHA token received in SignupForm');
-                onRecaptchaChange(token);
-              },
-              'expired-callback': () => {
+            onRecaptchaChange(token);
+          },
+          'expired-callback': () => {
                 console.log('⚠️ reCAPTCHA token expired in SignupForm');
-                onRecaptchaChange(null);
-              },
-              'error-callback': () => {
+            onRecaptchaChange(null);
+          },
+          'error-callback': () => {
                 console.error('❌ reCAPTCHA error in SignupForm');
-                onRecaptchaChange(null);
-              },
-            });
-            recaptchaWidgetId.current = widgetId;
+            onRecaptchaChange(null);
+          },
+        });
+        recaptchaWidgetId.current = widgetId;
             console.log('✅ reCAPTCHA widget rendered successfully in SignupForm');
           }
-        } catch (err) {
+      } catch (err) {
           console.error('❌ reCAPTCHA render error in SignupForm:', err);
-        }
+      }
       }
     };
 
