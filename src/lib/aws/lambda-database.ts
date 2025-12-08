@@ -44,11 +44,16 @@ async function invokeLambda(action: string, query?: string, params?: any[]): Pro
     
     console.log(`[Lambda Client] Lambda client created for region: ${AWS_REGION}`);
     
-    const payload = {
+    const payload: any = {
       action,
       query,
       params,
     };
+    
+    // Add transaction queries if provided
+    if (transactionQueries) {
+      payload.transactionQueries = transactionQueries;
+    }
     
     console.log(`[Lambda Client] Invoking ${LAMBDA_FUNCTION_NAME} with action: ${action}`);
     console.log(`[Lambda Client] Region: ${AWS_REGION}`);
@@ -117,6 +122,46 @@ export async function queryOne<T = any>(text: string, params?: any[]): Promise<T
 export async function queryMany<T = any>(text: string, params?: any[]): Promise<T[]> {
   const result = await invokeLambda('queryMany', text, params);
   return result.rows || [];
+}
+
+/**
+ * Execute a transaction
+ * @param callback - Function that receives a mock client and returns a promise
+ * @returns Result of the callback
+ * 
+ * Note: The client passed to callback is a mock that collects queries.
+ * All queries are executed in a single Lambda transaction call.
+ */
+export async function transaction<T>(
+  callback: (client: any) => Promise<T>
+): Promise<T> {
+  // Collect queries from the callback
+  const queries: Array<{ query: string; params?: any[] }> = [];
+  let callbackResult: T;
+  
+  // Mock client that collects queries instead of executing them
+  const mockClient = {
+    query: async (text: string, params?: any[]) => {
+      queries.push({ query: text, params });
+      // Return a mock result structure
+      return {
+        rows: [],
+        rowCount: 0,
+      };
+    },
+  };
+  
+  // Execute callback to collect queries
+  callbackResult = await callback(mockClient);
+  
+  // Execute all queries in a transaction via Lambda
+  if (queries.length > 0) {
+    const result = await invokeLambda('transaction', undefined, undefined, queries);
+    // Return the callback result (not the transaction result)
+    return callbackResult;
+  }
+  
+  return callbackResult;
 }
 
 /**

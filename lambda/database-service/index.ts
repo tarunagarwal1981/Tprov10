@@ -89,7 +89,7 @@ export const handler = async (event: any) => {
   console.log('[Database] Event:', JSON.stringify(event, null, 2));
 
   try {
-    const { action, query, params } = event;
+    const { action, query, params, transactionQueries } = event;
 
     if (!action) {
       return {
@@ -156,6 +156,44 @@ export const handler = async (event: any) => {
             time: testResult.rows[0].current_time,
           }),
         };
+
+      case 'transaction':
+        // Transaction: Execute multiple queries in a transaction
+        // event.transactionQueries is an array of { query: string, params: any[] }
+        if (!event.transactionQueries || !Array.isArray(event.transactionQueries)) {
+          return {
+            statusCode: 400,
+            body: JSON.stringify({ error: 'Missing transactionQueries parameter (array of queries)' }),
+          };
+        }
+        
+        const client = await dbPool.connect();
+        try {
+          await client.query('BEGIN');
+          const results: any[] = [];
+          
+          for (const { query: q, params } of event.transactionQueries) {
+            const result = await client.query(q, params || []);
+            results.push({
+              rows: result.rows,
+              rowCount: result.rowCount,
+            });
+          }
+          
+          await client.query('COMMIT');
+          return {
+            statusCode: 200,
+            body: JSON.stringify({
+              success: true,
+              results,
+            }),
+          };
+        } catch (error: any) {
+          await client.query('ROLLBACK');
+          throw error;
+        } finally {
+          client.release();
+        }
 
       default:
         return {

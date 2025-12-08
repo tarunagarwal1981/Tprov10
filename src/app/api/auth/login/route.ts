@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { queryOne } from '@/lib/aws/lambda-database';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -81,6 +82,32 @@ export async function POST(request: NextRequest) {
         { error: 'Email and password are required' },
         { status: 400 }
       );
+    }
+
+    // Check user's auth_method in database first
+    console.log('🔍 Checking user auth_method in database...');
+    const user = await queryOne<{ auth_method: string | null }>(
+      `SELECT auth_method FROM users WHERE email = $1`,
+      [email]
+    );
+
+    if (user) {
+      console.log('   User found, auth_method:', user.auth_method);
+      
+      // If user registered with phone OTP, they can't use email/password login
+      if (user.auth_method === 'phone_otp') {
+        console.log('❌ User registered with phone OTP, cannot use email/password login');
+        return NextResponse.json(
+          { 
+            error: 'Invalid authentication method',
+            message: 'This account was registered with phone number. Please use phone number login instead.',
+            authMethod: 'phone_otp',
+          },
+          { status: 400 }
+        );
+      }
+    } else {
+      console.log('   User not found in database, proceeding with Cognito authentication');
     }
 
     console.log('🔐 Calling signIn...');
