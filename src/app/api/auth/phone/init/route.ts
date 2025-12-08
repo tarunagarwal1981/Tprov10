@@ -75,17 +75,17 @@ export async function POST(request: NextRequest) {
     let user;
     try {
       user = await queryOne<{
-        id: string;
-        email: string;
-        name: string;
-        phone_verified: boolean;
-        auth_method: string;
-      }>(
-        `SELECT id, email, name, phone_verified, auth_method 
-         FROM users 
-         WHERE country_code = $1 AND phone_number = $2`,
-        [countryCode, phoneNumber]
-      );
+      id: string;
+      email: string;
+      name: string;
+      phone_verified: boolean;
+      auth_method: string;
+    }>(
+      `SELECT id, email, name, phone_verified, auth_method 
+       FROM users 
+       WHERE country_code = $1 AND phone_number = $2`,
+      [countryCode, phoneNumber]
+    );
       console.log('✅ Database query completed');
       console.log('   User found:', !!user);
     } catch (dbError: any) {
@@ -132,8 +132,8 @@ export async function POST(request: NextRequest) {
     
     // Return error details (safe for client - no sensitive info)
     const errorResponse: any = {
-      error: 'Failed to initialize phone authentication',
-      message: error.message || 'Unknown error',
+        error: 'Failed to initialize phone authentication',
+        message: error.message || 'Unknown error',
     };
     
     // Add more details in non-production or if it's a known safe error
