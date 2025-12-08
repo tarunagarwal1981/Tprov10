@@ -418,6 +418,7 @@ export const PhoneLoginTab: React.FC<PhoneLoginTabProps> = ({ onError }) => {
         error={error}
         recaptchaToken={recaptchaToken}
         onRecaptchaChange={setRecaptchaToken}
+        recaptchaLoaded={recaptchaLoaded}
       />
     );
   }
