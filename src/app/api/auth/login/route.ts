@@ -13,8 +13,9 @@ export const runtime = 'nodejs';
  */
 export async function POST(request: NextRequest) {
   // Ensure we always return JSON, even for unexpected errors
-  // Declare dbUser outside try block so it's accessible in catch block
+  // Declare variables outside try block so they're accessible in catch block
   let dbUser: { auth_method: string | null } | null = null;
+  let email: string = '';
   
   try {
     // Check if Cognito is configured
@@ -63,7 +64,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Parse request body
-    let email: string;
     let password: string;
     
     try {
