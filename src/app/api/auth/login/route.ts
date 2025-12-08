@@ -162,7 +162,7 @@ export async function POST(request: NextRequest) {
       refreshToken: authResult.refreshToken,
       expiresIn: authResult.expiresIn,
     });
-    } catch (error: any) {
+  } catch (error: any) {
     console.error('❌ Login error:', {
       name: error?.name,
       message: error?.message,
