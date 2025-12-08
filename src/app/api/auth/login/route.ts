@@ -90,6 +90,9 @@ export async function POST(request: NextRequest) {
       `SELECT auth_method FROM users WHERE email = $1`,
       [email]
     );
+    
+    // Store user for error handling
+    let dbUser = user;
 
     if (user) {
       console.log('   User found, auth_method:', user.auth_method);
@@ -112,7 +115,41 @@ export async function POST(request: NextRequest) {
 
     console.log('🔐 Calling signIn...');
     // Import signIn dynamically to avoid module-level errors
-    const { signIn } = await import('@/lib/aws/cognito');
+    const { signIn, getUserByUsername } = await import('@/lib/aws/cognito');
+    
+    // Check if user exists in Cognito and their status
+    try {
+      const cognitoUser = await getUserByUsername(email);
+      console.log('   Cognito user status:', cognitoUser.userStatus);
+      console.log('   Cognito user enabled:', cognitoUser.enabled);
+      
+      // If user is not confirmed, they need to verify email first
+      if (cognitoUser.userStatus === 'UNCONFIRMED') {
+        return NextResponse.json(
+          { 
+            error: 'Email not verified',
+            message: 'Please verify your email address before logging in. Check your inbox for the verification code.',
+            requiresConfirmation: true,
+          },
+          { status: 403 }
+        );
+      }
+    } catch (cognitoCheckError: any) {
+      // If user doesn't exist in Cognito, that's also an error
+      if (cognitoCheckError.name === 'UserNotFoundException') {
+        console.log('❌ User not found in Cognito');
+        return NextResponse.json(
+          { 
+            error: 'User not found',
+            message: 'No account found with this email address. Please register first.',
+          },
+          { status: 404 }
+        );
+      }
+      // Otherwise, continue with signIn attempt
+      console.log('   Could not check Cognito user status, proceeding with signIn:', cognitoCheckError.message);
+    }
+    
     const authResult = await signIn(email, password);
     console.log('✅ SignIn successful');
     
@@ -122,13 +159,42 @@ export async function POST(request: NextRequest) {
       refreshToken: authResult.refreshToken,
       expiresIn: authResult.expiresIn,
     });
-  } catch (error: any) {
+    } catch (error: any) {
     console.error('❌ Login error:', {
       name: error?.name,
       message: error?.message,
       code: error?.code,
       stack: error?.stack,
     });
+    
+    // If password is wrong and user has email_password auth_method, 
+    // check if they might have been created via phone OTP
+    if (error?.name === 'NotAuthorizedException' && dbUser?.auth_method === 'email_password') {
+      console.log('⚠️  Password incorrect for email_password user - checking if user might have been created via phone OTP...');
+      
+      // Try to get Cognito user to check their custom attributes
+      try {
+        const { getUserByUsername } = await import('@/lib/aws/cognito');
+        const cognitoUser = await getUserByUsername(email);
+        const authMethod = cognitoUser.attributes['custom:auth_method'];
+        
+        if (authMethod === 'phone_otp') {
+          console.log('❌ Mismatch detected: Database says email_password but Cognito says phone_otp');
+          return NextResponse.json(
+            { 
+              error: 'Invalid authentication method',
+              message: 'This account was registered with phone number. Please use phone number login instead.',
+              authMethod: 'phone_otp',
+              details: 'Database and Cognito auth_method mismatch detected',
+            },
+            { status: 400 }
+          );
+        }
+      } catch (checkError) {
+        // If we can't check, just proceed with normal error
+        console.log('   Could not verify Cognito auth_method:', checkError);
+      }
+    }
     
     // Ensure we always return JSON, not HTML
     const errorResponse = {
