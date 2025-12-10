@@ -99,6 +99,12 @@ export async function signUp(
       Value: String(value),
     }));
 
+  // Cognito requires email to be included in UserAttributes even though it's also the username
+  userAttributes.push({
+    Name: 'email',
+    Value: email,
+  });
+
   const command = new SignUpCommand({
     ClientId: CLIENT_ID,
     Username: email,
