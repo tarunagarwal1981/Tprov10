@@ -45,6 +45,7 @@ export interface AuthContextState {
     email: string;
     name: string;
     companyName?: string;
+    role: 'TRAVEL_AGENT' | 'TOUR_OPERATOR';
     otp: string;
   }) => Promise<string | false>;
   loginWithGoogle: () => Promise<boolean>;
@@ -450,30 +451,29 @@ export const CognitoAuthProvider: React.FC<{ children: React.ReactNode }> = ({ c
       // Load user profile
       const fullUser = await loadUserProfile(result.user.id, result.user.email);
 
-      if (fullUser) {
-        // Determine redirect URL based on role and profile completion
-        let redirectUrl = '/';
-        switch (fullUser.role) {
-          case 'SUPER_ADMIN':
-          case 'ADMIN':
-            redirectUrl = '/admin/dashboard';
-            break;
-          case 'TOUR_OPERATOR':
-            redirectUrl = '/operator/dashboard';
-            break;
-          case 'TRAVEL_AGENT':
-            // Check profile completion for agents
-            const userData = fullUser as any;
-            const completion = userData.profile_completion_percentage || 0;
-            const onboardingCompleted = userData.onboarding_completed || false;
-            redirectUrl = (completion < 100 || !onboardingCompleted) ? '/agent/onboarding' : '/agent';
-            break;
-          default:
-            redirectUrl = '/';
-        }
-        console.log('✅ Phone OTP login successful, redirecting to:', redirectUrl);
-        return redirectUrl;
+      const resolvedRole: UserRole =
+        (fullUser?.role as UserRole | undefined) || result.user.role || 'TRAVEL_AGENT';
+      const completion = (fullUser as any)?.profile_completion_percentage || 0;
+      const onboardingCompleted = (fullUser as any)?.onboarding_completed || false;
+      const needsOnboarding = resolvedRole === 'TRAVEL_AGENT' && (completion < 100 || !onboardingCompleted);
+      // Determine redirect URL based on role and profile completion (non-blocking for agents)
+      let redirectUrl = '/';
+      switch (resolvedRole) {
+        case 'SUPER_ADMIN':
+        case 'ADMIN':
+          redirectUrl = '/admin/dashboard';
+          break;
+        case 'TOUR_OPERATOR':
+          redirectUrl = '/operator/dashboard';
+          break;
+        case 'TRAVEL_AGENT':
+          redirectUrl = needsOnboarding ? '/agent?onboarding=1' : '/agent';
+          break;
+        default:
+          redirectUrl = '/';
       }
+      console.log('✅ Phone OTP login successful, redirecting to:', redirectUrl);
+      return redirectUrl;
 
       return false;
     } catch (err: any) {
@@ -495,6 +495,7 @@ export const CognitoAuthProvider: React.FC<{ children: React.ReactNode }> = ({ c
     email: string;
     name: string;
     companyName?: string;
+    role: 'TRAVEL_AGENT' | 'TOUR_OPERATOR';
     otp: string;
   }): Promise<string | false> => {
     try {
@@ -514,6 +515,7 @@ export const CognitoAuthProvider: React.FC<{ children: React.ReactNode }> = ({ c
           email: userData.email,
           name: userData.name,
           companyName: userData.companyName,
+          role: userData.role,
         }),
       });
 
@@ -536,13 +538,23 @@ export const CognitoAuthProvider: React.FC<{ children: React.ReactNode }> = ({ c
       // Load user profile
       const fullUser = await loadUserProfile(result.user.id, result.user.email);
 
-      if (fullUser) {
-        // New users always go to onboarding
-        const redirectUrl = '/agent/onboarding';
-        console.log('✅ Phone OTP registration successful, redirecting to:', redirectUrl);
-        toast.success('Account created successfully! Please complete your profile.');
-        return redirectUrl;
+      const resolvedRole = (fullUser?.role as UserRole | undefined) || result.user.role || userData.role || 'TRAVEL_AGENT';
+      const completion = (fullUser as any)?.profile_completion_percentage || 0;
+      const onboardingCompleted = (fullUser as any)?.onboarding_completed || false;
+      const needsOnboarding = resolvedRole === 'TRAVEL_AGENT' && (completion < 100 || !onboardingCompleted);
+      const redirectUrl =
+        resolvedRole === 'TOUR_OPERATOR'
+          ? '/operator/dashboard'
+          : needsOnboarding
+            ? '/agent?onboarding=1'
+            : '/agent';
+      console.log('✅ Phone OTP registration successful, redirecting to:', redirectUrl);
+      if (needsOnboarding) {
+        toast.success('Account created! Please complete your profile.', { duration: 4000 });
+      } else {
+        toast.success('Account created successfully!');
       }
+      return redirectUrl;
 
       return false;
     } catch (err: any) {

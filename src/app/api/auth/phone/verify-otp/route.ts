@@ -15,7 +15,7 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
-    const { countryCode, phoneNumber, code, purpose, email, name, companyName } = await request.json();
+    const { countryCode, phoneNumber, code, purpose, email, name, companyName, role } = await request.json();
     
     if (!countryCode || !phoneNumber || !code) {
       return NextResponse.json(
@@ -48,6 +48,14 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+      const normalizedRole = (role || '').toUpperCase();
+      const allowedRoles = ['TRAVEL_AGENT', 'TOUR_OPERATOR'];
+      if (!allowedRoles.includes(normalizedRole)) {
+        return NextResponse.json(
+          { error: 'Role is required and must be TRAVEL_AGENT or TOUR_OPERATOR' },
+          { status: 400 }
+        );
+      }
     
       // Check if user was already created (race condition protection)
       let user = await queryOne<{ id: string; email: string; auth_method: string }>(
@@ -64,30 +72,33 @@ export async function POST(request: NextRequest) {
           // Create user in Cognito (we'll use email as username, but phone for auth)
           const cognitoResult = await signUp(email, tempPassword, {
             name,
-            phone: `${countryCode}${phoneNumber}`,
+            // Use standard Cognito attribute for phone number (E.164 format)
+            phone_number: `${countryCode}${phoneNumber}`,
             'custom:country_code': countryCode,
             'custom:phone_number': phoneNumber,
             'custom:auth_method': 'phone_otp',
+            'custom:role': normalizedRole,
           });
 
           // Create user in database
           await transaction(async (client) => {
             await client.query(
               `INSERT INTO users 
-               (id, email, name, phone_number, country_code, phone_verified, email_verified, auth_method, profile, created_at, updated_at)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())`,
+               (id, email, name, phone_number, country_code, role, phone_verified, email_verified, auth_method, profile, created_at, updated_at)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())`,
               [
                 userId,
                 email,
                 name,
                 phoneNumber,
                 countryCode,
+                normalizedRole,
                 true, // phone_verified
                 false, // email_verified (can be verified later)
                 'phone_otp',
                 JSON.stringify({
                   companyName: companyName || null,
-                  role: 'agent', // Default role
+                  role: normalizedRole,
                 }),
               ]
             );
@@ -137,6 +148,7 @@ export async function POST(request: NextRequest) {
         user: {
           id: user.id,
           email: user.email,
+          role: normalizedRole,
           phoneNumber: `${countryCode}${phoneNumber}`,
           authMethod: user.auth_method,
         },
@@ -178,6 +190,7 @@ export async function POST(request: NextRequest) {
       // Generate tokens or session
       // For phone OTP users, we might need to use Cognito's custom auth
       // For now, return user info - frontend will handle session
+    const resolvedRole = user.role || 'TRAVEL_AGENT';
     return NextResponse.json({
       success: true,
         authenticated: true,
@@ -185,7 +198,7 @@ export async function POST(request: NextRequest) {
         id: user.id,
         email: user.email,
         name: user.name,
-          role: user.role,
+          role: resolvedRole,
           phoneNumber: `${countryCode}${phoneNumber}`,
           authMethod: user.auth_method,
         },

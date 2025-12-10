@@ -24,12 +24,22 @@ export async function POST(request: NextRequest) {
       name,
       companyName,
       recaptchaToken,
+      role,
     } = await request.json();
 
     // Validation
-    if (!countryCode || !phoneNumber || !email || !name) {
+    if (!countryCode || !phoneNumber || !email || !name || !role) {
       return NextResponse.json(
-        { error: 'Country code, phone number, email, and name are required' },
+        { error: 'Country code, phone number, email, name, and role are required' },
+        { status: 400 }
+      );
+    }
+
+    const normalizedRole = (role || '').toUpperCase();
+    const allowedRoles = ['TRAVEL_AGENT', 'TOUR_OPERATOR'];
+    if (!allowedRoles.includes(normalizedRole)) {
+      return NextResponse.json(
+        { error: 'Role must be TRAVEL_AGENT or TOUR_OPERATOR' },
         { status: 400 }
       );
     }
@@ -123,6 +133,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: 'OTP sent successfully',
+      role: normalizedRole,
       otpSentTo: {
         phone: true,
         email: emailResult.success,

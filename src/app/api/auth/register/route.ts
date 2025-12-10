@@ -21,7 +21,8 @@ export async function POST(request: NextRequest) {
 
     const result = await signUp(email, password, {
       name,
-      phone,
+      // Use Cognito standard attribute name
+      phone_number: phone,
       role,
       ...profile,
     });

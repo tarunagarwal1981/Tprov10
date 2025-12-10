@@ -182,7 +182,7 @@ const PhoneLoginPage: React.FC = () => {
     }
   };
 
-  const handleSignupSubmit = async (signupData: { email: string; name: string; companyName?: string }) => {
+  const handleSignupSubmit = async (signupData: { email: string; name: string; companyName?: string; role: 'TRAVEL_AGENT' | 'TOUR_OPERATOR' }) => {
     if (!userData) return;
 
     setLoading(true);
@@ -198,6 +198,7 @@ const PhoneLoginPage: React.FC = () => {
           email: signupData.email,
           name: signupData.name,
           companyName: signupData.companyName,
+          role: signupData.role,
           recaptchaToken: recaptchaToken || undefined,
         }),
       });
@@ -212,7 +213,7 @@ const PhoneLoginPage: React.FC = () => {
       resetRecaptcha();
 
       // Navigate to OTP verification
-      router.push(`/phone-otp?countryCode=${encodeURIComponent(userData.countryCode)}&phoneNumber=${encodeURIComponent(userData.phoneNumber)}&purpose=signup&email=${encodeURIComponent(signupData.email)}&name=${encodeURIComponent(signupData.name)}&companyName=${encodeURIComponent(signupData.companyName || '')}`);
+      router.push(`/phone-otp?countryCode=${encodeURIComponent(userData.countryCode)}&phoneNumber=${encodeURIComponent(userData.phoneNumber)}&purpose=signup&email=${encodeURIComponent(signupData.email)}&name=${encodeURIComponent(signupData.name)}&companyName=${encodeURIComponent(signupData.companyName || '')}&role=${encodeURIComponent(signupData.role)}`);
     } catch (err: any) {
       console.error('Signup error:', err);
       setError(err.message || 'Failed to create account. Please try again.');
@@ -421,7 +422,7 @@ const PhoneLoginPage: React.FC = () => {
 interface SignupFormProps {
   countryCode: string;
   phoneNumber: string;
-  onSubmit: (data: { email: string; name: string; companyName?: string }) => void;
+  onSubmit: (data: { email: string; name: string; companyName?: string; role: 'TRAVEL_AGENT' | 'TOUR_OPERATOR' }) => void;
   onBack: () => void;
   loading: boolean;
   error: string | null;
@@ -442,6 +443,7 @@ const SignupForm: React.FC<SignupFormProps> = ({
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [companyName, setCompanyName] = useState('');
+  const [role, setRole] = useState<'TRAVEL_AGENT' | 'TOUR_OPERATOR' | ''>('');
   const recaptchaRef = useRef<HTMLDivElement>(null);
   const recaptchaWidgetId = useRef<number | null>(null);
 
@@ -469,10 +471,10 @@ const SignupForm: React.FC<SignupFormProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !name) {
+    if (!email || !name || !role) {
       return;
     }
-    onSubmit({ email, name, companyName: companyName || undefined });
+    onSubmit({ email, name, companyName: companyName || undefined, role });
   };
 
   return (
@@ -551,6 +553,48 @@ const SignupForm: React.FC<SignupFormProps> = ({
             />
           </div>
 
+          {/* Role Selection */}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Select Role (required)
+            </label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setRole('TRAVEL_AGENT')}
+                className={`p-3 rounded-xl border ${
+                  role === 'TRAVEL_AGENT'
+                    ? 'border-[#FF6B35] bg-[#FF6B35]/10'
+                    : 'border-gray-300 dark:border-gray-600'
+                } text-left transition`}
+                disabled={loading}
+              >
+                <div className="font-semibold text-gray-900 dark:text-white">Travel Agent</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">
+                  Browse packages, create itineraries, manage customers.
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setRole('TOUR_OPERATOR')}
+                className={`p-3 rounded-xl border ${
+                  role === 'TOUR_OPERATOR'
+                    ? 'border-[#FF6B35] bg-[#FF6B35]/10'
+                    : 'border-gray-300 dark:border-gray-600'
+                } text-left transition`}
+                disabled={loading}
+              >
+                <div className="font-semibold text-gray-900 dark:text-white">Tour Operator</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">
+                  List packages, manage bookings, view analytics.
+                </div>
+              </button>
+            </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Roles can be extended later; choose the best fit now.
+            </p>
+          </div>
+
           {/* reCAPTCHA */}
           {RECAPTCHA_SITE_KEY && (
             <div className="flex justify-center">
@@ -577,9 +621,9 @@ const SignupForm: React.FC<SignupFormProps> = ({
             </motion.button>
             <motion.button
               type="submit"
-              disabled={!email || !name || loading || (process.env.NODE_ENV === 'production' && !recaptchaToken)}
+              disabled={!email || !name || !role || loading || (process.env.NODE_ENV === 'production' && !recaptchaToken)}
               className={`flex-1 py-3 px-4 rounded-xl font-medium transition-all ${
-                email && name && !loading && (process.env.NODE_ENV !== 'production' || recaptchaToken)
+                email && name && role && !loading && (process.env.NODE_ENV !== 'production' || recaptchaToken)
                   ? 'bg-[#FF6B35] hover:bg-[#E05A2A] text-white'
                   : 'bg-gray-300 dark:bg-gray-600 text-gray-500 cursor-not-allowed'
               }`}
