@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AgentDashboardLayout } from '@/components/dashboard/AgentDashboardLayout';
 import { useAuth } from '@/context/CognitoAuthContext';
 import { useRouter } from 'next/navigation';
 import { User, Building, BriefcaseBusiness, FileText as FileTextIcon, CheckCircle } from 'lucide-react';
@@ -70,13 +69,30 @@ export default function OnboardingPage() {
 
   const fetchProfileCompletion = async () => {
     try {
+      if (!user) return;
+      
+      // Get access token from either cognito_tokens or phoneAuthSession
       const tokens = localStorage.getItem('cognito_tokens');
-      if (!tokens) return;
-
-      const { accessToken } = JSON.parse(tokens);
-        if (!user) return;
+      const phoneSession = localStorage.getItem('phoneAuthSession');
+      
+      let accessToken: string | null = null;
+      if (tokens) {
+        try {
+          const parsed = JSON.parse(tokens);
+          accessToken = parsed.accessToken;
+        } catch (e) {
+          // Invalid token format
+        }
+      } else if (phoneSession) {
+        accessToken = phoneSession;
+      }
+      
+      if (!accessToken) {
+        console.warn('[OnboardingPage] No access token found');
+        return;
+      }
         
-        const response = await fetch('/api/user/profile', {
+      const response = await fetch('/api/user/profile', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -128,8 +144,7 @@ export default function OnboardingPage() {
   }
 
   return (
-    <AgentDashboardLayout>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-4 md:p-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-4 md:p-8">
         <div className="max-w-6xl mx-auto">
           {/* Header */}
           <motion.div
@@ -265,7 +280,6 @@ export default function OnboardingPage() {
           )}
         </div>
       </div>
-    </AgentDashboardLayout>
   );
 }
 
