@@ -443,6 +443,7 @@ const SignupForm: React.FC<SignupFormProps> = ({
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [companyName, setCompanyName] = useState('');
+  // Require explicit role selection
   const [role, setRole] = useState<'TRAVEL_AGENT' | 'TOUR_OPERATOR' | ''>('');
   const recaptchaRef = useRef<HTMLDivElement>(null);
   const recaptchaWidgetId = useRef<number | null>(null);
@@ -472,6 +473,7 @@ const SignupForm: React.FC<SignupFormProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !name || !role) {
+      setError('Please select a role');
       return;
     }
     onSubmit({ email, name, companyName: companyName || undefined, role });
@@ -561,7 +563,10 @@ const SignupForm: React.FC<SignupFormProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <button
                 type="button"
-                onClick={() => setRole('TRAVEL_AGENT')}
+                onClick={() => {
+                  setRole('TRAVEL_AGENT');
+                  setError(null);
+                }}
                 className={`p-3 rounded-xl border ${
                   role === 'TRAVEL_AGENT'
                     ? 'border-[#FF6B35] bg-[#FF6B35]/10'
@@ -576,7 +581,10 @@ const SignupForm: React.FC<SignupFormProps> = ({
               </button>
               <button
                 type="button"
-                onClick={() => setRole('TOUR_OPERATOR')}
+                onClick={() => {
+                  setRole('TOUR_OPERATOR');
+                  setError(null);
+                }}
                 className={`p-3 rounded-xl border ${
                   role === 'TOUR_OPERATOR'
                     ? 'border-[#FF6B35] bg-[#FF6B35]/10'
