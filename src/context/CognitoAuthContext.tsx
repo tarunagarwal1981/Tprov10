@@ -203,10 +203,13 @@ export const CognitoAuthProvider: React.FC<{ children: React.ReactNode }> = ({ c
   useEffect(() => {
     const initAuth = async () => {
       try {
+        console.log('[AuthContext] Initializing auth from stored tokens...');
         setLoading('initializing');
         
+        // Check for Cognito tokens first (email/password login)
         const tokens = getStoredTokens();
         if (tokens && tokens.accessToken) {
+          console.log('[AuthContext] Found Cognito tokens, validating...');
           try {
             // Verify token is still valid and get user info
             const userInfo = await getUser(tokens.accessToken);
@@ -214,19 +217,58 @@ export const CognitoAuthProvider: React.FC<{ children: React.ReactNode }> = ({ c
             const email = getUserEmailFromToken(tokens.idToken) || userInfo.attributes.email;
             
             if (userId && email) {
+              console.log('[AuthContext] Tokens valid, loading user profile...', { userId, email });
               await loadUserProfile(userId, email);
+              console.log('[AuthContext] User profile loaded successfully');
             }
           } catch (error) {
-            console.error('Error validating stored tokens:', error);
+            console.error('[AuthContext] Error validating stored tokens:', error);
             // Tokens invalid, clear them
             clearStoredTokens();
           }
+        } else {
+          // Check for phone OTP session (phone login)
+          if (typeof window !== 'undefined') {
+            const phoneAuthUser = localStorage.getItem('phoneAuthUser');
+            const phoneAuthSession = localStorage.getItem('phoneAuthSession');
+            
+            if (phoneAuthUser && phoneAuthSession) {
+              console.log('[AuthContext] Found phone auth session, restoring user...');
+              try {
+                const userData = JSON.parse(phoneAuthUser);
+                // Verify session is not too old (24 hours)
+                const sessionData = JSON.parse(atob(phoneAuthSession));
+                const sessionAge = Date.now() - (sessionData.timestamp || 0);
+                const maxAge = 24 * 60 * 60 * 1000; // 24 hours
+                
+                if (sessionAge < maxAge) {
+                  console.log('[AuthContext] Phone session valid, loading user profile...', {
+                    userId: userData.id,
+                    email: userData.email,
+                  });
+                  await loadUserProfile(userData.id, userData.email);
+                  console.log('[AuthContext] User profile loaded successfully from phone session');
+                } else {
+                  console.warn('[AuthContext] Phone session expired, clearing...');
+                  localStorage.removeItem('phoneAuthUser');
+                  localStorage.removeItem('phoneAuthSession');
+                }
+              } catch (error) {
+                console.error('[AuthContext] Error restoring phone auth session:', error);
+                localStorage.removeItem('phoneAuthUser');
+                localStorage.removeItem('phoneAuthSession');
+              }
+            } else {
+              console.log('[AuthContext] No stored tokens or phone session found');
+            }
+          }
         }
         
+        console.log('[AuthContext] Auth initialization complete');
         setIsInitialized(true);
         setLoading('idle');
       } catch (error) {
-        console.error('Auth initialization error:', error);
+        console.error('[AuthContext] Auth initialization error:', error);
         setIsInitialized(true);
         setLoading('idle');
       }
