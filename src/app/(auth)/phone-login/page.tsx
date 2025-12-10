@@ -445,6 +445,7 @@ const SignupForm: React.FC<SignupFormProps> = ({
   const [companyName, setCompanyName] = useState('');
   // Require explicit role selection
   const [role, setRole] = useState<'TRAVEL_AGENT' | 'TOUR_OPERATOR' | ''>('');
+  const [formError, setFormError] = useState<string | null>(null);
   const recaptchaRef = useRef<HTMLDivElement>(null);
   const recaptchaWidgetId = useRef<number | null>(null);
 
@@ -473,9 +474,10 @@ const SignupForm: React.FC<SignupFormProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !name || !role) {
-      setError('Please select a role');
+      setFormError('Please select a role');
       return;
     }
+    setFormError(null);
     onSubmit({ email, name, companyName: companyName || undefined, role });
   };
 
@@ -565,7 +567,7 @@ const SignupForm: React.FC<SignupFormProps> = ({
                 type="button"
                 onClick={() => {
                   setRole('TRAVEL_AGENT');
-                  setError(null);
+                  setFormError(null);
                 }}
                 className={`p-3 rounded-xl border ${
                   role === 'TRAVEL_AGENT'
@@ -583,7 +585,7 @@ const SignupForm: React.FC<SignupFormProps> = ({
                 type="button"
                 onClick={() => {
                   setRole('TOUR_OPERATOR');
-                  setError(null);
+                  setFormError(null);
                 }}
                 className={`p-3 rounded-xl border ${
                   role === 'TOUR_OPERATOR'
@@ -611,9 +613,9 @@ const SignupForm: React.FC<SignupFormProps> = ({
           )}
 
           {/* Error */}
-          {error && (
+          { (formError || error) && (
             <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-              <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
+              <p className="text-red-600 dark:text-red-400 text-sm">{formError || error}</p>
             </div>
           )}
 
