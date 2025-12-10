@@ -70,14 +70,15 @@ export async function POST(request: NextRequest) {
 
         try {
           // Create user in Cognito (we'll use email as username, but phone for auth)
+          // Note: Only use standard Cognito attributes (name, phone_number)
+          // Custom attributes (custom:role, custom:auth_method, etc.) must be defined in Cognito User Pool schema first
+          // For now, we'll store role, auth_method, country_code, phone_number in database only
           const cognitoResult = await signUp(email, tempPassword, {
             name,
             // Use standard Cognito attribute for phone number (E.164 format)
             phone_number: `${countryCode}${phoneNumber}`,
-            'custom:country_code': countryCode,
-            'custom:phone_number': phoneNumber,
-            'custom:auth_method': 'phone_otp',
-            'custom:role': normalizedRole,
+            // Removed custom attributes - they need to be defined in Cognito User Pool schema first
+            // Store role, auth_method, country_code, phone_number in database instead
           });
 
           // Create user in database
