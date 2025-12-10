@@ -25,10 +25,12 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/context/CognitoAuthContext';
+import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 
 export function Header() {
   const { user, logout } = useAuth();
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [notifications] = useState([
     { id: 1, title: 'New booking received', time: '2 min ago', unread: true },
@@ -139,16 +141,35 @@ export function Header() {
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={(e) => {
+                  e.preventDefault();
+                  console.log('[Header] Profile clicked, navigating to /agent/profile');
+                  router.push('/agent/profile');
+                }}
+              >
                 <User className="mr-2 h-4 w-4" />
                 <span>Profile</span>
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={(e) => {
+                  e.preventDefault();
+                  console.log('[Header] Settings clicked, navigating to /agent/onboarding');
+                  router.push('/agent/onboarding');
+                }}
+              >
                 <Settings className="mr-2 h-4 w-4" />
                 <span>Settings</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={logout} className="text-red-600">
+              <DropdownMenuItem
+                onSelect={(e) => {
+                  e.preventDefault();
+                  console.log('[Header] Logout clicked');
+                  logout();
+                }}
+                className="text-red-600"
+              >
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>Log out</span>
               </DropdownMenuItem>

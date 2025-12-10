@@ -24,11 +24,18 @@ export default function AgentLayout({ children }: { children: React.ReactNode })
       pathname?.includes('/onboarding') ||
       pathname?.includes('/profile')
     ) {
+      console.log('[AgentLayout] Skipping profile check', {
+        isInitialized,
+        hasUser: !!user,
+        role: user?.role,
+        pathname,
+      });
       setCheckingProfile(false);
       return;
     }
 
     const checkProfileCompletion = async () => {
+      console.log('[AgentLayout] Checking profile completion...');
       try {
         const tokens = localStorage.getItem('cognito_tokens');
         const phoneSession = localStorage.getItem('phoneAuthSession');
@@ -46,10 +53,12 @@ export default function AgentLayout({ children }: { children: React.ReactNode })
         }
 
         if (!accessToken) {
+          console.warn('[AgentLayout] No access token found for profile check');
           setCheckingProfile(false);
           return;
         }
 
+        console.log('[AgentLayout] Calling /api/user/profile', { userId: user.id, email: user.email });
         const response = await fetch('/api/user/profile', {
           method: 'POST',
           headers: {
@@ -73,20 +82,29 @@ export default function AgentLayout({ children }: { children: React.ReactNode })
 
             // Redirect to onboarding if profile is incomplete
             if ((completionPercentage < 100 || !onboardingCompleted) && pathname !== '/agent/onboarding') {
+              console.log('[AgentLayout] Profile incomplete, redirecting to onboarding', {
+                completionPercentage,
+                onboardingCompleted,
+              });
               router.push('/agent/onboarding');
               return;
             }
           } else {
             // No profile found, redirect to onboarding
             if (pathname !== '/agent/onboarding') {
+              console.log('[AgentLayout] No profile found, redirecting to onboarding');
               router.push('/agent/onboarding');
               return;
             }
           }
+        } else {
+          const text = await response.text().catch(() => '');
+          console.warn('[AgentLayout] /api/user/profile not ok', { status: response.status, text });
         }
       } catch (error) {
         console.error('Profile completion check error:', error);
       } finally {
+        console.log('[AgentLayout] Profile check done');
         setCheckingProfile(false);
       }
     };
