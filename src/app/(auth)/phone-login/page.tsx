@@ -55,6 +55,8 @@ const PhoneLoginPage: React.FC = () => {
       try {
         const widgetId = window.grecaptcha.render(recaptchaRef.current, {
           sitekey: RECAPTCHA_SITE_KEY,
+          size: 'normal', // 'normal' or 'compact' - normal is less likely to trigger challenges
+          badge: 'bottomright', // Position of reCAPTCHA badge
           callback: (token: string) => {
             setRecaptchaToken(token);
           },
@@ -454,6 +456,8 @@ const SignupForm: React.FC<SignupFormProps> = ({
       try {
         const widgetId = window.grecaptcha.render(recaptchaRef.current, {
           sitekey: RECAPTCHA_SITE_KEY,
+          size: 'normal', // 'normal' or 'compact' - normal is less likely to trigger challenges
+          badge: 'bottomright', // Position of reCAPTCHA badge
           callback: (token: string) => {
             onRecaptchaChange(token);
           },

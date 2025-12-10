@@ -123,6 +123,8 @@ export const PhoneLoginTab: React.FC<PhoneLoginTabProps> = ({ onError }) => {
             if (recaptchaRef.current && !recaptchaWidgetId.current) {
               const widgetId = window.grecaptcha.render(recaptchaRef.current, {
                 sitekey: RECAPTCHA_SITE_KEY,
+                size: 'normal', // 'normal' or 'compact' - normal is less likely to trigger challenges
+                badge: 'bottomright', // Position of reCAPTCHA badge
                 callback: (token: string) => {
                   console.log('✅ reCAPTCHA token received');
                   console.log('   Token length:', token.length);
@@ -147,6 +149,8 @@ export const PhoneLoginTab: React.FC<PhoneLoginTabProps> = ({ onError }) => {
           // Direct render for v2
         const widgetId = window.grecaptcha.render(recaptchaRef.current, {
           sitekey: RECAPTCHA_SITE_KEY,
+          size: 'normal', // 'normal' or 'compact' - normal is less likely to trigger challenges
+          badge: 'bottomright', // Position of reCAPTCHA badge
           callback: (token: string) => {
               console.log('✅ reCAPTCHA token received');
             setRecaptchaToken(token);
