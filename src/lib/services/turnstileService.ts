@@ -102,33 +102,3 @@ export async function verifyTurnstile(
     };
   }
 }
-
-    if (data['error-codes'] && data['error-codes'].length > 0) {
-      console.error('   ⚠️ ERROR CODES:', data['error-codes'].join(', '));
-    }
-
-    if (!data.success) {
-      const errorCodes = data['error-codes'] || [];
-      console.error('❌ Turnstile verification failed');
-      console.error('   Error codes:', errorCodes.join(', '));
-      console.error('   Hostname:', data.hostname || 'N/A');
-      console.error('   Challenge timestamp:', data.challenge_ts || 'N/A');
-      return {
-        valid: false,
-        error: `Turnstile verification failed: ${errorCodes.join(', ')}`,
-      };
-    }
-
-    console.log('✅ Turnstile verification successful');
-    console.log('   Hostname:', data.hostname || 'N/A');
-    console.log('   Challenge timestamp:', data.challenge_ts || 'N/A');
-
-    return { valid: true };
-  } catch (error: any) {
-    console.error('Turnstile verification error:', error);
-    return {
-      valid: false,
-      error: error.message || 'Failed to verify Turnstile',
-    };
-  }
-}

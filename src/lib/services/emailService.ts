@@ -1,26 +1,55 @@
 /**
  * Email Service
- * Handles email OTP delivery via AWS SES
+ * Handles email OTP delivery via SendGrid or AWS SES
+ * 
+ * To use SendGrid instead of AWS SES:
+ * 1. Set EMAIL_PROVIDER=sendgrid in environment variables (default)
+ * 2. Set SENDGRID_API_KEY, SENDGRID_FROM_EMAIL, SENDGRID_FROM_NAME
+ * 3. Install: npm install @sendgrid/mail
  */
 
 import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
 
-const sesClient = new SESClient({
-  region: process.env.AWS_REGION || process.env.DEPLOYMENT_REGION || 'us-east-1',
-});
+// Choose email provider: 'sendgrid' or 'aws'
+const EMAIL_PROVIDER = process.env.EMAIL_PROVIDER || 'sendgrid';
 
-const FROM_EMAIL = process.env.SES_FROM_EMAIL || process.env.FROM_EMAIL || 'noreply@travclan.com';
-const FROM_NAME = process.env.SES_FROM_NAME || 'TravClan';
+// AWS SES client (only initialized if using AWS)
+const sesClient = EMAIL_PROVIDER === 'aws' ? new SESClient({
+  region: process.env.AWS_REGION || process.env.DEPLOYMENT_REGION || 'us-east-1',
+}) : null;
+
+const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || process.env.SES_FROM_EMAIL || process.env.FROM_EMAIL || 'noreply@travclan.com';
+const FROM_NAME = process.env.SENDGRID_FROM_NAME || process.env.SES_FROM_NAME || 'TravClan';
 
 /**
- * Send OTP via Email using AWS SES
+ * Send OTP via Email using SendGrid or AWS SES
  */
 export async function sendEmailOTP(
   email: string,
   otpCode: string,
   purpose: 'login' | 'signup' | 'verify_phone' | 'verify_email' = 'login'
 ): Promise<{ messageId?: string; success: boolean; error?: string }> {
+  // Use SendGrid if configured
+  if (EMAIL_PROVIDER === 'sendgrid') {
+    try {
+      // Dynamic import to avoid loading SendGrid if not needed
+      const { sendEmailOTP: sendGridSendEmailOTP } = await import('./emailServiceSendGrid');
+      return await sendGridSendEmailOTP(email, otpCode, purpose);
+    } catch (error: any) {
+      console.error('Failed to load SendGrid email service:', error);
+      return {
+        success: false,
+        error: 'SendGrid email service not available. Install @sendgrid/mail package: npm install @sendgrid/mail',
+      };
+    }
+  }
+
+  // Default to AWS SES
   try {
+    if (!sesClient) {
+      throw new Error('AWS SES client not initialized');
+    }
+
     const subject = purpose === 'signup' 
       ? 'Welcome! Verify your email address'
       : 'Your verification code';
@@ -118,7 +147,7 @@ This is an automated message. Please do not reply to this email.
 }
 
 /**
- * Send generic email via SES
+ * Send generic email via SendGrid or AWS SES
  */
 export async function sendEmail(
   to: string,
@@ -126,7 +155,26 @@ export async function sendEmail(
   htmlBody: string,
   textBody?: string
 ): Promise<{ messageId?: string; success: boolean; error?: string }> {
+  // Use SendGrid if configured
+  if (EMAIL_PROVIDER === 'sendgrid') {
+    try {
+      const { sendEmail: sendGridSendEmail } = await import('./emailServiceSendGrid');
+      return await sendGridSendEmail(to, subject, htmlBody, textBody);
+    } catch (error: any) {
+      console.error('Failed to load SendGrid email service:', error);
+      return {
+        success: false,
+        error: 'SendGrid email service not available. Install @sendgrid/mail package: npm install @sendgrid/mail',
+      };
+    }
+  }
+
+  // Default to AWS SES
   try {
+    if (!sesClient) {
+      throw new Error('AWS SES client not initialized');
+    }
+
     const command = new SendEmailCommand({
       Source: `${FROM_NAME} <${FROM_EMAIL}>`,
       Destination: {

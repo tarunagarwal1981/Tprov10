@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
                       request.headers.get('x-real-ip') ||
                       'unknown';
       
-      const recaptchaResult = await verifyRecaptcha(recaptchaToken, clientIp);
+      const recaptchaResult = await verifyCaptcha(recaptchaToken, clientIp);
       if (!recaptchaResult.valid) {
         return NextResponse.json(
           { error: 'reCAPTCHA verification failed', details: recaptchaResult.error },

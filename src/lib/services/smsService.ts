@@ -11,7 +11,7 @@
 import { SNSClient, PublishCommand } from '@aws-sdk/client-sns';
 
 // Choose SMS provider: 'aws' or 'twilio'
-const SMS_PROVIDER = process.env.SMS_PROVIDER || 'aws';
+const SMS_PROVIDER = process.env.SMS_PROVIDER || 'twilio';
 
 // AWS SNS client (only initialized if using AWS)
 const snsClient = SMS_PROVIDER === 'aws' ? new SNSClient({
