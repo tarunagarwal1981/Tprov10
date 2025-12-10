@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { AgentDashboardLayout } from '@/components/dashboard/AgentDashboardLayout';
 import { useAuth } from '@/context/CognitoAuthContext';
 import { useRouter } from 'next/navigation';
 import { Pencil, Phone, Mail, Globe, Building, MapPin, Camera } from 'lucide-react';
@@ -137,8 +136,7 @@ export default function ProfilePage() {
   const logo = profileData?.brand?.logo_url || '';
 
   return (
-    <AgentDashboardLayout>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
         {/* Banner Section */}
         <div className="relative h-48 md:h-64 bg-gradient-to-r from-[#FF6B35] to-[#FF8C61] overflow-hidden">
           <div 
@@ -397,7 +395,6 @@ export default function ProfilePage() {
           </motion.div>
         </div>
       </div>
-    </AgentDashboardLayout>
   );
 }
 
