@@ -364,7 +364,7 @@ export const PhoneLoginTab: React.FC<PhoneLoginTabProps> = ({ onError }) => {
     }
   };
 
-  const handleSignupSubmit = async (signupData: { email: string; name: string; companyName?: string }) => {
+  const handleSignupSubmit = async (signupData: { email: string; name: string; companyName?: string; role: 'TRAVEL_AGENT' | 'TOUR_OPERATOR' }) => {
     if (!userData) return;
 
     setLoading(true);
@@ -380,6 +380,7 @@ export const PhoneLoginTab: React.FC<PhoneLoginTabProps> = ({ onError }) => {
           email: signupData.email,
           name: signupData.name,
           companyName: signupData.companyName,
+          role: signupData.role,
           recaptchaToken: recaptchaToken || undefined,
         }),
       });
@@ -391,7 +392,7 @@ export const PhoneLoginTab: React.FC<PhoneLoginTabProps> = ({ onError }) => {
       }
 
       resetRecaptcha();
-      router.push(`/phone-otp?countryCode=${encodeURIComponent(userData.countryCode)}&phoneNumber=${encodeURIComponent(userData.phoneNumber)}&purpose=signup&email=${encodeURIComponent(signupData.email)}&name=${encodeURIComponent(signupData.name)}&companyName=${encodeURIComponent(signupData.companyName || '')}`);
+      router.push(`/phone-otp?countryCode=${encodeURIComponent(userData.countryCode)}&phoneNumber=${encodeURIComponent(userData.phoneNumber)}&purpose=signup&email=${encodeURIComponent(signupData.email)}&name=${encodeURIComponent(signupData.name)}&companyName=${encodeURIComponent(signupData.companyName || '')}&role=${encodeURIComponent(signupData.role)}`);
     } catch (err: any) {
       console.error('Signup error:', err);
       const errMsg = err.message || 'Failed to create account. Please try again.';
