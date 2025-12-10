@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { query, queryOne, transaction } from '@/lib/aws/lambda-database';
+import { query, queryOne } from '@/lib/aws/lambda-database';
 import { verifyOTP } from '@/lib/services/otpService';
 import { signUp, signIn } from '@/lib/aws/cognito';
 import { v4 as uuidv4 } from 'uuid';
@@ -119,14 +119,52 @@ export async function POST(request: NextRequest) {
           };
         } catch (cognitoError: any) {
           console.error('Cognito signup error:', cognitoError);
-          // If Cognito fails but DB succeeds, we have a partial user
-          // For now, we'll still allow login but log the error
           if (cognitoError.name === 'UsernameExistsException') {
-            // User already exists in Cognito - try to get existing user
+            // User already exists in Cognito - check if they exist in DB
             user = await queryOne<{ id: string; email: string; auth_method: string }>(
-              `SELECT id, email, auth_method FROM users WHERE email = $1`,
-              [email]
+              `SELECT id, email, auth_method FROM users WHERE email = $1 OR (country_code = $2 AND phone_number = $3)`,
+              [email, countryCode, phoneNumber]
             );
+            
+            if (!user) {
+              // User exists in Cognito but not in DB - create DB record
+              const userId = uuidv4();
+              await query(
+                `INSERT INTO users 
+                 (id, email, name, phone_number, country_code, role, phone_verified, email_verified, auth_method, profile, created_at, updated_at)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())`,
+                [
+                  userId,
+                  email,
+                  name,
+                  phoneNumber,
+                  countryCode,
+                  normalizedRole,
+                  true, // phone_verified
+                  false, // email_verified
+                  'phone_otp',
+                  JSON.stringify({
+                    companyName: companyName || null,
+                    role: normalizedRole,
+                  }),
+                ]
+              );
+              
+              // Create profile entries
+              await query(
+                `INSERT INTO account_details (user_id, first_name, created_at, updated_at)
+                 VALUES ($1, $2, NOW(), NOW())
+                 ON CONFLICT (user_id) DO NOTHING`,
+                [userId, name.split(' ')[0] || name]
+              );
+              
+              user = {
+                id: userId,
+                email,
+                auth_method: 'phone_otp',
+              };
+            }
+            // If user exists in both Cognito and DB, proceed with existing user
           } else {
             throw cognitoError;
           }
