@@ -1,0 +1,19 @@
+{
+  "name": "database-service",
+  "version": "1.0.0",
+  "description": "Database service Lambda for travel app",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "package": "zip -r function.zip . -x '*.git*' '*.ts' 'node_modules/@types/*'"
+  },
+  "dependencies": {
+    "@aws-sdk/client-secrets-manager": "^3.0.0",
+    "pg": "^8.11.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/pg": "^8.15.6",
+    "typescript": "^5.9.3"
+  }
+}

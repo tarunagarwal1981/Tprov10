@@ -1,0 +1,17 @@
+{
+  "COGNITO_CLIENT_ID": "20t43em6vuke645ka10s4slgl9",
+  "COGNITO_USER_POOL_ID": "us-east-1_oF5qfa2IX",
+  "DEPLOYMENT_REGION": "us-east-1",
+  "NEXT_PUBLIC_COGNITO_CLIENT_ID": "20t43em6vuke645ka10s4slgl9",
+  "NEXT_PUBLIC_COGNITO_DOMAIN": "travel-app-auth-2285.auth.us-east-1.amazoncognito.com",
+  "RDS_HOST": "travel-app-db.c61sa44wsvgz.us-east-1.rds.amazonaws.com",
+  "RDS_PORT": "5432",
+  "RDS_DB": "postgres",
+  "RDS_USER": "postgres",
+  "RDS_PASSWORD": "ju3vrLHJUW8PqDG4",
+  "S3_BUCKET_NAME": "travel-app-storage-1769",
+  "NEXT_PUBLIC_SUPABASE_URL": "https://[YOUR_PROJECT_REF].supabase.co",
+  "NEXT_PUBLIC_SUPABASE_ANON_KEY": "[YOUR_SUPABASE_ANON_KEY]",
+  "SUPABASE_SERVICE_ROLE_KEY": "[YOUR_SUPABASE_SERVICE_ROLE_KEY]"
+}
+

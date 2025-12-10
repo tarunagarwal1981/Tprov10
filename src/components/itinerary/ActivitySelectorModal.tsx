@@ -8,7 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { createClient } from '@/lib/supabase/client';
-import { SmartItineraryFilter, TimeSlot, ActivityPackage, ActivityPricingPackage } from '@/lib/services/smartItineraryFilter';
+import type { ActivityPackage, ActivityPricingPackage } from '@/lib/services/smartItineraryFilter';
+import { getAvailableTimeSlots, filterActivitiesByTimeSlot, filterByDuration, type TimeSlot } from '@/lib/utils/timeSlots';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 
@@ -38,7 +39,7 @@ export function ActivitySelectorModal({
   onSelect,
 }: ActivitySelectorModalProps) {
   const supabase = createClient();
-  const filterService = new SmartItineraryFilter();
+  // filterService now accessed via API routes
 
   const [activities, setActivities] = useState<ActivityPackage[]>([]);
   const [filteredActivities, setFilteredActivities] = useState<ActivityPackage[]>([]);
@@ -60,8 +61,10 @@ export function ActivitySelectorModal({
     setLoading(true);
     try {
       console.log('[ActivitySelectorModal] Fetching activities for:', { cityName });
-      // Fetch all published activities from all operators for this city
-      const cityActivities = await filterService.getActivitiesForCity(cityName);
+      // Fetch all published activities from all operators for this city via API
+      const response = await fetch(`/api/itinerary-filter/activities?city=${encodeURIComponent(cityName)}`);
+      if (!response.ok) throw new Error('Failed to fetch activities');
+      const { activities: cityActivities } = await response.json();
       console.log('[ActivitySelectorModal] Found activities:', cityActivities.length);
       setActivities(cityActivities);
     } catch (err) {
@@ -75,16 +78,16 @@ export function ActivitySelectorModal({
     let filtered = [...activities];
 
     // Filter by time slot availability
-    filtered = filterService.filterActivitiesByTimeSlot(filtered, timeSlot);
+    filtered = filterActivitiesByTimeSlot(filtered, timeSlot);
 
     // Filter by arrival time if enabled
     if (enableSuggestions && arrivalTime) {
-      const availableSlots = filterService.getAvailableTimeSlots(arrivalTime);
+      const availableSlots = getAvailableTimeSlots(arrivalTime);
       if (!availableSlots.includes(timeSlot)) {
         filtered = [];
       } else {
         // Filter by duration
-        filtered = filterService.filterByDuration(filtered, timeSlot, arrivalTime);
+        filtered = filterByDuration(filtered, timeSlot, arrivalTime);
       }
     }
 

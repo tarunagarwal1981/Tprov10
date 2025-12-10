@@ -22,7 +22,7 @@ import {
   type ActivityPackageListOptions,
 } from '@/lib/supabase/activity-packages';
 import type { ActivityPackageFormData } from '@/lib/types/activity-package';
-import { useAuth } from '@/context/SupabaseAuthContext';
+import { useAuth } from '@/context/CognitoAuthContext';
 
 // ============================================================================
 // TYPES

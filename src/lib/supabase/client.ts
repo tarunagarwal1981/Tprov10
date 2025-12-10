@@ -39,8 +39,12 @@ export const createSupabaseBrowserClient = (): SupabaseClientType => {
     // During build/prerender some environments may not expose NEXT_PUBLIC_* vars.
     // Fall back to a non-routable host to avoid accidental network calls.
     // Consumers should provide real env at runtime.
-    // eslint-disable-next-line no-console
-    console.warn('⚠️  Supabase credentials missing at init time. Using no-op fallback client.');
+    // Note: This is expected if Supabase is not being used (e.g., using AWS Cognito instead)
+    // Only log in development to avoid noise in production logs
+    if (process.env.NODE_ENV === 'development') {
+      // eslint-disable-next-line no-console
+      console.warn('⚠️  Supabase credentials missing at init time. Using no-op fallback client.');
+    }
     return createBrowserClient<Database>('http://localhost.invalid', 'anon');
   }
   if (process.env.NODE_ENV === 'development') {

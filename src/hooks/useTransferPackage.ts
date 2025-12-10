@@ -15,7 +15,7 @@ import {
   type TransferPackageWithRelations,
 } from '@/lib/supabase/transfer-packages';
 import type { TransferPackageFormData } from '@/lib/types/transfer-package';
-import { useAuth } from '@/context/SupabaseAuthContext';
+import { useAuth } from '@/context/CognitoAuthContext';
 
 // ============================================================================
 // TYPES

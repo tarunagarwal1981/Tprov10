@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ItineraryService, OperatorInfo } from '@/lib/services/itineraryService';
+import type { OperatorInfo } from '@/lib/services/itineraryService';
 import { useToast } from '@/hooks/useToast';
 
 interface OperatorContactViewProps {
@@ -21,7 +21,7 @@ export function OperatorContactView({
   onClose,
 }: OperatorContactViewProps) {
   const toast = useToast();
-  const itineraryService = new ItineraryService();
+  // itineraryService now accessed via API routes
   const [operators, setOperators] = useState<OperatorInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -36,7 +36,9 @@ export function OperatorContactView({
   const fetchOperators = async () => {
     setLoading(true);
     try {
-      const data = await itineraryService.getOperatorsInfo(itineraryId);
+      const response = await fetch(`/api/itineraries/${itineraryId}/operators`);
+      if (!response.ok) throw new Error('Failed to fetch operators');
+      const { operators: data } = await response.json();
       setOperators(data);
     } catch (err) {
       console.error('Error fetching operators:', err);

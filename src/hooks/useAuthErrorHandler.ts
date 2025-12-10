@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback } from 'react';
-import { useAuth } from '@/context/SupabaseAuthContext';
+import { useAuth } from '@/context/CognitoAuthContext';
 import { toast } from 'sonner';
 
 export const useAuthErrorHandler = () => {

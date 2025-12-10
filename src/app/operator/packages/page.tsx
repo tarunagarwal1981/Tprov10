@@ -31,12 +31,11 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { createClient } from '@/lib/supabase/client';
+import { useAuth } from '@/context/CognitoAuthContext';
 import { toast } from 'sonner';
 import { FaCar } from 'react-icons/fa';
 import { TransferPackageCard, TransferPackageCardData } from '@/components/packages/TransferPackageCard';
 import { ActivityPackageCard, ActivityPackageCardData } from '@/components/packages/ActivityPackageCard';
-import { listTransferPackagesWithCardData, deleteTransferPackage } from '@/lib/supabase/transfer-packages';
 
 interface Package {
 	id: string;
@@ -73,6 +72,7 @@ function AnimatedNumber({ value, prefix = '', suffix = '' }: { value: number; pr
 
 export default function PackagesPage() {
 	const router = useRouter();
+	const { user } = useAuth();
 	const [packages, setPackages] = useState<Package[]>([]);
 	const [transferPackages, setTransferPackages] = useState<TransferPackageCardData[]>([]);
 	const [activityPackages, setActivityPackages] = useState<ActivityPackageCardData[]>([]);
@@ -93,200 +93,138 @@ export default function PackagesPage() {
 		const fetchPackages = async () => {
 			try {
 				setLoading(true);
-				const supabase = createClient();
 				
-				// Get current user
-				const { data: { user } } = await supabase.auth.getUser();
-				
-				if (!user) {
+				if (!user?.id) {
 					toast.error('Please log in to view packages');
 					setLoading(false);
 					return;
 				}
 
-		// Fetch ALL package types: activity, transfer (with full card data), and multi-city
-		const [activityResult, transferResult, multiCityResult] = await Promise.all([
-			// Activity packages
-			supabase
-				.from('activity_packages')
-				.select(`
-					id,
-					title,
-					short_description,
-					status,
-					base_price,
-					currency,
-					destination_city,
-					destination_country,
-					created_at,
-					published_at,
-					activity_package_images (
-						id,
-						public_url,
-						is_cover
-					)
-				`)
-				.eq('operator_id', user.id)
-				.order('created_at', { ascending: false }),
-			// Transfer packages with full card data (vehicles, images, pricing)
-			listTransferPackagesWithCardData({ operator_id: user.id }),
-			// Multi-city packages
-			supabase
-				.from('multi_city_packages' as any)
-				.select(`
-					id,
-					title,
-					short_description,
-					status,
-					base_price,
-					currency,
-					destination_region,
-					total_cities,
-					total_nights,
-					created_at,
-					published_at,
-					multi_city_package_images (
-						id,
-						public_url,
-						is_cover
-					)
-				`)
-				.eq('operator_id', user.id)
-				.order('created_at', { ascending: false })
-		]);
-
-		if (activityResult.error) {
-			console.error('Error fetching activity packages:', activityResult.error);
-		}
-		
-		if (transferResult.error) {
-			console.error('Error fetching transfer packages:', transferResult.error);
-			toast.error('Failed to load transfer packages');
-		}
-		
-		if (multiCityResult.error) {
-			console.error('Error fetching multi-city packages:', multiCityResult.error);
-		}
-
-		// Transform activity packages
-		const activityPackages: ActivityPackageCardData[] = await Promise.all(
-			(activityResult.data || []).map(async (pkg: any) => {
-				const coverImage = pkg.activity_package_images?.find((img: any) => img.is_cover);
-				const imageUrl = coverImage?.public_url || pkg.activity_package_images?.[0]?.public_url || '';
-
-				// Map database status to display status
-				let displayStatus: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED' = 'DRAFT';
-				if (pkg.status === 'published') {
-					displayStatus = 'PUBLISHED';
-				} else if (pkg.status === 'draft') {
-					displayStatus = 'DRAFT';
-				} else if (pkg.status === 'archived' || pkg.status === 'suspended') {
-					displayStatus = 'ARCHIVED';
+				// Fetch ALL package types from AWS API
+				const response = await fetch(`/api/operator/packages?operatorId=${user.id}`);
+				
+				if (!response.ok) {
+					const errorData = await response.json().catch(() => ({}));
+					throw new Error(errorData.error || 'Failed to fetch packages');
 				}
 
-			// Fetch pricing options to calculate min/max price
-			const { data: pricingOptions } = await supabase
-				.from('activity_pricing_packages' as any)
-				.select('adult_price')
-				.eq('package_id', pkg.id);
+				const data = await response.json();
+				const activityData = Array.isArray(data?.activityPackages) ? data.activityPackages : [];
+				const transferData = Array.isArray(data?.transferPackages) ? data.transferPackages : [];
+				const multiCityData = Array.isArray(data?.multiCityPackages) ? data.multiCityPackages : [];
 
-				let minPrice = pkg.base_price || 0;
-				let maxPrice = pkg.base_price || 0;
-
-				if (pricingOptions && Array.isArray(pricingOptions) && pricingOptions.length > 0) {
-					const prices = (pricingOptions as any[]).map((opt: any) => opt.adult_price).filter((p: number) => p > 0);
-					if (prices.length > 0) {
-						minPrice = Math.min(...prices);
-						maxPrice = Math.max(...prices);
+				// Transform activity packages
+				const activityPackages: ActivityPackageCardData[] = (Array.isArray(activityData) ? activityData : []).map((pkg: any) => {
+					// Map database status to display status
+					let displayStatus: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED' = 'DRAFT';
+					if (pkg.status === 'published') {
+						displayStatus = 'PUBLISHED';
+					} else if (pkg.status === 'draft') {
+						displayStatus = 'DRAFT';
+					} else if (pkg.status === 'archived' || pkg.status === 'suspended') {
+						displayStatus = 'ARCHIVED';
 					}
-				}
 
-				return {
+					return {
+						id: pkg.id,
+						title: pkg.title,
+						short_description: pkg.short_description,
+						destination_city: pkg.destination_city,
+						destination_country: pkg.destination_country,
+						status: displayStatus,
+						price: pkg.minPrice || pkg.base_price || 0,
+						maxPrice: pkg.maxPrice || pkg.base_price || 0,
+						duration_hours: pkg.duration_hours,
+						duration_minutes: pkg.duration_minutes,
+						image: pkg.imageUrl || '',
+						images: pkg.images || [],
+						created_at: new Date(pkg.created_at),
+					};
+				});
+
+				// Transform transfer packages (simplified - may need more fields from the API)
+				const transferPackagesWithCardData: TransferPackageCardData[] = (Array.isArray(transferData) ? transferData : []).map((pkg: any) => ({
 					id: pkg.id,
-					title: pkg.title,
-					short_description: pkg.short_description,
-					destination_city: pkg.destination_city,
-					destination_country: pkg.destination_country,
-					status: displayStatus,
-					price: minPrice,
-					maxPrice: maxPrice,
-					duration_hours: pkg.duration_hours,
-					duration_minutes: pkg.duration_minutes,
-					image: imageUrl,
-					images: pkg.activity_package_images || [],
-					created_at: new Date(pkg.created_at),
-				};
-			})
-		);
+					title: pkg.title || '',
+					short_description: pkg.short_description || null,
+					destination_city: pkg.destination_city || null,
+					destination_country: pkg.destination_country || null,
+					status: (pkg.status?.toLowerCase() || 'draft') as 'draft' | 'published' | 'archived' | 'suspended',
+					created_at: pkg.created_at ? (typeof pkg.created_at === 'string' ? pkg.created_at : new Date(pkg.created_at).toISOString()) : new Date().toISOString(),
+					images: (pkg.images || []).map((img: any) => ({
+						public_url: img.public_url || null,
+						alt_text: img.alt_text || null,
+					})),
+					vehicles: [], // Will be populated if needed from a separate API call
+					hourly_pricing: [],
+					point_to_point_pricing: [],
+				}));
 
-		// Store activity packages and transfer packages separately
-		setActivityPackages(activityPackages);
-		const transferPackagesWithCardData = transferResult.data || [];
-		setTransferPackages(transferPackagesWithCardData);
+				// Store activity packages and transfer packages separately
+				setActivityPackages(activityPackages);
+				setTransferPackages(transferPackagesWithCardData);
 
-		// Transform multi-city packages
-		const multiCityPackages: Package[] = (multiCityResult.data || []).map((pkg: any) => {
-			const coverImage = pkg.multi_city_package_images?.find((img: any) => img.is_cover);
-			const imageUrl = coverImage?.public_url || pkg.multi_city_package_images?.[0]?.public_url || '';
+				// Transform multi-city packages
+				const multiCityPackages: Package[] = (Array.isArray(multiCityData) ? multiCityData : []).map((pkg: any) => {
+					// Map database status to display status
+					let displayStatus: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED' = 'DRAFT';
+					if (pkg.status === 'published') {
+						displayStatus = 'PUBLISHED';
+					} else if (pkg.status === 'draft') {
+						displayStatus = 'DRAFT';
+					} else if (pkg.status === 'archived' || pkg.status === 'suspended') {
+						displayStatus = 'ARCHIVED';
+					}
 
-			// Map database status to display status
-			let displayStatus: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED' = 'DRAFT';
-			if (pkg.status === 'published') {
-				displayStatus = 'PUBLISHED';
-			} else if (pkg.status === 'draft') {
-				displayStatus = 'DRAFT';
-			} else if (pkg.status === 'archived' || pkg.status === 'suspended') {
-				displayStatus = 'ARCHIVED';
-			}
+					return {
+						id: pkg.id,
+						title: pkg.title,
+						type: 'Multi-City',
+						status: displayStatus,
+						price: pkg.base_price || 0,
+						rating: 0,
+						reviews: 0,
+						bookings: 0,
+						views: 0,
+						image: pkg.imageUrl || '',
+						createdAt: new Date(pkg.created_at),
+					};
+				});
 
-			return {
-				id: pkg.id,
-				title: pkg.title,
-				type: 'Multi-City',
-				status: displayStatus,
-				price: pkg.base_price || 0,
-				rating: 0,
-				reviews: 0,
-				bookings: 0,
-				views: 0,
-				image: imageUrl,
-				createdAt: new Date(pkg.created_at),
-			};
-		});
+				// Store remaining packages (multi-city, etc.) separately
+				const allPackages = [...multiCityPackages]
+					.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
-		// Store remaining packages (multi-city, etc.) separately
-		const allPackages = [...multiCityPackages]
-			.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+				setPackages(allPackages);
 
-			setPackages(allPackages);
-
-			// Update stats (including all package types)
-			const activeActivityCount = activityPackages.filter(p => p.status === 'PUBLISHED').length;
-			const activeTransferCount = transferPackagesWithCardData.filter(p => p.status === 'published').length;
-			const activeOtherCount = allPackages.filter(p => p.status === 'PUBLISHED').length;
-			const activeCount = activeActivityCount + activeTransferCount + activeOtherCount;
-			const totalRevenue = allPackages.reduce((sum, p) => sum + (p.bookings * p.price), 0);
-			
-			setStats({
-				total: activityPackages.length + transferPackagesWithCardData.length + allPackages.length,
-				active: activeCount,
-				revenue: totalRevenue,
-				avgRating: 4.8, // TODO: Calculate from reviews
-			});
+				// Update stats (including all package types)
+				const activeActivityCount = activityPackages.filter(p => p.status === 'PUBLISHED').length;
+				const activeTransferCount = transferPackagesWithCardData.filter(p => p.status === 'published').length;
+				const activeOtherCount = allPackages.filter(p => p.status === 'PUBLISHED').length;
+				const activeCount = activeActivityCount + activeTransferCount + activeOtherCount;
+				const totalRevenue = allPackages.reduce((sum, p) => sum + (p.bookings * p.price), 0);
+				
+				setStats({
+					total: activityPackages.length + transferPackagesWithCardData.length + allPackages.length,
+					active: activeCount,
+					revenue: totalRevenue,
+					avgRating: 4.8, // TODO: Calculate from reviews
+				});
 
 			} catch (error) {
 				console.error('Error loading packages:', error);
 				toast.error('Failed to load packages');
 			} finally {
-		setLoading(false);
+				setLoading(false);
 			}
 		};
 
 		fetchPackages();
-	}, []);
+	}, [user?.id]);
 
 	// Filter activity packages
 	const filteredActivityPackages = useMemo(() => {
+		if (!Array.isArray(activityPackages)) return [];
 		return activityPackages
 			.filter(p => {
 				if (statusFilter === 'ALL') return true;
@@ -298,6 +236,7 @@ export default function PackagesPage() {
 	}, [activityPackages, statusFilter, searchQuery]);
 
 	const filteredMultiCityPackages = useMemo(() => {
+		if (!Array.isArray(packages)) return [];
 		return packages
 			.filter(p => p.type === 'Multi-City')
 			.filter(p => {
@@ -310,6 +249,7 @@ export default function PackagesPage() {
 	}, [packages, statusFilter, searchQuery]);
 
 	const filteredOtherPackages = useMemo(() => {
+		if (!Array.isArray(packages)) return [];
 		return packages
 			.filter(p => p.type !== 'Activity' && p.type !== 'Multi-City')
 			.filter(p => {
@@ -378,99 +318,37 @@ export default function PackagesPage() {
 
 	const handleDuplicatePackage = async (pkg: Package) => {
 		try {
-			const supabase = createClient();
-			const { data: { user } } = await supabase.auth.getUser();
-			
-			if (!user) {
+			if (!user?.id) {
 				toast.error('Please log in to duplicate packages');
 				return;
 			}
 
 			toast.info('Duplicating package...');
 
-			// Determine the table name based on package type
-			const tableName = pkg.type === 'Activity' 
-				? 'activity_packages'
-				: pkg.type === 'Transfer'
-				? 'transfer_packages'
-				: pkg.type === 'Multi-City'
-				? 'multi_city_packages'
-				: null;
+			const response = await fetch('/api/operator/packages/duplicate', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					packageId: pkg.id,
+					packageType: pkg.type,
+					operatorId: user.id,
+				}),
+			});
 
-			if (!tableName) {
-				toast.error('Unknown package type');
-				return;
+			if (!response.ok) {
+				const error = await response.json();
+				throw new Error(error.error || 'Failed to duplicate package');
 			}
 
-			// Fetch the original package data
-			const { data: originalPackage, error: fetchError } = await supabase
-				.from(tableName)
-				.select('*')
-				.eq('id', pkg.id)
-				.single();
+			const result = await response.json();
+			toast.success(result.message || 'Package duplicated successfully');
+			
+			// Reload the page to refresh the packages
+			window.location.reload();
 
-			if (fetchError || !originalPackage) {
-				console.error('Error fetching package:', fetchError);
-				toast.error('Failed to duplicate package');
-				return;
-			}
-
-			// Create a copy with new title and reset certain fields
-			const { id, created_at, updated_at, published_at, ...packageData } = originalPackage;
-			const duplicatedPackage = {
-				...packageData,
-				title: `${originalPackage.title} (Copy)`,
-				status: 'draft' as const,
-				operator_id: user.id,
-			};
-
-			// Insert the duplicated package
-			const { data: newPackage, error: insertError } = await supabase
-				.from(tableName)
-				.insert(duplicatedPackage)
-				.select()
-				.single();
-
-			if (insertError || !newPackage) {
-				console.error('Error duplicating package:', insertError);
-				toast.error('Failed to duplicate package');
-				return;
-			}
-
-			// Copy images if they exist
-			const imageTableName = pkg.type === 'Activity'
-				? 'activity_package_images'
-				: pkg.type === 'Transfer'
-				? 'transfer_package_images'
-				: pkg.type === 'Multi-City'
-				? 'multi_city_package_images'
-				: null;
-
-			if (imageTableName) {
-				// All image tables use 'package_id' as the foreign key column
-				const { data: images } = await supabase
-					.from(imageTableName)
-					.select('*')
-					.eq('package_id', pkg.id);
-
-				if (images && images.length > 0) {
-					const copiedImages = images.map(({ id, created_at, updated_at, uploaded_at, ...imgData }: any) => ({
-						...imgData,
-						package_id: newPackage.id,
-					}));
-
-					await supabase.from(imageTableName).insert(copiedImages);
-				}
-			}
-
-		toast.success('Package duplicated successfully');
-		
-		// Reload the page to refresh the packages
-		window.location.reload();
-
-		} catch (error) {
+		} catch (error: any) {
 			console.error('Error duplicating package:', error);
-			toast.error('Failed to duplicate package');
+			toast.error(error.message || 'Failed to duplicate package');
 		}
 	};
 
@@ -480,58 +358,38 @@ export default function PackagesPage() {
 		}
 
 		try {
-			const supabase = createClient();
-			const { data: { user } } = await supabase.auth.getUser();
-			
-			if (!user) {
-				toast.error('Please log in to delete packages');
-				return;
-			}
-
 			toast.info('Deleting package...');
 
-			// Determine the table name based on package type
-			const tableName = pkg.type === 'Activity' 
-				? 'activity_packages'
-				: pkg.type === 'Transfer'
-				? 'transfer_packages'
-				: pkg.type === 'Multi-City'
-				? 'multi_city_packages'
-				: null;
+			const response = await fetch('/api/operator/packages/delete', {
+				method: 'DELETE',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					packageId: pkg.id,
+					packageType: pkg.type,
+				}),
+			});
 
-			if (!tableName) {
-				toast.error('Unknown package type');
-				return;
+			if (!response.ok) {
+				const error = await response.json();
+				throw new Error(error.error || 'Failed to delete package');
 			}
 
-			// Delete the package (images will be cascade deleted if foreign keys are set up)
-			const { error: deleteError } = await supabase
-				.from(tableName)
-				.delete()
-				.eq('id', pkg.id)
-				.eq('operator_id', user.id); // Ensure user owns the package
-
-			if (deleteError) {
-				console.error('Error deleting package:', deleteError);
-				toast.error('Failed to delete package');
-				return;
-			}
-
-			toast.success('Package deleted successfully');
+			const result = await response.json();
+			toast.success(result.message || 'Package deleted successfully');
 			
 			// Remove from local state
 			setPackages(prev => prev.filter(p => p.id !== pkg.id));
 			
-		// Update stats
-		setStats(prev => ({
-			...prev,
-			total: prev.total - 1,
-			active: pkg.status === 'PUBLISHED' ? prev.active - 1 : prev.active,
-		}));
+			// Update stats
+			setStats(prev => ({
+				...prev,
+				total: prev.total - 1,
+				active: pkg.status === 'PUBLISHED' ? prev.active - 1 : prev.active,
+			}));
 
-		} catch (error) {
+		} catch (error: any) {
 			console.error('Error deleting package:', error);
-			toast.error('Failed to delete package');
+			toast.error(error.message || 'Failed to delete package');
 		}
 	};
 
@@ -556,16 +414,23 @@ export default function PackagesPage() {
 
 		try {
 			toast.info('Deleting transfer package...');
-			
-			const { error } = await deleteTransferPackage(pkg.id);
-			
-			if (error) {
-				console.error('Error deleting transfer package:', error);
-				toast.error('Failed to delete transfer package');
-				return;
+
+			const response = await fetch('/api/operator/packages/delete', {
+				method: 'DELETE',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					packageId: pkg.id,
+					packageType: 'Transfer',
+				}),
+			});
+
+			if (!response.ok) {
+				const error = await response.json();
+				throw new Error(error.error || 'Failed to delete package');
 			}
 
-			toast.success('Transfer package deleted successfully');
+			const result = await response.json();
+			toast.success(result.message || 'Transfer package deleted successfully');
 			
 			// Remove from local state
 			setTransferPackages(prev => prev.filter(p => p.id !== pkg.id));
@@ -577,9 +442,9 @@ export default function PackagesPage() {
 				active: pkg.status === 'published' ? prev.active - 1 : prev.active,
 			}));
 
-		} catch (error) {
+		} catch (error: any) {
 			console.error('Error deleting transfer package:', error);
-			toast.error('Failed to delete transfer package');
+			toast.error(error.message || 'Failed to delete transfer package');
 		}
 	};
 
@@ -603,15 +468,24 @@ export default function PackagesPage() {
 		}
 
 		try {
-			const supabase = createClient();
-			const { error } = await supabase
-				.from('activity_packages')
-				.delete()
-				.eq('id', pkg.id);
-			
-			if (error) throw error;
-			
-			toast.success('Activity package deleted successfully');
+			toast.info('Deleting activity package...');
+
+			const response = await fetch('/api/operator/packages/delete', {
+				method: 'DELETE',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					packageId: pkg.id,
+					packageType: 'Activity',
+				}),
+			});
+
+			if (!response.ok) {
+				const error = await response.json();
+				throw new Error(error.error || 'Failed to delete package');
+			}
+
+			const result = await response.json();
+			toast.success(result.message || 'Activity package deleted successfully');
 			
 			// Remove from local state
 			setActivityPackages(prev => prev.filter(p => p.id !== pkg.id));
@@ -623,14 +497,15 @@ export default function PackagesPage() {
 				active: pkg.status === 'PUBLISHED' ? prev.active - 1 : prev.active,
 			}));
 
-		} catch (error) {
+		} catch (error: any) {
 			console.error('Error deleting activity package:', error);
-			toast.error('Failed to delete activity package');
+			toast.error(error.message || 'Failed to delete activity package');
 		}
 	};
 
 	// Filter transfer packages
 	const filteredTransferPackages = useMemo(() => {
+		if (!Array.isArray(transferPackages)) return [];
 		return transferPackages.filter(pkg => {
 			// Status filter
 			if (statusFilter === 'ALL') return true;

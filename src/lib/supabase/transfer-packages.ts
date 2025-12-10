@@ -4,7 +4,8 @@
  */
 
 import { createSupabaseBrowserClient, withErrorHandling, SupabaseError } from './client';
-import { uploadImageFiles, base64ToFile } from './file-upload';
+// Migrated to S3
+import { uploadImageFiles, base64ToFile } from '@/lib/aws/file-upload';
 import type { TransferPackageFormData } from '../types/transfer-package';
 
 // ============================================================================
@@ -575,199 +576,76 @@ export async function createTransferPackage(
       finalImages.push(...alreadyUploadedImages);
     }
 
-    // Insert main package
-    const { data: packageData, error: packageError } = await supabase
-      .from('transfer_packages')
-      .insert(data.package as any)
-      .select()
-      .single();
-
-    if (packageError) {
-      throw packageError;
-    }
-
-    const packageId = packageData.id;
-    const result: TransferPackageWithRelations = {
-      ...packageData,
-      images: [],
-      vehicles: [] as TransferPackageVehicleWithImages[],
-      stops: [],
-      additional_services: [],
-      hourly_pricing: [],
-      point_to_point_pricing: [],
-    };
-
-    // Insert images
-    if (finalImages.length > 0) {
-      const imagesWithPackageId = finalImages.map(img => ({
-        ...img,
-        package_id: packageId,
-      })) as any[];
-
-      const { data: imagesData, error: imagesError } = await supabase
-        .from('transfer_package_images')
-        .insert(imagesWithPackageId)
-        .select();
-
-      if (imagesError) throw imagesError;
-      result.images = imagesData || [];
-    }
-
-    // Insert vehicles
-    if (data.vehicles && data.vehicles.length > 0) {
-      const vehiclesWithPackageId = data.vehicles.map(vehicle => ({
-        ...vehicle,
-        package_id: packageId,
-      })) as any[];
-
-      const { data: vehiclesData, error: vehiclesError } = await supabase
-        .from('transfer_package_vehicles')
-        .insert(vehiclesWithPackageId)
-        .select();
-
-      if (vehiclesError) throw vehiclesError;
-      // Initialize vehicles with empty vehicle_images arrays
-      result.vehicles = (vehiclesData || []).map(vehicle => ({
-        ...vehicle,
-        vehicle_images: [],
-      }));
-
-      // Now insert vehicle images if any
-      if (data.vehicleImages && data.vehicleImages.length > 0 && vehiclesData) {
-        // Upload all vehicle images in parallel for better performance
-        const uploadPromises = data.vehicleImages.map(async (vehicleImageData, index) => {
-          const vehicleId = vehiclesData[vehicleImageData.vehicleIndex]?.id;
-          if (!vehicleId) {
-            console.log(`⚠️ Vehicle ${index}: No vehicle ID found`);
-            return null;
-          }
-
-          let finalImage = vehicleImageData.image;
+    // Process vehicle images - upload base64 images to S3
+    let processedVehicleImages = data.vehicleImages || [];
+    if (data.vehicleImages && data.vehicles) {
+      const uploadPromises = data.vehicleImages.map(async (vehicleImageData: any, index: number) => {
+        if (vehicleImageData.image.storage_path?.startsWith('data:')) {
+          const fileName = vehicleImageData.image.file_name || `vehicle_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
+          const file = base64ToFile(vehicleImageData.image.storage_path, fileName);
+          const uploadResult = await uploadImageFiles([file], userId, 'transfer-packages/vehicles', TRANSFER_PACKAGES_BUCKET);
           
-          if (vehicleImageData.image.storage_path?.startsWith('data:')) {
-            // Upload base64 image to storage
-            const fileName = vehicleImageData.image.file_name || `vehicle_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
-            const file = base64ToFile(vehicleImageData.image.storage_path, fileName);
-            
-            console.log(`📤 Uploading vehicle image ${index + 1}: ${fileName} to ${TRANSFER_PACKAGES_BUCKET}/transfer-packages/vehicles/`);
-            
-            const uploadResult = await uploadImageFiles([file], userId, 'transfer-packages/vehicles', TRANSFER_PACKAGES_BUCKET);
-            
-            if (uploadResult[0] && uploadResult[0].data) {
-              console.log(`✅ Vehicle image ${index + 1} uploaded:`, uploadResult[0].data.publicUrl);
-              finalImage = {
+          if (uploadResult[0] && uploadResult[0].data) {
+            return {
+              vehicleIndex: vehicleImageData.vehicleIndex,
+              image: {
                 ...vehicleImageData.image,
                 storage_path: uploadResult[0].data.path,
                 public_url: uploadResult[0].data.publicUrl,
-              };
-            } else if (uploadResult[0] && uploadResult[0].error) {
-              console.error(`❌ Vehicle image ${index + 1} upload failed:`, uploadResult[0].error);
-              console.error(`❌ Full error details:`, JSON.stringify(uploadResult[0].error, null, 2));
-              // Continue anyway - vehicle images are optional
-              return null;
-            } else {
-              console.error(`❌ Vehicle image ${index + 1} upload failed: No data or error returned`);
-              return null;
-            }
-          }
-
-          return {
-            ...finalImage,
-            vehicle_id: vehicleId,
-          };
-        });
-
-        // Wait for all uploads to complete
-        const uploadedImages = await Promise.all(uploadPromises);
-        const vehicleImagesWithIds = uploadedImages.filter(img => img !== null) as any[];
-        
-        console.log(`✅ Total vehicle images ready for database: ${vehicleImagesWithIds.length}`);
-
-        if (vehicleImagesWithIds.length > 0) {
-          const { data: vehicleImagesResult, error: vehicleImagesError } = await supabase
-            .from('transfer_vehicle_images')
-            .insert(vehicleImagesWithIds)
-            .select();
-
-          if (vehicleImagesError) {
-            console.error('Vehicle images insert error:', vehicleImagesError);
-            // Don't throw - vehicle images are optional
-          } else {
-            // Attach images to their respective vehicles in result
-            result.vehicles = result.vehicles.map(vehicle => ({
-              ...vehicle,
-              vehicle_images: (vehicleImagesResult || []).filter(
-                (img: any) => img.vehicle_id === vehicle.id
-              ),
-            }));
+              },
+            };
           }
         }
-      }
+        return vehicleImageData;
+      });
+      processedVehicleImages = await Promise.all(uploadPromises);
     }
 
-    // Insert stops
-    if (data.stops && data.stops.length > 0) {
-      const stopsWithPackageId = data.stops.map(stop => ({
-        ...stop,
-        package_id: packageId,
-      })) as any[];
+    // Use API route for database operations instead of Supabase
+    const response = await fetch('/api/operator/packages/transfer/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        package: data.package,
+        images: finalImages,
+        vehicles: data.vehicles,
+        vehicleImages: processedVehicleImages,
+        stops: data.stops,
+        additional_services: data.additional_services,
+        hourly_pricing: data.hourly_pricing,
+        point_to_point_pricing: data.point_to_point_pricing,
+      }),
+    });
 
-      const { data: stopsData, error: stopsError } = await supabase
-        .from('transfer_package_stops')
-        .insert(stopsWithPackageId)
-        .select();
-
-      if (stopsError) throw stopsError;
-      result.stops = stopsData || [];
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to create package');
     }
 
-    // Insert additional services
-    if (data.additional_services && data.additional_services.length > 0) {
-      const servicesWithPackageId = data.additional_services.map(service => ({
-        ...service,
-        package_id: packageId,
-      })) as any[];
+    const apiResult = await response.json();
+    const packageId = apiResult.data?.id;
 
-      const { data: servicesData, error: servicesError } = await supabase
-        .from('transfer_additional_services')
-        .insert(servicesWithPackageId)
-        .select();
-
-      if (servicesError) throw servicesError;
-      result.additional_services = servicesData || [];
+    if (!packageId) {
+      throw new Error('Failed to get package ID from API');
     }
 
-    // Insert hourly pricing options
-    if (data.hourly_pricing && data.hourly_pricing.length > 0) {
-      const hourlyPricingWithPackageId = data.hourly_pricing.map(option => ({
-        ...option,
-        package_id: packageId,
-      })) as any[];
-
-      const { data: hourlyPricingData, error: hourlyPricingError } = await supabase
-        .from('transfer_hourly_pricing')
-        .insert(hourlyPricingWithPackageId)
-        .select();
-
-      if (hourlyPricingError) throw hourlyPricingError;
-      result.hourly_pricing = hourlyPricingData || [];
-    }
-
-    // Insert point-to-point pricing options
-    if (data.point_to_point_pricing && data.point_to_point_pricing.length > 0) {
-      const p2pPricingWithPackageId = data.point_to_point_pricing.map(option => ({
-        ...option,
-        package_id: packageId,
-      })) as any[];
-
-      const { data: p2pPricingData, error: p2pPricingError } = await supabase
-        .from('transfer_point_to_point_pricing')
-        .insert(p2pPricingWithPackageId)
-        .select();
-
-      if (p2pPricingError) throw p2pPricingError;
-      result.point_to_point_pricing = p2pPricingData || [];
-    }
+    // Return a result structure compatible with the expected format
+    const result: TransferPackageWithRelations = {
+      id: packageId,
+      ...data.package as any,
+      images: finalImages as any,
+      vehicles: (data.vehicles || []).map((v, idx) => ({
+        ...v,
+        id: `temp-${idx}`,
+        vehicle_images: processedVehicleImages
+          .filter((vi: any) => vi.vehicleIndex === idx)
+          .map((vi: any) => vi.image),
+      })) as any,
+      stops: data.stops || [],
+      additional_services: data.additional_services || [],
+      hourly_pricing: data.hourly_pricing || [],
+      point_to_point_pricing: data.point_to_point_pricing || [],
+    } as any;
 
     return { data: result, error: null };
   });
@@ -855,54 +733,17 @@ export async function updateTransferPackage(
   const supabase = createSupabaseBrowserClient();
   
   return withErrorHandling(async () => {
-    // Update main package
-    const { data: packageData, error: packageError } = await supabase
-      .from('transfer_packages')
-      .update(data.package)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (packageError) throw packageError;
-
-    // For simplicity, we'll delete and re-insert related data
-    // In production, you might want more sophisticated merge logic
-
-    // Delete existing related data
-    // First get vehicle IDs to delete vehicle images
-    const { data: existingVehicles } = await supabase
-      .from('transfer_package_vehicles')
-      .select('id')
-      .eq('package_id', id);
-    
-    const vehicleIds = existingVehicles?.map(v => v.id) || [];
-    
-    await Promise.all([
-      supabase.from('transfer_package_images').delete().eq('package_id', id),
-      // Delete vehicle images first (has foreign key to vehicles)
-      vehicleIds.length > 0 
-        ? supabase.from('transfer_vehicle_images').delete().in('vehicle_id', vehicleIds)
-        : Promise.resolve(),
-      supabase.from('transfer_package_vehicles').delete().eq('package_id', id),
-      supabase.from('transfer_package_stops').delete().eq('package_id', id),
-      supabase.from('transfer_additional_services').delete().eq('package_id', id),
-      supabase.from('transfer_hourly_pricing').delete().eq('package_id', id),
-      supabase.from('transfer_point_to_point_pricing').delete().eq('package_id', id),
-    ]);
-
-    // Re-insert as in create
-    const result: TransferPackageWithRelations = {
-      ...packageData,
-      images: [],
-      vehicles: [] as TransferPackageVehicleWithImages[],
-      stops: [],
-      additional_services: [],
-      hourly_pricing: [],
-      point_to_point_pricing: [],
-    };
-
-    // Get userId from package data
-    const userId = packageData.operator_id;
+    // Get userId from existing package (needed for image uploads)
+    let userId = '';
+    try {
+      const getResponse = await fetch(`/api/operator/packages/transfer/${id}`);
+      if (getResponse.ok) {
+        const existing = await getResponse.json();
+        userId = existing.data?.operator_id || '';
+      }
+    } catch (e) {
+      console.warn('Could not fetch operator_id for image uploads:', e);
+    }
 
     // Handle images - upload base64 images first
     const finalImages: Partial<TransferPackageImage>[] = [];
@@ -910,8 +751,8 @@ export async function updateTransferPackage(
     if (data.images && data.images.length > 0) {
       const base64Images = data.images.filter(img => img.storage_path?.startsWith('data:'));
       const alreadyUploadedImages = data.images.filter(img => !img.storage_path?.startsWith('data:'));
-      
-      if (base64Images.length > 0) {
+
+      if (base64Images.length > 0 && userId) {
         const files = base64Images.map(img => {
           const fileName = img.file_name || `image_${Date.now()}.jpg`;
           return base64ToFile(img.storage_path!, fileName);
@@ -940,160 +781,72 @@ export async function updateTransferPackage(
       finalImages.push(...alreadyUploadedImages);
     }
 
-    // Insert images
-    if (finalImages.length > 0) {
-      const imagesWithPackageId = finalImages.map(img => ({
-        ...img,
-        package_id: id,
-      })) as any[];
-
-      const { data: imagesData, error: imagesError } = await supabase
-        .from('transfer_package_images')
-        .insert(imagesWithPackageId)
-        .select();
-
-      if (imagesError) throw imagesError;
-      result.images = imagesData || [];
-    }
-
-    // Insert vehicles
-    if (data.vehicles && data.vehicles.length > 0) {
-      const vehiclesWithPackageId = data.vehicles.map(vehicle => ({
-        ...vehicle,
-        package_id: id,
-      })) as any[];
-
-      const { data: vehiclesData, error: vehiclesError } = await supabase
-        .from('transfer_package_vehicles')
-        .insert(vehiclesWithPackageId)
-        .select();
-
-      if (vehiclesError) throw vehiclesError;
-      result.vehicles = (vehiclesData || []).map(vehicle => ({
-        ...vehicle,
-        vehicle_images: [],
-      }));
-
-      // Insert vehicle images
-      if (data.vehicleImages && data.vehicleImages.length > 0 && vehiclesData) {
-        const uploadPromises = data.vehicleImages.map(async (vehicleImageData, index) => {
-          const vehicleId = vehiclesData[vehicleImageData.vehicleIndex]?.id;
-          if (!vehicleId) return null;
-
-          let finalImage = vehicleImageData.image;
+    // Process vehicle images - upload base64 images to S3
+    let processedVehicleImages = data.vehicleImages || [];
+    if (data.vehicleImages && userId) {
+      const uploadPromises = data.vehicleImages.map(async (vehicleImageData: any, index: number) => {
+        if (vehicleImageData.image.storage_path?.startsWith('data:')) {
+          const fileName = vehicleImageData.image.file_name || `vehicle_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
+          const file = base64ToFile(vehicleImageData.image.storage_path, fileName);
+          const uploadResult = await uploadImageFiles([file], userId, 'transfer-packages/vehicles', TRANSFER_PACKAGES_BUCKET);
           
-          if (vehicleImageData.image.storage_path?.startsWith('data:')) {
-            const fileName = vehicleImageData.image.file_name || `vehicle_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
-            const file = base64ToFile(vehicleImageData.image.storage_path, fileName);
-            
-            const uploadResult = await uploadImageFiles([file], userId, 'transfer-packages/vehicles', TRANSFER_PACKAGES_BUCKET);
-            
-            if (uploadResult[0] && uploadResult[0].data) {
-              finalImage = {
+          if (uploadResult[0] && uploadResult[0].data) {
+            return {
+              vehicleIndex: vehicleImageData.vehicleIndex,
+              image: {
                 ...vehicleImageData.image,
                 storage_path: uploadResult[0].data.path,
                 public_url: uploadResult[0].data.publicUrl,
-              };
-            } else if (uploadResult[0] && uploadResult[0].error) {
-              console.error(`❌ UPDATE: Vehicle image ${index + 1} upload failed:`, uploadResult[0].error);
-              console.error(`❌ UPDATE: Full error details:`, JSON.stringify(uploadResult[0].error, null, 2));
-              return null;
-            } else {
-              console.error(`❌ UPDATE: Vehicle image ${index + 1} upload failed: No data or error returned`);
-              return null;
-            }
-          }
-
-          return {
-            ...finalImage,
-            vehicle_id: vehicleId,
-          };
-        });
-
-        const uploadedImages = await Promise.all(uploadPromises);
-        const vehicleImagesWithIds = uploadedImages.filter(img => img !== null) as any[];
-
-        if (vehicleImagesWithIds.length > 0) {
-          const { data: vehicleImagesResult, error: vehicleImagesError } = await supabase
-            .from('transfer_vehicle_images')
-            .insert(vehicleImagesWithIds)
-            .select();
-
-          if (!vehicleImagesError) {
-            result.vehicles = result.vehicles.map(vehicle => ({
-              ...vehicle,
-              vehicle_images: (vehicleImagesResult || []).filter(
-                (img: any) => img.vehicle_id === vehicle.id
-              ),
-            }));
+              },
+            };
           }
         }
-      }
+        return vehicleImageData;
+      });
+      processedVehicleImages = await Promise.all(uploadPromises);
     }
 
-    // Insert stops
-    if (data.stops && data.stops.length > 0) {
-      const stopsWithPackageId = data.stops.map(stop => ({
-        ...stop,
-        package_id: id,
-      })) as any[];
+    // Use API route for database operations instead of Supabase
+    const response = await fetch('/api/operator/packages/transfer/update', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        packageId: id,
+        package: data.package,
+        images: finalImages,
+        vehicles: data.vehicles,
+        vehicleImages: processedVehicleImages,
+        stops: data.stops,
+        additional_services: data.additional_services,
+        hourly_pricing: data.hourly_pricing,
+        point_to_point_pricing: data.point_to_point_pricing,
+      }),
+    });
 
-      const { data: stopsData, error: stopsError } = await supabase
-        .from('transfer_package_stops')
-        .insert(stopsWithPackageId)
-        .select();
-
-      if (stopsError) throw stopsError;
-      result.stops = stopsData || [];
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to update package');
     }
 
-    // Insert additional services
-    if (data.additional_services && data.additional_services.length > 0) {
-      const servicesWithPackageId = data.additional_services.map(service => ({
-        ...service,
-        package_id: id,
-      })) as any[];
-
-      const { data: servicesData, error: servicesError } = await supabase
-        .from('transfer_additional_services')
-        .insert(servicesWithPackageId)
-        .select();
-
-      if (servicesError) throw servicesError;
-      result.additional_services = servicesData || [];
-    }
-
-    // Insert hourly pricing options
-    if (data.hourly_pricing && data.hourly_pricing.length > 0) {
-      const hourlyPricingWithPackageId = data.hourly_pricing.map(option => ({
-        ...option,
-        package_id: id,
-      })) as any[];
-
-      const { data: hourlyPricingData, error: hourlyPricingError } = await supabase
-        .from('transfer_hourly_pricing')
-        .insert(hourlyPricingWithPackageId)
-        .select();
-
-      if (hourlyPricingError) throw hourlyPricingError;
-      result.hourly_pricing = hourlyPricingData || [];
-    }
-
-    // Insert point-to-point pricing options
-    if (data.point_to_point_pricing && data.point_to_point_pricing.length > 0) {
-      const p2pPricingWithPackageId = data.point_to_point_pricing.map(option => ({
-        ...option,
-        package_id: id,
-      })) as any[];
-
-      const { data: p2pPricingData, error: p2pPricingError } = await supabase
-        .from('transfer_point_to_point_pricing')
-        .insert(p2pPricingWithPackageId)
-        .select();
-
-      if (p2pPricingError) throw p2pPricingError;
-      result.point_to_point_pricing = p2pPricingData || [];
-    }
+    const apiResult = await response.json();
+    
+    // Return a result structure compatible with the expected format
+    const result: TransferPackageWithRelations = {
+      id,
+      ...data.package as any,
+      images: finalImages as any,
+      vehicles: (data.vehicles || []).map((v, idx) => ({
+        ...v,
+        id: `temp-${idx}`,
+        vehicle_images: processedVehicleImages
+          .filter((vi: any) => vi.vehicleIndex === idx)
+          .map((vi: any) => vi.image),
+      })) as any,
+      stops: data.stops || [],
+      additional_services: data.additional_services || [],
+      hourly_pricing: data.hourly_pricing || [],
+      point_to_point_pricing: data.point_to_point_pricing || [],
+    } as any;
 
     return { data: result, error: null };
   });

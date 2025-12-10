@@ -22,13 +22,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { useAuth } from '@/context/SupabaseAuthContext';
+import { useAuth } from '@/context/CognitoAuthContext';
 import { useToast } from '@/hooks/useToast';
 import { queryService, type ItineraryQuery } from '@/lib/services/queryService';
 import { itineraryService, type Itinerary } from '@/lib/services/itineraryService';
 import { MarketplaceService } from '@/lib/services/marketplaceService';
 import { QueryModal } from '@/components/agent/QueryModal';
-import { createClient } from '@/lib/supabase/client';
+// Removed Supabase import - now using AWS API routes
 
 interface LeadDetails {
   id: string;
@@ -47,7 +47,7 @@ export default function LeadDetailPage() {
   const router = useRouter();
   const { user } = useAuth();
   const toast = useToast();
-  const supabase = createClient();
+  // Removed Supabase client - now using AWS API routes
 
   const leadId = params.leadId as string;
 
@@ -80,84 +80,23 @@ export default function LeadDetailPage() {
   }, [leadId, user?.id]);
 
   const fetchLeadData = async () => {
+    if (!user?.id) return;
+    
     setLoading(true);
     try {
-      // Fetch lead details
-      const { data: purchaseData } = await supabase
-        .from('lead_purchases' as any)
-        .select('lead_id')
-        .eq('lead_id', leadId)
-        .eq('agent_id', user?.id)
-        .maybeSingle();
-
-      let leadData: LeadDetails | null = null;
-
-      if (purchaseData) {
-        // Fetch from marketplace
-        const { data: marketplaceLead } = await supabase
-          .from('lead_marketplace' as any)
-          .select('id, destination, customer_name, customer_email, customer_phone, budget_min, budget_max, duration_days, travelers_count')
-          .eq('id', leadId)
-          .single();
-
-        if (marketplaceLead) {
-          const lead = marketplaceLead as unknown as {
-            id: string;
-            destination: string;
-            customer_name?: string | null;
-            customer_email?: string | null;
-            customer_phone?: string | null;
-            budget_min?: number | null;
-            budget_max?: number | null;
-            duration_days?: number | null;
-            travelers_count?: number | null;
-          };
-          leadData = {
-            id: lead.id,
-            destination: lead.destination,
-            customerName: lead.customer_name || undefined,
-            customerEmail: lead.customer_email || undefined,
-            customerPhone: lead.customer_phone || undefined,
-            budgetMin: lead.budget_min || undefined,
-            budgetMax: lead.budget_max || undefined,
-            durationDays: lead.duration_days || undefined,
-            travelersCount: lead.travelers_count || undefined,
-          };
+      // Fetch lead details from AWS API route
+      const response = await fetch(`/api/leads/${leadId}?agentId=${user.id}`);
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          toast.error('Lead not found');
+          router.push('/agent/leads');
+          return;
         }
-      } else {
-        // Fetch from leads table
-        const { data: regularLead } = await supabase
-          .from('leads' as any)
-          .select('id, destination, customer_name, customer_email, customer_phone, budget_min, budget_max, duration_days, travelers_count')
-          .eq('id', leadId)
-          .eq('agent_id', user?.id)
-          .maybeSingle();
-
-        if (regularLead) {
-          const lead = regularLead as unknown as {
-            id: string;
-            destination: string;
-            customer_name?: string | null;
-            customer_email?: string | null;
-            customer_phone?: string | null;
-            budget_min?: number | null;
-            budget_max?: number | null;
-            duration_days?: number | null;
-            travelers_count?: number | null;
-          };
-          leadData = {
-            id: lead.id,
-            destination: lead.destination,
-            customerName: lead.customer_name || undefined,
-            customerEmail: lead.customer_email || undefined,
-            customerPhone: lead.customer_phone || undefined,
-            budgetMin: lead.budget_min || undefined,
-            budgetMax: lead.budget_max || undefined,
-            durationDays: lead.duration_days || undefined,
-            travelersCount: lead.travelers_count || undefined,
-          };
-        }
+        throw new Error('Failed to fetch lead details');
       }
+
+      const { lead: leadData } = await response.json();
 
       if (!leadData) {
         toast.error('Lead not found');
@@ -168,12 +107,19 @@ export default function LeadDetailPage() {
       setLead(leadData);
 
       // Fetch query
-      const queryData = await queryService.getQueryByLeadId(leadId);
-      setQuery(queryData);
+      // Fetch query
+      const queryResponse = await fetch(`/api/queries/${leadId}`);
+      if (queryResponse.ok) {
+        const { query: queryData } = await queryResponse.json();
+        setQuery(queryData);
+      }
 
       // Fetch itineraries
-      const itinerariesData = await itineraryService.getLeadItineraries(leadId);
-      setItineraries(itinerariesData);
+      const itinerariesResponse = await fetch(`/api/itineraries/leads/${leadId}`);
+      if (itinerariesResponse.ok) {
+        const { itineraries: itinerariesData } = await itinerariesResponse.json();
+        setItineraries(itinerariesData);
+      }
     } catch (err) {
       console.error('Error fetching lead data:', err);
       toast.error('Failed to load lead data');
@@ -196,18 +142,27 @@ export default function LeadDetailPage() {
 
     setQueryLoading(true);
     try {
-      const savedQuery = await queryService.upsertQuery({
-        lead_id: leadId,
-        agent_id: user.id,
-        destinations: data.destinations,
-        leaving_from: data.leaving_from,
-        nationality: data.nationality,
-        leaving_on: data.leaving_on,
-        travelers: data.travelers,
-        star_rating: data.star_rating,
-        add_transfers: data.add_transfers,
+      const response = await fetch(`/api/queries/${leadId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          agent_id: user.id,
+          destinations: data.destinations,
+          leaving_from: data.leaving_from,
+          nationality: data.nationality,
+          leaving_on: data.leaving_on,
+          travelers: data.travelers,
+          star_rating: data.star_rating,
+          add_transfers: data.add_transfers,
+        }),
       });
 
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.details || 'Failed to save query');
+      }
+
+      const { query: savedQuery } = await response.json();
       setQuery(savedQuery);
       toast.success('Query updated successfully!');
       setQueryModalOpen(false);

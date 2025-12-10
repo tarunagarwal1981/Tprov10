@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { createClient } from '@/lib/supabase/client';
-import { SmartItineraryFilter, TimeSlot } from '@/lib/services/smartItineraryFilter';
+import { getAvailableTimeSlots, type TimeSlot } from '@/lib/utils/timeSlots';
 import { ActivitySelectorModal } from './ActivitySelectorModal';
 import { TransferSelectorModal } from './TransferSelectorModal';
 import { HotelSelectorModal } from './HotelSelectorModal';
@@ -76,7 +76,7 @@ export function EnhancedItineraryBuilder({
   onEditPackage,
 }: EnhancedItineraryBuilderProps) {
   const supabase = createClient();
-  const filterService = new SmartItineraryFilter();
+  // filterService methods now accessed via API routes
 
   const [selectedDay, setSelectedDay] = useState<ItineraryDay | null>(null);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlot | null>(null);
@@ -294,7 +294,7 @@ export function EnhancedItineraryBuilder({
         const isFirstDay = index === 0;
         const isLastDay = index === days.length - 1;
         const availableTimeSlots = isFirstDay && day.arrival_time
-          ? filterService.getAvailableTimeSlots(day.arrival_time)
+          ? getAvailableTimeSlots(day.arrival_time)
           : ['morning', 'afternoon', 'evening'] as TimeSlot[];
 
         return (

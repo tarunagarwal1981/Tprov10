@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePathname, useRouter } from 'next/navigation';
-import { useAuth, useUserDisplay } from '@/context/SupabaseAuthContext';
+import { useAuth, useUserDisplay } from '@/context/CognitoAuthContext';
 import { cn } from '@/lib/utils';
 import {
   FiSearch,
@@ -425,7 +425,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ user, onLogout }) => {
         <Button variant="ghost" className="relative h-8 w-8 rounded-full">
           <Avatar className="h-8 w-8">
             <AvatarImage src={avatar} alt={displayName} />
-            <AvatarFallback className="text-xs">{displayName?.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+            <AvatarFallback className="text-xs">{displayName?.split(' ').map((n: string) => n[0]).join('')}</AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>

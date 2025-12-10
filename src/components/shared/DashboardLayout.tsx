@@ -8,7 +8,7 @@
 import React, { useState, useEffect, useCallback, Suspense, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePathname, useRouter } from 'next/navigation';
-import { useAuth, useRBAC, useIsAuthenticated, useAuthLoading } from '@/context/SupabaseAuthContext';
+import { useAuth, useRBAC, useIsAuthenticated, useAuthLoading } from '@/context/CognitoAuthContext';
 import { Sidebar } from '@/components/shared/Sidebar';
 import { Header } from '@/components/shared/Header';
 import { cn } from '@/lib/utils';

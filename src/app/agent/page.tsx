@@ -1,5 +1,8 @@
 'use client';
 
+// Force dynamic rendering (don't pre-render at build time)
+export const dynamic = 'force-dynamic';
+
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
@@ -17,8 +20,7 @@ import { FaPlane, FaHiking, FaUmbrellaBeach, FaPaw, FaGem, FaMoneyBillWave, FaHe
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { useAuth } from '@/context/SupabaseAuthContext';
-import { MarketplaceService } from '@/lib/services/marketplaceService';
+import { useAuth } from '@/context/CognitoAuthContext';
 import type { MarketplaceLead } from '@/lib/types/marketplace';
 import { TripType } from '@/lib/types/marketplace';
 import Link from 'next/link';
@@ -139,6 +141,8 @@ function FeaturedLeadCard({ lead, onBuyNow }: { lead: MarketplaceLead; onBuyNow:
 export default function AgentDashboardPage() {
   const { user } = useAuth();
   
+  console.log('[AgentDashboard] Component rendering', { hasUser: !!user, userId: user?.id });
+  
   // Stats state
   const [stats, setStats] = useState({
     availableLeads: 0,
@@ -151,6 +155,8 @@ export default function AgentDashboardPage() {
   const [featuredLeads, setFeaturedLeads] = useState<MarketplaceLead[]>([]);
   const [loadingStats, setLoadingStats] = useState(true);
   const [loadingLeads, setLoadingLeads] = useState(true);
+  
+  console.log('[AgentDashboard] State:', { loadingStats, loadingLeads, statsCount: Object.keys(stats).length, leadsCount: featuredLeads.length });
 
   // Fetch marketplace stats
   useEffect(() => {
@@ -158,7 +164,10 @@ export default function AgentDashboardPage() {
       if (!user?.id) return;
       
       try {
-        const marketplaceStats = await MarketplaceService.getMarketplaceStats(user.id);
+        console.log('[AgentDashboard] Fetching stats for', user.id);
+        const response = await fetch(`/api/marketplace/stats?agentId=${user.id}`);
+        if (!response.ok) throw new Error('Failed to fetch stats');
+        const { stats: marketplaceStats } = await response.json();
         
         setStats({
           availableLeads: marketplaceStats.totalAvailable,
@@ -169,6 +178,7 @@ export default function AgentDashboardPage() {
       } catch (error) {
         console.error('Error fetching marketplace stats:', error);
       } finally {
+        console.log('[AgentDashboard] Stats fetch completed');
         setLoadingStats(false);
       }
     };
@@ -180,11 +190,15 @@ export default function AgentDashboardPage() {
   useEffect(() => {
     const fetchFeaturedLeads = async () => {
       try {
-        const leads = await MarketplaceService.getFeaturedLeads(3);
+        console.log('[AgentDashboard] Fetching featured leads');
+        const response = await fetch('/api/marketplace/featured?limit=3');
+        if (!response.ok) throw new Error('Failed to fetch featured leads');
+        const { leads } = await response.json();
         setFeaturedLeads(leads);
       } catch (error) {
         console.error('Error fetching featured leads:', error);
       } finally {
+        console.log('[AgentDashboard] Featured leads fetch completed');
         setLoadingLeads(false);
       }
     };
@@ -197,6 +211,8 @@ export default function AgentDashboardPage() {
     window.location.href = `/agent/marketplace`;
   };
 
+  console.log('[AgentDashboard] Rendering JSX');
+  
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/30">
       <div className="p-4 lg:p-6 space-y-6">

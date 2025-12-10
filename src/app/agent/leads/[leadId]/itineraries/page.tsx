@@ -8,9 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
  
-import { useAuth } from '@/context/SupabaseAuthContext';
+import { useAuth } from '@/context/CognitoAuthContext';
 import { useToast } from '@/hooks/useToast';
-import { itineraryService, Itinerary } from '@/lib/services/itineraryService';
+import type { Itinerary } from '@/lib/services/itineraryService';
 
 export default function LeadItinerariesPage() {
   const params = useParams();
@@ -34,7 +34,9 @@ export default function LeadItinerariesPage() {
   const fetchItineraries = async () => {
     setLoading(true);
     try {
-      const data = await itineraryService.getLeadItineraries(leadId);
+      const response = await fetch(`/api/itineraries/leads/${leadId}`);
+      if (!response.ok) throw new Error('Failed to fetch itineraries');
+      const { itineraries: data } = await response.json();
       setItineraries(data);
     } catch (err) {
       console.error('Error fetching itineraries:', err);
@@ -50,7 +52,18 @@ export default function LeadItinerariesPage() {
 
     setDuplicatingId(itineraryId);
     try {
-      const newItinerary = await itineraryService.duplicateItinerary(itineraryId, newName);
+      const response = await fetch('/api/itineraries/duplicate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ itineraryId, newName }),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.details || 'Failed to duplicate itinerary');
+      }
+      
+      const { itinerary: newItinerary } = await response.json();
       toast.success('Itinerary duplicated successfully');
       setItineraries(prev => [newItinerary, ...prev]);
     } catch (err) {

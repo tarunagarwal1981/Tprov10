@@ -2,9 +2,12 @@
  * Smart Itinerary Filter Service
  * Provides intelligent filtering for activities, transfers, and other itinerary components
  * based on time, location, and other contextual factors.
+ * 
+ * MIGRATED: Now uses PostgreSQL directly via AWS RDS
  */
 
-import { createClient } from '@/lib/supabase/client';
+// Use Lambda database service for reliable VPC access
+import { query, queryMany } from '@/lib/aws/lambda-database';
 
 export type TimeSlot = 'morning' | 'afternoon' | 'evening';
 
@@ -58,7 +61,6 @@ export interface TransferPackage {
 }
 
 export class SmartItineraryFilter {
-  private supabase = createClient();
 
   /**
    * Get available time slots based on arrival time
@@ -98,63 +100,64 @@ export class SmartItineraryFilter {
     country?: string,
     operatorId?: string // Kept for backward compatibility but not used for filtering
   ): Promise<ActivityPackage[]> {
-    let query = this.supabase
-      .from('activity_packages')
-      .select('id, title, destination_city, destination_country, base_price, currency, operator_id, duration_hours, duration_minutes')
-      .eq('status', 'published');
+    try {
+      let sql = `
+        SELECT id, title, destination_city, destination_country, base_price, currency, 
+               operator_id, duration_hours, duration_minutes
+        FROM activity_packages
+        WHERE status = 'published'
+      `;
+      const params: any[] = [];
+      let paramIndex = 1;
 
-    // Note: operatorId filter removed - agents can now see all published activities from all operators
+      // Filter by city or country
+      if (cityName && country) {
+        sql += ` AND (destination_city ILIKE $${paramIndex} OR destination_country ILIKE $${paramIndex + 1})`;
+        params.push(`%${cityName}%`, `%${country}%`);
+        paramIndex += 2;
+      } else if (cityName) {
+        sql += ` AND destination_city ILIKE $${paramIndex}`;
+        params.push(`%${cityName}%`);
+        paramIndex++;
+      } else if (country) {
+        sql += ` AND destination_country ILIKE $${paramIndex}`;
+        params.push(`%${country}%`);
+        paramIndex++;
+      }
 
-    // Filter by city or country
-    if (cityName && country) {
-      // Multiple conditions - use .or() with PostgREST syntax
-      query = query.or(`destination_city.ilike.%${cityName}%,destination_country.ilike.%${country}%`);
-    } else if (cityName) {
-      // Single condition - use .ilike() directly
-      query = query.ilike('destination_city', `%${cityName}%`);
-    } else if (country) {
-      // Single condition - use .ilike() directly
-      query = query.ilike('destination_country', `%${country}%`);
-    }
+      sql += ` LIMIT 50`;
 
-    const { data, error } = await query.limit(50);
+      const result = await query<ActivityPackage>(sql, params);
+      const activities = result.rows;
 
-    if (error) {
+      // Fetch pricing packages for each activity
+      const activitiesWithPricing = await Promise.all(
+        activities.map(async (activity) => {
+          try {
+            const pricingResult = await query<ActivityPricingPackage>(
+              `SELECT * FROM activity_pricing_packages 
+               WHERE package_id = $1 AND is_active = true 
+               ORDER BY display_order ASC`,
+              [activity.id]
+            );
+
+            return {
+              ...activity,
+              pricing_packages: pricingResult.rows,
+            };
+          } catch (err) {
+            console.warn(`Error fetching pricing for activity ${activity.id}:`, err);
+            return activity;
+          }
+        })
+      );
+
+      return activitiesWithPricing;
+    } catch (error) {
       console.error('Error fetching activities:', error);
       console.error('Query details:', { cityName, country });
       return [];
     }
-
-    const activities = (data || []) as unknown as ActivityPackage[];
-
-    // Fetch pricing packages for each activity
-    const activitiesWithPricing = await Promise.all(
-      activities.map(async (activity) => {
-        try {
-          const { data: pricingData, error: pricingError } = await this.supabase
-            .from('activity_pricing_packages' as any)
-            .select('*')
-            .eq('package_id', activity.id)
-            .eq('is_active', true)
-            .order('display_order', { ascending: true });
-
-          if (pricingError) {
-            console.warn(`Error fetching pricing for activity ${activity.id}:`, pricingError);
-            return activity;
-          }
-
-          return {
-            ...activity,
-            pricing_packages: (pricingData || []) as unknown as ActivityPricingPackage[],
-          };
-        } catch (err) {
-          console.warn(`Error fetching pricing for activity ${activity.id}:`, err);
-          return activity;
-        }
-      })
-    );
-
-    return activitiesWithPricing;
   }
 
   /**
@@ -224,42 +227,39 @@ export class SmartItineraryFilter {
     toCity: string,
     operatorId?: string // Kept for backward compatibility but not used for filtering
   ): Promise<TransferPackage[]> {
-    // First, try point-to-point transfers
-    let query = this.supabase
-      .from('transfer_packages' as any)
-      .select('id, title, from_location, to_location, pricing_mode, base_price, currency, operator_id')
-      .eq('status', 'published');
+    try {
+      // Query transfers matching from or to location
+      const sql = `
+        SELECT id, title, from_location, to_location, pricing_mode, base_price, currency, operator_id
+        FROM transfer_packages
+        WHERE status = 'published'
+          AND (from_location ILIKE $1 OR to_location ILIKE $2)
+        LIMIT 50
+      `;
 
-    // Note: operatorId filter removed - agents can now see all published transfers from all operators
+      const result = await query<TransferPackage>(sql, [`%${fromCity}%`, `%${fromCity}%`]);
+      const transfers = result.rows;
 
-    // Filter by from or to location
-    query = query.or(`from_location.ilike.%${fromCity}%,to_location.ilike.%${fromCity}%`);
+      // Filter by route match
+      return transfers.filter(transfer => {
+        // Point-to-point match
+        if (transfer.pricing_mode === 'POINT_TO_POINT') {
+          const fromMatch = transfer.from_location?.toLowerCase().includes(fromCity.toLowerCase());
+          const toMatch = transfer.to_location?.toLowerCase().includes(toCity.toLowerCase());
+          return fromMatch && toMatch;
+        }
 
-    const { data, error } = await query.limit(50);
+        // Hourly transfers can be configured for any route
+        if (transfer.pricing_mode === 'HOURLY') {
+          return true;
+        }
 
-    if (error) {
+        return false;
+      });
+    } catch (error) {
       console.error('Error fetching transfers:', error);
       return [];
     }
-
-    const transfers = (data || []) as unknown as TransferPackage[];
-
-    // Filter by route match
-    return transfers.filter(transfer => {
-      // Point-to-point match
-      if (transfer.pricing_mode === 'POINT_TO_POINT') {
-        const fromMatch = transfer.from_location?.toLowerCase().includes(fromCity.toLowerCase());
-        const toMatch = transfer.to_location?.toLowerCase().includes(toCity.toLowerCase());
-        return fromMatch && toMatch;
-      }
-
-      // Hourly transfers can be configured for any route
-      if (transfer.pricing_mode === 'HOURLY') {
-        return true;
-      }
-
-      return false;
-    });
   }
 
   /**

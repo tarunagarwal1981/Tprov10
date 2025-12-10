@@ -18,12 +18,12 @@ import { FaPlane, FaHiking, FaUmbrellaBeach, FaPaw, FaGem, FaMoneyBillWave, FaUs
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MarketplaceService } from '@/lib/services/marketplaceService';
+// MarketplaceService now accessed via API routes
 import type { LeadPurchase } from '@/lib/types/marketplace';
 import { TripType } from '@/lib/types/marketplace';
-import { useAuth } from '@/context/SupabaseAuthContext';
+import { useAuth } from '@/context/CognitoAuthContext';
 import { useToast } from '@/hooks/useToast';
-import { queryService } from '@/lib/services/queryService';
+// queryService now accessed via API routes
 import { QueryModal } from '@/components/agent/QueryModal';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -291,7 +291,9 @@ export default function MyLeadsPage() {
     setError(null);
     
     try {
-      const data = await MarketplaceService.getAgentPurchasedLeads(user.id);
+      const response = await fetch(`/api/marketplace/purchased?agentId=${user.id}`);
+      if (!response.ok) throw new Error('Failed to fetch purchased leads');
+      const { purchases: data } = await response.json();
       setPurchases(data);
     } catch (err) {
       console.error('Error fetching purchased leads:', err);
@@ -312,16 +314,19 @@ export default function MyLeadsPage() {
 
     try {
       // Check if query exists for this lead
-      const existingQuery = await queryService.getQueryByLeadId(leadId);
-      
-      if (existingQuery) {
-        // Query exists, navigate to lead detail page
-        router.push(`/agent/leads/${leadId}`);
-      } else {
-        // No query exists, open query modal
-        setSelectedLeadId(leadId);
-        setQueryModalOpen(true);
+      const response = await fetch(`/api/queries/${leadId}`);
+      if (response.ok) {
+        const { query: existingQuery } = await response.json();
+        if (existingQuery) {
+          // Query exists, navigate to lead detail page
+          router.push(`/agent/leads/${leadId}`);
+          return;
+        }
       }
+      
+      // No query exists, open query modal
+      setSelectedLeadId(leadId);
+      setQueryModalOpen(true);
     } catch (err) {
       console.error('Error checking query:', err);
       // On error, open modal anyway
@@ -344,17 +349,25 @@ export default function MyLeadsPage() {
 
     setQueryLoading(true);
     try {
-      await queryService.upsertQuery({
-        lead_id: selectedLeadId,
-        agent_id: user.id,
-        destinations: data.destinations,
-        leaving_from: data.leaving_from,
-        nationality: data.nationality,
-        leaving_on: data.leaving_on,
-        travelers: data.travelers,
-        star_rating: data.star_rating,
-        add_transfers: data.add_transfers,
+      const response = await fetch(`/api/queries/${selectedLeadId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          agent_id: user.id,
+          destinations: data.destinations,
+          leaving_from: data.leaving_from,
+          nationality: data.nationality,
+          leaving_on: data.leaving_on,
+          travelers: data.travelers,
+          star_rating: data.star_rating,
+          add_transfers: data.add_transfers,
+        }),
       });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.details || 'Failed to save query');
+      }
 
       toast.success('Query saved successfully!');
       
@@ -438,7 +451,12 @@ export default function MyLeadsPage() {
                   </div>
                   <div className="text-right">
                     <p className="text-2xl font-bold text-gray-900">
-                      ${purchases.reduce((sum, p) => sum + p.purchasePrice, 0).toLocaleString()}
+                      ${purchases.reduce((sum, p) => {
+                        const price = typeof p.purchasePrice === 'number' 
+                          ? p.purchasePrice 
+                          : parseFloat(String(p.purchasePrice)) || 0;
+                        return sum + price;
+                      }, 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                     <p className="text-sm text-gray-600 mt-1">Total Spent</p>
                   </div>

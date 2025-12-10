@@ -1,0 +1,16 @@
+{
+  "CORSRules": [
+    {
+      "AllowedHeaders": ["*"],
+      "AllowedMethods": ["GET", "PUT", "POST", "DELETE", "HEAD"],
+      "AllowedOrigins": [
+        "http://localhost:3000",
+        "https://*.amplifyapp.com",
+        "https://*.netlify.app"
+      ],
+      "ExposeHeaders": ["ETag", "x-amz-server-side-encryption"],
+      "MaxAgeSeconds": 3000
+    }
+  ]
+}
+
