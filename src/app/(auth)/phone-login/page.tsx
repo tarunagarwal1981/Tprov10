@@ -600,6 +600,24 @@ const SignupForm: React.FC<SignupFormProps> = ({
                 </div>
               </button>
             </div>
+            {/* Fallback select for devices/browsers where buttons might not render */}
+            <div className="md:hidden">
+              <select
+                value={role}
+                onChange={(e) => {
+                  const val = e.target.value as 'TRAVEL_AGENT' | 'TOUR_OPERATOR' | '';
+                  setRole(val);
+                  setFormError(null);
+                }}
+                disabled={loading}
+                required
+                className="w-full mt-2 py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700"
+              >
+                <option value="">Select your role</option>
+                <option value="TRAVEL_AGENT">Travel Agent</option>
+                <option value="TOUR_OPERATOR">Tour Operator</option>
+              </select>
+            </div>
             <p className="text-xs text-gray-500 dark:text-gray-400">
               Roles can be extended later; choose the best fit now.
             </p>
