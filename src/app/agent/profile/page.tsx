@@ -27,14 +27,21 @@ export default function ProfilePage() {
   }, [user]);
 
   const loadProfile = async () => {
+    console.log('[ProfilePage] Starting to load profile data...');
     setLoading(true);
     try {
       const tokens = localStorage.getItem('cognito_tokens');
-      if (!tokens) return;
+      if (!tokens) {
+        console.warn('[ProfilePage] No tokens found in localStorage');
+        setLoading(false);
+        return;
+      }
 
       const { accessToken } = JSON.parse(tokens);
+      console.log('[ProfilePage] Tokens found, fetching profile data...');
 
       // Load all profile data in parallel
+      console.log('[ProfilePage] Fetching account, brand, business, documents...');
       const [accountRes, brandRes, businessRes, documentsRes] = await Promise.all([
         fetch('/api/profile/account', {
           headers: { Authorization: `Bearer ${accessToken}` },
@@ -50,10 +57,24 @@ export default function ProfilePage() {
         }),
       ]);
 
+      console.log('[ProfilePage] API responses received', {
+        account: accountRes.status,
+        brand: brandRes.status,
+        business: businessRes.status,
+        documents: documentsRes.status,
+      });
+
       const account = accountRes.ok ? await accountRes.json() : null;
       const brand = brandRes.ok ? await brandRes.json() : null;
       const business = businessRes.ok ? await businessRes.json() : null;
       const documents = documentsRes.ok ? await documentsRes.json() : null;
+
+      console.log('[ProfilePage] Profile data loaded', {
+        hasAccount: !!account,
+        hasBrand: !!brand,
+        hasBusiness: !!business,
+        documentsCount: documents?.documents?.length || 0,
+      });
 
       setProfileData({
         account: account?.account,
@@ -62,8 +83,9 @@ export default function ProfilePage() {
         documents: documents?.documents || [],
       });
     } catch (error) {
-      console.error('Failed to load profile:', error);
+      console.error('[ProfilePage] Failed to load profile:', error);
     } finally {
+      console.log('[ProfilePage] Profile loading complete');
       setLoading(false);
     }
   };
