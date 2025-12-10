@@ -24,9 +24,15 @@ export function ProtectedRoute({
   const router = useRouter();
 
   useEffect(() => {
-    if (!isInitialized) return;
+    // Wait for auth to initialize before checking user
+    if (!isInitialized) {
+      console.log('[ProtectedRoute] Waiting for auth initialization...');
+      return;
+    }
 
+    // Only redirect if auth is initialized AND user is null
     if (!user) {
+      console.log('[ProtectedRoute] User not authenticated, redirecting to login');
       router.push('/login');
       return;
     }
@@ -52,8 +58,9 @@ export function ProtectedRoute({
     }
   }, [isInitialized, user, requiredRoles, requiredPermissions, hasRole, hasPermission, router]);
 
-  // Show loading while initializing
-  if (!isInitialized || !user) {
+  // Show loading while initializing OR while waiting for user to be loaded
+  if (!isInitialized) {
+    console.log('[ProtectedRoute] Auth not initialized, showing loading...');
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
@@ -61,8 +68,9 @@ export function ProtectedRoute({
     );
   }
 
-  // Show loading while not authenticated
+  // Show loading while user is being loaded (but auth is initialized)
   if (!user) {
+    console.log('[ProtectedRoute] Auth initialized but no user, showing loading...');
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
