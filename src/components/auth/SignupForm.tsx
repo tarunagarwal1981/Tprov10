@@ -64,6 +64,8 @@ export const SignupForm: React.FC<SignupFormProps> = ({
               if (recaptchaRef.current && !recaptchaWidgetId.current) {
                 const widgetId = window.grecaptcha.render(recaptchaRef.current, {
                   sitekey: RECAPTCHA_SITE_KEY,
+                  size: 'normal', // 'normal' or 'compact' - normal is less likely to trigger challenges
+                  badge: 'bottomright', // Position of reCAPTCHA badge
                   callback: (token: string) => {
                     console.log('✅ reCAPTCHA token received in SignupForm');
                     onRecaptchaChange(token);
@@ -85,6 +87,8 @@ export const SignupForm: React.FC<SignupFormProps> = ({
             // Direct render for v2
         const widgetId = window.grecaptcha.render(recaptchaRef.current, {
           sitekey: RECAPTCHA_SITE_KEY,
+          size: 'normal', // 'normal' or 'compact' - normal is less likely to trigger challenges
+          badge: 'bottomright', // Position of reCAPTCHA badge
           callback: (token: string) => {
                 console.log('✅ reCAPTCHA token received in SignupForm');
             onRecaptchaChange(token);
