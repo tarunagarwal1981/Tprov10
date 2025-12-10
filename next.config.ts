@@ -33,6 +33,25 @@ const nextConfig = {
     // reCAPTCHA configuration
     RECAPTCHA_SECRET_KEY: process.env.RECAPTCHA_SECRET_KEY,
     RECAPTCHA_MIN_SCORE: process.env.RECAPTCHA_MIN_SCORE || '0.5',
+    // Turnstile configuration (alternative to reCAPTCHA)
+    TURNSTILE_SECRET_KEY: process.env.TURNSTILE_SECRET_KEY,
+    // Twilio SMS configuration
+    TWILIO_ACCOUNT_SID: process.env.TWILIO_ACCOUNT_SID,
+    TWILIO_AUTH_TOKEN: process.env.TWILIO_AUTH_TOKEN,
+    TWILIO_PHONE_NUMBER: process.env.TWILIO_PHONE_NUMBER,
+    SMS_SENDER_ID: process.env.SMS_SENDER_ID,
+    SMS_PROVIDER: process.env.SMS_PROVIDER,
+    // SendGrid Email configuration
+    SENDGRID_API_KEY: process.env.SENDGRID_API_KEY,
+    SENDGRID_FROM_EMAIL: process.env.SENDGRID_FROM_EMAIL,
+    SENDGRID_FROM_NAME: process.env.SENDGRID_FROM_NAME,
+    EMAIL_PROVIDER: process.env.EMAIL_PROVIDER,
+    // AWS SES (fallback for email)
+    SES_FROM_EMAIL: process.env.SES_FROM_EMAIL,
+    SES_FROM_NAME: process.env.SES_FROM_NAME,
+    FROM_EMAIL: process.env.FROM_EMAIL,
+    // CAPTCHA provider selection
+    CAPTCHA_PROVIDER: process.env.CAPTCHA_PROVIDER,
   },
   
   // Enable experimental features
