@@ -141,6 +141,8 @@ function FeaturedLeadCard({ lead, onBuyNow }: { lead: MarketplaceLead; onBuyNow:
 export default function AgentDashboardPage() {
   const { user } = useAuth();
   
+  console.log('[AgentDashboard] Component rendering', { hasUser: !!user, userId: user?.id });
+  
   // Stats state
   const [stats, setStats] = useState({
     availableLeads: 0,
@@ -153,6 +155,8 @@ export default function AgentDashboardPage() {
   const [featuredLeads, setFeaturedLeads] = useState<MarketplaceLead[]>([]);
   const [loadingStats, setLoadingStats] = useState(true);
   const [loadingLeads, setLoadingLeads] = useState(true);
+  
+  console.log('[AgentDashboard] State:', { loadingStats, loadingLeads, statsCount: Object.keys(stats).length, leadsCount: featuredLeads.length });
 
   // Fetch marketplace stats
   useEffect(() => {
@@ -207,6 +211,8 @@ export default function AgentDashboardPage() {
     window.location.href = `/agent/marketplace`;
   };
 
+  console.log('[AgentDashboard] Rendering JSX');
+  
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/30">
       <div className="p-4 lg:p-6 space-y-6">

@@ -142,12 +142,19 @@ export default function AgentLayout({ children }: { children: React.ReactNode })
   }, [user, isInitialized, pathname, router, isOnboardingOrProfile]);
 
   if (checkingProfile) {
+    console.log('[AgentLayout] Still checking profile, showing spinner');
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FF6B35]"></div>
       </div>
     );
   }
+
+  console.log('[AgentLayout] Profile check complete, rendering children', {
+    hasUser: !!user,
+    pathname,
+    isOnboardingOrProfile,
+  });
 
   return (
     <ProtectedRoute requiredRoles={AGENT_ROLES}>
