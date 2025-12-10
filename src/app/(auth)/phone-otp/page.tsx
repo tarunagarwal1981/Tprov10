@@ -29,6 +29,7 @@ const PhoneOTPPageContent: React.FC = () => {
   const email = searchParams?.get('email') || '';
   const name = searchParams?.get('name') || '';
   const companyName = searchParams?.get('companyName') || '';
+  const role = (searchParams?.get('role') || '').toUpperCase() as 'TRAVEL_AGENT' | 'TOUR_OPERATOR' | '';
 
   // Redirect if missing required params
   useEffect(() => {
@@ -109,6 +110,10 @@ const PhoneOTPPageContent: React.FC = () => {
       setError('Please enter the complete OTP');
       return;
     }
+    if (purpose === 'signup' && !role) {
+      setError('Missing role. Please restart signup.');
+      return;
+    }
 
     setVerifying(true);
     setLoading(true);
@@ -125,6 +130,7 @@ const PhoneOTPPageContent: React.FC = () => {
           email,
           name,
           companyName,
+          role: role as 'TRAVEL_AGENT' | 'TOUR_OPERATOR',
           otp: code,
         });
       } else {
