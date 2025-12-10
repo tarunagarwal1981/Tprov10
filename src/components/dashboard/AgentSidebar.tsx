@@ -17,7 +17,7 @@ import {
 } from "react-icons/fi";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useAuth } from "@/context/SupabaseAuthContext";
+import { useAuth } from "@/context/CognitoAuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { LogoSVG } from "@/components/marketing/Logo";
-import { MarketplaceService } from "@/lib/services/marketplaceService";
+// MarketplaceService now accessed via API routes
 
 interface NavItem {
 	id: string;
@@ -84,8 +84,11 @@ export function AgentSidebar() {
 			if (!user?.id) return;
 			
 			try {
-				const stats = await MarketplaceService.getMarketplaceStats(user.id);
-				setAvailableLeadsCount(stats.totalAvailable);
+				const response = await fetch(`/api/marketplace/stats?agentId=${user.id}`);
+				if (response.ok) {
+					const { stats } = await response.json();
+					setAvailableLeadsCount(stats.totalAvailable);
+				}
 			} catch (error) {
 				console.error('Error fetching marketplace stats:', error);
 			}

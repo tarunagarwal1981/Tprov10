@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter, Space_Grotesk } from 'next/font/google';
 import './globals.css';
-import { SupabaseAuthProvider } from '@/context/SupabaseAuthContext';
+import { CognitoAuthProvider } from '@/context/CognitoAuthContext';
 import { Toaster } from 'sonner';
 
 const inter = Inter({ 
@@ -66,10 +66,10 @@ export default function RootLayout({
   return (
     <html lang='en'>
       <body className={`${inter.variable} ${spaceGrotesk.variable} ${inter.className}`} suppressHydrationWarning={true}>
-        <SupabaseAuthProvider>
+        <CognitoAuthProvider>
           {children}
           <Toaster position="top-right" />
-        </SupabaseAuthProvider>
+        </CognitoAuthProvider>
       </body>
     </html>
   );

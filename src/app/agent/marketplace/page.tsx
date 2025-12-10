@@ -15,10 +15,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { LeadCard, LeadFilters, PurchaseConfirmationModal } from '@/components/marketplace';
-import { MarketplaceService } from '@/lib/services/marketplaceService';
 import type { MarketplaceLead, LeadFilters as LeadFiltersType } from '@/lib/types/marketplace';
 import { LeadStatus } from '@/lib/types/marketplace';
-import { useAuth } from '@/context/SupabaseAuthContext';
+import { useAuth } from '@/context/CognitoAuthContext';
 import { useToast } from '@/hooks/useToast';
 
 // Loading skeleton component
@@ -148,10 +147,33 @@ export default function MarketplacePage() {
     setError(null);
     
     try {
-      const data = await MarketplaceService.getAvailableLeads(filters);
+      // Build query string from filters
+      const params = new URLSearchParams();
+      if (filters?.destination) params.append('destination', filters.destination);
+      if (filters?.tripType) params.append('tripType', filters.tripType);
+      if (filters?.budgetMin !== undefined) params.append('budgetMin', filters.budgetMin.toString());
+      if (filters?.budgetMax !== undefined) params.append('budgetMax', filters.budgetMax.toString());
+      if (filters?.durationMin !== undefined) params.append('durationMin', filters.durationMin.toString());
+      if (filters?.durationMax !== undefined) params.append('durationMax', filters.durationMax.toString());
+      if (filters?.minQualityScore !== undefined) params.append('minQualityScore', filters.minQualityScore.toString());
+
+      const response = await fetch(`/api/marketplace/leads?${params.toString()}`);
+      if (!response.ok) throw new Error('Failed to fetch leads');
+      const { leads: data } = await response.json();
+      
+      // Convert date strings to Date objects for sorting
+      const leadsWithDates = data.map((lead: any) => ({
+        ...lead,
+        postedAt: lead.postedAt ? new Date(lead.postedAt) : new Date(),
+        expiresAt: lead.expiresAt ? new Date(lead.expiresAt) : new Date(),
+        createdAt: lead.createdAt ? new Date(lead.createdAt) : new Date(),
+        updatedAt: lead.updatedAt ? new Date(lead.updatedAt) : new Date(),
+        travelDateStart: lead.travelDateStart ? new Date(lead.travelDateStart) : undefined,
+        travelDateEnd: lead.travelDateEnd ? new Date(lead.travelDateEnd) : undefined,
+      }));
       
       // Sort leads based on selected sort option
-      const sortedData = [...data];
+      const sortedData = [...leadsWithDates];
       switch (sortBy) {
         case 'newest':
           sortedData.sort((a, b) => b.postedAt.getTime() - a.postedAt.getTime());
@@ -179,12 +201,23 @@ export default function MarketplacePage() {
     if (!user) return;
     
     try {
-      const [marketplaceStats, purchasedLeads] = await Promise.all([
-        MarketplaceService.getMarketplaceStats(user.id),
-        MarketplaceService.getAgentPurchasedLeads(user.id),
+      const [statsResponse, purchasedResponse] = await Promise.all([
+        fetch(`/api/marketplace/stats?agentId=${user.id}`),
+        fetch(`/api/marketplace/purchased?agentId=${user.id}`),
       ]);
       
-      const totalSpent = purchasedLeads.reduce((sum, purchase) => sum + purchase.purchasePrice, 0);
+      if (!statsResponse.ok || !purchasedResponse.ok) throw new Error('Failed to fetch stats');
+      
+      const { stats: marketplaceStats } = await statsResponse.json();
+      const { purchases: purchasedLeads } = await purchasedResponse.json();
+      
+      // Calculate total spent safely, handling both number and string values
+      const totalSpent = purchasedLeads.reduce((sum: number, purchase: any) => {
+        const price = typeof purchase.purchasePrice === 'number' 
+          ? purchase.purchasePrice 
+          : parseFloat(purchase.purchasePrice) || 0;
+        return sum + price;
+      }, 0);
       
       setStats({
         availableLeads: marketplaceStats.totalAvailable,
@@ -237,7 +270,16 @@ export default function MarketplacePage() {
     setIsPurchasing(true);
     
     try {
-      await MarketplaceService.purchaseLead(selectedLead.id, user.id);
+      const response = await fetch('/api/marketplace/purchase', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ leadId: selectedLead.id, agentId: user.id }),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.details || 'Failed to purchase lead');
+      }
       
       toast.success(
         `You have successfully purchased the lead "${selectedLead.title}". Check your purchased leads.`

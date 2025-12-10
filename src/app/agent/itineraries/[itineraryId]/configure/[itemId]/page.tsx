@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { createClient } from '@/lib/supabase/client';
-import { useAuth } from '@/context/SupabaseAuthContext';
+import { useAuth } from '@/context/CognitoAuthContext';
 import { useToast } from '@/hooks/useToast';
 import { ActivitySelectorModal } from '@/components/itinerary/ActivitySelectorModal';
 import { TransferSelectorModal } from '@/components/itinerary/TransferSelectorModal';

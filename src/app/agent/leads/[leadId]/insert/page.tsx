@@ -8,11 +8,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useAuth } from '@/context/SupabaseAuthContext';
+import { useAuth } from '@/context/CognitoAuthContext';
 import { useToast } from '@/hooks/useToast';
-import { queryService } from '@/lib/services/queryService';
-import { createClient } from '@/lib/supabase/client';
-import { ItineraryService } from '@/lib/services/itineraryService';
+// Removed Supabase import - now using AWS API routes
+// queryService and itineraryService now accessed via API routes
 
 interface MultiCityPackage {
   id: string;
@@ -39,7 +38,7 @@ export default function InsertItineraryPage() {
   const router = useRouter();
   const { user } = useAuth();
   const toast = useToast();
-  const supabase = createClient();
+  // Removed Supabase client - now using AWS API routes
 
   const leadId = params.leadId as string;
   const [activeTab, setActiveTab] = useState<'multi_city' | 'multi_city_hotel'>('multi_city');
@@ -58,9 +57,16 @@ export default function InsertItineraryPage() {
 
   const fetchQueryData = async () => {
     try {
-      const query = await queryService.getQueryByLeadId(leadId);
+      const response = await fetch(`/api/queries/${leadId}`);
+      if (!response.ok) {
+        toast.error('Failed to load query data');
+        router.push(`/agent/leads/${leadId}`);
+        return;
+      }
+      
+      const { query } = await response.json();
       if (query && query.destinations.length > 0) {
-        const cities = query.destinations.map(d => d.city);
+        const cities = query.destinations.map((d: any) => d.city);
         setQueryDestinations(cities);
         fetchPackages(cities);
       } else {
@@ -77,13 +83,10 @@ export default function InsertItineraryPage() {
   const fetchPackages = async (cities: string[]) => {
     setLoading(true);
     try {
-      // Fetch operators info
-      const { data: operatorsData } = await supabase
-        .from('users' as any)
-        .select('id, name, email')
-        .in('role', ['TOUR_OPERATOR', 'ADMIN', 'SUPER_ADMIN']);
-
-      if (operatorsData) {
+      // Fetch operators info from AWS API
+      const operatorsResponse = await fetch('/api/operators');
+      if (operatorsResponse.ok) {
+        const { operators: operatorsData } = await operatorsResponse.json();
         const operatorsMap: Record<string, OperatorInfo> = {};
         operatorsData.forEach((op: any) => {
           operatorsMap[op.id] = {
@@ -95,142 +98,25 @@ export default function InsertItineraryPage() {
         setOperators(operatorsMap);
       }
 
-      // Fetch Multi-City Packages matching destinations
-      const multiCityQuery = supabase
-        .from('multi_city_packages' as any)
-        .select(`
-          id,
-          title,
-          destination_region,
-          operator_id,
-          base_price,
-          adult_price,
-          currency,
-          total_nights,
-          total_cities,
-          status,
-          multi_city_package_images!inner(public_url, is_cover)
-        `)
-        .eq('status', 'published');
-
-      // Filter by cities - check if any city in package matches query cities
-      // We'll need to join with multi_city_package_cities
-      const { data: multiCityData } = await supabase
-        .from('multi_city_packages' as any)
-        .select(`
-          id,
-          title,
-          destination_region,
-          operator_id,
-          base_price,
-          per_person_price,
-          fixed_price,
-          pricing_mode,
-          currency,
-          total_nights,
-          total_cities,
-          status
-        `)
-        .eq('status', 'published')
-        .limit(50);
-
-      // Fetch cities for each package and filter
-      if (multiCityData) {
-        const packageIds = multiCityData.map((p: any) => p.id);
-        const { data: citiesData } = await supabase
-          .from('multi_city_package_cities' as any)
-          .select('package_id, name, nights')
-          .in('package_id', packageIds);
-
-        // Filter packages that have at least one matching city
-        const matchingPackages = multiCityData.filter((pkg: any) => {
-          const pkgCities = citiesData?.filter((c: any) => c.package_id === pkg.id).map((c: any) => c.name.toLowerCase()) || [];
-          return cities.some(queryCity => 
-            pkgCities.some((pkgCity: string) => 
-              pkgCity.includes(queryCity.toLowerCase()) || queryCity.toLowerCase().includes(pkgCity)
-            )
-          );
-        });
-
-        // Fetch images for matching packages
-        const matchingPackageIds = matchingPackages.map((p: any) => p.id);
-        const { data: imagesData } = await supabase
-          .from('multi_city_package_images' as any)
-          .select('package_id, public_url, is_cover')
-          .in('package_id', matchingPackageIds)
-          .eq('is_cover', true);
-
-        const packagesWithImages = matchingPackages.map((pkg: any) => {
-          const image = imagesData?.find((img: any) => img.package_id === pkg.id) as { public_url?: string } | undefined;
-          return {
-            ...pkg,
-            featured_image_url: image?.public_url || undefined,
-            cities: citiesData?.filter((c: any) => c.package_id === pkg.id).map((c: any) => ({
-              name: c.name,
-              nights: c.nights || 1,
-            })),
-          };
-        });
-
-        setMultiCityPackages(packagesWithImages as MultiCityPackage[]);
+      // Fetch Multi-City Packages from AWS API
+      const citiesParam = cities.join(',');
+      const multiCityResponse = await fetch(`/api/packages/multi-city?cities=${encodeURIComponent(citiesParam)}`);
+      if (multiCityResponse.ok) {
+        const { packages: multiCityPackages } = await multiCityResponse.json();
+        setMultiCityPackages(multiCityPackages as MultiCityPackage[]);
+      } else {
+        console.error('Failed to fetch multi-city packages:', await multiCityResponse.text());
+        setMultiCityPackages([]);
       }
 
-      // Fetch Multi-City Hotel Packages
-      const { data: multiCityHotelData } = await supabase
-        .from('multi_city_hotel_packages' as any)
-        .select(`
-          id,
-          title,
-          destination_region,
-          operator_id,
-          base_price,
-          adult_price,
-          currency,
-          total_nights,
-          total_cities,
-          status
-        `)
-        .eq('status', 'published')
-        .limit(50);
-
-      if (multiCityHotelData) {
-        const hotelPackageIds = multiCityHotelData.map((p: any) => p.id);
-        const { data: hotelCitiesData } = await supabase
-          .from('multi_city_hotel_package_cities' as any)
-          .select('package_id, name, nights')
-          .in('package_id', hotelPackageIds);
-
-        // Filter packages that have at least one matching city
-        const matchingHotelPackages = multiCityHotelData.filter((pkg: any) => {
-          const pkgCities = hotelCitiesData?.filter((c: any) => c.package_id === pkg.id).map((c: any) => c.name.toLowerCase()) || [];
-          return cities.some(queryCity => 
-            pkgCities.some((pkgCity: string) => 
-              pkgCity.includes(queryCity.toLowerCase()) || queryCity.toLowerCase().includes(pkgCity)
-            )
-          );
-        });
-
-        // Fetch images
-        const matchingHotelPackageIds = matchingHotelPackages.map((p: any) => p.id);
-        const { data: hotelImagesData } = await supabase
-          .from('multi_city_hotel_package_images' as any)
-          .select('package_id, public_url, is_cover')
-          .in('package_id', matchingHotelPackageIds)
-          .eq('is_cover', true);
-
-        const hotelPackagesWithImages = matchingHotelPackages.map((pkg: any) => {
-          const image = hotelImagesData?.find((img: any) => img.package_id === pkg.id) as { public_url?: string } | undefined;
-          return {
-            ...pkg,
-            featured_image_url: image?.public_url || undefined,
-            cities: hotelCitiesData?.filter((c: any) => c.package_id === pkg.id).map((c: any) => ({
-              name: c.name,
-              nights: c.nights || 1,
-            })),
-          };
-        });
-
-        setMultiCityHotelPackages(hotelPackagesWithImages as MultiCityPackage[]);
+      // Fetch Multi-City Hotel Packages from AWS API
+      const multiCityHotelResponse = await fetch(`/api/packages/multi-city-hotel?cities=${encodeURIComponent(citiesParam)}`);
+      if (multiCityHotelResponse.ok) {
+        const { packages: multiCityHotelPackages } = await multiCityHotelResponse.json();
+        setMultiCityHotelPackages(multiCityHotelPackages as MultiCityPackage[]);
+      } else {
+        console.error('Failed to fetch multi-city hotel packages:', await multiCityHotelResponse.text());
+        setMultiCityHotelPackages([]);
       }
     } catch (err) {
       console.error('Error fetching packages:', err);
@@ -244,132 +130,65 @@ export default function InsertItineraryPage() {
     if (!user?.id) return;
 
     try {
-      // First, ensure the lead exists in the leads table (for foreign key constraint)
-      let actualLeadId = leadId;
-      
-      const { data: existingLead, error: checkError } = await supabase
-        .from('leads' as any)
-        .select('id')
-        .or(`id.eq.${leadId},marketplace_lead_id.eq.${leadId}`)
-        .eq('agent_id', user.id)
-        .maybeSingle();
+      // Ensure the lead exists in the leads table (create if needed from marketplace)
+      const ensureResponse = await fetch('/api/leads/ensure', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ leadId, agentId: user.id }),
+      });
 
-      if (checkError && checkError.code !== 'PGRST116') {
-        throw checkError;
+      if (!ensureResponse.ok) {
+        const error = await ensureResponse.json();
+        toast.error(error.error || 'Failed to ensure lead exists');
+        return;
       }
 
-      // If lead doesn't exist in leads table, create it (for marketplace leads)
-      if (!existingLead) {
-        // Get purchase info and marketplace lead details
-        const [purchaseResult, marketplaceLeadResult] = await Promise.all([
-          supabase
-            .from('lead_purchases' as any)
-            .select('id')
-            .eq('lead_id', leadId)
-            .eq('agent_id', user.id)
-            .maybeSingle(),
-          supabase
-            .from('lead_marketplace' as any)
-            .select('customer_name, customer_email, customer_phone, special_requirements, destination')
-            .eq('id', leadId)
-            .single(),
-        ]);
-
-        const purchase = (purchaseResult.data as unknown as { id: string } | null) || null;
-        const marketplaceLead = marketplaceLeadResult.data as unknown as {
-          customer_name?: string | null;
-          customer_email?: string | null;
-          customer_phone?: string | null;
-          special_requirements?: string | null;
-          destination?: string | null;
-        } | null;
-
-        if (!marketplaceLead) {
-          toast.error('Lead not found');
-          return;
-        }
-
-        // Create lead entry in leads table
-        const { data: newLead, error: leadError } = await supabase
-          .from('leads' as any)
-          .insert({
-            agent_id: user.id,
-            marketplace_lead_id: leadId,
-            customer_name: marketplaceLead.customer_name,
-            customer_email: marketplaceLead.customer_email,
-            customer_phone: marketplaceLead.customer_phone,
-            destination: marketplaceLead.destination,
-            special_requirements: marketplaceLead.special_requirements,
-            status: 'active',
-          })
-          .select('id')
-          .single();
-
-        if (leadError) {
-          console.error('Error creating lead:', leadError);
-          toast.error('Failed to create lead entry');
-          return;
-        }
-
-        actualLeadId = (newLead as unknown as { id: string }).id;
-      } else {
-        actualLeadId = (existingLead as unknown as { id: string }).id;
-      }
+      const { leadId: actualLeadId } = await ensureResponse.json();
 
       // Check if itinerary exists for this lead
-      const itineraryService = new ItineraryService();
-      const existingItineraries = await itineraryService.getLeadItineraries(actualLeadId);
+      const itinerariesResponse = await fetch(`/api/itineraries/leads/${actualLeadId}`);
+      const existingItineraries = itinerariesResponse.ok 
+        ? (await itinerariesResponse.json()).itineraries 
+        : [];
       
       let itineraryId: string;
       
       if (existingItineraries.length === 0) {
         // Create new itinerary
-        const query = await queryService.getQueryByLeadId(leadId);
+        const queryResponse = await fetch(`/api/queries/${leadId}`);
+        if (!queryResponse.ok) {
+          toast.error('Query not found. Please create a query first.');
+          return;
+        }
+        const { query } = await queryResponse.json();
         if (!query) {
           toast.error('Query not found. Please create a query first.');
           return;
         }
 
-        // Create itinerary with query data
-        const { data: newItinerary, error: itineraryError } = await supabase
-          .from('itineraries' as any)
-          .insert({
-            lead_id: actualLeadId,
-            agent_id: user.id,
+        // Create itinerary with query data via API route
+        const createItineraryResponse = await fetch('/api/itineraries/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            leadId: actualLeadId,
+            agentId: user.id,
             name: 'Itinerary #1',
-            adults_count: query.travelers?.adults || 2,
-            children_count: query.travelers?.children || 0,
-            infants_count: query.travelers?.infants || 0,
-            start_date: query.leaving_on || null,
-            end_date: null,
-            status: 'draft',
-          })
-          .select('id')
-          .single();
+            adultsCount: query.travelers?.adults || 2,
+            childrenCount: query.travelers?.children || 0,
+            infantsCount: query.travelers?.infants || 0,
+            startDate: query.leaving_on || null,
+            endDate: null,
+          }),
+        });
 
-        if (itineraryError) {
-          // If it's a conflict (409), try to get existing itinerary
-          if (itineraryError.code === '23505' || (itineraryError as any).status === 409) {
-            const { data: existingItinerary } = await supabase
-              .from('itineraries' as any)
-              .select('id')
-              .eq('lead_id', actualLeadId)
-              .eq('agent_id', user.id)
-              .order('created_at', { ascending: false })
-              .limit(1)
-              .single();
-            
-            if (existingItinerary) {
-              itineraryId = (existingItinerary as unknown as { id: string }).id;
-            } else {
-              throw itineraryError;
-            }
-          } else {
-            throw itineraryError;
-          }
-        } else {
-          itineraryId = (newItinerary as unknown as { id: string }).id;
+        if (!createItineraryResponse.ok) {
+          const error = await createItineraryResponse.json();
+          throw new Error(error.error || 'Failed to create itinerary');
         }
+
+        const { itinerary: newItinerary } = await createItineraryResponse.json();
+        itineraryId = newItinerary.id;
       } else {
         // Use first existing itinerary
         itineraryId = existingItineraries[0]!.id;
@@ -377,56 +196,39 @@ export default function InsertItineraryPage() {
 
       // For multi-city packages, create itinerary_item immediately and navigate to configure page
       if (packageType === 'multi_city' || packageType === 'multi_city_hotel') {
-        // Fetch package details to get operator_id and base price
-        const packageTable = packageType === 'multi_city' 
-          ? 'multi_city_packages' 
-          : 'multi_city_hotel_packages';
+        // Fetch package details from AWS API
+        const packageResponse = await fetch(`/api/packages/${packageId}?type=${packageType}`);
         
-        const { data: pkgData, error: pkgError } = await supabase
-          .from(packageTable as any)
-          .select('id, title, operator_id, base_price, currency')
-          .eq('id', packageId)
-          .single();
-
-        if (pkgError) {
-          console.error('Error fetching package:', pkgError);
-          toast.error('Failed to load package details');
+        if (!packageResponse.ok) {
+          const error = await packageResponse.json();
+          toast.error(error.error || 'Failed to load package details');
           return;
         }
 
-        // Fetch package image
-        const imageTable = packageType === 'multi_city'
-          ? 'multi_city_package_images'
-          : 'multi_city_hotel_package_images';
-        const { data: imageData } = await supabase
-          .from(imageTable as any)
-          .select('public_url')
-          .eq('package_id', packageId)
-          .eq('is_cover', true)
-          .limit(1)
-          .maybeSingle();
+        const { package: pkgData } = await packageResponse.json();
 
         // Get itinerary info for default pricing
-        const { data: itineraryInfo } = await supabase
-          .from('itineraries' as any)
-          .select('adults_count, children_count, infants_count')
-          .eq('id', itineraryId)
-          .single();
+        const itineraryResponse = await fetch(`/api/itineraries/${itineraryId}?agentId=${user.id}`);
+        let itineraryInfo = null;
+        if (itineraryResponse.ok) {
+          const { itinerary } = await itineraryResponse.json();
+          itineraryInfo = itinerary;
+        }
 
         // Calculate default price (use base_price or 0)
-        const defaultPrice = (pkgData as any).base_price || 0;
+        const defaultPrice = pkgData.base_price || 0;
 
-        // Create itinerary_item with default configuration
-        const { data: newItem, error: itemError } = await supabase
-          .from('itinerary_items' as any)
-          .insert({
-            itinerary_id: itineraryId,
-            day_id: null, // Unassigned initially
-            package_type: packageType,
-            package_id: packageId,
-            operator_id: (pkgData as any).operator_id,
-            package_title: (pkgData as any).title,
-            package_image_url: (imageData as any)?.public_url || null,
+        // Create itinerary_item with default configuration via API
+        const createItemResponse = await fetch(`/api/itineraries/${itineraryId}/items/create`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            dayId: null, // Unassigned initially
+            packageType: packageType,
+            packageId: packageId,
+            operatorId: pkgData.operator_id,
+            packageTitle: pkgData.title,
+            packageImageUrl: pkgData.image_url || null,
             configuration: {
               pricingType: 'SIC',
               selectedPricingRowId: null,
@@ -436,22 +238,24 @@ export default function InsertItineraryPage() {
               activities: [],
               transfers: [],
             },
-            unit_price: defaultPrice,
+            unitPrice: defaultPrice,
             quantity: 1,
-            total_price: defaultPrice,
-            display_order: 0,
-          })
-          .select('id')
-          .single();
+            displayOrder: 0,
+            notes: null,
+          }),
+        });
 
-        if (itemError) {
-          console.error('Error creating itinerary item:', itemError);
-          toast.error('Failed to create itinerary item');
+        if (!createItemResponse.ok) {
+          const error = await createItemResponse.json();
+          console.error('Error creating itinerary item:', error);
+          toast.error(error.error || 'Failed to create itinerary item');
           return;
         }
 
+        const { item: newItem } = await createItemResponse.json();
+
         // Navigate directly to configure page
-        router.push(`/agent/itineraries/${itineraryId}/configure/${(newItem as any).id}`);
+        router.push(`/agent/itineraries/${itineraryId}/configure/${newItem.id}`);
       } else {
         // For other packages, navigate to builder (keep existing flow)
         router.push(`/agent/itineraries/${itineraryId}/builder?packageId=${packageId}&packageType=${packageType}`);

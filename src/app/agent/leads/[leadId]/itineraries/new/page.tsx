@@ -9,10 +9,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { useAuth } from '@/context/SupabaseAuthContext';
+import { useAuth } from '@/context/CognitoAuthContext';
 import { useToast } from '@/hooks/useToast';
-import { createClient } from '@/lib/supabase/client';
-import { queryService } from '@/lib/services/queryService';
+// Removed Supabase import - now using AWS API routes
+// queryService now accessed via API routes
 
 interface LeadDetails {
   id: string;
@@ -28,7 +28,7 @@ export default function CreateItineraryPage() {
   const router = useRouter();
   const { user } = useAuth();
   const toast = useToast();
-  const supabase = createClient();
+  // Removed Supabase client - now using AWS API routes
 
   const leadId = params.leadId as string;
 
@@ -55,8 +55,14 @@ export default function CreateItineraryPage() {
 
       try {
         // Fetch query data first (required for Create Itinerary)
-        const queryData = await queryService.getQueryByLeadId(leadId);
+        const queryResponse = await fetch(`/api/queries/${leadId}`);
+        if (!queryResponse.ok) {
+          toast.error('Failed to load query data');
+          router.push(`/agent/leads/${leadId}`);
+          return;
+        }
         
+        const { query: queryData } = await queryResponse.json();
         if (!queryData || !queryData.destinations || queryData.destinations.length === 0) {
           toast.error('Please create a query with destinations first');
           router.push(`/agent/leads/${leadId}`);
@@ -65,70 +71,31 @@ export default function CreateItineraryPage() {
 
         setQuery(queryData);
 
-        // Fetch lead details
-        // First check if this is a purchased marketplace lead
-        const { data: purchaseData, error: purchaseError } = await supabase
-          .from('lead_purchases' as any)
-          .select('lead_id')
-          .eq('lead_id', leadId)
-          .eq('agent_id', user.id)
-          .maybeSingle();
-
-        if (purchaseError && purchaseError.code !== 'PGRST116') {
-          throw purchaseError;
+        // Fetch lead details from AWS API route
+        const leadResponse = await fetch(`/api/leads/${leadId}?agentId=${user.id}`);
+        
+        if (!leadResponse.ok) {
+          if (leadResponse.status === 404) {
+            throw new Error('Lead not found or you do not have access to it');
+          }
+          throw new Error('Failed to fetch lead details');
         }
 
-        let leadData: LeadDetails | null = null;
+        const { lead: leadDataRaw } = await leadResponse.json();
 
-        // If it's a purchased marketplace lead, fetch from lead_marketplace
-        if (purchaseData) {
-          const { data: marketplaceLeadRaw, error: marketplaceError } = await supabase
-            .from('lead_marketplace' as any)
-            .select('id, destination, budget_min, budget_max, duration_days, travelers_count')
-            .eq('id', leadId)
-            .single();
-
-          if (marketplaceError) throw marketplaceError;
-          const marketplaceLead = marketplaceLeadRaw as unknown as {
-            id: string;
-            destination: string;
-            budget_min?: number | null;
-            budget_max?: number | null;
-            duration_days?: number | null;
-            travelers_count?: number | null;
-          } | null;
-
-          if (marketplaceLead) {
-            leadData = {
-              id: marketplaceLead.id,
-              destination: marketplaceLead.destination,
-              budget_min: marketplaceLead.budget_min ?? undefined,
-              budget_max: marketplaceLead.budget_max ?? undefined,
-              duration_days: marketplaceLead.duration_days ?? undefined,
-              travelers_count: marketplaceLead.travelers_count ?? undefined,
-            };
-          }
-        } else {
-          // Otherwise, try fetching from leads table
-          const { data: regularLead, error: leadsError } = await supabase
-          .from('leads' as any)
-          .select('id, destination, budget_min, budget_max, duration_days, travelers_count')
-          .eq('id', leadId)
-          .eq('agent_id', user.id)
-            .maybeSingle();
-
-          if (leadsError && leadsError.code !== 'PGRST116') {
-            throw leadsError;
-          }
-
-          if (regularLead) {
-            leadData = regularLead as unknown as LeadDetails;
-          }
-        }
-
-        if (!leadData) {
+        if (!leadDataRaw) {
           throw new Error('Lead not found or you do not have access to it');
         }
+
+        // Map to LeadDetails format
+        const leadData: LeadDetails = {
+          id: leadDataRaw.id,
+          destination: leadDataRaw.destination,
+          budget_min: leadDataRaw.budgetMin ?? undefined,
+          budget_max: leadDataRaw.budgetMax ?? undefined,
+          duration_days: leadDataRaw.durationDays ?? undefined,
+          travelers_count: leadDataRaw.travelersCount ?? undefined,
+        };
 
         setLead(leadData);
         
@@ -153,7 +120,7 @@ export default function CreateItineraryPage() {
     };
 
     fetchData();
-  }, [leadId, user?.id, router, toast, supabase]);
+  }, [leadId, user?.id, router, toast]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -164,79 +131,22 @@ export default function CreateItineraryPage() {
 
     try {
       // First, ensure the lead exists in the leads table (for foreign key constraint)
-      // Check if lead exists in leads table by marketplace_lead_id or by id
-      let actualLeadId = leadId;
-      
-      const { data: existingLead, error: checkError } = await supabase
-        .from('leads' as any)
-        .select('id')
-        .or(`id.eq.${leadId},marketplace_lead_id.eq.${leadId}`)
-        .eq('agent_id', user.id)
-        .maybeSingle();
+      // Use the /api/leads/ensure endpoint which handles checking and creating if needed
+      const ensureResponse = await fetch('/api/leads/ensure', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          leadId: leadId,
+          agentId: user.id,
+        }),
+      });
 
-      if (checkError && checkError.code !== 'PGRST116') {
-        throw checkError;
+      if (!ensureResponse.ok) {
+        const error = await ensureResponse.json();
+        throw new Error(error.error || 'Failed to ensure lead exists');
       }
 
-      // If lead doesn't exist in leads table, create it (for marketplace leads)
-      if (!existingLead) {
-        // Get purchase info and marketplace lead details with customer data
-        const [purchaseResult, marketplaceLeadResult] = await Promise.all([
-          supabase
-            .from('lead_purchases' as any)
-            .select('id')
-            .eq('lead_id', leadId)
-            .eq('agent_id', user.id)
-            .maybeSingle(),
-          supabase
-            .from('lead_marketplace' as any)
-            .select('customer_name, customer_email, customer_phone, special_requirements')
-            .eq('id', leadId)
-            .single(),
-        ]);
-
-        const purchase = (purchaseResult.data as unknown as { id: string } | null) || null;
-        const marketplaceLead = marketplaceLeadResult.data as unknown as {
-          customer_name?: string | null;
-          customer_email?: string | null;
-          customer_phone?: string | null;
-          special_requirements?: string | null;
-        } | null;
-
-        // Create lead entry in leads table from marketplace lead data
-        const { data: newLeadRaw, error: createLeadError } = await supabase
-          .from('leads' as any)
-          .insert({
-            agent_id: user.id,
-            destination: lead.destination,
-            budget_min: lead.budget_min || null,
-            budget_max: lead.budget_max || null,
-            duration_days: lead.duration_days || null,
-            travelers_count: lead.travelers_count || formData.adultsCount,
-            marketplace_lead_id: leadId,
-            purchased_from_marketplace: true,
-            purchase_id: purchase?.id || null,
-            is_purchased: true,
-            source: 'MARKETPLACE',
-            stage: 'NEW',
-            priority: 'MEDIUM',
-            customer_name: marketplaceLead?.customer_name || 'Customer',
-            customer_email: marketplaceLead?.customer_email || 'customer@example.com',
-            customer_phone: marketplaceLead?.customer_phone || null,
-            requirements: marketplaceLead?.special_requirements || null,
-          })
-          .select('id')
-          .single();
-
-        if (createLeadError) throw createLeadError;
-        const newLead = newLeadRaw as unknown as { id: string } | null;
-        if (newLead) {
-          actualLeadId = newLead.id;
-        }
-      } else {
-        const typedExisting = existingLead as unknown as { id: string };
-        actualLeadId = typedExisting.id;
-      }
+      const { leadId: actualLeadId } = await ensureResponse.json();
 
       // Calculate end date based on destinations and nights
       const totalNights = query.destinations.reduce((sum: number, dest: any) => sum + (dest.nights || 0), 0);
@@ -245,29 +155,32 @@ export default function CreateItineraryPage() {
       endDate.setDate(endDate.getDate() + totalNights);
 
       // Create itinerary using the actual lead_id from leads table
-      const { data: itinerary, error: itineraryError } = await supabase
-        .from('itineraries' as any)
-        .insert({
-          lead_id: actualLeadId,
-          agent_id: user.id,
+      const createResponse = await fetch('/api/itineraries/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          leadId: actualLeadId,
+          agentId: user.id,
           name: formData.name,
-          adults_count: formData.adultsCount,
-          children_count: formData.childrenCount,
-          infants_count: formData.infantsCount,
-          start_date: formData.startDate || startDate.toISOString().split('T')[0],
-          end_date: endDate.toISOString().split('T')[0],
+          adultsCount: formData.adultsCount,
+          childrenCount: formData.childrenCount,
+          infantsCount: formData.infantsCount,
+          startDate: formData.startDate || startDate.toISOString().split('T')[0],
+          endDate: endDate.toISOString().split('T')[0],
           notes: formData.notes || null,
-          lead_budget_min: lead?.budget_min || null,
-          lead_budget_max: lead?.budget_max || null,
+          leadBudgetMin: lead?.budget_min || null,
+          leadBudgetMax: lead?.budget_max || null,
           status: 'draft',
-        })
-        .select()
-        .single();
+        }),
+      });
 
-      if (itineraryError) throw itineraryError;
+      if (!createResponse.ok) {
+        const error = await createResponse.json();
+        throw new Error(error.error || 'Failed to create itinerary');
+      }
 
-      const itineraryData = itinerary as unknown as { id: string };
-      const itineraryId = itineraryData.id;
+      const { itinerary } = await createResponse.json();
+      const itineraryId = itinerary.id;
 
       // Generate days based on query destinations
       const daysToInsert: any[] = [];
@@ -284,12 +197,11 @@ export default function CreateItineraryPage() {
           dayDate.setDate(currentDate.getDate() + night);
 
           daysToInsert.push({
-            itinerary_id: itineraryId,
-            day_number: dayNumber,
+            dayNumber: dayNumber,
             date: dayDate.toISOString().split('T')[0],
-            city_name: cityName,
-            display_order: dayNumber,
-            time_slots: {
+            cityName: cityName,
+            displayOrder: dayNumber,
+            timeSlots: {
               morning: { time: '', activities: [], transfers: [] },
               afternoon: { time: '', activities: [], transfers: [] },
               evening: { time: '', activities: [], transfers: [] }
@@ -303,13 +215,18 @@ export default function CreateItineraryPage() {
         currentDate.setDate(currentDate.getDate() + nights);
       }
 
-      // Insert all days
+      // Insert all days using bulk create endpoint
       if (daysToInsert.length > 0) {
-        const { error: daysError } = await supabase
-          .from('itinerary_days' as any)
-          .insert(daysToInsert);
+        const daysResponse = await fetch(`/api/itineraries/${itineraryId}/days/bulk-create`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ days: daysToInsert }),
+        });
 
-        if (daysError) throw daysError;
+        if (!daysResponse.ok) {
+          const error = await daysResponse.json();
+          throw new Error(error.error || 'Failed to create itinerary days');
+        }
       }
 
       toast.success('Itinerary created successfully!');

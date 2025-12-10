@@ -1,0 +1,8 @@
+{
+  "commands": [
+    "sudo yum install -y postgresql15",
+    "export PGPASSWORD='ju3vrLHJUW8PqDG4'",
+    "psql -h travel-app-db.c61sa44wsvgz.us-east-1.rds.amazonaws.com -U postgres -d postgres -c \"SELECT version();\""
+  ]
+}
+

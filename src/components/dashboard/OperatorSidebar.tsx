@@ -17,7 +17,7 @@ import {
 } from "react-icons/fi";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useAuth } from "@/context/SupabaseAuthContext";
+import { useAuth } from "@/context/CognitoAuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";

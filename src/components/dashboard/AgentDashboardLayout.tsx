@@ -10,6 +10,7 @@ interface AgentDashboardLayoutProps {
 }
 
 export function AgentDashboardLayout({ children }: AgentDashboardLayoutProps) {
+  console.log('[AgentDashboardLayout] Rendering layout');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [leftMarginPx, setLeftMarginPx] = useState(280);
@@ -82,6 +83,10 @@ export function AgentDashboardLayout({ children }: AgentDashboardLayoutProps) {
       mainContentRef.current.style.marginLeft = `${margin}px`;
     }
   }, [isSidebarCollapsed, leftMarginPx, computeSidebarWidth]);
+
+  useEffect(() => {
+    console.log('[AgentDashboardLayout] Layout mounted, children should render');
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50">

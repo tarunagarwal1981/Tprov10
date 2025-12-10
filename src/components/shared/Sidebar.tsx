@@ -8,7 +8,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { usePathname, useRouter } from 'next/navigation';
-import { useAuth, useRBAC, useUserDisplay } from '@/context/SupabaseAuthContext';
+import { useAuth, useRBAC, useUserDisplay } from '@/context/CognitoAuthContext';
 import { cn } from '@/lib/utils';
 import {
   FiHome,
@@ -740,7 +740,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
               <Avatar className="h-10 w-10">
                 <AvatarImage src={avatar || undefined} />
                 <AvatarFallback className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white">
-                  {displayName?.split(' ').map(n => n[0]).join('')}
+                  {displayName?.split(' ').map((n: string) => n[0]).join('')}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
