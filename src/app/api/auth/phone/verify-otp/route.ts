@@ -82,37 +82,35 @@ export async function POST(request: NextRequest) {
             // Store role, auth_method, country_code, phone_number in database instead
           });
 
-          // Create user in database
-          await transaction(async (client) => {
-            await client.query(
-              `INSERT INTO users 
-               (id, email, name, phone_number, country_code, role, phone_verified, email_verified, auth_method, profile, created_at, updated_at)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())`,
-              [
-                userId,
-                email,
-                name,
-                phoneNumber,
-                countryCode,
-                normalizedRole,
-                true, // phone_verified
-                false, // email_verified (can be verified later)
-                'phone_otp',
-                JSON.stringify({
-                  companyName: companyName || null,
-                  role: normalizedRole,
-                }),
-              ]
-            );
+          // Create user in database (no transaction support in Lambda client; execute sequentially)
+          await query(
+            `INSERT INTO users 
+             (id, email, name, phone_number, country_code, role, phone_verified, email_verified, auth_method, profile, created_at, updated_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())`,
+            [
+              userId,
+              email,
+              name,
+              phoneNumber,
+              countryCode,
+              normalizedRole,
+              true, // phone_verified
+              false, // email_verified (can be verified later)
+              'phone_otp',
+              JSON.stringify({
+                companyName: companyName || null,
+                role: normalizedRole,
+              }),
+            ]
+          );
 
-            // Create profile entries
-            await client.query(
-              `INSERT INTO account_details (user_id, first_name, created_at, updated_at)
-               VALUES ($1, $2, NOW(), NOW())
-               ON CONFLICT (user_id) DO NOTHING`,
-              [userId, name.split(' ')[0] || name]
-            );
-          });
+          // Create profile entries
+          await query(
+            `INSERT INTO account_details (user_id, first_name, created_at, updated_at)
+             VALUES ($1, $2, NOW(), NOW())
+             ON CONFLICT (user_id) DO NOTHING`,
+            [userId, name.split(' ')[0] || name]
+          );
 
           user = {
             id: userId,
