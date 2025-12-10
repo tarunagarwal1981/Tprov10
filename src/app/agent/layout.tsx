@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { AgentDashboardLayout } from '@/components/dashboard/AgentDashboardLayout';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
@@ -14,22 +14,38 @@ export default function AgentLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
   const pathname = usePathname();
   const [checkingProfile, setCheckingProfile] = useState(true);
+  const hasRedirectedRef = useRef(false);
+  const isOnboardingOrProfile = pathname?.includes('/onboarding') || pathname?.includes('/profile');
 
   useEffect(() => {
-    // Only check for travel agents, and skip if already on onboarding page
+    // Reset redirect flag when pathname changes to onboarding/profile
+    if (isOnboardingOrProfile) {
+      hasRedirectedRef.current = false;
+    }
+  }, [isOnboardingOrProfile]);
+
+  useEffect(() => {
+    // Only check for travel agents, and skip if already on onboarding/profile page
     if (
       !isInitialized ||
       !user ||
       user.role !== 'TRAVEL_AGENT' ||
-      pathname?.includes('/onboarding') ||
-      pathname?.includes('/profile')
+      isOnboardingOrProfile
     ) {
       console.log('[AgentLayout] Skipping profile check', {
         isInitialized,
         hasUser: !!user,
         role: user?.role,
         pathname,
+        isOnboardingOrProfile,
       });
+      setCheckingProfile(false);
+      return;
+    }
+
+    // Prevent multiple redirects
+    if (hasRedirectedRef.current) {
+      console.log('[AgentLayout] Already redirected, skipping check');
       setCheckingProfile(false);
       return;
     }
@@ -81,19 +97,32 @@ export default function AgentLayout({ children }: { children: React.ReactNode })
             const onboardingCompleted = profile.onboarding_completed || false;
 
             // Redirect to onboarding if profile is incomplete
-            if ((completionPercentage < 100 || !onboardingCompleted) && pathname !== '/agent/onboarding') {
+            if ((completionPercentage < 100 || !onboardingCompleted) && !isOnboardingOrProfile) {
               console.log('[AgentLayout] Profile incomplete, redirecting to onboarding', {
                 completionPercentage,
                 onboardingCompleted,
+                currentPath: pathname,
               });
+              hasRedirectedRef.current = true;
               router.push('/agent/onboarding');
+              setCheckingProfile(false);
               return;
+            } else {
+              console.log('[AgentLayout] Profile complete or already on onboarding', {
+                completionPercentage,
+                onboardingCompleted,
+                currentPath: pathname,
+              });
             }
           } else {
             // No profile found, redirect to onboarding
-            if (pathname !== '/agent/onboarding') {
-              console.log('[AgentLayout] No profile found, redirecting to onboarding');
+            if (!isOnboardingOrProfile) {
+              console.log('[AgentLayout] No profile found, redirecting to onboarding', {
+                currentPath: pathname,
+              });
+              hasRedirectedRef.current = true;
               router.push('/agent/onboarding');
+              setCheckingProfile(false);
               return;
             }
           }
@@ -110,7 +139,7 @@ export default function AgentLayout({ children }: { children: React.ReactNode })
     };
 
     checkProfileCompletion();
-  }, [user, isInitialized, pathname, router]);
+  }, [user, isInitialized, pathname, router, isOnboardingOrProfile]);
 
   if (checkingProfile) {
     return (
