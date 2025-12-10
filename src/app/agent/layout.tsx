@@ -96,35 +96,20 @@ export default function AgentLayout({ children }: { children: React.ReactNode })
             const completionPercentage = profile.profile_completion_percentage || 0;
             const onboardingCompleted = profile.onboarding_completed || false;
 
-            // Redirect to onboarding if profile is incomplete
-            if ((completionPercentage < 100 || !onboardingCompleted) && !isOnboardingOrProfile) {
-              console.log('[AgentLayout] Profile incomplete, redirecting to onboarding', {
-                completionPercentage,
-                onboardingCompleted,
-                currentPath: pathname,
-              });
-              hasRedirectedRef.current = true;
-              router.push('/agent/onboarding');
-              setCheckingProfile(false);
-              return;
-            } else {
-              console.log('[AgentLayout] Profile complete or already on onboarding', {
-                completionPercentage,
-                onboardingCompleted,
-                currentPath: pathname,
-              });
-            }
+            // Log profile completion status but don't redirect (relaxed guard)
+            console.log('[AgentLayout] Profile status', {
+              completionPercentage,
+              onboardingCompleted,
+              currentPath: pathname,
+              note: 'Onboarding guard relaxed - dashboard accessible even if incomplete',
+            });
+            // Note: We're not redirecting anymore - users can access dashboard even with incomplete profile
           } else {
-            // No profile found, redirect to onboarding
-            if (!isOnboardingOrProfile) {
-              console.log('[AgentLayout] No profile found, redirecting to onboarding', {
-                currentPath: pathname,
-              });
-              hasRedirectedRef.current = true;
-              router.push('/agent/onboarding');
-              setCheckingProfile(false);
-              return;
-            }
+            // No profile found - log but don't redirect
+            console.log('[AgentLayout] No profile found', {
+              currentPath: pathname,
+              note: 'Onboarding guard relaxed - dashboard accessible',
+            });
           }
         } else {
           const text = await response.text().catch(() => '');
