@@ -30,14 +30,35 @@ export default function ProfilePage() {
     console.log('[ProfilePage] Starting to load profile data...');
     setLoading(true);
     try {
+      // Check for Cognito tokens first (email/password login)
+      let accessToken: string | null = null;
       const tokens = localStorage.getItem('cognito_tokens');
-      if (!tokens) {
-        console.warn('[ProfilePage] No tokens found in localStorage');
+      
+      if (tokens) {
+        try {
+          const parsed = JSON.parse(tokens);
+          accessToken = parsed.accessToken;
+          console.log('[ProfilePage] Found Cognito tokens');
+        } catch (e) {
+          console.warn('[ProfilePage] Failed to parse cognito_tokens', e);
+        }
+      }
+      
+      // If no Cognito tokens, check for phone auth session
+      if (!accessToken) {
+        const phoneSession = localStorage.getItem('phoneAuthSession');
+        if (phoneSession) {
+          accessToken = phoneSession;
+          console.log('[ProfilePage] Found phone auth session');
+        }
+      }
+      
+      if (!accessToken) {
+        console.warn('[ProfilePage] No tokens found in localStorage (checked cognito_tokens and phoneAuthSession)');
         setLoading(false);
         return;
       }
 
-      const { accessToken } = JSON.parse(tokens);
       console.log('[ProfilePage] Tokens found, fetching profile data...');
 
       // Load all profile data in parallel
