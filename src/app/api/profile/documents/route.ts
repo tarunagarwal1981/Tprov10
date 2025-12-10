@@ -5,8 +5,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { query, queryOne, queryMany, transaction } from '@/lib/aws/database';
-import { getUser } from '@/lib/aws/cognito';
+import { query, queryOne, queryMany, transaction } from '@/lib/aws/lambda-database';
+import { getUserIdFromToken } from '@/lib/auth/getUserIdFromToken';
 import { generateUploadUrl, generateDownloadUrl, deleteDocument } from '@/lib/services/s3Service';
 
 export const runtime = 'nodejs';
@@ -21,8 +21,11 @@ export async function GET(request: NextRequest) {
     }
 
     const token = authHeader.substring(7);
-    const userInfo = await getUser(token);
-    const userId = userInfo.username;
+    const userId = await getUserIdFromToken(token);
+    
+    if (!userId) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    }
 
     const documents = await queryMany<{
       id: string;
@@ -80,8 +83,11 @@ export async function POST(request: NextRequest) {
     }
 
     const token = authHeader.substring(7);
-    const userInfo = await getUser(token);
-    const userId = userInfo.username;
+    const userId = await getUserIdFromToken(token);
+    
+    if (!userId) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    }
 
     const { documentType, fileName, fileSize, mimeType } = await request.json();
 
@@ -171,8 +177,11 @@ export async function DELETE(request: NextRequest) {
     }
 
     const token = authHeader.substring(7);
-    const userInfo = await getUser(token);
-    const userId = userInfo.username;
+    const userId = await getUserIdFromToken(token);
+    
+    if (!userId) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    }
 
     const { searchParams } = new URL(request.url);
     const documentId = searchParams.get('id');

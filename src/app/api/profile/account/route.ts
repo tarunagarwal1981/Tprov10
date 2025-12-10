@@ -5,8 +5,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { query, queryOne, transaction } from '@/lib/aws/database';
-import { getUser } from '@/lib/aws/cognito';
+import { query, queryOne, transaction } from '@/lib/aws/lambda-database';
+import { getUserIdFromToken } from '@/lib/auth/getUserIdFromToken';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -20,8 +20,11 @@ export async function GET(request: NextRequest) {
     }
 
     const token = authHeader.substring(7);
-    const userInfo = await getUser(token);
-    const userId = userInfo.username;
+    const userId = await getUserIdFromToken(token);
+    
+    if (!userId) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    }
 
     const accountDetails = await queryOne<{
       user_id: string;
@@ -73,8 +76,11 @@ export async function POST(request: NextRequest) {
     }
 
     const token = authHeader.substring(7);
-    const userInfo = await getUser(token);
-    const userId = userInfo.username;
+    const userId = await getUserIdFromToken(token);
+    
+    if (!userId) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    }
 
     const { firstName, lastName, profilePhotoUrl, aboutMe } = await request.json();
 
