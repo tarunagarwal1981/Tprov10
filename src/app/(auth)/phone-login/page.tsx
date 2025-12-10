@@ -621,6 +621,9 @@ const SignupForm: React.FC<SignupFormProps> = ({
             <p className="text-xs text-gray-500 dark:text-gray-400">
               Roles can be extended later; choose the best fit now.
             </p>
+            <p className="text-[11px] text-gray-400 dark:text-gray-500">
+              Role selector loaded (debug marker)
+            </p>
           </div>
 
           {/* reCAPTCHA */}
