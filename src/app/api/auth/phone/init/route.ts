@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { queryOne } from '@/lib/aws/lambda-database';
-import { verifyRecaptcha } from '@/lib/services/recaptchaService';
+import { verifyCaptcha } from '@/lib/services/captchaService';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -36,33 +36,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify reCAPTCHA
+    // Verify CAPTCHA (Turnstile or reCAPTCHA)
     if (recaptchaToken) {
       const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0] ||
                       request.headers.get('x-real-ip') ||
                       'unknown';
       
-      console.log('🔍 Verifying reCAPTCHA token...');
+      console.log('🔍 Verifying CAPTCHA token...');
       console.log('   Token length:', recaptchaToken.length);
       console.log('   Token prefix:', recaptchaToken.substring(0, 20) + '...');
-      console.log('   Has secret key:', !!process.env.RECAPTCHA_SECRET_KEY);
+      console.log('   CAPTCHA provider:', process.env.CAPTCHA_PROVIDER || 'recaptcha');
       
-      const recaptchaResult = await verifyRecaptcha(recaptchaToken, clientIp);
-      if (!recaptchaResult.valid) {
-        console.error('❌ reCAPTCHA verification failed');
-        console.error('   Error:', recaptchaResult.error);
-        console.error('   Score:', recaptchaResult.score || 'N/A');
+      const captchaResult = await verifyCaptcha(recaptchaToken, clientIp);
+      if (!captchaResult.valid) {
+        console.error('❌ CAPTCHA verification failed');
+        console.error('   Error:', captchaResult.error);
+        console.error('   Score:', (captchaResult as any).score || 'N/A');
         return NextResponse.json(
-          { error: 'reCAPTCHA verification failed', details: recaptchaResult.error },
+          { error: 'CAPTCHA verification failed', details: captchaResult.error },
           { status: 400 }
         );
       }
-      console.log('✅ reCAPTCHA verification passed');
-      console.log('   Score:', recaptchaResult.score || 'N/A (v2)');
+      console.log('✅ CAPTCHA verification passed');
+      console.log('   Score:', (captchaResult as any).score || 'N/A (v2)');
     } else if (process.env.NODE_ENV === 'production') {
-      // Require reCAPTCHA in production
+      // Require CAPTCHA in production
       return NextResponse.json(
-        { error: 'reCAPTCHA token is required' },
+        { error: 'CAPTCHA token is required' },
         { status: 400 }
       );
     }

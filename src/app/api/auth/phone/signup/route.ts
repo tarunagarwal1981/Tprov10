@@ -8,7 +8,7 @@ import { queryOne } from '@/lib/aws/lambda-database';
 import { createOTP } from '@/lib/services/otpService';
 import { sendSMSOTP } from '@/lib/services/smsService';
 import { sendEmailOTP } from '@/lib/services/emailService';
-import { verifyRecaptcha } from '@/lib/services/recaptchaService';
+import { verifyCaptcha } from '@/lib/services/captchaService';
 import { signUp } from '@/lib/aws/cognito';
 import { v4 as uuidv4 } from 'uuid';
 
