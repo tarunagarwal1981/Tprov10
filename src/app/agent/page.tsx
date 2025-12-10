@@ -160,6 +160,7 @@ export default function AgentDashboardPage() {
       if (!user?.id) return;
       
       try {
+        console.log('[AgentDashboard] Fetching stats for', user.id);
         const response = await fetch(`/api/marketplace/stats?agentId=${user.id}`);
         if (!response.ok) throw new Error('Failed to fetch stats');
         const { stats: marketplaceStats } = await response.json();
@@ -173,6 +174,7 @@ export default function AgentDashboardPage() {
       } catch (error) {
         console.error('Error fetching marketplace stats:', error);
       } finally {
+        console.log('[AgentDashboard] Stats fetch completed');
         setLoadingStats(false);
       }
     };
@@ -184,6 +186,7 @@ export default function AgentDashboardPage() {
   useEffect(() => {
     const fetchFeaturedLeads = async () => {
       try {
+        console.log('[AgentDashboard] Fetching featured leads');
         const response = await fetch('/api/marketplace/featured?limit=3');
         if (!response.ok) throw new Error('Failed to fetch featured leads');
         const { leads } = await response.json();
@@ -191,6 +194,7 @@ export default function AgentDashboardPage() {
       } catch (error) {
         console.error('Error fetching featured leads:', error);
       } finally {
+        console.log('[AgentDashboard] Featured leads fetch completed');
         setLoadingLeads(false);
       }
     };
