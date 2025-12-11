@@ -556,7 +556,7 @@ const SignupForm: React.FC<SignupFormProps> = ({
               value={companyName}
               onChange={(e) => setCompanyName(e.target.value)}
               disabled={loading}
-              placeholder="TravClan"
+              placeholder="Enter company name"
               className="w-full py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/20 bg-white dark:bg-gray-700"
             />
           </div>
