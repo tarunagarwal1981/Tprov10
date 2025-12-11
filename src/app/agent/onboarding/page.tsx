@@ -50,15 +50,15 @@ export default function OnboardingPage() {
   const [activeTab, setActiveTab] = useState<OnboardingTab>('account');
   const [profileCompletion, setProfileCompletion] = useState(0);
   const [completedTabs, setCompletedTabs] = useState<Set<OnboardingTab>>(new Set());
-  const { user, loading: authLoading } = useAuth();
+  const { user, isInitialized } = useAuth();
   const router = useRouter();
 
   // Redirect if not authenticated
   useEffect(() => {
-    if (!authLoading && !user) {
+    if (isInitialized && !user) {
       router.push('/phone-login');
     }
-  }, [user, authLoading, router]);
+  }, [user, isInitialized, router]);
 
   // Fetch profile completion
   useEffect(() => {
@@ -135,12 +135,16 @@ export default function OnboardingPage() {
     }
   };
 
-  if (authLoading || !user) {
+  if (!isInitialized) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FF6B35]"></div>
       </div>
     );
+  }
+
+  if (!user) {
+    return null; // Will redirect via useEffect
   }
 
   return (

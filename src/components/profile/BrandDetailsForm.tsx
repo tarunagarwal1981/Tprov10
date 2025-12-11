@@ -30,10 +30,8 @@ export function BrandDetailsForm({ onComplete }: BrandDetailsFormProps) {
 
   const loadBrandDetails = async () => {
     try {
-      const tokens = localStorage.getItem('cognito_tokens');
-      if (!tokens) return;
-
-      const { accessToken } = JSON.parse(tokens);
+      const accessToken = getAccessToken();
+      if (!accessToken) return;
       const response = await fetch('/api/profile/brand', {
         method: 'GET',
         headers: {
@@ -66,13 +64,11 @@ export function BrandDetailsForm({ onComplete }: BrandDetailsFormProps) {
     setLoading(true);
 
     try {
-      const tokens = localStorage.getItem('cognito_tokens');
-      if (!tokens) {
+      const accessToken = getAccessToken();
+      if (!accessToken) {
         toast.error('Please login again');
         return;
       }
-
-      const { accessToken } = JSON.parse(tokens);
       const response = await fetch('/api/profile/brand', {
         method: 'POST',
         headers: {

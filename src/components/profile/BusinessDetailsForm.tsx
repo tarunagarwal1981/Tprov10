@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { BriefcaseBusiness, Calendar, MapPin, User, Target } from 'lucide-react';
 import { toast } from 'sonner';
+import { getAccessToken } from '@/lib/auth/getAccessToken';
 
 interface BusinessDetailsFormProps {
   onComplete: () => void;
@@ -64,10 +65,8 @@ export function BusinessDetailsForm({ onComplete }: BusinessDetailsFormProps) {
 
   const loadBusinessDetails = async () => {
     try {
-      const tokens = localStorage.getItem('cognito_tokens');
-      if (!tokens) return;
-
-      const { accessToken } = JSON.parse(tokens);
+      const accessToken = getAccessToken();
+      if (!accessToken) return;
       const response = await fetch('/api/profile/business', {
         method: 'GET',
         headers: {
@@ -99,13 +98,11 @@ export function BusinessDetailsForm({ onComplete }: BusinessDetailsFormProps) {
     setLoading(true);
 
     try {
-      const tokens = localStorage.getItem('cognito_tokens');
-      if (!tokens) {
+      const accessToken = getAccessToken();
+      if (!accessToken) {
         toast.error('Please login again');
         return;
       }
-
-      const { accessToken } = JSON.parse(tokens);
       const response = await fetch('/api/profile/business', {
         method: 'POST',
         headers: {
