@@ -64,10 +64,8 @@ export function DocumentsForm({ onComplete }: DocumentsFormProps) {
   const loadDocuments = async () => {
     setLoading(true);
     try {
-      const tokens = localStorage.getItem('cognito_tokens');
-      if (!tokens) return;
-
-      const { accessToken } = JSON.parse(tokens);
+      const accessToken = getAccessToken();
+      if (!accessToken) return;
       const response = await fetch('/api/profile/documents', {
         method: 'GET',
         headers: {
@@ -90,13 +88,11 @@ export function DocumentsForm({ onComplete }: DocumentsFormProps) {
     setUploading(documentType);
 
     try {
-      const tokens = localStorage.getItem('cognito_tokens');
-      if (!tokens) {
+      const accessToken = getAccessToken();
+      if (!accessToken) {
         toast.error('Please login again');
         return;
       }
-
-      const { accessToken } = JSON.parse(tokens);
 
       // Get presigned URL
       const response = await fetch('/api/profile/documents', {
@@ -147,13 +143,11 @@ export function DocumentsForm({ onComplete }: DocumentsFormProps) {
     if (!confirm('Are you sure you want to delete this document?')) return;
 
     try {
-      const tokens = localStorage.getItem('cognito_tokens');
-      if (!tokens) {
+      const accessToken = getAccessToken();
+      if (!accessToken) {
         toast.error('Please login again');
         return;
       }
-
-      const { accessToken } = JSON.parse(tokens);
       const response = await fetch(`/api/profile/documents?id=${documentId}`, {
         method: 'DELETE',
         headers: {
