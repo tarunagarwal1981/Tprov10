@@ -24,7 +24,7 @@ const getTwilioClient = () => {
 };
 
 const TWILIO_PHONE_NUMBER = process.env.TWILIO_PHONE_NUMBER;
-const SMS_SENDER_ID = process.env.SMS_SENDER_ID || 'TRAVCLAN'; // Max 11 chars
+const SMS_SENDER_ID = process.env.SMS_SENDER_ID || 'Travselbuy'; // Max 11 chars
 
 /**
  * Send OTP via SMS using Twilio
