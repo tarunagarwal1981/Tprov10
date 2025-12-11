@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { FileText as FileTextIcon, Upload, CheckCircle, X, Clock, Eye } from 'lucide-react';
 import { toast } from 'sonner';
+import { getAccessToken } from '@/lib/auth/getAccessToken';
 
 interface DocumentsFormProps {
   onComplete: () => void;

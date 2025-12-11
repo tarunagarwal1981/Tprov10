@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Building, User, Phone, Mail, Globe, Search, Image as ImageIcon } from 'lucide-react';
 import { toast } from 'sonner';
+import { getAccessToken } from '@/lib/auth/getAccessToken';
 
 interface BrandDetailsFormProps {
   onComplete: () => void;
