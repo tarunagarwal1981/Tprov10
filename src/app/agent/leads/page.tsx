@@ -24,7 +24,6 @@ import { TripType } from '@/lib/types/marketplace';
 import { useAuth } from '@/context/CognitoAuthContext';
 import { useToast } from '@/hooks/useToast';
 // queryService now accessed via API routes
-import { QueryModal } from '@/components/agent/QueryModal';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -278,11 +277,6 @@ export default function MyLeadsPage() {
   const [purchases, setPurchases] = useState<LeadPurchase[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
-  // Query modal state
-  const [queryModalOpen, setQueryModalOpen] = useState(false);
-  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
-  const [queryLoading, setQueryLoading] = useState(false);
 
   const fetchPurchasedLeads = async () => {
     if (!user?.id) return;
@@ -308,84 +302,9 @@ export default function MyLeadsPage() {
     fetchPurchasedLeads();
   }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Handle Create Itinerary button click
-  const handleCreateItinerary = async (leadId: string) => {
-    if (!user?.id) return;
-
-    try {
-      // Check if query exists for this lead
-      const response = await fetch(`/api/queries/${leadId}`);
-      if (response.ok) {
-        const { query: existingQuery } = await response.json();
-        if (existingQuery) {
-          // Query exists, navigate to lead detail page
-          router.push(`/agent/leads/${leadId}`);
-          return;
-        }
-      }
-      
-      // No query exists, open query modal
-      setSelectedLeadId(leadId);
-      setQueryModalOpen(true);
-    } catch (err) {
-      console.error('Error checking query:', err);
-      // On error, open modal anyway
-      setSelectedLeadId(leadId);
-      setQueryModalOpen(true);
-    }
-  };
-
-  // Handle query save
-  const handleQuerySave = async (data: {
-    destinations: Array<{ city: string; nights: number }>;
-    leaving_from: string;
-    nationality: string;
-    leaving_on: string;
-    travelers: { rooms: number; adults: number; children: number; infants: number };
-    star_rating?: number;
-    add_transfers: boolean;
-  }) => {
-    if (!user?.id || !selectedLeadId) return;
-
-    setQueryLoading(true);
-    try {
-      const response = await fetch(`/api/queries/${selectedLeadId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          agent_id: user.id,
-          destinations: data.destinations,
-          leaving_from: data.leaving_from,
-          nationality: data.nationality,
-          leaving_on: data.leaving_on,
-          travelers: data.travelers,
-          star_rating: data.star_rating,
-          add_transfers: data.add_transfers,
-        }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.details || 'Failed to save query');
-      }
-
-      toast.success('Query saved successfully!');
-      
-      // Save leadId before clearing state
-      const savedLeadId = selectedLeadId;
-      
-      setQueryModalOpen(false);
-      setSelectedLeadId(null);
-      
-      // Navigate to lead detail page
-      router.push(`/agent/leads/${savedLeadId}`);
-    } catch (err) {
-      console.error('Error saving query:', err);
-      toast.error('Failed to save query. Please try again.');
-      throw err;
-    } finally {
-      setQueryLoading(false);
-    }
+  // Handle Create Itinerary button click - navigate directly to lead detail page
+  const handleCreateItinerary = (leadId: string) => {
+    router.push(`/agent/leads/${leadId}`);
   };
 
   return (
@@ -570,20 +489,6 @@ export default function MyLeadsPage() {
         )}
       </div>
 
-      {/* Query Modal */}
-      {selectedLeadId && (
-        <QueryModal
-          isOpen={queryModalOpen}
-          onClose={() => {
-            setQueryModalOpen(false);
-            setSelectedLeadId(null);
-          }}
-          onSave={handleQuerySave}
-          initialData={null}
-          leadId={selectedLeadId}
-          loading={queryLoading}
-        />
-      )}
     </div>
   );
 }
