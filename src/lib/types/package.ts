@@ -75,7 +75,7 @@ export interface PackageWithDetails {
   total_cities: number;
   status: string;
   featured_image_url?: string;
-  cities: Array<{ name: string; nights: number }>;
+  cities: Array<{ name: string; nights: number; country?: string | null }>;
   // Additional fields for multi-city packages
   per_person_price?: number | null;
   fixed_price?: number | null;

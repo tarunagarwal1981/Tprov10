@@ -136,7 +136,7 @@ export async function GET(request: NextRequest) {
     let citiesResult;
     try {
       citiesResult = await query<any>(
-        `SELECT package_id, name, nights 
+        `SELECT package_id, name, nights, country 
          FROM multi_city_hotel_package_cities 
          WHERE package_id::text = ANY($1::text[])
          ORDER BY package_id, display_order`,
@@ -205,7 +205,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const citiesMap = new Map<PackageId, Array<{ name: string; nights: number }>>();
+    const citiesMap = new Map<PackageId, Array<{ name: string; nights: number; country?: string | null }>>();
     let citiesProcessed = 0;
     let citiesSkipped = 0;
     
@@ -215,10 +215,11 @@ export async function GET(request: NextRequest) {
         if (!citiesMap.has(normalizedId)) {
           citiesMap.set(normalizedId, []);
         }
-        citiesMap.get(normalizedId)!.push({
-          name: city.name || 'Unknown',
-          nights: city.nights || 1,
-        });
+      citiesMap.get(normalizedId)!.push({
+        name: city.name || 'Unknown',
+        nights: city.nights || 1,
+        country: city.country || null,
+      });
         citiesProcessed++;
       } catch (idError) {
         citiesSkipped++;
