@@ -19,9 +19,21 @@ export async function POST(
   try {
     const paramsResult = await params;
     itineraryId = paramsResult.itineraryId;
-    days = await request.json();
+    const body = await request.json();
+    
+    // Extract days from request body (body.days or body itself if it's an array)
+    days = body.days || body;
+    
+    console.log('Received request:', { 
+      bodyKeys: Object.keys(body), 
+      hasDaysProperty: 'days' in body,
+      daysIsArray: Array.isArray(days),
+      daysLength: Array.isArray(days) ? days.length : 'not an array',
+      itineraryId 
+    });
 
     if (!days || !Array.isArray(days) || days.length === 0) {
+      console.error('Invalid days array:', { days, body });
       return NextResponse.json(
         { error: 'days array is required and must not be empty' },
         { status: 400 }
