@@ -270,7 +270,7 @@ function EmptyState() {
 }
 
 export default function MyLeadsPage() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const toast = useToast();
   const router = useRouter();
   
@@ -279,13 +279,14 @@ export default function MyLeadsPage() {
   const [error, setError] = useState<string | null>(null);
 
   const fetchPurchasedLeads = async () => {
-    if (!user?.id) return;
+    const agentId = profile?.id || user?.id;
+    if (!agentId) return;
     
     setLoading(true);
     setError(null);
     
     try {
-      const response = await fetch(`/api/marketplace/purchased?agentId=${user.id}`);
+      const response = await fetch(`/api/marketplace/purchased?agentId=${agentId}`);
       if (!response.ok) throw new Error('Failed to fetch purchased leads');
       const { purchases: data } = await response.json();
       setPurchases(data);
@@ -300,7 +301,7 @@ export default function MyLeadsPage() {
 
   useEffect(() => {
     fetchPurchasedLeads();
-  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [profile?.id, user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Handle Create Itinerary button click - navigate directly to lead detail page
   const handleCreateItinerary = (leadId: string) => {
