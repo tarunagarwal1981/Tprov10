@@ -279,7 +279,7 @@ export default function MyLeadsPage() {
   const [error, setError] = useState<string | null>(null);
 
   const fetchPurchasedLeads = async () => {
-    const agentId = profile?.id || user?.id;
+    const agentId = user?.id;
     if (!agentId) return;
     
     setLoading(true);
@@ -301,7 +301,7 @@ export default function MyLeadsPage() {
 
   useEffect(() => {
     fetchPurchasedLeads();
-  }, [profile?.id, user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Handle Create Itinerary button click - navigate directly to lead detail page
   const handleCreateItinerary = (leadId: string) => {
