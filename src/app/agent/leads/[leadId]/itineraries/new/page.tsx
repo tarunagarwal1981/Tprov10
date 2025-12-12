@@ -507,7 +507,16 @@ export default function CreateItineraryPage() {
         return;
       }
 
-      const { item: newItem } = await createItemResponse.json();
+      const responseData = await createItemResponse.json();
+      console.log('Item creation response:', responseData);
+      
+      const newItem = responseData.item;
+      
+      if (!newItem || !newItem.id) {
+        console.error('Invalid item response:', responseData);
+        toast.error('Failed to create itinerary item: Invalid response');
+        return;
+      }
 
       toast.success('Itinerary created successfully!');
       // Navigate to configure page
