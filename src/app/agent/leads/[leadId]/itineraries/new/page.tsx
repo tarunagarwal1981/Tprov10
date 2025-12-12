@@ -336,7 +336,17 @@ export default function CreateItineraryPage() {
   };
 
   const handlePackageSelect = async (packageId: string, packageType: 'multi_city' | 'multi_city_hotel') => {
-    if (!user?.id || !query) return;
+    if (!user?.id || !query) {
+      toast.error('Query information is missing. Please save the query first.');
+      return;
+    }
+
+    // Validate query has destinations
+    if (!query.destinations || !Array.isArray(query.destinations) || query.destinations.length === 0) {
+      toast.error('Query destinations are missing. Please update the query with destinations.');
+      console.error('Query destinations missing:', { query });
+      return;
+    }
 
     try {
       // Ensure the lead exists
@@ -393,7 +403,18 @@ export default function CreateItineraryPage() {
       const currentDate = new Date(startDate);
       let dayNumber = 1;
 
+      console.log('Generating days from query:', { 
+        destinations: query.destinations, 
+        destinationsLength: query.destinations?.length,
+        startDate: startDate.toISOString()
+      });
+
       for (const destination of query.destinations) {
+        if (!destination || !destination.city) {
+          console.warn('Skipping invalid destination:', destination);
+          continue;
+        }
+
         const cityName = destination.city;
         const nights = destination.nights || 1;
 
@@ -420,18 +441,25 @@ export default function CreateItineraryPage() {
         currentDate.setDate(currentDate.getDate() + nights);
       }
 
-      // Insert all days
-      if (daysToInsert.length > 0) {
-        const daysResponse = await fetch(`/api/itineraries/${itineraryId}/days/bulk-create`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ days: daysToInsert }),
-        });
+      console.log('Generated days to insert:', { count: daysToInsert.length, days: daysToInsert });
 
-        if (!daysResponse.ok) {
-          const error = await daysResponse.json();
-          throw new Error(error.error || 'Failed to create itinerary days');
-        }
+      // Insert all days
+      if (daysToInsert.length === 0) {
+        console.error('No days to insert! Query destinations:', query.destinations);
+        toast.error('Failed to generate itinerary days. Please check your query destinations.');
+        throw new Error('No days generated from query destinations');
+      }
+
+      const daysResponse = await fetch(`/api/itineraries/${itineraryId}/days/bulk-create`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ days: daysToInsert }),
+      });
+
+      if (!daysResponse.ok) {
+        const error = await daysResponse.json();
+        console.error('Failed to create itinerary days:', error);
+        throw new Error(error.error || 'Failed to create itinerary days');
       }
 
       // Fetch package details
