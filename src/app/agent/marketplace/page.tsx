@@ -198,7 +198,7 @@ export default function MarketplacePage() {
 
   // Fetch stats function
   const fetchStats = async () => {
-    const agentId = profile?.id || user?.id;
+    const agentId = user?.id;
     if (!agentId) return;
     
     try {
@@ -234,7 +234,7 @@ export default function MarketplacePage() {
   useEffect(() => {
     fetchLeads();
     fetchStats();
-  }, [filters, sortBy, profile?.id, user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [filters, sortBy, user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Handle filter changes
   const handleFiltersChange = (newFilters: LeadFiltersType) => {
@@ -266,7 +266,7 @@ export default function MarketplacePage() {
 
   // Handle purchase confirmation
   const handlePurchaseConfirm = async () => {
-    const agentId = profile?.id || user?.id;
+    const agentId = user?.id;
     if (!selectedLead || !agentId) return;
     
     setIsPurchasing(true);
