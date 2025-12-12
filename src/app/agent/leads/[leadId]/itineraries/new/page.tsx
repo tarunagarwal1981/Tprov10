@@ -120,6 +120,8 @@ export default function CreateItineraryPage() {
     }
   };
 
+  const formatDate = (date: Date) => date.toISOString().split('T')[0];
+
   const fetchAndMatchPackages = async (queryData: ItineraryQuery) => {
     if (!queryData.destinations || queryData.destinations.length === 0) {
       return;
@@ -369,8 +371,8 @@ export default function CreateItineraryPage() {
           adultsCount: query.travelers?.adults || 2,
           childrenCount: query.travelers?.children || 0,
           infantsCount: query.travelers?.infants || 0,
-          startDate: query.leaving_on || startDate.toISOString().split('T')[0],
-          endDate: endDate.toISOString().split('T')[0],
+          startDate: query.leaving_on ? formatDate(startDate) : formatDate(startDate),
+          endDate: formatDate(endDate),
           notes: null,
           leadBudgetMin: lead?.budgetMin || null,
           leadBudgetMax: lead?.budgetMax || null,
@@ -401,7 +403,7 @@ export default function CreateItineraryPage() {
 
           daysToInsert.push({
             dayNumber: dayNumber,
-            date: dayDate.toISOString().split('T')[0],
+            date: formatDate(dayDate),
             cityName: cityName,
             displayOrder: dayNumber,
             timeSlots: {

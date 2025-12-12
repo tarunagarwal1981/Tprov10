@@ -121,7 +121,7 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
 }
 
 export default function MarketplacePage() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const toast = useToast();
   
   // State management
@@ -198,12 +198,13 @@ export default function MarketplacePage() {
 
   // Fetch stats function
   const fetchStats = async () => {
-    if (!user) return;
+    const agentId = profile?.id || user?.id;
+    if (!agentId) return;
     
     try {
       const [statsResponse, purchasedResponse] = await Promise.all([
-        fetch(`/api/marketplace/stats?agentId=${user.id}`),
-        fetch(`/api/marketplace/purchased?agentId=${user.id}`),
+        fetch(`/api/marketplace/stats?agentId=${agentId}`),
+        fetch(`/api/marketplace/purchased?agentId=${agentId}`),
       ]);
       
       if (!statsResponse.ok || !purchasedResponse.ok) throw new Error('Failed to fetch stats');
@@ -233,7 +234,7 @@ export default function MarketplacePage() {
   useEffect(() => {
     fetchLeads();
     fetchStats();
-  }, [filters, sortBy]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [filters, sortBy, profile?.id, user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Handle filter changes
   const handleFiltersChange = (newFilters: LeadFiltersType) => {
@@ -265,7 +266,8 @@ export default function MarketplacePage() {
 
   // Handle purchase confirmation
   const handlePurchaseConfirm = async () => {
-    if (!selectedLead || !user) return;
+    const agentId = profile?.id || user?.id;
+    if (!selectedLead || !agentId) return;
     
     setIsPurchasing(true);
     
@@ -273,7 +275,7 @@ export default function MarketplacePage() {
       const response = await fetch('/api/marketplace/purchase', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ leadId: selectedLead.id, agentId: user.id }),
+        body: JSON.stringify({ leadId: selectedLead.id, agentId }),
       });
       
       if (!response.ok) {
