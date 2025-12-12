@@ -112,9 +112,6 @@ export default function PackageConfigurationPage() {
         const itineraryData = await itineraryResponse.json();
         setItineraryInfo(itineraryData.itinerary);
 
-        if (itineraryError) throw itineraryError;
-        setItineraryInfo(itineraryData);
-
         // Fetch itinerary item
         const { data: item, error: itemError } = await supabase
           .from('itinerary_items' as any)
