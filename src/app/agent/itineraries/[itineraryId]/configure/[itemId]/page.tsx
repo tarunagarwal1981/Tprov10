@@ -91,16 +91,26 @@ export default function PackageConfigurationPage() {
   // Fetch itinerary item and package data
   useEffect(() => {
     const fetchData = async () => {
-      if (!itemId || !itineraryId) return;
+      if (!itemId || !itineraryId || itemId === 'null' || itemId === 'undefined') {
+        console.error('Invalid itemId or itineraryId:', { itemId, itineraryId });
+        toast.error('Invalid itinerary item. Please try again.');
+        router.push(`/agent/leads`);
+        return;
+      }
 
       setLoading(true);
       try {
-        // Fetch itinerary info (adults, children, infants)
-        const { data: itineraryData, error: itineraryError } = await supabase
-          .from('itineraries' as any)
-          .select('id, lead_id, adults_count, children_count, infants_count')
-          .eq('id', itineraryId)
-          .single();
+        // Fetch itinerary info (adults, children, infants) - use API route instead of Supabase
+        if (!user?.id) {
+          throw new Error('User not authenticated');
+        }
+        
+        const itineraryResponse = await fetch(`/api/itineraries/${itineraryId}?agentId=${user.id}`);
+        if (!itineraryResponse.ok) {
+          throw new Error('Failed to fetch itinerary');
+        }
+        const itineraryData = await itineraryResponse.json();
+        setItineraryInfo(itineraryData.itinerary);
 
         if (itineraryError) throw itineraryError;
         setItineraryInfo(itineraryData);
