@@ -13,9 +13,13 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ itineraryId: string }> }
 ) {
+  let itineraryId: string | undefined;
+  let days: any;
+  
   try {
-    const { itineraryId } = await params;
-    const { days } = await request.json();
+    const paramsResult = await params;
+    itineraryId = paramsResult.itineraryId;
+    days = await request.json();
 
     if (!days || !Array.isArray(days) || days.length === 0) {
       return NextResponse.json(
@@ -124,7 +128,12 @@ export async function POST(
     console.error('Error creating itinerary days:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     const errorStack = error instanceof Error ? error.stack : undefined;
-    console.error('Error details:', { errorMessage, errorStack, itineraryId, daysCount: days?.length });
+    console.error('Error details:', { 
+      errorMessage, 
+      errorStack, 
+      itineraryId: itineraryId || 'unknown', 
+      daysCount: days?.length || 0 
+    });
     
     return NextResponse.json(
       { 
