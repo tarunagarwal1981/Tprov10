@@ -24,8 +24,34 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ purchase });
   } catch (error) {
     console.error('Error purchasing lead:', error);
+    
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    
+    // Handle specific business logic errors with appropriate status codes
+    if (errorMessage.includes('already purchased')) {
+      return NextResponse.json(
+        { error: errorMessage },
+        { status: 409 } // Conflict - resource already exists
+      );
+    }
+    
+    if (errorMessage.includes('not found') || errorMessage.includes('unavailable')) {
+      return NextResponse.json(
+        { error: errorMessage },
+        { status: 404 } // Not Found
+      );
+    }
+    
+    if (errorMessage.includes('expired')) {
+      return NextResponse.json(
+        { error: errorMessage },
+        { status: 410 } // Gone - resource no longer available
+      );
+    }
+    
+    // Default to 500 for unexpected errors
     return NextResponse.json(
-      { error: 'Failed to purchase lead', details: error instanceof Error ? error.message : 'Unknown error' },
+      { error: 'Failed to purchase lead', details: errorMessage },
       { status: 500 }
     );
   }
