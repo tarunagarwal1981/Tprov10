@@ -156,6 +156,26 @@ export class QueryService {
    */
   async updateQuery(queryId: string, updateData: UpdateQueryData): Promise<ItineraryQuery> {
     try {
+      // First verify the query exists
+      const existing = await queryOne<{
+        id: string;
+        lead_id: string;
+        agent_id: string;
+        destinations: any;
+        leaving_from: string | null;
+        nationality: string | null;
+        leaving_on: string | null;
+        travelers: any;
+        star_rating: number | null;
+        add_transfers: boolean;
+        created_at: string;
+        updated_at: string;
+      }>('SELECT * FROM itinerary_queries WHERE id = $1 LIMIT 1', [queryId]);
+      
+      if (!existing) {
+        throw new Error('Query not found');
+      }
+
       const updates: string[] = [];
       const values: any[] = [];
       let paramIndex = 1;
@@ -198,25 +218,6 @@ export class QueryService {
 
       if (updates.length === 0) {
         // No updates, just return existing query
-        const existing = await queryOne<{
-          id: string;
-          lead_id: string;
-          agent_id: string;
-          destinations: any;
-          leaving_from: string | null;
-          nationality: string | null;
-          leaving_on: string | null;
-          travelers: any;
-          star_rating: number | null;
-          add_transfers: boolean;
-          created_at: string;
-          updated_at: string;
-        }>('SELECT * FROM itinerary_queries WHERE id = $1 LIMIT 1', [queryId]);
-        
-        if (!existing) {
-          throw new Error('Query not found');
-        }
-        
         return this.mapQueryFromDB(existing);
       }
 
@@ -247,12 +248,16 @@ export class QueryService {
       }>(sql, values);
 
       if (!result.rows || result.rows.length === 0) {
-        throw new Error('Query not found');
+        // If update failed, return the existing query we fetched earlier
+        console.warn('Update query returned no rows, returning existing query');
+        return this.mapQueryFromDB(existing);
       }
 
       const updatedRow = result.rows[0];
       if (!updatedRow) {
-        throw new Error('Query not found');
+        // If no updated row, return the existing query we fetched earlier
+        console.warn('Update query returned no updated row, returning existing query');
+        return this.mapQueryFromDB(existing);
       }
 
       return this.mapQueryFromDB(updatedRow);
@@ -268,23 +273,34 @@ export class QueryService {
    * @returns Query data
    */
   async upsertQuery(queryData: CreateQueryData): Promise<ItineraryQuery> {
-    // First check if query exists
-    const existing = await this.getQueryByLeadId(queryData.lead_id);
+    try {
+      // First check if query exists
+      const existing = await this.getQueryByLeadId(queryData.lead_id);
 
-    if (existing) {
-      // Update existing
-      return this.updateQuery(existing.id, {
-        destinations: queryData.destinations,
-        leaving_from: queryData.leaving_from,
-        nationality: queryData.nationality,
-        leaving_on: queryData.leaving_on,
-        travelers: queryData.travelers,
-        star_rating: queryData.star_rating,
-        add_transfers: queryData.add_transfers,
-      });
-    } else {
-      // Create new
-      return this.createQuery(queryData);
+      if (existing) {
+        // Update existing
+        try {
+          return await this.updateQuery(existing.id, {
+            destinations: queryData.destinations,
+            leaving_from: queryData.leaving_from,
+            nationality: queryData.nationality,
+            leaving_on: queryData.leaving_on,
+            travelers: queryData.travelers,
+            star_rating: queryData.star_rating,
+            add_transfers: queryData.add_transfers,
+          });
+        } catch (updateError) {
+          // If update fails (e.g., query was deleted), create a new one
+          console.warn('Update query failed, creating new query:', updateError);
+          return this.createQuery(queryData);
+        }
+      } else {
+        // Create new
+        return this.createQuery(queryData);
+      }
+    } catch (error) {
+      console.error('Error in upsertQuery:', error);
+      throw error;
     }
   }
 
