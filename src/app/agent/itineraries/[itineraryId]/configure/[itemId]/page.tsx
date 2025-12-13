@@ -1032,38 +1032,69 @@ export default function PackageConfigurationPage() {
         const existingDay = existingDaysTyped.find((d) => d.day_number === currentDayNumber);
         
         if (existingDay) {
-          // Update existing day
-          const { error: updateDayError } = await supabase
+          // Update existing day - try with time_slots first, fallback without if column doesn't exist
+          const updateData: any = {
+            city_name: day.city_name,
+            time_slots: {
+              morning: { time: '', activities: day.activities.filter(a => a.id).map(a => a.id), transfers: [] },
+              afternoon: { time: '', activities: [], transfers: day.transfers.filter(t => t.id).map(t => t.id) },
+              evening: { time: '', activities: [], transfers: [] },
+            },
+          };
+
+          let { error: updateDayError } = await supabase
             .from('itinerary_days' as any)
-            .update({
-              city_name: day.city_name,
-              time_slots: {
-                morning: { time: '', activities: day.activities.filter(a => a.id).map(a => a.id), transfers: [] },
-                afternoon: { time: '', activities: [], transfers: day.transfers.filter(t => t.id).map(t => t.id) },
-                evening: { time: '', activities: [], transfers: [] },
-              },
-            })
+            .update(updateData)
             .eq('id', existingDay.id);
+
+          // If error is about time_slots column not existing, retry without it
+          if (updateDayError && (updateDayError.message?.includes('time_slots') || updateDayError.code === '42703')) {
+            console.warn('time_slots column not found, updating without it');
+            const { error: retryError } = await supabase
+              .from('itinerary_days' as any)
+              .update({ city_name: day.city_name })
+              .eq('id', existingDay.id);
+            updateDayError = retryError;
+          }
 
           if (updateDayError) throw updateDayError;
           dayIds.push(existingDay.id);
         } else {
-          // Create new day
-          const { data: newDay, error: createDayError } = await supabase
+          // Create new day - try with time_slots first, fallback without if column doesn't exist
+          const insertData: any = {
+            itinerary_id: itineraryId,
+            day_number: currentDayNumber,
+            city_name: day.city_name,
+            display_order: currentDayNumber,
+            time_slots: {
+              morning: { time: '', activities: day.activities.filter(a => a.id).map(a => a.id), transfers: [] },
+              afternoon: { time: '', activities: [], transfers: day.transfers.filter(t => t.id).map(t => t.id) },
+              evening: { time: '', activities: [], transfers: [] },
+            },
+          };
+
+          let { data: newDay, error: createDayError } = await supabase
             .from('itinerary_days' as any)
-            .insert({
-              itinerary_id: itineraryId,
-              day_number: currentDayNumber,
-              city_name: day.city_name,
-              display_order: currentDayNumber,
-              time_slots: {
-                morning: { time: '', activities: day.activities.filter(a => a.id).map(a => a.id), transfers: [] },
-                afternoon: { time: '', activities: [], transfers: day.transfers.filter(t => t.id).map(t => t.id) },
-                evening: { time: '', activities: [], transfers: [] },
-              },
-            })
+            .insert(insertData)
             .select('id')
             .single();
+
+          // If error is about time_slots column not existing, retry without it
+          if (createDayError && (createDayError.message?.includes('time_slots') || createDayError.code === '42703')) {
+            console.warn('time_slots column not found, inserting without it');
+            const { data: retryDay, error: retryError } = await supabase
+              .from('itinerary_days' as any)
+              .insert({
+                itinerary_id: itineraryId,
+                day_number: currentDayNumber,
+                city_name: day.city_name,
+                display_order: currentDayNumber,
+              })
+              .select('id')
+              .single();
+            newDay = retryDay;
+            createDayError = retryError;
+          }
 
           if (createDayError) throw createDayError;
           if (newDay) {
