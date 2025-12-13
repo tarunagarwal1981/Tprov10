@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { User, Mail, Phone, Camera, FileText as FileTextIcon } from 'lucide-react';
 import { useAuth } from '@/context/CognitoAuthContext';
 import { toast } from 'sonner';
+import { getAccessToken } from '@/lib/auth/getAccessToken';
 
 interface AccountDetailsFormProps {
   onComplete: () => void;
@@ -34,10 +35,12 @@ export function AccountDetailsForm({ onComplete }: AccountDetailsFormProps) {
 
   const loadAccountDetails = async () => {
     try {
-      const tokens = localStorage.getItem('cognito_tokens');
-      if (!tokens) return;
+      const accessToken = getAccessToken();
+      if (!accessToken) {
+        console.warn('[AccountDetailsForm] No access token found');
+        return;
+      }
 
-      const { accessToken } = JSON.parse(tokens);
       const response = await fetch('/api/profile/account', {
         method: 'GET',
         headers: {
@@ -69,13 +72,11 @@ export function AccountDetailsForm({ onComplete }: AccountDetailsFormProps) {
     setLoading(true);
 
     try {
-      const tokens = localStorage.getItem('cognito_tokens');
-      if (!tokens) {
+      const accessToken = getAccessToken();
+      if (!accessToken) {
         toast.error('Please login again');
         return;
       }
-
-      const { accessToken } = JSON.parse(tokens);
       const response = await fetch('/api/profile/account', {
         method: 'POST',
         headers: {

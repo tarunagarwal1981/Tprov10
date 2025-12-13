@@ -121,7 +121,7 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
 }
 
 export default function MarketplacePage() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const toast = useToast();
   
   // State management
@@ -198,12 +198,13 @@ export default function MarketplacePage() {
 
   // Fetch stats function
   const fetchStats = async () => {
-    if (!user) return;
+    const agentId = user?.id;
+    if (!agentId) return;
     
     try {
       const [statsResponse, purchasedResponse] = await Promise.all([
-        fetch(`/api/marketplace/stats?agentId=${user.id}`),
-        fetch(`/api/marketplace/purchased?agentId=${user.id}`),
+        fetch(`/api/marketplace/stats?agentId=${agentId}`),
+        fetch(`/api/marketplace/purchased?agentId=${agentId}`),
       ]);
       
       if (!statsResponse.ok || !purchasedResponse.ok) throw new Error('Failed to fetch stats');
@@ -233,7 +234,7 @@ export default function MarketplacePage() {
   useEffect(() => {
     fetchLeads();
     fetchStats();
-  }, [filters, sortBy]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [filters, sortBy, user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Handle filter changes
   const handleFiltersChange = (newFilters: LeadFiltersType) => {
@@ -265,7 +266,8 @@ export default function MarketplacePage() {
 
   // Handle purchase confirmation
   const handlePurchaseConfirm = async () => {
-    if (!selectedLead || !user) return;
+    const agentId = user?.id;
+    if (!selectedLead || !agentId) return;
     
     setIsPurchasing(true);
     
@@ -273,12 +275,18 @@ export default function MarketplacePage() {
       const response = await fetch('/api/marketplace/purchase', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ leadId: selectedLead.id, agentId: user.id }),
+        body: JSON.stringify({ leadId: selectedLead.id, agentId }),
       });
       
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.details || 'Failed to purchase lead');
+        const errorData = await response.json();
+        const errorMessage = errorData.error || errorData.details || 'Failed to purchase lead';
+        
+        // Show error message based on status code
+        // All error types will show the message from the API
+        toast.error(errorMessage);
+        
+        throw new Error(errorMessage);
       }
       
       toast.success(
@@ -293,9 +301,14 @@ export default function MarketplacePage() {
       setSelectedLead(null);
     } catch (err) {
       console.error('Error purchasing lead:', err);
-      toast.error(
-        err instanceof Error ? err.message : 'Failed to purchase lead. Please try again.'
-      );
+      // Error message is already shown in toast above for all cases
+      // Only show a generic error if it's an unexpected network error
+      if (err instanceof Error && !err.message.includes('already purchased') && 
+          !err.message.includes('not found') && !err.message.includes('expired') &&
+          !err.message.includes('unavailable')) {
+        // This is likely a network error or unexpected error
+        // The toast.error above should have already shown the message, but if not, show generic
+      }
     } finally {
       setIsPurchasing(false);
     }

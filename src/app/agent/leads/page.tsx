@@ -24,7 +24,6 @@ import { TripType } from '@/lib/types/marketplace';
 import { useAuth } from '@/context/CognitoAuthContext';
 import { useToast } from '@/hooks/useToast';
 // queryService now accessed via API routes
-import { QueryModal } from '@/components/agent/QueryModal';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -271,27 +270,23 @@ function EmptyState() {
 }
 
 export default function MyLeadsPage() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const toast = useToast();
   const router = useRouter();
   
   const [purchases, setPurchases] = useState<LeadPurchase[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
-  // Query modal state
-  const [queryModalOpen, setQueryModalOpen] = useState(false);
-  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
-  const [queryLoading, setQueryLoading] = useState(false);
 
   const fetchPurchasedLeads = async () => {
-    if (!user?.id) return;
+    const agentId = user?.id;
+    if (!agentId) return;
     
     setLoading(true);
     setError(null);
     
     try {
-      const response = await fetch(`/api/marketplace/purchased?agentId=${user.id}`);
+      const response = await fetch(`/api/marketplace/purchased?agentId=${agentId}`);
       if (!response.ok) throw new Error('Failed to fetch purchased leads');
       const { purchases: data } = await response.json();
       setPurchases(data);
@@ -311,28 +306,8 @@ export default function MyLeadsPage() {
   // Handle Create Itinerary button click
   const handleCreateItinerary = async (leadId: string) => {
     if (!user?.id) return;
-
-    try {
-      // Check if query exists for this lead
-      const response = await fetch(`/api/queries/${leadId}`);
-      if (response.ok) {
-        const { query: existingQuery } = await response.json();
-        if (existingQuery) {
-          // Query exists, navigate to lead detail page
-          router.push(`/agent/leads/${leadId}`);
-          return;
-        }
-      }
-      
-      // No query exists, open query modal
-      setSelectedLeadId(leadId);
-      setQueryModalOpen(true);
-    } catch (err) {
-      console.error('Error checking query:', err);
-      // On error, open modal anyway
-      setSelectedLeadId(leadId);
-      setQueryModalOpen(true);
-    }
+    // Navigate directly to lead detail page - query form will appear when card is clicked
+    router.push(`/agent/leads/${leadId}`);
   };
 
   // Handle query save
@@ -570,20 +545,6 @@ export default function MyLeadsPage() {
         )}
       </div>
 
-      {/* Query Modal */}
-      {selectedLeadId && (
-        <QueryModal
-          isOpen={queryModalOpen}
-          onClose={() => {
-            setQueryModalOpen(false);
-            setSelectedLeadId(null);
-          }}
-          onSave={handleQuerySave}
-          initialData={null}
-          leadId={selectedLeadId}
-          loading={queryLoading}
-        />
-      )}
     </div>
   );
 }

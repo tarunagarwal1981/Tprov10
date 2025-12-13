@@ -75,7 +75,7 @@ async function main() {
 
     const createTableSql = `
       CREATE TABLE IF NOT EXISTS lead_purchases (
-        id UUID PRIMARY KEY,
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         -- We intentionally do NOT add foreign key constraints here because
         -- the referenced tables in RDS may not yet have the required unique
         -- constraints. The application logic already enforces integrity.

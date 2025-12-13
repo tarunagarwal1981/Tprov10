@@ -121,7 +121,7 @@ export class MarketplaceService {
 
       // Fetch lead details
       const dbLead = await queryOne<MarketplaceLeadDB>(
-        'SELECT * FROM lead_marketplace WHERE id = $1',
+        'SELECT * FROM lead_marketplace WHERE id::text = $1',
         [leadId]
       );
 
@@ -159,57 +159,148 @@ export class MarketplaceService {
    */
   static async purchaseLead(leadId: string, agentId: string): Promise<LeadPurchase> {
     try {
+      console.log('[MarketplaceService] purchaseLead called:', { leadId, agentId });
+      
       // First, verify the lead is available
+      console.log('[MarketplaceService] Fetching lead data...');
       const leadData = await queryOne<{
         id: string;
         status: string;
         expires_at: string;
         lead_price: number;
       }>(
-        'SELECT id, status, expires_at, lead_price FROM lead_marketplace WHERE id = $1',
+        'SELECT id, status, expires_at, lead_price FROM lead_marketplace WHERE id::text = $1',
         [leadId]
       );
 
+      console.log('[MarketplaceService] Lead data fetched:', { 
+        found: !!leadData, 
+        status: leadData?.status,
+        expires_at: leadData?.expires_at,
+        lead_price: leadData?.lead_price,
+      });
+
       if (!leadData) {
+        console.log('[MarketplaceService] Lead not found');
         throw new Error('Lead not found or unavailable');
       }
 
       // Check if lead is available
       if (leadData.status !== LeadStatus.AVAILABLE) {
+        console.log('[MarketplaceService] Lead not available, status:', leadData.status);
         throw new Error('Lead is no longer available for purchase');
       }
 
       // Check if lead has expired
-      if (new Date(leadData.expires_at) <= new Date()) {
+      const expiresAt = new Date(leadData.expires_at);
+      const now = new Date();
+      console.log('[MarketplaceService] Checking expiration:', { 
+        expires_at: expiresAt.toISOString(), 
+        now: now.toISOString(),
+        isExpired: expiresAt <= now,
+      });
+      
+      if (expiresAt <= now) {
+        console.log('[MarketplaceService] Lead has expired');
         throw new Error('Lead has expired');
       }
 
       // Check if agent has already purchased this lead
+      console.log('[MarketplaceService] Checking if already purchased...');
       const alreadyPurchased = await this.hasAgentPurchased(leadId, agentId);
+      console.log('[MarketplaceService] Already purchased check result:', alreadyPurchased);
+      
       if (alreadyPurchased) {
+        console.log('[MarketplaceService] Lead already purchased by agent');
         throw new Error('You have already purchased this lead');
       }
 
       // Create purchase record (trigger will update lead status)
-      const purchaseResult = await query<LeadPurchaseDB>(
-        `INSERT INTO lead_purchases (lead_id, agent_id, purchase_price)
-         VALUES ($1, $2, $3)
-         RETURNING *`,
-        [leadId, agentId, leadData.lead_price]
-      );
+      console.log('[MarketplaceService] Creating purchase record...', {
+        leadId,
+        agentId,
+        purchasePrice: leadData.lead_price,
+        leadIdType: typeof leadId,
+        agentIdType: typeof agentId,
+      });
+      
+      try {
+        // Try with UUID casting first
+        let purchaseResult;
+        try {
+          purchaseResult = await query<LeadPurchaseDB>(
+            `INSERT INTO lead_purchases (lead_id, agent_id, purchase_price)
+             VALUES ($1::uuid, $2::uuid, $3)
+             RETURNING *`,
+            [leadId, agentId, leadData.lead_price]
+          );
+        } catch (castError: any) {
+          // If UUID casting fails, try without explicit casting (PostgreSQL might auto-cast)
+          console.log('[MarketplaceService] UUID cast failed, trying without explicit cast:', castError?.message);
+          purchaseResult = await query<LeadPurchaseDB>(
+            `INSERT INTO lead_purchases (lead_id, agent_id, purchase_price)
+             VALUES ($1, $2, $3)
+             RETURNING *`,
+            [leadId, agentId, leadData.lead_price]
+          );
+        }
 
-      if (!purchaseResult.rows || purchaseResult.rows.length === 0) {
-        throw new Error('Purchase failed - no data returned');
+        console.log('[MarketplaceService] Purchase result:', {
+          hasRows: !!purchaseResult.rows,
+          rowCount: purchaseResult.rows?.length || 0,
+        });
+
+        if (!purchaseResult.rows || purchaseResult.rows.length === 0) {
+          console.log('[MarketplaceService] Purchase failed - no rows returned');
+          throw new Error('Purchase failed - no data returned');
+        }
+
+        const purchase = purchaseResult.rows[0];
+        if (!purchase) {
+          console.log('[MarketplaceService] Purchase failed - no purchase data');
+          throw new Error('Purchase failed - no data returned');
+        }
+
+        console.log('[MarketplaceService] Purchase successful:', { purchaseId: purchase.id });
+        return mapLeadPurchaseFromDB(purchase);
+      } catch (dbError: any) {
+        // Check for unique constraint violation (already purchased)
+        const dbErrorMessage = dbError?.message || String(dbError);
+        const dbErrorCode = dbError?.code || dbError?.originalError?.code;
+        const originalError = dbError?.originalError;
+        
+        console.error('[MarketplaceService] Database error during insert:', {
+          error: dbError,
+          errorMessage: dbErrorMessage,
+          errorCode: dbErrorCode,
+          originalError: originalError,
+          errorStack: dbError?.stack,
+        });
+        
+        // Check for PostgreSQL unique constraint violation (code 23505)
+        // or unique constraint name in error message
+        if (dbErrorCode === '23505' || 
+            dbErrorMessage.includes('unique_agent_lead_purchase') || 
+            dbErrorMessage.includes('duplicate key') ||
+            dbErrorMessage.includes('violates unique constraint') ||
+            (originalError && (originalError.code === '23505' || originalError.message?.includes('unique')))) {
+          console.log('[MarketplaceService] Unique constraint violation - lead already purchased');
+          throw new Error('You have already purchased this lead');
+        }
+        
+        // Re-throw other database errors with more context
+        const enhancedError = new Error(`Database error: ${dbErrorMessage}`);
+        (enhancedError as any).code = dbErrorCode;
+        (enhancedError as any).originalError = dbError;
+        throw enhancedError;
       }
-
-      const purchase = purchaseResult.rows[0];
-      if (!purchase) {
-        throw new Error('Purchase failed - no data returned');
-      }
-
-      return mapLeadPurchaseFromDB(purchase);
     } catch (error) {
-      console.error('[MarketplaceService] Error in purchaseLead:', error);
+      console.error('[MarketplaceService] Error in purchaseLead:', {
+        error,
+        errorType: error?.constructor?.name,
+        errorMessage: error instanceof Error ? error.message : String(error),
+        errorStack: error instanceof Error ? error.stack : undefined,
+      });
       throw error;
     }
   }

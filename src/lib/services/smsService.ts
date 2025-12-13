@@ -20,7 +20,7 @@ const snsClient = SMS_PROVIDER === 'aws' ? new SNSClient({
 
 // SNS Topic ARN for SMS (if using topic) or direct SMS
 const SMS_TOPIC_ARN = process.env.SNS_SMS_TOPIC_ARN;
-const SMS_SENDER_ID = process.env.SMS_SENDER_ID || 'TRAVCLAN'; // Max 11 chars
+const SMS_SENDER_ID = process.env.SMS_SENDER_ID || 'Travselbuy'; // Max 11 chars
 
 /**
  * Send OTP via SMS using AWS SNS
