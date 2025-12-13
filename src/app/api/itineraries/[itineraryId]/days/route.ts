@@ -15,15 +15,42 @@ export async function GET(
   try {
     const { itineraryId } = await params;
 
-    // Fetch itinerary days
-    const result = await query<any>(
-      `SELECT * FROM itinerary_days 
-       WHERE itinerary_id::text = $1 
-       ORDER BY day_number ASC`,
-      [itineraryId]
-    );
+    // Fetch itinerary days - explicitly list columns to avoid issues if time_slots doesn't exist
+    // Try with time_slots first, fallback to without if column doesn't exist
+    let result;
+    let hasTimeSlots = true;
 
-    // Ensure time_slots exists for each day
+    try {
+      // First attempt: try selecting with time_slots
+      result = await query<any>(
+        `SELECT id, itinerary_id, day_number, date, city_name, display_order, notes, 
+                created_at, updated_at, time_slots
+         FROM itinerary_days 
+         WHERE itinerary_id::text = $1 
+         ORDER BY day_number ASC`,
+        [itineraryId]
+      );
+    } catch (error: any) {
+      // If error is about time_slots column not existing, retry without it
+      if (error?.message?.includes('time_slots') || error?.code === '42703') {
+        console.warn('time_slots column not found, selecting without it');
+        hasTimeSlots = false;
+        
+        result = await query<any>(
+          `SELECT id, itinerary_id, day_number, date, city_name, display_order, notes, 
+                  created_at, updated_at
+           FROM itinerary_days 
+           WHERE itinerary_id::text = $1 
+           ORDER BY day_number ASC`,
+          [itineraryId]
+        );
+      } else {
+        // Re-throw if it's a different error
+        throw error;
+      }
+    }
+
+    // Ensure time_slots exists for each day (provide default if column doesn't exist or is null)
     const days = result.rows.map((day: any) => ({
       ...day,
       time_slots: day.time_slots || {

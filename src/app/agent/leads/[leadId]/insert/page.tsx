@@ -252,7 +252,14 @@ export default function InsertItineraryPage() {
           return;
         }
 
-        const { item: newItem } = await createItemResponse.json();
+        const responseData = await createItemResponse.json();
+        const newItem = responseData.item;
+
+        if (!newItem || !newItem.id) {
+          console.error('Error creating itinerary item:', { error: 'ID not returned', response: responseData });
+          toast.error('Failed to create itinerary item: ID not returned');
+          return;
+        }
 
         // Navigate directly to configure page
         router.push(`/agent/itineraries/${itineraryId}/configure/${newItem.id}`);
