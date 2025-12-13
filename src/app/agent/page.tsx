@@ -141,7 +141,7 @@ function FeaturedLeadCard({ lead, onBuyNow }: { lead: MarketplaceLead; onBuyNow:
 export default function AgentDashboardPage() {
   const { user } = useAuth();
   
-  console.log('[AgentDashboard] Component rendering', { hasUser: !!user, userId: user?.id });
+  // Component rendering
   
   // Stats state
   const [stats, setStats] = useState({
@@ -156,7 +156,7 @@ export default function AgentDashboardPage() {
   const [loadingStats, setLoadingStats] = useState(true);
   const [loadingLeads, setLoadingLeads] = useState(true);
   
-  console.log('[AgentDashboard] State:', { loadingStats, loadingLeads, statsCount: Object.keys(stats).length, leadsCount: featuredLeads.length });
+  // State initialized
 
   // Fetch marketplace stats
   useEffect(() => {
@@ -164,7 +164,7 @@ export default function AgentDashboardPage() {
       if (!user?.id) return;
       
       try {
-        console.log('[AgentDashboard] Fetching stats for', user.id);
+        // Fetching stats
         const response = await fetch(`/api/marketplace/stats?agentId=${user.id}`);
         if (!response.ok) throw new Error('Failed to fetch stats');
         const { stats: marketplaceStats } = await response.json();
@@ -178,7 +178,7 @@ export default function AgentDashboardPage() {
       } catch (error) {
         console.error('Error fetching marketplace stats:', error);
       } finally {
-        console.log('[AgentDashboard] Stats fetch completed');
+        // Stats fetch completed
         setLoadingStats(false);
       }
     };
@@ -190,7 +190,7 @@ export default function AgentDashboardPage() {
   useEffect(() => {
     const fetchFeaturedLeads = async () => {
       try {
-        console.log('[AgentDashboard] Fetching featured leads');
+        // Fetching featured leads
         const response = await fetch('/api/marketplace/featured?limit=3');
         if (!response.ok) throw new Error('Failed to fetch featured leads');
         const { leads } = await response.json();
@@ -198,7 +198,7 @@ export default function AgentDashboardPage() {
       } catch (error) {
         console.error('Error fetching featured leads:', error);
       } finally {
-        console.log('[AgentDashboard] Featured leads fetch completed');
+        // Featured leads fetch completed
         setLoadingLeads(false);
       }
     };
@@ -211,7 +211,7 @@ export default function AgentDashboardPage() {
     window.location.href = `/agent/marketplace`;
   };
 
-  console.log('[AgentDashboard] Rendering JSX');
+  // Rendering JSX
   
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/30">
