@@ -2,15 +2,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { FiArrowLeft, FiPackage, FiLoader, FiMapPin, FiDollarSign, FiCalendar, FiCheckCircle } from 'react-icons/fi';
+import { motion } from 'framer-motion';
+import { FiArrowLeft, FiPackage, FiLoader, FiMapPin, FiDollarSign, FiCalendar } from 'react-icons/fi';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAuth } from '@/context/CognitoAuthContext';
 import { useToast } from '@/hooks/useToast';
-import { QueryModal } from '@/components/agent/QueryModal';
 // Removed Supabase import - now using AWS API routes
 // queryService and itineraryService now accessed via API routes
 
@@ -48,18 +47,6 @@ export default function InsertItineraryPage() {
   const [loading, setLoading] = useState(true);
   const [queryDestinations, setQueryDestinations] = useState<string[]>([]);
   const [operators, setOperators] = useState<Record<string, OperatorInfo>>({});
-  const [showSimilarPackages, setShowSimilarPackages] = useState(false);
-  const [similarPackagesMultiCity, setSimilarPackagesMultiCity] = useState<{
-    sameCities: MultiCityPackage[];
-    sameCountries: MultiCityPackage[];
-  }>({ sameCities: [], sameCountries: [] });
-  const [similarPackagesMultiCityHotel, setSimilarPackagesMultiCityHotel] = useState<{
-    sameCities: MultiCityPackage[];
-    sameCountries: MultiCityPackage[];
-  }>({ sameCities: [], sameCountries: [] });
-  const [query, setQuery] = useState<any>(null);
-  const [queryModalOpen, setQueryModalOpen] = useState(false);
-  const [queryLoading, setQueryLoading] = useState(false);
 
   // Fetch query destinations
   useEffect(() => {
@@ -68,97 +55,33 @@ export default function InsertItineraryPage() {
     }
   }, [leadId]);
 
-  // Get current similar packages based on active tab
-  const currentSimilarPackages = activeTab === 'multi_city' 
-    ? similarPackagesMultiCity 
-    : similarPackagesMultiCityHotel;
-
   const fetchQueryData = async () => {
     try {
       const response = await fetch(`/api/queries/${leadId}`);
       if (!response.ok) {
-        // No query exists, show query form
-        setQueryModalOpen(true);
-        setLoading(false);
+        toast.error('Failed to load query data');
+        router.push(`/agent/leads/${leadId}`);
         return;
       }
       
-      const { query: queryData } = await response.json();
-      if (queryData && queryData.destinations && queryData.destinations.length > 0) {
-        setQuery(queryData);
-        const cities = queryData.destinations.map((d: any) => d.city);
+      const { query } = await response.json();
+      if (query && query.destinations.length > 0) {
+        const cities = query.destinations.map((d: any) => d.city);
         setQueryDestinations(cities);
-        fetchPackages(queryData.destinations); // Pass full destinations with nights
+        fetchPackages(cities);
       } else {
-        // No query exists, show query form
-        setQueryModalOpen(true);
-        setLoading(false);
+        toast.error('Please create a query first with destinations');
+        router.push(`/agent/leads/${leadId}`);
       }
     } catch (err) {
       console.error('Error fetching query:', err);
-      // On error, show query form
-      setQueryModalOpen(true);
-      setLoading(false);
+      toast.error('Failed to load query data');
+      router.push(`/agent/leads/${leadId}`);
     }
   };
 
-  const handleQuerySave = async (data: {
-    destinations: Array<{ city: string; nights: number }>;
-    leaving_from: string;
-    nationality: string;
-    leaving_on: string;
-    travelers: { rooms: number; adults: number; children: number; infants: number };
-    star_rating?: number;
-    add_transfers: boolean;
-  }) => {
-    if (!user?.id || !leadId) return;
-
-    setQueryLoading(true);
-    try {
-      const response = await fetch(`/api/queries/${leadId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          agent_id: user.id,
-          destinations: data.destinations,
-          leaving_from: data.leaving_from,
-          nationality: data.nationality,
-          leaving_on: data.leaving_on,
-          travelers: data.travelers,
-          star_rating: data.star_rating,
-          add_transfers: data.add_transfers,
-        }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.details || 'Failed to save query');
-      }
-
-      const { query: savedQuery } = await response.json();
-      setQuery(savedQuery);
-      toast.success('Query saved successfully!');
-      setQueryModalOpen(false);
-      
-      // Fetch packages with the new query
-      const cities = savedQuery.destinations.map((d: any) => d.city);
-      setQueryDestinations(cities);
-      fetchPackages(savedQuery.destinations);
-    } catch (err) {
-      console.error('Error saving query:', err);
-      toast.error('Failed to save query. Please try again.');
-      throw err;
-    } finally {
-      setQueryLoading(false);
-    }
-  };
-
-  const fetchPackages = async (destinations: Array<{ city: string; nights: number }>) => {
-    const cities = destinations.map(d => d.city);
+  const fetchPackages = async (cities: string[]) => {
     setLoading(true);
-    setShowSimilarPackages(false);
-    setSimilarPackagesMultiCity({ sameCities: [], sameCountries: [] }); // Reset similar packages
-    setSimilarPackagesMultiCityHotel({ sameCities: [], sameCountries: [] }); // Reset similar packages
     try {
       // Fetch operators info from AWS API
       const operatorsResponse = await fetch('/api/operators');
@@ -175,33 +98,22 @@ export default function InsertItineraryPage() {
         setOperators(operatorsMap);
       }
 
-      // Fetch Multi-City Packages with exact matching
-      const multiCityResponse = await fetch('/api/packages/multi-city/match', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ destinations }),
-      });
-      
+      // Fetch Multi-City Packages from AWS API
+      const citiesParam = cities.join(',');
+      const multiCityResponse = await fetch(`/api/packages/multi-city?cities=${encodeURIComponent(citiesParam)}`);
       if (multiCityResponse.ok) {
-        const { exactMatches, similarMatches } = await multiCityResponse.json();
-        setMultiCityPackages(exactMatches as MultiCityPackage[]);
-        setSimilarPackagesMultiCity(similarMatches);
+        const { packages: multiCityPackages } = await multiCityResponse.json();
+        setMultiCityPackages(multiCityPackages as MultiCityPackage[]);
       } else {
         console.error('Failed to fetch multi-city packages:', await multiCityResponse.text());
         setMultiCityPackages([]);
       }
 
-      // Fetch Multi-City Hotel Packages with exact matching
-      const multiCityHotelResponse = await fetch('/api/packages/multi-city-hotel/match', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ destinations }),
-      });
-      
+      // Fetch Multi-City Hotel Packages from AWS API
+      const multiCityHotelResponse = await fetch(`/api/packages/multi-city-hotel?cities=${encodeURIComponent(citiesParam)}`);
       if (multiCityHotelResponse.ok) {
-        const { exactMatches, similarMatches } = await multiCityHotelResponse.json();
-        setMultiCityHotelPackages(exactMatches as MultiCityPackage[]);
-        setSimilarPackagesMultiCityHotel(similarMatches);
+        const { packages: multiCityHotelPackages } = await multiCityHotelResponse.json();
+        setMultiCityHotelPackages(multiCityHotelPackages as MultiCityPackage[]);
       } else {
         console.error('Failed to fetch multi-city hotel packages:', await multiCityHotelResponse.text());
         setMultiCityHotelPackages([]);
@@ -385,15 +297,7 @@ export default function InsertItineraryPage() {
       </div>
 
       {/* Tabs for Multi-City and Multi-City Hotel */}
-      <Tabs 
-        value={activeTab} 
-        onValueChange={(value) => {
-          setActiveTab(value as 'multi_city' | 'multi_city_hotel');
-          // Reset similar packages when switching tabs
-          setShowSimilarPackages(false);
-        }} 
-        className="w-full"
-      >
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'multi_city' | 'multi_city_hotel')} className="w-full">
         <TabsList className="grid w-full grid-cols-2 mb-6">
           <TabsTrigger value="multi_city">Multi-City Packages</TabsTrigger>
           <TabsTrigger value="multi_city_hotel">Multi-City Hotel Packages</TabsTrigger>
@@ -410,200 +314,90 @@ export default function InsertItineraryPage() {
             <Card>
               <CardContent className="py-12 text-center">
                 <FiPackage className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">No Exact Match Found</h3>
-                <p className="text-gray-600 mb-4">
-                  No multi-city packages exactly match your query destinations: {queryDestinations.join(', ')}
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">No Multi-City Packages Found</h3>
+                <p className="text-gray-600">
+                  No multi-city packages match your query destinations: {queryDestinations.join(', ')}
                 </p>
-                {(currentSimilarPackages.sameCities.length > 0 || currentSimilarPackages.sameCountries.length > 0) && (
-                  <div className="mt-4">
-                    <Button
-                      onClick={() => setShowSimilarPackages(!showSimilarPackages)}
-                      variant="outline"
-                    >
-                      {showSimilarPackages ? 'Hide' : 'Show'} Similar Packages
-                    </Button>
-                  </div>
-                )}
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-4">
-              <Card>
-                <CardContent className="p-0">
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="px-4 py-3">Package Name</TableHead>
-                          <TableHead className="px-4 py-3">Cities (Sequence)</TableHead>
-                          <TableHead className="px-4 py-3">Nights</TableHead>
-                          <TableHead className="px-4 py-3">Operator</TableHead>
-                          <TableHead className="px-4 py-3 text-right">Price</TableHead>
-                          <TableHead className="px-4 py-3 text-center">Action</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {multiCityPackages.map((pkg) => (
-                          <TableRow key={pkg.id}>
-                            <TableCell className="px-4 py-3">
-                              <div className="font-medium text-gray-900">{pkg.title}</div>
-                              {pkg.destination_region && (
-                                <div className="text-xs text-gray-500 mt-1">{pkg.destination_region}</div>
-                              )}
-                            </TableCell>
-                            <TableCell className="px-4 py-3">
-                              <div className="text-sm text-gray-700">
-                                {pkg.cities && pkg.cities.length > 0
-                                  ? pkg.cities.map((c, idx) => (
-                                      <span key={idx}>
-                                        {c.name} ({c.nights}N)
-                                        {idx < pkg.cities!.length - 1 && ' → '}
-                                      </span>
-                                    ))
-                                  : 'N/A'}
-                              </div>
-                            </TableCell>
-                            <TableCell className="px-4 py-3">
-                              <div className="flex items-center gap-1 text-sm text-gray-600">
-                                <FiCalendar className="w-4 h-4" />
-                                <span>{pkg.total_nights} nights</span>
-                              </div>
-                            </TableCell>
-                            <TableCell className="px-4 py-3">
-                              <div className="text-sm text-gray-600">
-                                {operators[pkg.operator_id]?.name || 'Unknown Operator'}
-                              </div>
-                            </TableCell>
-                            <TableCell className="px-4 py-3 text-right">
-                              <div className="text-lg font-bold text-green-600">
-                                {pkg.base_price || pkg.adult_price
-                                  ? `${pkg.currency || 'USD'} ${(pkg.base_price || pkg.adult_price || 0).toLocaleString()}`
-                                  : 'Contact'}
-                              </div>
-                            </TableCell>
-                            <TableCell className="px-4 py-3 text-center">
-                              <Button
-                                size="sm"
-                                onClick={() => handlePackageSelect(pkg.id, 'multi_city')}
-                              >
-                                <FiPackage className="w-4 h-4 mr-2" />
-                                Insert
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </CardContent>
-              </Card>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {multiCityPackages.map((pkg) => (
+                <motion.div
+                  key={pkg.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  whileHover={{ y: -4 }}
+                >
+                  <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer"
+                    onClick={() => handlePackageSelect(pkg.id, 'multi_city')}
+                  >
+                    {pkg.featured_image_url && (
+                      <div className="h-48 overflow-hidden rounded-t-lg">
+                        <img
+                          src={pkg.featured_image_url}
+                          alt={pkg.title}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    )}
+                    <CardHeader>
+                      <CardTitle className="text-lg line-clamp-2">{pkg.title}</CardTitle>
+                      {pkg.destination_region && (
+                        <div className="flex items-center gap-1 text-sm text-gray-600 mt-1">
+                          <FiMapPin className="w-4 h-4" />
+                          <span>{pkg.destination_region}</span>
+                        </div>
+                      )}
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="flex items-center gap-4 text-sm text-gray-600">
+                        <div className="flex items-center gap-1">
+                          <FiCalendar className="w-4 h-4" />
+                          <span>{pkg.total_nights} nights</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <FiMapPin className="w-4 h-4" />
+                          <span>{pkg.total_cities} cities</span>
+                        </div>
+                      </div>
+                      
+                      {pkg.cities && pkg.cities.length > 0 && (
+                        <div className="text-sm">
+                          <span className="font-medium text-gray-700">Cities: </span>
+                          <span className="text-gray-600">{formatCities(pkg.cities)}</span>
+                        </div>
+                      )}
 
-              {/* Similar Packages Section */}
-              {showSimilarPackages && (currentSimilarPackages.sameCities.length > 0 || currentSimilarPackages.sameCountries.length > 0) && (
-                <Card className="border-yellow-200 bg-yellow-50">
-                  <CardHeader>
-                    <CardTitle className="text-lg">Similar Packages</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {currentSimilarPackages.sameCities.length > 0 && (
-                      <div>
-                        <h4 className="font-semibold text-gray-900 mb-2">Same Cities, Different Nights</h4>
-                        <div className="overflow-x-auto">
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead className="px-3 py-2">Package</TableHead>
-                                <TableHead className="px-3 py-2">Cities</TableHead>
-                                <TableHead className="px-3 py-2">Nights</TableHead>
-                                <TableHead className="px-3 py-2 text-right">Price</TableHead>
-                                <TableHead className="px-3 py-2 text-center">Action</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {currentSimilarPackages.sameCities.map((pkg) => (
-                                <TableRow key={pkg.id}>
-                                  <TableCell className="px-3 py-2">{pkg.title}</TableCell>
-                                  <TableCell className="px-3 py-2">
-                                    {pkg.cities?.map((c, idx) => (
-                                      <span key={idx}>
-                                        {c.name} ({c.nights}N)
-                                        {idx < pkg.cities!.length - 1 && ' → '}
-                                      </span>
-                                    ))}
-                                  </TableCell>
-                                  <TableCell className="px-3 py-2">{pkg.total_nights}</TableCell>
-                                  <TableCell className="px-3 py-2 text-right font-semibold text-green-600">
-                                    {pkg.base_price || pkg.adult_price
-                                      ? `${pkg.currency || 'USD'} ${(pkg.base_price || pkg.adult_price || 0).toLocaleString()}`
-                                      : 'Contact'}
-                                  </TableCell>
-                                  <TableCell className="px-3 py-2 text-center">
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => handlePackageSelect(pkg.id, activeTab)}
-                                    >
-                                      Insert
-                                    </Button>
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        </div>
+                      <div className="flex items-center justify-between pt-2 border-t">
+                        <span className="text-sm text-gray-600">Price</span>
+                        <span className="text-xl font-bold text-green-600">
+                          {pkg.base_price || pkg.adult_price
+                            ? `${pkg.currency || 'USD'} ${(pkg.base_price || pkg.adult_price || 0).toLocaleString()}`
+                            : 'Contact for price'}
+                        </span>
                       </div>
-                    )}
-                    {currentSimilarPackages.sameCountries.length > 0 && (
-                      <div>
-                        <h4 className="font-semibold text-gray-900 mb-2">Same Countries</h4>
-                        <div className="overflow-x-auto">
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead>Package</TableHead>
-                                <TableHead>Cities</TableHead>
-                                <TableHead>Nights</TableHead>
-                                <TableHead className="text-right">Price</TableHead>
-                                <TableHead className="text-center">Action</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {currentSimilarPackages.sameCountries.map((pkg) => (
-                                <TableRow key={pkg.id}>
-                                  <TableCell>{pkg.title}</TableCell>
-                                  <TableCell>
-                                    {pkg.cities?.map((c, idx) => (
-                                      <span key={idx}>
-                                        {c.name} ({c.nights}N)
-                                        {idx < pkg.cities!.length - 1 && ' → '}
-                                      </span>
-                                    ))}
-                                  </TableCell>
-                                  <TableCell>{pkg.total_nights}</TableCell>
-                                  <TableCell className="text-right font-semibold text-green-600">
-                                    {pkg.base_price || pkg.adult_price
-                                      ? `${pkg.currency || 'USD'} ${(pkg.base_price || pkg.adult_price || 0).toLocaleString()}`
-                                      : 'Contact'}
-                                  </TableCell>
-                                  <TableCell className="text-center">
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => handlePackageSelect(pkg.id, activeTab)}
-                                    >
-                                      Insert
-                                    </Button>
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
+
+                      {operators[pkg.operator_id] && (
+                        <div className="text-xs text-gray-500">
+                          Operator: {operators[pkg.operator_id]!.name}
                         </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              )}
+                      )}
+
+                      <Button
+                        className="w-full mt-4"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handlePackageSelect(pkg.id, 'multi_city');
+                        }}
+                      >
+                        <FiPackage className="w-4 h-4 mr-2" />
+                        Insert Package
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
             </div>
           )}
         </TabsContent>
@@ -619,219 +413,94 @@ export default function InsertItineraryPage() {
             <Card>
               <CardContent className="py-12 text-center">
                 <FiPackage className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">No Exact Match Found</h3>
-                <p className="text-gray-600 mb-4">
-                  No multi-city hotel packages exactly match your query destinations: {queryDestinations.join(', ')}
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">No Multi-City Hotel Packages Found</h3>
+                <p className="text-gray-600">
+                  No multi-city hotel packages match your query destinations: {queryDestinations.join(', ')}
                 </p>
-                {(currentSimilarPackages.sameCities.length > 0 || currentSimilarPackages.sameCountries.length > 0) && (
-                  <div className="mt-4">
-                    <Button
-                      onClick={() => setShowSimilarPackages(!showSimilarPackages)}
-                      variant="outline"
-                    >
-                      {showSimilarPackages ? 'Hide' : 'Show'} Similar Packages
-                    </Button>
-                  </div>
-                )}
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-4">
-              <Card>
-                <CardContent className="p-0">
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="px-4 py-3">Package Name</TableHead>
-                          <TableHead className="px-4 py-3">Cities (Sequence)</TableHead>
-                          <TableHead className="px-4 py-3">Nights</TableHead>
-                          <TableHead className="px-4 py-3">Operator</TableHead>
-                          <TableHead className="px-4 py-3 text-right">Price</TableHead>
-                          <TableHead className="px-4 py-3 text-center">Action</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {multiCityHotelPackages.map((pkg) => (
-                          <TableRow key={pkg.id}>
-                            <TableCell className="px-4 py-3">
-                              <div className="font-medium text-gray-900">{pkg.title}</div>
-                              {pkg.destination_region && (
-                                <div className="text-xs text-gray-500 mt-1">{pkg.destination_region}</div>
-                              )}
-                            </TableCell>
-                            <TableCell className="px-4 py-3">
-                              <div className="text-sm text-gray-700">
-                                {pkg.cities && pkg.cities.length > 0
-                                  ? pkg.cities.map((c, idx) => (
-                                      <span key={idx}>
-                                        {c.name} ({c.nights}N)
-                                        {idx < pkg.cities!.length - 1 && ' → '}
-                                      </span>
-                                    ))
-                                  : 'N/A'}
-                              </div>
-                            </TableCell>
-                            <TableCell className="px-4 py-3">
-                              <div className="flex items-center gap-1 text-sm text-gray-600">
-                                <FiCalendar className="w-4 h-4" />
-                                <span>{pkg.total_nights} nights</span>
-                              </div>
-                            </TableCell>
-                            <TableCell className="px-4 py-3">
-                              <div className="text-sm text-gray-600">
-                                {operators[pkg.operator_id]?.name || 'Unknown Operator'}
-                              </div>
-                            </TableCell>
-                            <TableCell className="px-4 py-3 text-right">
-                              <div className="text-lg font-bold text-green-600">
-                                {pkg.base_price || pkg.adult_price
-                                  ? `${pkg.currency || 'USD'} ${(pkg.base_price || pkg.adult_price || 0).toLocaleString()}`
-                                  : 'Contact'}
-                              </div>
-                            </TableCell>
-                            <TableCell className="px-4 py-3 text-center">
-                              <Button
-                                size="sm"
-                                onClick={() => handlePackageSelect(pkg.id, 'multi_city_hotel')}
-                              >
-                                <FiPackage className="w-4 h-4 mr-2" />
-                                Insert
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </CardContent>
-              </Card>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {multiCityHotelPackages.map((pkg) => (
+                <motion.div
+                  key={pkg.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  whileHover={{ y: -4 }}
+                >
+                  <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer"
+                    onClick={() => handlePackageSelect(pkg.id, 'multi_city_hotel')}
+                  >
+                    {pkg.featured_image_url && (
+                      <div className="h-48 overflow-hidden rounded-t-lg">
+                        <img
+                          src={pkg.featured_image_url}
+                          alt={pkg.title}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    )}
+                    <CardHeader>
+                      <CardTitle className="text-lg line-clamp-2">{pkg.title}</CardTitle>
+                      {pkg.destination_region && (
+                        <div className="flex items-center gap-1 text-sm text-gray-600 mt-1">
+                          <FiMapPin className="w-4 h-4" />
+                          <span>{pkg.destination_region}</span>
+                        </div>
+                      )}
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="flex items-center gap-4 text-sm text-gray-600">
+                        <div className="flex items-center gap-1">
+                          <FiCalendar className="w-4 h-4" />
+                          <span>{pkg.total_nights} nights</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <FiMapPin className="w-4 h-4" />
+                          <span>{pkg.total_cities} cities</span>
+                        </div>
+                      </div>
+                      
+                      {pkg.cities && pkg.cities.length > 0 && (
+                        <div className="text-sm">
+                          <span className="font-medium text-gray-700">Cities: </span>
+                          <span className="text-gray-600">{formatCities(pkg.cities)}</span>
+                        </div>
+                      )}
 
-              {/* Similar Packages Section */}
-              {showSimilarPackages && (currentSimilarPackages.sameCities.length > 0 || currentSimilarPackages.sameCountries.length > 0) && (
-                <Card className="border-yellow-200 bg-yellow-50">
-                  <CardHeader>
-                    <CardTitle className="text-lg">Similar Packages</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {currentSimilarPackages.sameCities.length > 0 && (
-                      <div>
-                        <h4 className="font-semibold text-gray-900 mb-2">Same Cities, Different Nights</h4>
-                        <div className="overflow-x-auto">
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead>Package</TableHead>
-                                <TableHead>Cities</TableHead>
-                                <TableHead>Nights</TableHead>
-                                <TableHead className="text-right">Price</TableHead>
-                                <TableHead className="text-center">Action</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {currentSimilarPackages.sameCities.map((pkg) => (
-                                <TableRow key={pkg.id}>
-                                  <TableCell>{pkg.title}</TableCell>
-                                  <TableCell>
-                                    {pkg.cities?.map((c, idx) => (
-                                      <span key={idx}>
-                                        {c.name} ({c.nights}N)
-                                        {idx < pkg.cities!.length - 1 && ' → '}
-                                      </span>
-                                    ))}
-                                  </TableCell>
-                                  <TableCell>{pkg.total_nights}</TableCell>
-                                  <TableCell className="text-right font-semibold text-green-600">
-                                    {pkg.base_price || pkg.adult_price
-                                      ? `${pkg.currency || 'USD'} ${(pkg.base_price || pkg.adult_price || 0).toLocaleString()}`
-                                      : 'Contact'}
-                                  </TableCell>
-                                  <TableCell className="text-center">
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => handlePackageSelect(pkg.id, activeTab)}
-                                    >
-                                      Insert
-                                    </Button>
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        </div>
+                      <div className="flex items-center justify-between pt-2 border-t">
+                        <span className="text-sm text-gray-600">Price</span>
+                        <span className="text-xl font-bold text-green-600">
+                          {pkg.base_price || pkg.adult_price
+                            ? `${pkg.currency || 'USD'} ${(pkg.base_price || pkg.adult_price || 0).toLocaleString()}`
+                            : 'Contact for price'}
+                        </span>
                       </div>
-                    )}
-                    {currentSimilarPackages.sameCountries.length > 0 && (
-                      <div>
-                        <h4 className="font-semibold text-gray-900 mb-2">Same Countries</h4>
-                        <div className="overflow-x-auto">
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead className="px-3 py-2">Package</TableHead>
-                                <TableHead className="px-3 py-2">Cities</TableHead>
-                                <TableHead className="px-3 py-2">Nights</TableHead>
-                                <TableHead className="px-3 py-2 text-right">Price</TableHead>
-                                <TableHead className="px-3 py-2 text-center">Action</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {currentSimilarPackages.sameCountries.map((pkg) => (
-                                <TableRow key={pkg.id}>
-                                  <TableCell className="px-3 py-2">{pkg.title}</TableCell>
-                                  <TableCell className="px-3 py-2">
-                                    {pkg.cities?.map((c, idx) => (
-                                      <span key={idx}>
-                                        {c.name} ({c.nights}N)
-                                        {idx < pkg.cities!.length - 1 && ' → '}
-                                      </span>
-                                    ))}
-                                  </TableCell>
-                                  <TableCell className="px-3 py-2">{pkg.total_nights}</TableCell>
-                                  <TableCell className="px-3 py-2 text-right font-semibold text-green-600">
-                                    {pkg.base_price || pkg.adult_price
-                                      ? `${pkg.currency || 'USD'} ${(pkg.base_price || pkg.adult_price || 0).toLocaleString()}`
-                                      : 'Contact'}
-                                  </TableCell>
-                                  <TableCell className="px-3 py-2 text-center">
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => handlePackageSelect(pkg.id, activeTab)}
-                                    >
-                                      Insert
-                                    </Button>
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
+
+                      {operators[pkg.operator_id] && (
+                        <div className="text-xs text-gray-500">
+                          Operator: {operators[pkg.operator_id]!.name}
                         </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              )}
+                      )}
+
+                      <Button
+                        className="w-full mt-4"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handlePackageSelect(pkg.id, 'multi_city_hotel');
+                        }}
+                      >
+                        <FiPackage className="w-4 h-4 mr-2" />
+                        Insert Package
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
             </div>
           )}
         </TabsContent>
       </Tabs>
-
-      {/* Query Modal */}
-      <QueryModal
-        isOpen={queryModalOpen}
-        onClose={() => {
-          setQueryModalOpen(false);
-          if (!query) {
-            router.push(`/agent/leads/${leadId}`);
-          }
-        }}
-        onSave={handleQuerySave}
-        initialData={query}
-        leadId={leadId}
-        loading={queryLoading}
-      />
     </div>
   );
 }
