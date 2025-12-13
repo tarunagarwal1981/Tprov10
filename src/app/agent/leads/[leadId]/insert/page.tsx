@@ -428,11 +428,13 @@ export default function InsertItineraryPage() {
         
         if (!packageResponse.ok) {
           const error = await packageResponse.json();
+          console.error('Error fetching package:', error);
           toast.error(error.error || 'Failed to load package details');
           return;
         }
 
         const { package: pkgData } = await packageResponse.json();
+        console.log('Package data received:', { packageId, packageType, pkgData });
 
         // Get itinerary info for default pricing
         const itineraryResponse = await fetch(`/api/itineraries/${itineraryId}?agentId=${user.id}`);
@@ -442,8 +444,32 @@ export default function InsertItineraryPage() {
           itineraryInfo = itinerary;
         }
 
-        // Calculate default price (use base_price or 0)
-        const defaultPrice = pkgData.base_price || 0;
+        // Calculate default price (use base_price, adult_price, or 0)
+        // Ensure it's a number, not null or undefined
+        const defaultPrice = Number(pkgData.base_price || pkgData.adult_price || 0);
+        
+        // Validate required fields
+        if (!pkgData.operator_id) {
+          console.error('Package missing operator_id:', pkgData);
+          toast.error('Package is missing operator information');
+          return;
+        }
+        
+        if (!pkgData.title) {
+          console.error('Package missing title:', pkgData);
+          toast.error('Package is missing title');
+          return;
+        }
+
+        console.log('Creating item with:', { 
+          itineraryId, 
+          packageId, 
+          packageType, 
+          operatorId: pkgData.operator_id, 
+          packageTitle: pkgData.title,
+          defaultPrice,
+          defaultPriceType: typeof defaultPrice
+        });
 
         // Create itinerary_item with default configuration via API
         const createItemResponse = await fetch(`/api/itineraries/${itineraryId}/items/create`, {
