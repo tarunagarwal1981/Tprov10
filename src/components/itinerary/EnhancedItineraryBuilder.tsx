@@ -169,11 +169,19 @@ export function EnhancedItineraryBuilder({
       return d;
     });
 
-    // Update day in database
-    await supabase
-      .from('itinerary_days' as any)
-      .update({ time_slots: updatedDays.find(d => d.id === selectedDay.id)?.time_slots })
-      .eq('id', selectedDay.id);
+    // Update day in database - handle backward compatibility for time_slots
+    const dayToUpdate = updatedDays.find(d => d.id === selectedDay.id);
+    if (dayToUpdate?.time_slots) {
+      const { error } = await supabase
+        .from('itinerary_days' as any)
+        .update({ time_slots: dayToUpdate.time_slots })
+        .eq('id', selectedDay.id);
+      
+      // If error is about time_slots column not existing, silently ignore (backward compatibility)
+      if (error && !error.message?.includes('time_slots') && error.code !== '42703') {
+        console.error('Error updating day time_slots:', error);
+      }
+    }
 
     onDaysChange(updatedDays);
     onItemsChange([...items, item as unknown as ItineraryItem]);

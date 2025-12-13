@@ -393,13 +393,78 @@ export default function InsertItineraryPage() {
         itineraryId = existingItineraries[0]!.id;
       }
 
-      // Fetch package details
-      const packageResponse = await fetch(`/api/packages/${packageId}?type=${packageType}`);
-      
-      if (!packageResponse.ok) {
-        const error = await packageResponse.json();
-        toast.error(error.error || 'Failed to load package details');
-        return;
+      // For multi-city packages, create itinerary_item immediately and navigate to configure page
+      if (packageType === 'multi_city' || packageType === 'multi_city_hotel') {
+        // Fetch package details from AWS API
+        const packageResponse = await fetch(`/api/packages/${packageId}?type=${packageType}`);
+        
+        if (!packageResponse.ok) {
+          const error = await packageResponse.json();
+          toast.error(error.error || 'Failed to load package details');
+          return;
+        }
+
+        const { package: pkgData } = await packageResponse.json();
+
+        // Get itinerary info for default pricing
+        const itineraryResponse = await fetch(`/api/itineraries/${itineraryId}?agentId=${user.id}`);
+        let itineraryInfo = null;
+        if (itineraryResponse.ok) {
+          const { itinerary } = await itineraryResponse.json();
+          itineraryInfo = itinerary;
+        }
+
+        // Calculate default price (use base_price or 0)
+        const defaultPrice = pkgData.base_price || 0;
+
+        // Create itinerary_item with default configuration via API
+        const createItemResponse = await fetch(`/api/itineraries/${itineraryId}/items/create`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            dayId: null, // Unassigned initially
+            packageType: packageType,
+            packageId: packageId,
+            operatorId: pkgData.operator_id,
+            packageTitle: pkgData.title,
+            packageImageUrl: pkgData.image_url || null,
+            configuration: {
+              pricingType: 'SIC',
+              selectedPricingRowId: null,
+              selectedVehicle: null,
+              quantity: 1,
+              selectedHotels: [],
+              activities: [],
+              transfers: [],
+            },
+            unitPrice: defaultPrice,
+            quantity: 1,
+            displayOrder: 0,
+            notes: null,
+          }),
+        });
+
+        if (!createItemResponse.ok) {
+          const error = await createItemResponse.json();
+          console.error('Error creating itinerary item:', error);
+          toast.error(error.error || 'Failed to create itinerary item');
+          return;
+        }
+
+        const responseData = await createItemResponse.json();
+        const newItem = responseData.item;
+
+        if (!newItem || !newItem.id) {
+          console.error('Error creating itinerary item:', { error: 'ID not returned', response: responseData });
+          toast.error('Failed to create itinerary item: ID not returned');
+          return;
+        }
+
+        // Navigate directly to configure page
+        router.push(`/agent/itineraries/${itineraryId}/configure/${newItem.id}`);
+      } else {
+        // For other packages, navigate to builder (keep existing flow)
+        router.push(`/agent/itineraries/${itineraryId}/builder?packageId=${packageId}&packageType=${packageType}`);
       }
 
       const { package: pkgData } = await packageResponse.json();
