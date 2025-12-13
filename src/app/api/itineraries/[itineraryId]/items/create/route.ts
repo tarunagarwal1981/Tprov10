@@ -111,7 +111,7 @@ export async function POST(
     }
 
     return NextResponse.json({
-      item: { id: itemId },
+      item: { id: createdItem.id },
       created: true,
     });
   } catch (error) {

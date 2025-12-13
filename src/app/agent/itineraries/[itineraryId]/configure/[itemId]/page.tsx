@@ -485,7 +485,7 @@ export default function PackageConfigurationPage() {
 
           // Auto-select transport option if PRIVATE_PACKAGE and no selection exists
           const config = itemTyped.configuration || {};
-          if (!config.selectedPricingRowId && pricingPkg?.pricing_type === 'PRIVATE_PACKAGE' && privateRows.length > 0) {
+          if (!config.selectedPricingRowId && (pricingPkg as any)?.pricing_type === 'PRIVATE_PACKAGE' && privateRows.length > 0) {
             const itineraryTyped = itineraryData as unknown as { adults_count?: number; children_count?: number } | null;
             const adults = itineraryTyped?.adults_count || 0;
             const children = itineraryTyped?.children_count || 0;
@@ -1023,82 +1023,132 @@ export default function PackageConfigurationPage() {
       const dayIds: string[] = [];
       const existingDaysTyped = (existingDays || []) as unknown as Array<{ id: string; day_number: number }>;
       
-      for (const day of days) {
-        // Check if day already exists
-        const existingDay = existingDaysTyped.find((d) => d.day_number === currentDayNumber);
-        
-        if (existingDay) {
-          // Update existing day - try with time_slots first, fallback without if column doesn't exist
-          const updateData: any = {
-            city_name: day.city_name,
-            time_slots: {
-              morning: { time: '', activities: day.activities.filter(a => a.id).map(a => a.id), transfers: [] },
-              afternoon: { time: '', activities: [], transfers: day.transfers.filter(t => t.id).map(t => t.id) },
-              evening: { time: '', activities: [], transfers: [] },
-            },
-          };
+      try {
+        for (const day of days) {
+          // Check if day already exists
+          const existingDay = existingDaysTyped.find((d) => d.day_number === currentDayNumber);
+          
+          if (existingDay) {
+            // Update existing day - try with time_slots first, fallback without if column doesn't exist
+            const updateData: any = {
+              city_name: day.city_name,
+              time_slots: {
+                morning: { time: '', activities: day.activities.filter(a => a.id).map(a => a.id), transfers: [] },
+                afternoon: { time: '', activities: [], transfers: day.transfers.filter(t => t.id).map(t => t.id) },
+                evening: { time: '', activities: [], transfers: [] },
+              },
+            };
 
-          let { error: updateDayError } = await supabase
-            .from('itinerary_days' as any)
-            .update(updateData)
-            .eq('id', existingDay.id);
+            let updateDayError = null;
+            try {
+              const updateResponse = await fetch(`/api/itineraries/${itineraryId}/days/${existingDay.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  cityName: updateData.city_name,
+                  timeSlots: updateData.time_slots,
+                }),
+              });
 
-          // If error is about time_slots column not existing, retry without it
-          if (updateDayError && (updateDayError.message?.includes('time_slots') || updateDayError.code === '42703')) {
-            console.warn('time_slots column not found, updating without it');
-            const { error: retryError } = await supabase
-              .from('itinerary_days' as any)
-              .update({ city_name: day.city_name })
-              .eq('id', existingDay.id);
-            updateDayError = retryError;
+              if (!updateResponse.ok) {
+                const errorData = await updateResponse.json();
+                updateDayError = new Error(errorData.error || 'Failed to update day');
+              }
+            } catch (err) {
+              updateDayError = err instanceof Error ? err : new Error('Failed to update day');
+            }
+
+            // If error is about time_slots column not existing, retry without it
+            if (updateDayError && (updateDayError.message?.includes('time_slots') || (updateDayError as any).code === '42703')) {
+              console.warn('time_slots column not found, updating without it');
+              let retryError = null;
+              try {
+                const retryResponse = await fetch(`/api/itineraries/${itineraryId}/days/${existingDay.id}`, {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    cityName: updateData.city_name,
+                  }),
+                });
+
+                if (!retryResponse.ok) {
+                  const errorData = await retryResponse.json();
+                  retryError = new Error(errorData.error || 'Failed to update day');
+                }
+              } catch (err) {
+                retryError = err instanceof Error ? err : new Error('Failed to update day');
+              }
+
+              if (retryError) {
+                throw retryError;
+              }
+            } else if (updateDayError) {
+              throw updateDayError;
+            }
+            dayIds.push(existingDay.id);
+          } else {
+            // Create new day - try with time_slots first, fallback without if column doesn't exist
+            let createDayError = null;
+            try {
+              const createResponse = await fetch(`/api/itineraries/${itineraryId}/days/create`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  cityName: day.city_name,
+                  dayNumber: currentDayNumber,
+                  timeSlots: {
+                    morning: { time: '', activities: day.activities.filter(a => a.id).map(a => a.id), transfers: [] },
+                    afternoon: { time: '', activities: [], transfers: day.transfers.filter(t => t.id).map(t => t.id) },
+                    evening: { time: '', activities: [], transfers: [] },
+                  },
+                }),
+              });
+
+              if (!createResponse.ok) {
+                const errorData = await createResponse.json();
+                createDayError = new Error(errorData.error || 'Failed to create day');
+              } else {
+                const { day: createdDay } = await createResponse.json();
+                dayIds.push(createdDay.id);
+              }
+            } catch (err) {
+              createDayError = err instanceof Error ? err : new Error('Failed to create day');
+            }
+
+            // If error is about time_slots column not existing, retry without it
+            if (createDayError && (createDayError.message?.includes('time_slots') || (createDayError as any).code === '42703')) {
+              console.warn('time_slots column not found, creating without it');
+              try {
+                const retryResponse = await fetch(`/api/itineraries/${itineraryId}/days/create`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    cityName: day.city_name,
+                    dayNumber: currentDayNumber,
+                  }),
+                });
+
+                if (!retryResponse.ok) {
+                  const errorData = await retryResponse.json();
+                  throw new Error(errorData.error || 'Failed to create day');
+                } else {
+                  const { day: createdDay } = await retryResponse.json();
+                  dayIds.push(createdDay.id);
+                }
+              } catch (err) {
+                throw err instanceof Error ? err : new Error('Failed to create day');
+              }
+            } else if (createDayError) {
+              throw createDayError;
+            }
           }
-
-          if (updateDayError) throw updateDayError;
-          dayIds.push(existingDay.id);
-        } else {
-          // Create new day - try with time_slots first, fallback without if column doesn't exist
-          const insertData: any = {
-            itinerary_id: itineraryId,
-            day_number: currentDayNumber,
-            city_name: day.city_name,
-            display_order: currentDayNumber,
-            time_slots: {
-              morning: { time: '', activities: day.activities.filter(a => a.id).map(a => a.id), transfers: [] },
-              afternoon: { time: '', activities: [], transfers: day.transfers.filter(t => t.id).map(t => t.id) },
-              evening: { time: '', activities: [], transfers: [] },
-            },
-          };
-
-          let { data: newDay, error: createDayError } = await supabase
-            .from('itinerary_days' as any)
-            .insert(insertData)
-            .select('id')
-            .single();
-
-          // If error is about time_slots column not existing, retry without it
-          if (createDayError && (createDayError.message?.includes('time_slots') || createDayError.code === '42703')) {
-            console.warn('time_slots column not found, inserting without it');
-            const { data: retryDay, error: retryError } = await supabase
-              .from('itinerary_days' as any)
-              .insert({
-                itinerary_id: itineraryId,
-                day_number: currentDayNumber,
-                city_name: day.city_name,
-                display_order: currentDayNumber,
-              })
-              .select('id')
-              .single();
-            newDay = retryDay;
-            createDayError = retryError;
-          }
-
-          if (createDayError) throw createDayError;
-          if (newDay) {
-            dayIds.push((newDay as any).id);
-          }
+          
+          currentDayNumber++;
         }
-
-        currentDayNumber++;
+      } catch (err) {
+        console.error('Error saving days:', err);
+        toast.error('Failed to save days');
+        throw err;
       }
 
       // Update itinerary item with first day_id (for reference)
