@@ -9,11 +9,23 @@ export const runtime = 'nodejs';
  * Purchase a lead
  */
 export async function POST(request: NextRequest) {
+  console.log('[Purchase API] POST handler called');
+  
   try {
-    const body = await request.json();
+    console.log('[Purchase API] Parsing request body...');
+    let body;
+    try {
+      body = await request.json();
+    } catch (parseError) {
+      console.error('[Purchase API] Failed to parse request body:', parseError);
+      return NextResponse.json(
+        { error: 'Invalid request body' },
+        { status: 400 }
+      );
+    }
+    
     const { leadId, agentId } = body;
-
-    console.log('[Purchase API] Request received:', { leadId, agentId });
+    console.log('[Purchase API] Request received:', { leadId, agentId, bodyKeys: Object.keys(body || {}) });
 
     if (!leadId || !agentId) {
       console.log('[Purchase API] Missing required fields:', { leadId: !!leadId, agentId: !!agentId });
