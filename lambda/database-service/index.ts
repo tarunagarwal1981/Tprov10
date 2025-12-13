@@ -202,13 +202,25 @@ export const handler = async (event: any) => {
         };
     }
   } catch (error: any) {
-    console.error('[Database] Error:', error);
+    console.error('[Database] Error:', {
+      error,
+      message: error?.message,
+      code: error?.code,
+      name: error?.name,
+      stack: error?.stack,
+      detail: error?.detail,
+      constraint: error?.constraint,
+      table: error?.table,
+      column: error?.column,
+    });
     return {
       statusCode: 500,
       body: JSON.stringify({
         error: 'Database operation failed',
-        message: error.message,
-        code: error.code,
+        message: error?.message || 'Unknown database error',
+        code: error?.code,
+        detail: error?.detail,
+        constraint: error?.constraint,
       }),
     };
   }
