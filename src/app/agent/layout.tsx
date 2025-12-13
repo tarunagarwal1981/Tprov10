@@ -18,7 +18,7 @@ export default function AgentLayout({ children }: { children: React.ReactNode })
   const isOnboardingOrProfile = pathname?.includes('/onboarding') || pathname?.includes('/profile');
 
   useEffect(() => {
-    // Reset redirect flag when pathname changes to onboarding/profile
+    // Reset check flag when pathname changes to onboarding/profile
     if (isOnboardingOrProfile) {
       hasRedirectedRef.current = false;
     }
@@ -37,33 +37,45 @@ export default function AgentLayout({ children }: { children: React.ReactNode })
       return;
     }
 
-    // Prevent multiple redirects
+    // Prevent multiple checks
     if (hasRedirectedRef.current) {
-      // Already redirected, skipping check
+      // Already checked, skipping
       setCheckingProfile(false);
       return;
     }
 
+    // Mark as checked to prevent duplicate runs
+    hasRedirectedRef.current = true;
+
     const checkProfileCompletion = async () => {
       // Checking profile completion
       try {
-        const tokens = localStorage.getItem('cognito_tokens');
-        const phoneSession = localStorage.getItem('phoneAuthSession');
-        
+        // Try to get access token from the same storage keys as CognitoAuthContext
         let accessToken: string | null = null;
-        if (tokens) {
-          try {
-            const parsed = JSON.parse(tokens);
-            accessToken = parsed.accessToken;
-          } catch (e) {
-            // Invalid token format
+        
+        // First try: cognito_access_token (primary storage used by AuthContext)
+        accessToken = localStorage.getItem('cognito_access_token');
+        
+        // Fallback: cognito_tokens (legacy JSON format)
+        if (!accessToken) {
+          const tokens = localStorage.getItem('cognito_tokens');
+          if (tokens) {
+            try {
+              const parsed = JSON.parse(tokens);
+              accessToken = parsed.accessToken;
+            } catch (e) {
+              // Invalid token format
+            }
           }
-        } else if (phoneSession) {
-          accessToken = phoneSession;
+        }
+        
+        // Fallback: phoneAuthSession
+        if (!accessToken) {
+          accessToken = localStorage.getItem('phoneAuthSession');
         }
 
         if (!accessToken) {
-          console.warn('[AgentLayout] No access token found for profile check');
+          // No access token found - skip profile check silently
           setCheckingProfile(false);
           return;
         }

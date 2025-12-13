@@ -10,11 +10,11 @@ interface AgentDashboardLayoutProps {
 }
 
 export function AgentDashboardLayout({ children }: AgentDashboardLayoutProps) {
-  // Rendering layout
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [leftMarginPx, setLeftMarginPx] = useState(280);
   const mainContentRef = useRef<HTMLDivElement>(null);
+  const hasInitializedRef = useRef(false);
 
   const computeSidebarWidth = useCallback(() => (isSidebarCollapsed ? 80 : 280), [isSidebarCollapsed]);
 
@@ -25,6 +25,9 @@ export function AgentDashboardLayout({ children }: AgentDashboardLayoutProps) {
 
   // Initialize collapsed state and margin on mount from persisted preference
   React.useEffect(() => {
+    if (hasInitializedRef.current) return;
+    hasInitializedRef.current = true;
+    
     try {
       const saved = localStorage.getItem("agent-sidebar-collapsed");
       if (saved) {
@@ -84,9 +87,6 @@ export function AgentDashboardLayout({ children }: AgentDashboardLayoutProps) {
     }
   }, [isSidebarCollapsed, leftMarginPx, computeSidebarWidth]);
 
-  useEffect(() => {
-    // Layout mounted, children should render
-  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50">
