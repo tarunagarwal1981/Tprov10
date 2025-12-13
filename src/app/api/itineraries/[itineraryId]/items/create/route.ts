@@ -74,23 +74,13 @@ export async function POST(
     );
 
     if (!insertResult.rows || insertResult.rows.length === 0 || !insertResult.rows[0]) {
-      console.error('Insert result missing rows or first row:', { rows: insertResult.rows });
       return NextResponse.json(
-        { error: 'Failed to create itinerary item: ID not returned' },
+        { error: 'Failed to create itinerary item' },
         { status: 500 }
       );
     }
 
     const createdItem = insertResult.rows[0];
-    
-    if (!createdItem.id) {
-      console.error('Created item missing ID:', createdItem);
-      return NextResponse.json(
-        { error: 'Failed to create itinerary item: ID not returned' },
-        { status: 500 }
-      );
-    }
-
     return NextResponse.json({
       item: { id: createdItem.id },
       created: true,
