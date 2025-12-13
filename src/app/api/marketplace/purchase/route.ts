@@ -33,25 +33,46 @@ export async function POST(request: NextRequest) {
       error,
       errorType: error?.constructor?.name,
       errorMessage: error instanceof Error ? error.message : String(error),
+      errorCode: (error as any)?.code,
+      originalError: (error as any)?.originalError,
       errorStack: error instanceof Error ? error.stack : undefined,
     });
     
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    // Extract error message - check multiple sources
+    let errorMessage = error instanceof Error ? error.message : String(error);
+    const errorCode = (error as any)?.code;
+    const originalError = (error as any)?.originalError;
+    
+    // If there's an originalError, try to get message from there
+    if (originalError) {
+      if (originalError.message) {
+        errorMessage = originalError.message;
+      } else if (originalError.error) {
+        errorMessage = originalError.error;
+      }
+    }
+    
     const lowerErrorMessage = errorMessage.toLowerCase();
     
     console.log('[Purchase API] Error message analysis:', {
       originalMessage: errorMessage,
       lowerMessage: lowerErrorMessage,
-      includesAlreadyPurchased: lowerErrorMessage.includes('already purchased'),
+      errorCode: errorCode,
+      includesAlreadyPurchased: lowerErrorMessage.includes('already purchased') || errorCode === '23505',
       includesNotFound: lowerErrorMessage.includes('not found') || lowerErrorMessage.includes('unavailable'),
       includesExpired: lowerErrorMessage.includes('expired'),
+      includesUniqueConstraint: lowerErrorMessage.includes('unique') || lowerErrorMessage.includes('duplicate'),
     });
     
     // Handle specific business logic errors with appropriate status codes
-    if (lowerErrorMessage.includes('already purchased')) {
-      console.log('[Purchase API] Returning 409 Conflict');
+    // Check for unique constraint violation (PostgreSQL error code 23505)
+    if (lowerErrorMessage.includes('already purchased') || 
+        errorCode === '23505' ||
+        lowerErrorMessage.includes('unique constraint') ||
+        lowerErrorMessage.includes('duplicate key')) {
+      console.log('[Purchase API] Returning 409 Conflict - already purchased');
       return NextResponse.json(
-        { error: errorMessage },
+        { error: 'You have already purchased this lead' },
         { status: 409 } // Conflict - resource already exists
       );
     }

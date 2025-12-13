@@ -251,21 +251,33 @@ export class MarketplaceService {
       } catch (dbError: any) {
         // Check for unique constraint violation (already purchased)
         const dbErrorMessage = dbError?.message || String(dbError);
+        const dbErrorCode = dbError?.code || dbError?.originalError?.code;
+        const originalError = dbError?.originalError;
+        
         console.error('[MarketplaceService] Database error during insert:', {
           error: dbError,
           errorMessage: dbErrorMessage,
-          errorCode: dbError?.code,
+          errorCode: dbErrorCode,
+          originalError: originalError,
+          errorStack: dbError?.stack,
         });
         
-        if (dbErrorMessage.includes('unique_agent_lead_purchase') || 
+        // Check for PostgreSQL unique constraint violation (code 23505)
+        // or unique constraint name in error message
+        if (dbErrorCode === '23505' || 
+            dbErrorMessage.includes('unique_agent_lead_purchase') || 
             dbErrorMessage.includes('duplicate key') ||
-            dbError?.code === '23505') {
+            dbErrorMessage.includes('violates unique constraint') ||
+            (originalError && (originalError.code === '23505' || originalError.message?.includes('unique')))) {
           console.log('[MarketplaceService] Unique constraint violation - lead already purchased');
           throw new Error('You have already purchased this lead');
         }
         
-        // Re-throw other database errors
-        throw dbError;
+        // Re-throw other database errors with more context
+        const enhancedError = new Error(`Database error: ${dbErrorMessage}`);
+        (enhancedError as any).code = dbErrorCode;
+        (enhancedError as any).originalError = dbError;
+        throw enhancedError;
       }
     } catch (error) {
       console.error('[MarketplaceService] Error in purchaseLead:', {

@@ -78,8 +78,17 @@ async function invokeLambda(
     
     if (result.statusCode !== 200) {
       const errorBody = typeof result.body === 'string' ? JSON.parse(result.body) : result.body;
-      console.error(`[Lambda Client] Lambda returned error:`, errorBody);
-      throw new Error(errorBody.message || errorBody.error || 'Lambda invocation failed');
+      console.error(`[Lambda Client] Lambda returned error:`, {
+        statusCode: result.statusCode,
+        errorBody,
+        fullResult: result,
+      });
+      
+      // Create an error object that preserves the original error details
+      const error = new Error(errorBody.message || errorBody.error || 'Lambda invocation failed');
+      (error as any).code = errorBody.code;
+      (error as any).originalError = errorBody;
+      throw error;
     }
     
     const body = typeof result.body === 'string' ? JSON.parse(result.body) : result.body;
