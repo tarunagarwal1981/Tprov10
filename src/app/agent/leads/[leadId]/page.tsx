@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
@@ -52,12 +52,13 @@ export default function LeadDetailPage() {
   const leadId = params.leadId as string;
 
   const [lead, setLead] = useState<LeadDetails | null>(null);
-  const [query, setQuery] = useState<ItineraryQuery | null>(null);
+  const [queries, setQueries] = useState<Record<string, ItineraryQuery>>({}); // Map of itinerary_id -> query
   const [itineraries, setItineraries] = useState<Itinerary[]>([]);
   const [loading, setLoading] = useState(true);
   const [queryModalOpen, setQueryModalOpen] = useState(false);
   const [queryLoading, setQueryLoading] = useState(false);
   const [queryAction, setQueryAction] = useState<'create' | 'insert' | null>(null); // Track which card was clicked
+  const [editingQueryForItinerary, setEditingQueryForItinerary] = useState<string | null>(null); // Track which itinerary's query is being edited
   const sidebarInitialized = React.useRef(false);
 
   // Collapse sidebar by default on this page (only once on initial mount)
@@ -107,19 +108,28 @@ export default function LeadDetailPage() {
 
       setLead(leadData);
 
-      // Fetch query
-      // Fetch query
-      const queryResponse = await fetch(`/api/queries/${leadId}`);
-      if (queryResponse.ok) {
-        const { query: queryData } = await queryResponse.json();
-        setQuery(queryData);
-      }
-
       // Fetch itineraries
       const itinerariesResponse = await fetch(`/api/itineraries/leads/${leadId}`);
       if (itinerariesResponse.ok) {
         const { itineraries: itinerariesData } = await itinerariesResponse.json();
         setItineraries(itinerariesData);
+        
+        // Fetch queries for each itinerary
+        const queriesMap: Record<string, ItineraryQuery> = {};
+        for (const itinerary of itinerariesData) {
+          if (itinerary.query_id) {
+            try {
+              const queryResponse = await fetch(`/api/queries/by-id/${itinerary.query_id}`);
+              if (queryResponse.ok) {
+                const { query: queryData } = await queryResponse.json();
+                queriesMap[itinerary.id] = queryData;
+              }
+            } catch (err) {
+              console.error(`Error fetching query for itinerary ${itinerary.id}:`, err);
+            }
+          }
+        }
+        setQueries(queriesMap);
       }
     } catch (err) {
       console.error('Error fetching lead data:', err);
@@ -129,7 +139,7 @@ export default function LeadDetailPage() {
     }
   };
 
-  // Handle query save
+  // Handle query save - creates a new query and optionally creates/links an itinerary
   const handleQuerySave = async (data: {
     destinations: Array<{ city: string; nights: number }>;
     leaving_from: string;
@@ -143,6 +153,7 @@ export default function LeadDetailPage() {
 
     setQueryLoading(true);
     try {
+      // Create a new query for this itinerary
       const response = await fetch(`/api/queries/${leadId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -164,16 +175,65 @@ export default function LeadDetailPage() {
       }
 
       const { query: savedQuery } = await response.json();
-      setQuery(savedQuery);
-      toast.success('Query updated successfully!');
-      setQueryModalOpen(false);
       
-      // After query is saved, navigate based on which action was clicked
-      if (queryAction === 'insert') {
-        router.push(`/agent/leads/${leadId}/insert`);
-      } else if (queryAction === 'create') {
-        router.push(`/agent/leads/${leadId}/itineraries/new`);
+      // If editing an existing itinerary's query, update the itinerary's query_id
+      if (editingQueryForItinerary) {
+        await fetch(`/api/itineraries/${editingQueryForItinerary}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query_id: savedQuery.id }),
+        });
+        setQueries(prev => ({ ...prev, [editingQueryForItinerary]: savedQuery }));
+        setEditingQueryForItinerary(null);
+        toast.success('Query updated successfully!');
+      } else {
+        // Creating a new itinerary - create itinerary and link query
+        const itineraryResponse = await fetch('/api/itineraries/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            leadId,
+            agentId: user.id,
+            name: queryAction === 'insert' ? 'Insert Itinerary' : 'Create Itinerary',
+            adultsCount: data.travelers.adults,
+            childrenCount: data.travelers.children,
+            infantsCount: data.travelers.infants,
+            queryId: savedQuery.id,
+          }),
+        });
+
+        if (!itineraryResponse.ok) {
+          throw new Error('Failed to create itinerary');
+        }
+
+        const { itinerary } = await itineraryResponse.json();
+        
+        // Update itinerary with query_id
+        await fetch(`/api/itineraries/${itinerary.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query_id: savedQuery.id }),
+        });
+
+        // Refresh itineraries
+        const itinerariesResponse = await fetch(`/api/itineraries/leads/${leadId}`);
+        if (itinerariesResponse.ok) {
+          const { itineraries: itinerariesData } = await itinerariesResponse.json();
+          setItineraries(itinerariesData);
+          setQueries(prev => ({ ...prev, [itinerary.id]: savedQuery }));
+        }
+
+        toast.success('Query and itinerary created successfully!');
+        
+        // Navigate based on action
+        if (queryAction === 'insert') {
+          router.push(`/agent/leads/${leadId}/insert?queryId=${savedQuery.id}&itineraryId=${itinerary.id}`);
+        } else if (queryAction === 'create') {
+          router.push(`/agent/leads/${leadId}/itineraries/new?queryId=${savedQuery.id}&itineraryId=${itinerary.id}`);
+        }
       }
+      
+      setQueryModalOpen(false);
       setQueryAction(null);
     } catch (err) {
       console.error('Error saving query:', err);
@@ -295,72 +355,6 @@ export default function LeadDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Query Details */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">Query Details</CardTitle>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setQueryModalOpen(true)}
-                >
-                  <FiEdit2 className="w-4 h-4 mr-1" />
-                  Edit
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {query ? (
-                <>
-                  {query.destinations.length > 0 && (
-                    <div className="text-sm">
-                      <span className="font-medium text-gray-700">Destinations: </span>
-                      <span className="text-gray-600">{formatDestinations(query.destinations)}</span>
-                    </div>
-                  )}
-                  {query.leaving_from && (
-                    <div className="text-sm">
-                      <span className="font-medium text-gray-700">Leaving From: </span>
-                      <span className="text-gray-600">{query.leaving_from}</span>
-                    </div>
-                  )}
-                  {query.nationality && (
-                    <div className="text-sm">
-                      <span className="font-medium text-gray-700">Nationality: </span>
-                      <span className="text-gray-600">{query.nationality}</span>
-                    </div>
-                  )}
-                  {query.leaving_on && (
-                    <div className="text-sm">
-                      <span className="font-medium text-gray-700">Leaving on: </span>
-                      <span className="text-gray-600">{new Date(query.leaving_on).toLocaleDateString()}</span>
-                    </div>
-                  )}
-                  {query.travelers && (
-                    <div className="text-sm">
-                      <span className="font-medium text-gray-700">Travelers: </span>
-                      <span className="text-gray-600">{formatTravelers(query.travelers)}</span>
-                    </div>
-                  )}
-                  {query.star_rating && (
-                    <div className="text-sm">
-                      <span className="font-medium text-gray-700">Star Rating: </span>
-                      <span className="text-gray-600">{query.star_rating} stars</span>
-                    </div>
-                  )}
-                  <div className="text-sm">
-                    <span className="font-medium text-gray-700">Transfers: </span>
-                    <span className="text-gray-600">{query.add_transfers ? 'Yes' : 'No'}</span>
-                  </div>
-                </>
-              ) : (
-                <div className="text-sm text-gray-500 text-center py-4">
-                  No query data yet. Click Edit to create a query.
-                </div>
-              )}
-            </CardContent>
-          </Card>
         </div>
 
         {/* Right Column - Proposals Section */}
@@ -370,80 +364,125 @@ export default function LeadDetailPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Existing Itineraries */}
-            {itineraries.map((itinerary) => (
-              <Card key={itinerary.id} className="hover:shadow-lg transition-shadow cursor-pointer"
-                onClick={() => router.push(`/agent/itineraries/${itinerary.id}/builder`)}
-              >
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <CardTitle className="text-lg font-semibold line-clamp-1">
-                      {itinerary.name}
-                    </CardTitle>
-                    <Badge variant="secondary">{itinerary.status}</Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center gap-4 text-sm text-gray-600">
-                    <span>{itinerary.adults_count} Adults</span>
-                    {itinerary.children_count > 0 && (
-                      <span>{itinerary.children_count} Children</span>
+            {/* Existing Itineraries - Each with its own query */}
+            {itineraries.map((itinerary) => {
+              const itineraryQuery = queries[itinerary.id];
+              const isInsertItinerary = itinerary.name.toLowerCase().includes('insert');
+              
+              return (
+                <Card key={itinerary.id} className="hover:shadow-lg transition-shadow">
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <CardTitle className="text-lg font-semibold line-clamp-1">
+                        {itinerary.name}
+                      </CardTitle>
+                      <Badge variant="secondary">{itinerary.status}</Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Query Details for this itinerary */}
+                    {itineraryQuery ? (
+                      <div className="bg-gray-50 p-3 rounded-md space-y-2 text-sm">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-medium text-gray-700">Query Details</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingQueryForItinerary(itinerary.id);
+                              setQueryModalOpen(true);
+                            }}
+                          >
+                            <FiEdit2 className="w-3 h-3 mr-1" />
+                            Edit Query
+                          </Button>
+                        </div>
+                        {itineraryQuery.destinations.length > 0 && (
+                          <div>
+                            <span className="font-medium text-gray-600">Destinations: </span>
+                            <span className="text-gray-500">{formatDestinations(itineraryQuery.destinations)}</span>
+                          </div>
+                        )}
+                        {itineraryQuery.travelers && (
+                          <div>
+                            <span className="font-medium text-gray-600">Travelers: </span>
+                            <span className="text-gray-500">{formatTravelers(itineraryQuery.travelers)}</span>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="bg-yellow-50 p-3 rounded-md text-sm text-yellow-700">
+                        No query data. Click &quot;Edit Query&quot; to add query details.
+                      </div>
                     )}
-                  </div>
-                  <div className="flex items-center justify-between pt-2 border-t">
-                    <span className="text-sm text-gray-600">Total Price</span>
-                    <span className="text-xl font-bold text-green-600">
-                      ${itinerary.total_price.toFixed(2)}
-                    </span>
-                  </div>
-                  <div className="flex gap-2 pt-2 border-t" onClick={(e) => e.stopPropagation()}>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => router.push(`/agent/itineraries/${itinerary.id}/builder`)}
-                      className="flex-1"
-                    >
-                      <FiEye className="w-4 h-4 mr-1" />
-                      View
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                    
+                    <div className="flex items-center gap-4 text-sm text-gray-600">
+                      <span>{itinerary.adults_count} Adults</span>
+                      {itinerary.children_count > 0 && (
+                        <span>{itinerary.children_count} Children</span>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between pt-2 border-t">
+                      <span className="text-sm text-gray-600">Total Price</span>
+                      <span className="text-xl font-bold text-green-600">
+                        ${itinerary.total_price.toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex gap-2 pt-2 border-t">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => router.push(`/agent/itineraries/${itinerary.id}/builder`)}
+                        className="flex-1"
+                      >
+                        <FiEye className="w-4 h-4 mr-1" />
+                        View
+                      </Button>
+                      {isInsertItinerary && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => router.push(`/agent/leads/${leadId}/insert?itineraryId=${itinerary.id}&queryId=${itineraryQuery?.id || ''}`)}
+                          className="flex-1"
+                        >
+                          <FiPackage className="w-4 h-4 mr-1" />
+                          Insert Packages
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
 
-            {/* Insert Itinerary Card */}
+            {/* Insert Itinerary Card - Always shows, creates new query + itinerary */}
             <Card className="border-dashed border-2 border-gray-300 hover:border-blue-500 transition-colors cursor-pointer flex items-center justify-center min-h-[200px]"
               onClick={() => {
-                // Check if query exists, if not show query form
-                if (!query) {
-                  setQueryAction('insert');
-                  setQueryModalOpen(true);
-                } else {
-                  router.push(`/agent/leads/${leadId}/insert`);
-                }
+                setQueryAction('insert');
+                setEditingQueryForItinerary(null);
+                setQueryModalOpen(true);
               }}
             >
               <CardContent className="flex flex-col items-center justify-center py-8">
                 <FiPlus className="w-12 h-12 text-gray-400 mb-2" />
                 <p className="text-gray-600 font-medium">Insert Itinerary</p>
+                <p className="text-xs text-gray-400 mt-1">Create new itinerary with packages</p>
               </CardContent>
             </Card>
 
-            {/* Create Itinerary Card */}
+            {/* Create Itinerary Card - Always shows, creates new query + itinerary */}
             <Card className="border-dashed border-2 border-gray-300 hover:border-green-500 transition-colors cursor-pointer flex items-center justify-center min-h-[200px]"
               onClick={() => {
-                // Check if query exists, if not show query form
-                if (!query) {
-                  setQueryAction('create');
-                  setQueryModalOpen(true);
-                } else {
-                  router.push(`/agent/leads/${leadId}/itineraries/new`);
-                }
+                setQueryAction('create');
+                setEditingQueryForItinerary(null);
+                setQueryModalOpen(true);
               }}
             >
               <CardContent className="flex flex-col items-center justify-center py-8">
                 <FiPlus className="w-12 h-12 text-gray-400 mb-2" />
                 <p className="text-gray-600 font-medium">Create Itinerary</p>
+                <p className="text-xs text-gray-400 mt-1">Build custom itinerary from scratch</p>
               </CardContent>
             </Card>
           </div>
@@ -453,9 +492,12 @@ export default function LeadDetailPage() {
       {/* Query Modal */}
       <QueryModal
         isOpen={queryModalOpen}
-        onClose={() => setQueryModalOpen(false)}
+        onClose={() => {
+          setQueryModalOpen(false);
+          setEditingQueryForItinerary(null);
+        }}
         onSave={handleQuerySave}
-        initialData={query}
+        initialData={editingQueryForItinerary ? queries[editingQueryForItinerary] || null : null}
         leadId={leadId}
         loading={queryLoading}
       />
