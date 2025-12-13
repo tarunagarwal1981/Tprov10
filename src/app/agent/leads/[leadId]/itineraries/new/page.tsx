@@ -54,17 +54,17 @@ export default function CreateItineraryPage() {
       if (!leadId || !user?.id) return;
 
       try {
-        // Fetch query data (optional - if not exists, query form will be shown)
+        // Fetch query data first (required for Create Itinerary)
         const queryResponse = await fetch(`/api/queries/${leadId}`);
-        let queryData = null;
-        
-        if (queryResponse.ok) {
-          const result = await queryResponse.json();
-          queryData = result.query;
+        if (!queryResponse.ok) {
+          toast.error('Failed to load query data');
+          router.push(`/agent/leads/${leadId}`);
+          return;
         }
         
-        // If no query exists, redirect back to lead detail page where query form will appear
+        const { query: queryData } = await queryResponse.json();
         if (!queryData || !queryData.destinations || queryData.destinations.length === 0) {
+          toast.error('Please create a query with destinations first');
           router.push(`/agent/leads/${leadId}`);
           return;
         }

@@ -311,8 +311,28 @@ export default function MyLeadsPage() {
   // Handle Create Itinerary button click
   const handleCreateItinerary = async (leadId: string) => {
     if (!user?.id) return;
-    // Navigate directly to lead detail page - query form will appear when card is clicked
-    router.push(`/agent/leads/${leadId}`);
+
+    try {
+      // Check if query exists for this lead
+      const response = await fetch(`/api/queries/${leadId}`);
+      if (response.ok) {
+        const { query: existingQuery } = await response.json();
+        if (existingQuery) {
+          // Query exists, navigate to lead detail page
+          router.push(`/agent/leads/${leadId}`);
+          return;
+        }
+      }
+      
+      // No query exists, open query modal
+      setSelectedLeadId(leadId);
+      setQueryModalOpen(true);
+    } catch (err) {
+      console.error('Error checking query:', err);
+      // On error, open modal anyway
+      setSelectedLeadId(leadId);
+      setQueryModalOpen(true);
+    }
   };
 
   // Handle query save

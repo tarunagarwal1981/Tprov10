@@ -116,7 +116,7 @@ export async function GET(
     // If no day plans, fetch cities as fallback
     let cities: any[] = [];
     let hotels: any[] = [];
-    const hotelsByCity: Record<string, any[]> = {};
+    let hotelsByCity: Record<string, any[]> = {};
 
     if (dayPlans.length === 0) {
       const citiesResult = await query<any>(
@@ -144,7 +144,7 @@ export async function GET(
           if (!hotelsByCity[hotel.city_id]) {
             hotelsByCity[hotel.city_id] = [];
           }
-          hotelsByCity[hotel.city_id]?.push(hotel);
+          hotelsByCity[hotel.city_id].push(hotel);
         });
       }
     }

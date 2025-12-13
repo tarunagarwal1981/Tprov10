@@ -533,29 +533,6 @@ export default function PackageConfigurationPage() {
             private_package_rows: privateRows,
           });
 
-          // Auto-select transport option if PRIVATE_PACKAGE and no selection exists
-          const config = itemTyped.configuration || {};
-          if (!config.selectedPricingRowId && pricingPkg?.pricing_type === 'PRIVATE_PACKAGE' && privateRows.length > 0) {
-            const itineraryTyped = itineraryData as unknown as { adults_count?: number; children_count?: number } | null;
-            const adults = itineraryTyped?.adults_count || 0;
-            const children = itineraryTyped?.children_count || 0;
-            const totalTravelers = adults + children;
-            
-            // Find first vehicle with capacity >= total travelers
-            const suitableVehicle = privateRows.find((row: any) => 
-              row.vehicle_capacity >= totalTravelers
-            );
-            
-            if (suitableVehicle) {
-              setInitialConfig({
-                pricingType: 'PRIVATE_PACKAGE',
-                selectedPricingRowId: suitableVehicle.id,
-                selectedVehicle: suitableVehicle.id,
-                quantity: config.quantity || 1,
-              });
-            }
-          }
-
           // Fetch day plans from the database (not cities - day plans have all the days)
           const { data: dayPlans, error: dayPlansError } = await supabase
             .from('multi_city_package_day_plans' as any)
@@ -1338,30 +1315,17 @@ export default function PackageConfigurationPage() {
                       const isSelected = initialConfig.selectedPricingRowId === row.id;
                       const isMatching = row.number_of_adults === (itineraryInfo?.adults_count || 0) && 
                                         row.number_of_children === (itineraryInfo?.children_count || 0);
-                      
-                      // Calculate total travelers
-                      const totalTravelers = (itineraryInfo?.adults_count || 0) + (itineraryInfo?.children_count || 0);
-                      const hasInsufficientCapacity = row.vehicle_capacity < totalTravelers;
-                      
                       return (
                         <div
                           key={row.id}
-                          onClick={() => {
-                            if (!hasInsufficientCapacity) {
-                              setInitialConfig({ 
-                                ...initialConfig, 
-                                selectedPricingRowId: row.id,
-                                selectedVehicle: row.id,
-                              });
-                            }
-                          }}
-                          className={`p-3 border rounded-lg transition-colors ${
-                            hasInsufficientCapacity 
-                              ? 'opacity-50 cursor-not-allowed bg-gray-100' 
-                              : isSelected 
-                                ? 'border-blue-500 bg-blue-50 cursor-pointer' 
-                                : 'hover:bg-gray-50 cursor-pointer'
-                          } ${isMatching && !hasInsufficientCapacity ? 'ring-2 ring-green-500' : ''}`}
+                          onClick={() => setInitialConfig({ 
+                            ...initialConfig, 
+                            selectedPricingRowId: row.id,
+                            selectedVehicle: row.id,
+                          })}
+                          className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                            isSelected ? 'border-blue-500 bg-blue-50' : 'hover:bg-gray-50'
+                          } ${isMatching ? 'ring-2 ring-green-500' : ''}`}
                         >
                           <div className="flex items-center justify-between">
                             <div>
@@ -1370,12 +1334,7 @@ export default function PackageConfigurationPage() {
                                 Capacity: {row.vehicle_capacity} • {row.number_of_adults} Adult{row.number_of_adults !== 1 ? 's' : ''}
                                 {row.number_of_children > 0 && `, ${row.number_of_children} Child${row.number_of_children !== 1 ? 'ren' : ''}`}
                               </div>
-                              {hasInsufficientCapacity && (
-                                <Badge className="mt-1 bg-red-100 text-red-700">
-                                  Insufficient capacity (needs {totalTravelers}+)
-                                </Badge>
-                              )}
-                              {isMatching && !hasInsufficientCapacity && (
+                              {isMatching && (
                                 <Badge className="mt-1 bg-green-100 text-green-700">Matches your group</Badge>
                               )}
                             </div>
