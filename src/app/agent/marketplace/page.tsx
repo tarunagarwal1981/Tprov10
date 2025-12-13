@@ -279,8 +279,14 @@ export default function MarketplacePage() {
       });
       
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.details || 'Failed to purchase lead');
+        const errorData = await response.json();
+        const errorMessage = errorData.error || errorData.details || 'Failed to purchase lead';
+        
+        // Show error message based on status code
+        // All error types will show the message from the API
+        toast.error(errorMessage);
+        
+        throw new Error(errorMessage);
       }
       
       toast.success(
@@ -295,9 +301,14 @@ export default function MarketplacePage() {
       setSelectedLead(null);
     } catch (err) {
       console.error('Error purchasing lead:', err);
-      toast.error(
-        err instanceof Error ? err.message : 'Failed to purchase lead. Please try again.'
-      );
+      // Error message is already shown in toast above for all cases
+      // Only show a generic error if it's an unexpected network error
+      if (err instanceof Error && !err.message.includes('already purchased') && 
+          !err.message.includes('not found') && !err.message.includes('expired') &&
+          !err.message.includes('unavailable')) {
+        // This is likely a network error or unexpected error
+        // The toast.error above should have already shown the message, but if not, show generic
+      }
     } finally {
       setIsPurchasing(false);
     }
