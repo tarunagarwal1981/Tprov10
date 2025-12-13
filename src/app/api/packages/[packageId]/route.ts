@@ -28,9 +28,10 @@ export async function GET(
       ? 'multi_city_packages' 
       : 'multi_city_hotel_packages';
 
-    // Fetch package details
+    // Fetch package details - use base_price for multi_city, adult_price for multi_city_hotel
+    const priceField = type === 'multi_city' ? 'base_price' : 'adult_price';
     const packageData = await queryOne<any>(
-      `SELECT id, title, operator_id, base_price, currency 
+      `SELECT id, title, operator_id, ${priceField} as base_price, currency 
        FROM ${tableName} 
        WHERE id::text = $1 LIMIT 1`,
       [packageId]

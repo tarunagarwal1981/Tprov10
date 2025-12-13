@@ -124,7 +124,11 @@ export function Header() {
                   <p className="text-sm font-medium text-slate-900">
                     {(user as any)?.name || 'User'}
                   </p>
-                  <p className="text-xs text-slate-500">Tour Operator</p>
+                  <p className="text-xs text-slate-500">
+                    {user?.role === 'TRAVEL_AGENT' ? 'Travel Agent' : 
+                     user?.role === 'TOUR_OPERATOR' ? 'Tour Operator' : 
+                     user?.role || 'User'}
+                  </p>
                 </div>
                 <ChevronDown className="w-4 h-4 text-slate-400" />
               </Button>

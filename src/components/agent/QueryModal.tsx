@@ -190,12 +190,18 @@ export const QueryModal: React.FC<QueryModalProps> = ({
     return parts.join(', ') || '1 room, 2 adults';
   };
 
+  // Determine if modal can be closed (only if query exists or initialData is provided)
+  const canClose = initialData !== null && initialData !== undefined;
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={canClose ? onClose : undefined}>
       <DialogContent 
         size="xl" 
         overlayVariant="subtle"
         className="max-h-[90vh] overflow-y-auto bg-white"
+        preventClose={!canClose}
+        closeOnOverlayClick={canClose}
+        showCloseButton={canClose}
       >
         <DialogHeader>
           <DialogTitle>Create Query</DialogTitle>

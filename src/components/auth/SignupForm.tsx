@@ -275,7 +275,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({
               value={companyName}
               onChange={(e) => setCompanyName(e.target.value)}
               disabled={loading}
-              placeholder="TravClan"
+              placeholder="Enter company name"
               style={{ paddingLeft: '3.5rem', paddingRight: '3rem' }}
               className={`w-full py-3 border rounded-xl focus:outline-none focus:ring-2 transition-all duration-200 ${
                 loading
