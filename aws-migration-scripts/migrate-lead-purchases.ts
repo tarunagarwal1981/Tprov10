@@ -100,7 +100,7 @@ async function main() {
     await invokeQuery(
       `
       CREATE TABLE IF NOT EXISTS lead_purchases (
-        id UUID PRIMARY KEY,
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         -- No foreign key constraints here; see create-lead-purchases-table.ts
         lead_id UUID NOT NULL,
         agent_id UUID NOT NULL,
