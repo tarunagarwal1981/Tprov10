@@ -71,8 +71,77 @@ export default function CreateItineraryPage() {
     }
   }, [leadId, user?.id]);
 
-  const fetchInitialData = async () => {
-    if (!user?.id) return;
+      try {
+        // Fetch query data (optional - if not exists, query form will be shown)
+        const queryResponse = await fetch(`/api/queries/${leadId}`);
+        let queryData = null;
+        
+        if (queryResponse.ok) {
+          const result = await queryResponse.json();
+          queryData = result.query;
+        }
+        
+        // If no query exists, redirect back to lead detail page where query form will appear
+        if (!queryData || !queryData.destinations || queryData.destinations.length === 0) {
+          router.push(`/agent/leads/${leadId}`);
+          return;
+        }
+
+        setQuery(queryData);
+
+        // Fetch lead details from AWS API route
+        const leadResponse = await fetch(`/api/leads/${leadId}?agentId=${user.id}`);
+        
+        if (!leadResponse.ok) {
+          if (leadResponse.status === 404) {
+            throw new Error('Lead not found or you do not have access to it');
+          }
+          throw new Error('Failed to fetch lead details');
+        }
+
+        const { lead: leadDataRaw } = await leadResponse.json();
+
+        if (!leadDataRaw) {
+          throw new Error('Lead not found or you do not have access to it');
+        }
+
+        // Map to LeadDetails format
+        const leadData: LeadDetails = {
+          id: leadDataRaw.id,
+          destination: leadDataRaw.destination,
+          budget_min: leadDataRaw.budgetMin ?? undefined,
+          budget_max: leadDataRaw.budgetMax ?? undefined,
+          duration_days: leadDataRaw.durationDays ?? undefined,
+          travelers_count: leadDataRaw.travelersCount ?? undefined,
+        };
+
+        setLead(leadData);
+        
+        // Pre-fill form with query data
+        const startDateValue = queryData.leaving_on 
+          ? (new Date(queryData.leaving_on).toISOString().split('T')[0] || '')
+          : '';
+        setFormData(prev => ({
+          ...prev,
+          adultsCount: queryData.travelers?.adults || 2,
+          childrenCount: queryData.travelers?.children || 0,
+          infantsCount: queryData.travelers?.infants || 0,
+          startDate: startDateValue,
+        }));
+      } catch (err) {
+        console.error('Error fetching data:', err);
+        toast.error('Failed to load data');
+        router.push(`/agent/leads/${leadId}`);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [leadId, user?.id, router, toast]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     
     setLoading(true);
     try {

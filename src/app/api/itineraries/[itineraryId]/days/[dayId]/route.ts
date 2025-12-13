@@ -13,8 +13,8 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ itineraryId: string; dayId: string }> }
 ) {
+  const { itineraryId, dayId } = await params;
   try {
-    const { itineraryId, dayId } = await params;
     const updates = await request.json();
 
     if (!updates || Object.keys(updates).length === 0) {
@@ -95,7 +95,7 @@ export async function PATCH(
     }
 
     // Fetch time_slots if column exists (with fallback)
-    let day = updateResult.rows[0];
+    const day = updateResult.rows[0];
     try {
       const timeSlotsResult = await query<any>(
         `SELECT time_slots FROM itinerary_days WHERE id::text = $1`,
