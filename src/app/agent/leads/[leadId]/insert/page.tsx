@@ -11,6 +11,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useAuth } from '@/context/CognitoAuthContext';
 import { useToast } from '@/hooks/useToast';
 import { QueryModal } from '@/components/agent/QueryModal';
+import type { ItineraryQuery } from '@/lib/services/queryService';
+import type { PackageTableRow } from '@/components/agent/PackagesTable';
+import { findSimilarPackages } from '@/lib/utils/packageMatching';
 // Removed Supabase import - now using AWS API routes
 // queryService and itineraryService now accessed via API routes
 
@@ -24,6 +27,20 @@ interface LeadDetails {
   budgetMax?: number;
   durationDays?: number;
   travelersCount?: number;
+}
+
+interface MultiCityPackage {
+  id: string;
+  title: string;
+  destination_region: string | null;
+  operator_id: string;
+  base_price: number | null;
+  adult_price: number | null;
+  currency: string;
+  total_nights: number;
+  total_cities: number;
+  featured_image_url?: string;
+  cities?: Array<{ name: string; nights: number; country?: string | null }>;
 }
 
 interface PackageWithCities {
@@ -56,13 +73,17 @@ export default function InsertItineraryPage() {
   
   // State
   const [lead, setLead] = useState<LeadDetails | null>(null);
-  const [query, setQuery] = useState<ItineraryQuery | null>(null);
+  const [query, setQuery] = useState<any>(null);
   const [queryModalOpen, setQueryModalOpen] = useState(false);
   const [queryLoading, setQueryLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [packages, setPackages] = useState<PackageTableRow[]>([]);
   const [operators, setOperators] = useState<Record<string, OperatorInfo>>({});
   const [showSimilarPackages, setShowSimilarPackages] = useState(false);
+  const [activeTab, setActiveTab] = useState<'multi_city' | 'multi_city_hotel'>('multi_city');
+  const [multiCityPackages, setMultiCityPackages] = useState<MultiCityPackage[]>([]);
+  const [multiCityHotelPackages, setMultiCityHotelPackages] = useState<MultiCityPackage[]>([]);
+  const [queryDestinations, setQueryDestinations] = useState<string[]>([]);
   const [similarPackagesMultiCity, setSimilarPackagesMultiCity] = useState<{
     sameCities: MultiCityPackage[];
     sameCountries: MultiCityPackage[];
@@ -71,14 +92,11 @@ export default function InsertItineraryPage() {
     sameCities: MultiCityPackage[];
     sameCountries: MultiCityPackage[];
   }>({ sameCities: [], sameCountries: [] });
-  const [query, setQuery] = useState<any>(null);
-  const [queryModalOpen, setQueryModalOpen] = useState(false);
-  const [queryLoading, setQueryLoading] = useState(false);
 
   // Fetch lead and query data on mount
   useEffect(() => {
     if (leadId && user?.id) {
-      fetchInitialData();
+      fetchQueryData();
     }
   }, [leadId, user?.id]);
 
@@ -219,8 +237,8 @@ export default function InsertItineraryPage() {
         setMultiCityHotelPackages(exactMatches as MultiCityPackage[]);
         setSimilarPackagesMultiCityHotel(similarMatches);
       } else {
-        // No exact matches, show dialog
-        setShowSimilarDialog(true);
+        console.error('Failed to fetch multi-city hotel packages:', await multiCityHotelResponse.text());
+        setMultiCityHotelPackages([]);
       }
     } catch (err) {
       console.error('Error fetching packages:', err);
@@ -233,7 +251,7 @@ export default function InsertItineraryPage() {
   const handleShowSimilar = async () => {
     if (!query) return;
 
-    setShowSimilarDialog(false);
+    setShowSimilarPackages(true);
     setLoading(true);
 
     try {
@@ -255,7 +273,7 @@ export default function InsertItineraryPage() {
       }
 
       // Fetch all packages again (we need all for similar matching)
-      const cities = query.destinations.map(d => d.city);
+      const cities = query.destinations.map((d: any) => d.city);
       const citiesParam = cities.join(',');
 
       const [multiCityResponse, multiCityHotelResponse] = await Promise.all([
@@ -298,7 +316,7 @@ export default function InsertItineraryPage() {
       }));
 
       setPackages(tableRows);
-      setShowingSimilar(true);
+      setShowSimilarPackages(true);
     } catch (err) {
       console.error('Error fetching similar packages:', err);
       toast.error('Failed to load similar packages');
@@ -307,59 +325,6 @@ export default function InsertItineraryPage() {
     }
   };
 
-  const handleDontShowSimilar = () => {
-    setShowSimilarDialog(false);
-    router.push(`/agent/leads/${leadId}`);
-  };
-
-  const handleQuerySave = async (data: {
-    destinations: Array<{ city: string; nights: number }>;
-    leaving_from: string;
-    nationality: string;
-    leaving_on: string;
-    travelers: { rooms: number; adults: number; children: number; infants: number };
-    star_rating?: number;
-    add_transfers: boolean;
-  }) => {
-    if (!user?.id || !leadId) return;
-
-    setQueryLoading(true);
-    try {
-      const response = await fetch(`/api/queries/${leadId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          agent_id: user.id,
-          destinations: data.destinations,
-          leaving_from: data.leaving_from,
-          nationality: data.nationality,
-          leaving_on: data.leaving_on,
-          travelers: data.travelers,
-          star_rating: data.star_rating,
-          add_transfers: data.add_transfers,
-        }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.details || 'Failed to save query');
-      }
-
-      const { query: savedQuery } = await response.json();
-      setQuery(savedQuery);
-      toast.success('Query saved successfully!');
-      setQueryModalOpen(false);
-
-      // Fetch and match packages after query is saved
-      await fetchAndMatchPackages(savedQuery);
-    } catch (err) {
-      console.error('Error saving query:', err);
-      toast.error('Failed to save query. Please try again.');
-      throw err;
-    } finally {
-      setQueryLoading(false);
-    }
-  };
 
   const handlePackageSelect = async (packageId: string, packageType: 'multi_city' | 'multi_city_hotel') => {
     if (!user?.id) return;
@@ -520,62 +485,6 @@ export default function InsertItineraryPage() {
         // For other packages, navigate to builder (keep existing flow)
         router.push(`/agent/itineraries/${itineraryId}/builder?packageId=${packageId}&packageType=${packageType}`);
       }
-
-      const { package: pkgData } = await packageResponse.json();
-
-      // Create itinerary_item
-      const createItemResponse = await fetch(`/api/itineraries/${itineraryId}/items/create`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          dayId: null,
-          packageType: packageType,
-          packageId: packageId,
-          operatorId: pkgData.operator_id,
-          packageTitle: pkgData.title,
-          packageImageUrl: pkgData.image_url || null,
-          configuration: {
-            pricingType: 'SIC',
-            selectedPricingRowId: null,
-            selectedVehicle: null,
-            quantity: 1,
-            selectedHotels: [],
-            activities: [],
-            transfers: [],
-          },
-          unitPrice: pkgData.base_price || 0,
-          quantity: 1,
-          displayOrder: 0,
-          notes: null,
-        }),
-      });
-
-      if (!createItemResponse.ok) {
-        const error = await createItemResponse.json();
-        console.error('Error creating itinerary item:', error);
-        toast.error(error.error || 'Failed to create itinerary item');
-        return;
-      }
-
-      const responseData = await createItemResponse.json();
-      console.log('Item creation response:', responseData);
-      
-      const newItem = responseData.item;
-      
-      if (!newItem) {
-        console.error('Item is missing from response:', responseData);
-        toast.error('Failed to create itinerary item: Item not found in response');
-        return;
-      }
-      
-      if (!newItem.id) {
-        console.error('Item ID is missing:', { newItem, responseData });
-        toast.error('Failed to create itinerary item: Item ID is missing');
-        return;
-      }
-
-      // Navigate to configure page
-      router.push(`/agent/itineraries/${itineraryId}/configure/${newItem.id}`);
     } catch (err) {
       console.error('Error creating/selecting itinerary:', err);
       toast.error('Failed to create itinerary');
@@ -622,10 +531,10 @@ export default function InsertItineraryPage() {
         </Button>
         <h1 className="text-2xl font-bold text-gray-900">Insert Itinerary</h1>
         <p className="text-gray-600 mt-2">
-          {showingSimilar 
+          {showSimilarPackages 
             ? 'Similar packages (exact matches not available)' 
-            : packages.length > 0 
-              ? `Found ${packages.length} matching package${packages.length > 1 ? 's' : ''}`
+            : multiCityPackages.length > 0 || multiCityHotelPackages.length > 0
+              ? `Found ${multiCityPackages.length + multiCityHotelPackages.length} matching package${(multiCityPackages.length + multiCityHotelPackages.length) > 1 ? 's' : ''}`
               : query 
                 ? 'Select a package matching your query'
                 : 'Create a query to find matching packages'}
@@ -854,7 +763,7 @@ export default function InsertItineraryPage() {
               )}
             </div>
           )}
-        </div>
+        </TabsContent>
 
         {/* Multi-City Hotel Packages Tab */}
         <TabsContent value="multi_city_hotel" className="space-y-4">
@@ -1080,6 +989,7 @@ export default function InsertItineraryPage() {
         leadId={leadId}
         loading={queryLoading}
       />
+      </div>
     </div>
   );
 }
