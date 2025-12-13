@@ -57,6 +57,7 @@ export default function LeadDetailPage() {
   const [loading, setLoading] = useState(true);
   const [queryModalOpen, setQueryModalOpen] = useState(false);
   const [queryLoading, setQueryLoading] = useState(false);
+  const [queryAction, setQueryAction] = useState<'create' | 'insert' | null>(null); // Track which card was clicked
   const sidebarInitialized = React.useRef(false);
 
   // Collapse sidebar by default on this page (only once on initial mount)
@@ -166,6 +167,14 @@ export default function LeadDetailPage() {
       setQuery(savedQuery);
       toast.success('Query updated successfully!');
       setQueryModalOpen(false);
+      
+      // After query is saved, navigate based on which action was clicked
+      if (queryAction === 'insert') {
+        router.push(`/agent/leads/${leadId}/insert`);
+      } else if (queryAction === 'create') {
+        router.push(`/agent/leads/${leadId}/itineraries/new`);
+      }
+      setQueryAction(null);
     } catch (err) {
       console.error('Error saving query:', err);
       toast.error('Failed to save query. Please try again.');
@@ -405,7 +414,13 @@ export default function LeadDetailPage() {
             {/* Insert Itinerary Card */}
             <Card className="border-dashed border-2 border-gray-300 hover:border-blue-500 transition-colors cursor-pointer flex items-center justify-center min-h-[200px]"
               onClick={() => {
-                router.push(`/agent/leads/${leadId}/insert`);
+                // Check if query exists, if not show query form
+                if (!query) {
+                  setQueryAction('insert');
+                  setQueryModalOpen(true);
+                } else {
+                  router.push(`/agent/leads/${leadId}/insert`);
+                }
               }}
             >
               <CardContent className="flex flex-col items-center justify-center py-8">
@@ -417,7 +432,13 @@ export default function LeadDetailPage() {
             {/* Create Itinerary Card */}
             <Card className="border-dashed border-2 border-gray-300 hover:border-green-500 transition-colors cursor-pointer flex items-center justify-center min-h-[200px]"
               onClick={() => {
-                router.push(`/agent/leads/${leadId}/itineraries/new`);
+                // Check if query exists, if not show query form
+                if (!query) {
+                  setQueryAction('create');
+                  setQueryModalOpen(true);
+                } else {
+                  router.push(`/agent/leads/${leadId}/itineraries/new`);
+                }
               }}
             >
               <CardContent className="flex flex-col items-center justify-center py-8">
