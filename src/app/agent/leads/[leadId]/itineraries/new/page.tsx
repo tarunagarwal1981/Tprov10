@@ -509,12 +509,20 @@ export default function CreateItineraryPage() {
 
       const responseData = await createItemResponse.json();
       console.log('Item creation response:', responseData);
+      console.log('Item object:', responseData.item);
+      console.log('Item ID:', responseData.item?.id);
       
       const newItem = responseData.item;
       
-      if (!newItem || !newItem.id) {
-        console.error('Invalid item response:', responseData);
-        toast.error('Failed to create itinerary item: Invalid response');
+      if (!newItem) {
+        console.error('Item is missing from response:', responseData);
+        toast.error('Failed to create itinerary item: Item not found in response');
+        return;
+      }
+      
+      if (!newItem.id) {
+        console.error('Item ID is missing:', { newItem, responseData });
+        toast.error('Failed to create itinerary item: Item ID is missing');
         return;
       }
 
