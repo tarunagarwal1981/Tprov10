@@ -65,6 +65,7 @@ export async function PATCH(
       totalPrice,
       status,
       notes,
+      queryId,
     } = body;
 
     // Build update query dynamically
@@ -85,6 +86,11 @@ export async function PATCH(
     if (notes !== undefined) {
       updates.push(`notes = $${paramIndex++}`);
       values.push(notes);
+    }
+
+    if (queryId !== undefined) {
+      updates.push(`query_id = $${paramIndex++}`);
+      values.push(queryId);
     }
 
     if (updates.length === 0) {

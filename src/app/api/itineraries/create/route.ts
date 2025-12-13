@@ -20,6 +20,7 @@ export async function POST(request: NextRequest) {
       infantsCount = 0,
       startDate = null,
       endDate = null,
+      queryId = null,
     } = await request.json();
 
     if (!leadId || !agentId) {
@@ -29,27 +30,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if itinerary already exists for this lead
-    const existingResult = await query<{ id: string }>(
-      `SELECT id FROM itineraries 
-       WHERE lead_id::text = $1 AND agent_id::text = $2 
-       ORDER BY created_at DESC LIMIT 1`,
-      [leadId, agentId]
-    );
-
-    if (existingResult.rows && existingResult.rows.length > 0 && existingResult.rows[0]) {
-      return NextResponse.json({
-        itinerary: { id: existingResult.rows[0].id },
-        created: false,
-      });
-    }
-
-    // Create new itinerary
+    // Create new itinerary (allow multiple itineraries per lead)
     const insertResult = await query<{ id: string }>(
       `INSERT INTO itineraries (
         lead_id, agent_id, name, adults_count, children_count, 
-        infants_count, start_date, end_date, status, total_price, currency
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        infants_count, start_date, end_date, status, total_price, currency, query_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
       RETURNING id`,
       [
         leadId,
@@ -63,6 +49,7 @@ export async function POST(request: NextRequest) {
         'draft',
         0,
         'USD',
+        queryId,
       ]
     );
 

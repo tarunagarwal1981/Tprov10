@@ -60,6 +60,40 @@ export interface UpdateQueryData {
 
 export class QueryService {
   /**
+   * Get query by ID
+   * @param queryId - Query ID
+   * @returns Query data or null if not found
+   */
+  async getQueryById(queryId: string): Promise<ItineraryQuery | null> {
+    try {
+      const row = await queryOne<{
+        id: string;
+        lead_id: string;
+        agent_id: string;
+        destinations: any;
+        leaving_from: string | null;
+        nationality: string | null;
+        leaving_on: string | null;
+        travelers: any;
+        star_rating: number | null;
+        add_transfers: boolean;
+        created_at: string;
+        updated_at: string;
+      }>(
+        'SELECT * FROM itinerary_queries WHERE id = $1 LIMIT 1',
+        [queryId]
+      );
+
+      if (!row) return null;
+
+      return this.mapQueryFromDB(row);
+    } catch (error) {
+      console.error('Error fetching query:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Get query for a lead
    * @param leadId - Lead ID
    * @returns Query data or null if not found
