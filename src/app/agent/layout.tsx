@@ -32,26 +32,20 @@ export default function AgentLayout({ children }: { children: React.ReactNode })
       user.role !== 'TRAVEL_AGENT' ||
       isOnboardingOrProfile
     ) {
-      console.log('[AgentLayout] Skipping profile check', {
-        isInitialized,
-        hasUser: !!user,
-        role: user?.role,
-        pathname,
-        isOnboardingOrProfile,
-      });
+      // Skipping profile check
       setCheckingProfile(false);
       return;
     }
 
     // Prevent multiple redirects
     if (hasRedirectedRef.current) {
-      console.log('[AgentLayout] Already redirected, skipping check');
+      // Already redirected, skipping check
       setCheckingProfile(false);
       return;
     }
 
     const checkProfileCompletion = async () => {
-      console.log('[AgentLayout] Checking profile completion...');
+      // Checking profile completion
       try {
         const tokens = localStorage.getItem('cognito_tokens');
         const phoneSession = localStorage.getItem('phoneAuthSession');
@@ -74,7 +68,7 @@ export default function AgentLayout({ children }: { children: React.ReactNode })
           return;
         }
 
-        console.log('[AgentLayout] Calling /api/user/profile', { userId: user.id, email: user.email });
+        // Calling /api/user/profile
         const response = await fetch('/api/user/profile', {
           method: 'POST',
           headers: {
@@ -96,20 +90,10 @@ export default function AgentLayout({ children }: { children: React.ReactNode })
             const completionPercentage = profile.profile_completion_percentage || 0;
             const onboardingCompleted = profile.onboarding_completed || false;
 
-            // Log profile completion status but don't redirect (relaxed guard)
-            console.log('[AgentLayout] Profile status', {
-              completionPercentage,
-              onboardingCompleted,
-              currentPath: pathname,
-              note: 'Onboarding guard relaxed - dashboard accessible even if incomplete',
-            });
+            // Profile status checked (onboarding guard relaxed)
             // Note: We're not redirecting anymore - users can access dashboard even with incomplete profile
           } else {
-            // No profile found - log but don't redirect
-            console.log('[AgentLayout] No profile found', {
-              currentPath: pathname,
-              note: 'Onboarding guard relaxed - dashboard accessible',
-            });
+            // No profile found (onboarding guard relaxed)
           }
         } else {
           const text = await response.text().catch(() => '');
@@ -118,16 +102,16 @@ export default function AgentLayout({ children }: { children: React.ReactNode })
       } catch (error) {
         console.error('Profile completion check error:', error);
       } finally {
-        console.log('[AgentLayout] Profile check done');
+        // Profile check done
         setCheckingProfile(false);
       }
     };
 
     checkProfileCompletion();
-  }, [user, isInitialized, pathname, router, isOnboardingOrProfile]);
+  }, [user, isInitialized, pathname, isOnboardingOrProfile]);
 
   if (checkingProfile) {
-    console.log('[AgentLayout] Still checking profile, showing spinner');
+    // Still checking profile, showing spinner
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FF6B35]"></div>
@@ -135,11 +119,7 @@ export default function AgentLayout({ children }: { children: React.ReactNode })
     );
   }
 
-  console.log('[AgentLayout] Profile check complete, rendering children', {
-    hasUser: !!user,
-    pathname,
-    isOnboardingOrProfile,
-  });
+  // Profile check complete, rendering children
 
   return (
     <ProtectedRoute requiredRoles={AGENT_ROLES}>
