@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import AgentSidebar from './AgentSidebar';
 import { Header } from './Header';
@@ -9,7 +9,7 @@ interface AgentDashboardLayoutProps {
   children: React.ReactNode;
 }
 
-export function AgentDashboardLayout({ children }: AgentDashboardLayoutProps) {
+export const AgentDashboardLayout = memo(function AgentDashboardLayout({ children }: AgentDashboardLayoutProps) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [leftMarginPx, setLeftMarginPx] = useState(280);
@@ -125,5 +125,5 @@ export function AgentDashboardLayout({ children }: AgentDashboardLayoutProps) {
       </AnimatePresence>
     </div>
   );
-}
+});
 
