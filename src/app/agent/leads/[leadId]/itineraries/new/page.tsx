@@ -66,11 +66,9 @@ export default function CreateItineraryPage() {
 
   // Fetch lead and query data on mount
   useEffect(() => {
-    if (leadId && user?.id) {
-      fetchInitialData();
-    }
-  }, [leadId, user?.id]);
-
+    const fetchData = async () => {
+      if (!leadId || !user?.id) return;
+      
       try {
         // Fetch query data (optional - if not exists, query form will be shown)
         const queryResponse = await fetch(`/api/queries/${leadId}`);
@@ -109,25 +107,13 @@ export default function CreateItineraryPage() {
         const leadData: LeadDetails = {
           id: leadDataRaw.id,
           destination: leadDataRaw.destination,
-          budget_min: leadDataRaw.budgetMin ?? undefined,
-          budget_max: leadDataRaw.budgetMax ?? undefined,
-          duration_days: leadDataRaw.durationDays ?? undefined,
-          travelers_count: leadDataRaw.travelersCount ?? undefined,
+          budgetMin: leadDataRaw.budgetMin ?? undefined,
+          budgetMax: leadDataRaw.budgetMax ?? undefined,
+          durationDays: leadDataRaw.durationDays ?? undefined,
+          travelersCount: leadDataRaw.travelersCount ?? undefined,
         };
 
         setLead(leadData);
-        
-        // Pre-fill form with query data
-        const startDateValue = queryData.leaving_on 
-          ? (new Date(queryData.leaving_on).toISOString().split('T')[0] || '')
-          : '';
-        setFormData(prev => ({
-          ...prev,
-          adultsCount: queryData.travelers?.adults || 2,
-          childrenCount: queryData.travelers?.children || 0,
-          infantsCount: queryData.travelers?.infants || 0,
-          startDate: startDateValue,
-        }));
       } catch (err) {
         console.error('Error fetching data:', err);
         toast.error('Failed to load data');
@@ -142,6 +128,8 @@ export default function CreateItineraryPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!user?.id) return;
     
     setLoading(true);
     try {

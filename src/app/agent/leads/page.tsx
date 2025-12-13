@@ -310,58 +310,6 @@ export default function MyLeadsPage() {
     router.push(`/agent/leads/${leadId}`);
   };
 
-  // Handle query save
-  const handleQuerySave = async (data: {
-    destinations: Array<{ city: string; nights: number }>;
-    leaving_from: string;
-    nationality: string;
-    leaving_on: string;
-    travelers: { rooms: number; adults: number; children: number; infants: number };
-    star_rating?: number;
-    add_transfers: boolean;
-  }) => {
-    if (!user?.id || !selectedLeadId) return;
-
-    setQueryLoading(true);
-    try {
-      const response = await fetch(`/api/queries/${selectedLeadId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          agent_id: user.id,
-          destinations: data.destinations,
-          leaving_from: data.leaving_from,
-          nationality: data.nationality,
-          leaving_on: data.leaving_on,
-          travelers: data.travelers,
-          star_rating: data.star_rating,
-          add_transfers: data.add_transfers,
-        }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.details || 'Failed to save query');
-      }
-
-      toast.success('Query saved successfully!');
-      
-      // Save leadId before clearing state
-      const savedLeadId = selectedLeadId;
-      
-      setQueryModalOpen(false);
-      setSelectedLeadId(null);
-      
-      // Navigate to lead detail page
-      router.push(`/agent/leads/${savedLeadId}`);
-    } catch (err) {
-      console.error('Error saving query:', err);
-      toast.error('Failed to save query. Please try again.');
-      throw err;
-    } finally {
-      setQueryLoading(false);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/30">
