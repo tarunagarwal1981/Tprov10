@@ -438,7 +438,22 @@ export default function InsertItineraryPage() {
         return;
       }
 
-      const { item: newItem } = await createItemResponse.json();
+      const responseData = await createItemResponse.json();
+      console.log('Item creation response:', responseData);
+      
+      const newItem = responseData.item;
+      
+      if (!newItem) {
+        console.error('Item is missing from response:', responseData);
+        toast.error('Failed to create itinerary item: Item not found in response');
+        return;
+      }
+      
+      if (!newItem.id) {
+        console.error('Item ID is missing:', { newItem, responseData });
+        toast.error('Failed to create itinerary item: Item ID is missing');
+        return;
+      }
 
       // Navigate to configure page
       router.push(`/agent/itineraries/${itineraryId}/configure/${newItem.id}`);

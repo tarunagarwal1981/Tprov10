@@ -233,3 +233,4 @@ Display in UI
 - Multi-City Hotel API: `src/app/api/packages/multi-city-hotel/route.ts`
 - Database Schema: `supabase_schema.sql` (lines 275-285, 397-406)
 
+ 

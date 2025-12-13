@@ -74,6 +74,7 @@ export async function POST(
     );
 
     if (!insertResult.rows || insertResult.rows.length === 0 || !insertResult.rows[0]) {
+      console.error('No rows returned from insert:', { insertResult });
       return NextResponse.json(
         { error: 'Failed to create itinerary item' },
         { status: 500 }
@@ -81,8 +82,21 @@ export async function POST(
     }
 
     const createdItem = insertResult.rows[0];
+    console.log('Created item from database:', createdItem);
+    
+    if (!createdItem.id) {
+      console.error('Item ID is missing from database response:', { createdItem, insertResult });
+      return NextResponse.json(
+        { error: 'Failed to create itinerary item: ID not returned' },
+        { status: 500 }
+      );
+    }
+
+    // Ensure ID is a string (UUID might be returned as object in some cases)
+    const itemId = String(createdItem.id);
+    
     return NextResponse.json({
-      item: { id: createdItem.id },
+      item: { id: itemId },
       created: true,
     });
   } catch (error) {
