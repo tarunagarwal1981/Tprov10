@@ -95,8 +95,28 @@ export async function POST(request: NextRequest) {
     
     // Default to 500 for unexpected errors
     console.log('[Purchase API] Returning 500 Internal Server Error');
+    console.log('[Purchase API] Full error details for debugging:', {
+      error,
+      errorMessage,
+      errorCode,
+      originalError,
+      errorType: error?.constructor?.name,
+    });
+    
+    // Return the actual error message in development/staging for debugging
+    const isDevelopment = process.env.NODE_ENV === 'development' || 
+                         process.env.NEXT_PUBLIC_ENV === 'development' ||
+                         process.env.AMPLIFY_ENV === 'dev';
+    
     return NextResponse.json(
-      { error: 'Failed to purchase lead', details: errorMessage },
+      { 
+        error: isDevelopment ? errorMessage : 'Failed to purchase lead',
+        details: isDevelopment ? {
+          message: errorMessage,
+          code: errorCode,
+          type: error?.constructor?.name,
+        } : undefined
+      },
       { status: 500 }
     );
   }

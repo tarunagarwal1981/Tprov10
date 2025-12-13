@@ -220,15 +220,30 @@ export class MarketplaceService {
         leadId,
         agentId,
         purchasePrice: leadData.lead_price,
+        leadIdType: typeof leadId,
+        agentIdType: typeof agentId,
       });
       
       try {
-        const purchaseResult = await query<LeadPurchaseDB>(
-          `INSERT INTO lead_purchases (lead_id, agent_id, purchase_price)
-           VALUES ($1::uuid, $2::uuid, $3)
-           RETURNING *`,
-          [leadId, agentId, leadData.lead_price]
-        );
+        // Try with UUID casting first
+        let purchaseResult;
+        try {
+          purchaseResult = await query<LeadPurchaseDB>(
+            `INSERT INTO lead_purchases (lead_id, agent_id, purchase_price)
+             VALUES ($1::uuid, $2::uuid, $3)
+             RETURNING *`,
+            [leadId, agentId, leadData.lead_price]
+          );
+        } catch (castError: any) {
+          // If UUID casting fails, try without explicit casting (PostgreSQL might auto-cast)
+          console.log('[MarketplaceService] UUID cast failed, trying without explicit cast:', castError?.message);
+          purchaseResult = await query<LeadPurchaseDB>(
+            `INSERT INTO lead_purchases (lead_id, agent_id, purchase_price)
+             VALUES ($1, $2, $3)
+             RETURNING *`,
+            [leadId, agentId, leadData.lead_price]
+          );
+        }
 
         console.log('[MarketplaceService] Purchase result:', {
           hasRows: !!purchaseResult.rows,
