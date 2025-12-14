@@ -174,7 +174,12 @@ export default function LeadDetailPage() {
         throw new Error(error.details || 'Failed to save query');
       }
 
-      const { query: savedQuery } = await response.json();
+      const responseData = await response.json();
+      const savedQuery = responseData.query;
+      
+      if (!savedQuery || !savedQuery.id) {
+        throw new Error('Query created but no ID returned');
+      }
       
       // If editing an existing itinerary's query, update the itinerary's query_id
       if (editingQueryForItinerary) {
