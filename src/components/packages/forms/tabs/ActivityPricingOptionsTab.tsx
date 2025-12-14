@@ -439,7 +439,11 @@ const SimplePricingCard: React.FC<SimplePricingCardProps> = ({
               type="button"
               size="sm"
               variant="ghost"
-              onClick={() => onEdit(option.id)}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onEdit(option.id);
+              }}
               className="package-button-fix"
             >
               <FaEdit className="h-3 w-3" />
@@ -448,7 +452,11 @@ const SimplePricingCard: React.FC<SimplePricingCardProps> = ({
               type="button"
               size="sm"
               variant="ghost"
-              onClick={() => onRemove(option.id)}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onRemove(option.id);
+              }}
               className="package-button-fix text-red-600 hover:text-red-700"
             >
               <FaTrash className="h-3 w-3" />
@@ -637,7 +645,11 @@ export const ActivityPricingOptionsTab: React.FC = () => {
                                     type="button"
                                     size="sm"
                                     variant="ghost"
-                                    onClick={() => setEditingId(option.id)}
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      setEditingId(option.id);
+                                    }}
                                     className="package-button-fix"
                                   >
                                     <FaEdit className="h-3 w-3" />
@@ -646,7 +658,11 @@ export const ActivityPricingOptionsTab: React.FC = () => {
                                     type="button"
                                     size="sm"
                                     variant="ghost"
-                                    onClick={() => handleRemoveOption(option.id)}
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      handleRemoveOption(option.id);
+                                    }}
                                     className="package-button-fix text-red-600 hover:text-red-700"
                                   >
                                     <FaTrash className="h-3 w-3" />
@@ -696,7 +712,11 @@ export const ActivityPricingOptionsTab: React.FC = () => {
                                     type="button"
                                     size="sm"
                                     variant="ghost"
-                                    onClick={() => setEditingId(option.id)}
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      setEditingId(option.id);
+                                    }}
                                     className="package-button-fix"
                                   >
                                     <FaEdit className="h-3 w-3" />
@@ -705,7 +725,11 @@ export const ActivityPricingOptionsTab: React.FC = () => {
                                     type="button"
                                     size="sm"
                                     variant="ghost"
-                                    onClick={() => handleRemoveOption(option.id)}
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      handleRemoveOption(option.id);
+                                    }}
                                     className="package-button-fix text-red-600 hover:text-red-700"
                                   >
                                     <FaTrash className="h-3 w-3" />
@@ -763,7 +787,11 @@ export const ActivityPricingOptionsTab: React.FC = () => {
                                         type="button"
                                         size="sm"
                                         variant="ghost"
-                                        onClick={() => setEditingId(option.id)}
+                                        onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      setEditingId(option.id);
+                                    }}
                                         className="package-button-fix"
                                       >
                                         <FaEdit className="h-3 w-3" />
@@ -772,7 +800,11 @@ export const ActivityPricingOptionsTab: React.FC = () => {
                                         type="button"
                                         size="sm"
                                         variant="ghost"
-                                        onClick={() => handleRemoveOption(option.id)}
+                                        onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      handleRemoveOption(option.id);
+                                    }}
                                         className="package-button-fix text-red-600 hover:text-red-700"
                                       >
                                         <FaTrash className="h-3 w-3" />
@@ -799,7 +831,11 @@ export const ActivityPricingOptionsTab: React.FC = () => {
                                       type="button"
                                       size="sm"
                                       variant="ghost"
-                                      onClick={() => setEditingId(option.id)}
+                                      onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      setEditingId(option.id);
+                                    }}
                                       className="package-button-fix"
                                     >
                                       <FaEdit className="h-3 w-3" />
@@ -808,7 +844,11 @@ export const ActivityPricingOptionsTab: React.FC = () => {
                                       type="button"
                                       size="sm"
                                       variant="ghost"
-                                      onClick={() => handleRemoveOption(option.id)}
+                                      onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      handleRemoveOption(option.id);
+                                    }}
                                       className="package-button-fix text-red-600 hover:text-red-700"
                                     >
                                       <FaTrash className="h-3 w-3" />

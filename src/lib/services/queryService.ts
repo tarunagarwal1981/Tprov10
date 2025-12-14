@@ -80,7 +80,7 @@ export class QueryService {
         created_at: string;
         updated_at: string;
       }>(
-        'SELECT * FROM itinerary_queries WHERE id = $1 LIMIT 1',
+        'SELECT * FROM itinerary_queries WHERE id::text = $1 LIMIT 1',
         [queryId]
       );
 
@@ -114,7 +114,7 @@ export class QueryService {
         created_at: string;
         updated_at: string;
       }>(
-        'SELECT * FROM itinerary_queries WHERE lead_id = $1 LIMIT 1',
+        'SELECT * FROM itinerary_queries WHERE lead_id::text = $1 LIMIT 1',
         [leadId]
       );
 
@@ -151,7 +151,7 @@ export class QueryService {
         `INSERT INTO itinerary_queries (
           id, lead_id, agent_id, destinations, leaving_from, nationality,
           leaving_on, travelers, star_rating, add_transfers
-        ) VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6, $7, $8, $9)
+        ) VALUES (gen_random_uuid(), $1::uuid, $2::uuid, $3::jsonb, $4, $5, $6, $7::jsonb, $8, $9)
         RETURNING id, lead_id, agent_id, destinations, leaving_from, nationality,
           leaving_on, travelers, star_rating, add_transfers, created_at, updated_at`,
         [
@@ -244,7 +244,7 @@ export class QueryService {
         add_transfers: boolean;
         created_at: string;
         updated_at: string;
-      }>('SELECT * FROM itinerary_queries WHERE id = $1 LIMIT 1', [queryId]);
+      }>('SELECT * FROM itinerary_queries WHERE id::text = $1 LIMIT 1', [queryId]);
       
       if (!existing) {
         throw new Error('Query not found');
@@ -302,7 +302,7 @@ export class QueryService {
       const sql = `
         UPDATE itinerary_queries
         SET ${updates.join(', ')}
-        WHERE id = $${paramIndex}
+        WHERE id::text = $${paramIndex}
         RETURNING *
       `;
 
@@ -364,7 +364,7 @@ export class QueryService {
    */
   async deleteQuery(queryId: string): Promise<void> {
     try {
-      await query('DELETE FROM itinerary_queries WHERE id = $1', [queryId]);
+      await query('DELETE FROM itinerary_queries WHERE id::text = $1', [queryId]);
     } catch (error) {
       console.error('Error deleting query:', error);
       throw error;

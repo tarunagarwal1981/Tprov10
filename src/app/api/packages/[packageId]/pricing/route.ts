@@ -57,6 +57,46 @@ export async function GET(
         sicRows,
         privateRows,
       });
+    } else if (packageType === 'multi_city') {
+      // Fetch pricing packages for multi_city
+      const pricingResult = await query<any>(
+        `SELECT * FROM multi_city_pricing_packages 
+         WHERE package_id::text = $1 
+         ORDER BY created_at ASC`,
+        [packageId]
+      );
+
+      const pricingPackages = pricingResult.rows || [];
+      const pricingPkg = pricingPackages[0] || null;
+
+      let sicRows: any[] = [];
+      let privateRows: any[] = [];
+
+      if (pricingPkg) {
+        if (pricingPkg.pricing_type === 'SIC') {
+          const sicResult = await query<any>(
+            `SELECT * FROM multi_city_pricing_rows 
+             WHERE pricing_package_id::text = $1 
+             ORDER BY display_order ASC`,
+            [pricingPkg.id]
+          );
+          sicRows = sicResult.rows || [];
+        } else if (pricingPkg.pricing_type === 'PRIVATE_PACKAGE') {
+          const privateResult = await query<any>(
+            `SELECT * FROM multi_city_private_package_rows 
+             WHERE pricing_package_id::text = $1 
+             ORDER BY display_order ASC`,
+            [pricingPkg.id]
+          );
+          privateRows = privateResult.rows || [];
+        }
+      }
+
+      return NextResponse.json({
+        pricingPackage: pricingPkg,
+        sicRows,
+        privateRows,
+      });
     } else {
       // For other package types, return empty for now
       return NextResponse.json({

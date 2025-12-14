@@ -54,6 +54,10 @@ export async function POST(
     const finalDisplayOrder = displayOrder || (maxOrderResult.rows[0]?.max_order || 0) + 1;
 
     // Insert itinerary item
+    // Note: configuration is JSONB NOT NULL, so use empty object if null
+    // PostgreSQL will automatically cast JSON string to JSONB
+    const configValue = configuration ? JSON.stringify(configuration) : '{}';
+    
     const insertValues = [
         itineraryId,
         dayId,
@@ -61,14 +65,18 @@ export async function POST(
         packageId,
         operatorId,
         packageTitle,
-        packageImageUrl,
-        configuration ? JSON.stringify(configuration) : null,
+        packageImageUrl || null, // Allow null for image URL
+        configValue,
         unitPrice,
         quantity,
         totalPrice,
         finalDisplayOrder,
-        notes,
+        notes || null, // Allow null for notes
     ];
+    
+    console.log('[Create Item] Prepared insert values:', {
+      values: insertValues.map((v, i) => ({ index: i + 1, value: typeof v === 'string' && v.length > 100 ? v.substring(0, 100) + '...' : v, type: typeof v })),
+    });
 
     console.log('[Create Item] Inserting with values:', { 
       itineraryId, 
@@ -82,36 +90,126 @@ export async function POST(
       totalPrice 
     });
 
-    const insertResult = await query<{ id: string }>(
-      `INSERT INTO itinerary_items (
-        itinerary_id, day_id, package_type, package_id, operator_id,
-        package_title, package_image_url, configuration, unit_price,
-        quantity, total_price, display_order, notes
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-      RETURNING id`,
-      insertValues
-    );
+    console.log('[Create Item] Executing INSERT query with values:', {
+      itineraryId,
+      dayId,
+      packageType,
+      packageId,
+      operatorId,
+      packageTitle,
+      unitPrice,
+      quantity,
+      totalPrice,
+      finalDisplayOrder,
+      valuesCount: insertValues.length,
+    });
 
-    if (!insertResult.rows || insertResult.rows.length === 0 || !insertResult.rows[0]) {
-      console.error('Insert result missing rows or first row:', { rows: insertResult.rows });
+    let insertResult;
+    try {
+      // Generate UUID explicitly for id column (in case default isn't working)
+      insertResult = await query<any>(
+        `INSERT INTO itinerary_items (
+          id, itinerary_id, day_id, package_type, package_id, operator_id,
+          package_title, package_image_url, configuration, unit_price,
+          quantity, total_price, display_order, notes
+        ) VALUES (gen_random_uuid(), $1::uuid, $2::uuid, $3, $4::uuid, $5::uuid, $6, $7, $8::jsonb, $9, $10, $11, $12, $13)
+        RETURNING *`,
+        insertValues
+      );
+
+      const firstRow = insertResult.rows?.[0];
+      const allKeys = firstRow ? Object.keys(firstRow) : [];
+      
+      console.log('[Create Item] Insert result:', {
+        hasRows: !!insertResult.rows,
+        rowsLength: insertResult.rows?.length,
+        firstRow: firstRow,
+        allKeys: allKeys,
+        hasIdKey: allKeys.includes('id'),
+        hasIDKey: allKeys.includes('ID'),
+        firstRowEntries: firstRow ? Object.entries(firstRow).map(([k, v]) => [k, typeof v === 'string' && v.length > 50 ? v.substring(0, 50) + '...' : v]) : [],
+        fullResult: JSON.stringify(insertResult, null, 2),
+      });
+    } catch (dbError) {
+      console.error('[Create Item] Database error during INSERT:', {
+        error: dbError instanceof Error ? dbError.message : String(dbError),
+        stack: dbError instanceof Error ? dbError.stack : undefined,
+        name: dbError instanceof Error ? dbError.name : undefined,
+      });
+      throw dbError;
+    }
+
+    if (!insertResult || !insertResult.rows || insertResult.rows.length === 0) {
+      console.error('[Create Item] Insert result missing rows:', { 
+        hasResult: !!insertResult,
+        hasRows: !!insertResult?.rows,
+        rowsLength: insertResult?.rows?.length,
+        fullResult: JSON.stringify(insertResult, null, 2),
+      });
       return NextResponse.json(
-        { error: 'Failed to create itinerary item: ID not returned' },
+        { error: 'Failed to create itinerary item: ID not returned', details: 'No rows returned from INSERT' },
         { status: 500 }
       );
     }
 
     const createdItem = insertResult.rows[0];
     
-    if (!createdItem.id) {
-      console.error('Created item missing ID:', createdItem);
+    if (!createdItem) {
+      console.error('[Create Item] Created item is null/undefined:', { 
+        rows: insertResult.rows,
+        firstRow: insertResult.rows[0],
+      });
       return NextResponse.json(
-        { error: 'Failed to create itinerary item: ID not returned' },
+        { error: 'Failed to create itinerary item: ID not returned', details: 'First row is null' },
+        { status: 500 }
+      );
+    }
+    
+    // Handle case-insensitive ID access (PostgreSQL might return 'ID' or 'id')
+    // Also check all possible variations
+    const itemId = createdItem.id 
+      || (createdItem as any).ID 
+      || (createdItem as any).Id 
+      || (createdItem as any).iD
+      || (createdItem as any)['id']
+      || (createdItem as any)['ID'];
+    
+    // If still not found, try to get it from the first key-value pair if it looks like an ID
+    let fallbackId = null;
+    if (!itemId && createdItem) {
+      const entries = Object.entries(createdItem);
+      // Look for a UUID-like value
+      for (const [key, value] of entries) {
+        if (typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)) {
+          // This looks like a UUID, might be the id
+          if (key.toLowerCase().includes('id') || entries.length === 1) {
+            fallbackId = value;
+            console.log('[Create Item] Found ID-like value in key:', key, 'value:', value);
+            break;
+          }
+        }
+      }
+    }
+    
+    const finalId = itemId || fallbackId;
+    
+    if (!finalId) {
+      console.error('[Create Item] Created item missing ID:', { 
+        createdItem,
+        keys: Object.keys(createdItem),
+        allValues: createdItem,
+        fullRow: JSON.stringify(createdItem, null, 2),
+      });
+      return NextResponse.json(
+        { error: 'Failed to create itinerary item: ID not returned', details: `ID field missing from returned row. Available keys: ${Object.keys(createdItem).join(', ')}` },
         { status: 500 }
       );
     }
 
+    console.log('[Create Item] ✅ Successfully created item with ID:', finalId);
+
     return NextResponse.json({
-      item: { id: createdItem.id },
+      item: { id: finalId },
       created: true,
     });
   } catch (error) {

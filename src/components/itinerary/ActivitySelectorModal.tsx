@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { createClient } from '@/lib/supabase/client';
 import type { ActivityPackage, ActivityPricingPackage } from '@/lib/services/smartItineraryFilter';
 import { getAvailableTimeSlots, filterActivitiesByTimeSlot, filterByDuration, type TimeSlot } from '@/lib/utils/timeSlots';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -38,8 +37,7 @@ export function ActivitySelectorModal({
   childrenCount = 0,
   onSelect,
 }: ActivitySelectorModalProps) {
-  const supabase = createClient();
-  // filterService now accessed via API routes
+  // Activities are fetched via API routes (AWS-based, no Supabase needed)
 
   const [activities, setActivities] = useState<ActivityPackage[]>([]);
   const [filteredActivities, setFilteredActivities] = useState<ActivityPackage[]>([]);

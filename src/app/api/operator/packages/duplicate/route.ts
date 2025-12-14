@@ -48,6 +48,28 @@ export async function POST(request: NextRequest) {
           'multi_city_package_cancellation_tiers',
         ];
         break;
+      case 'Multi-City Hotel':
+        tableName = 'multi_city_hotel_packages';
+        imageTableName = 'multi_city_hotel_package_images';
+        relatedTables = [
+          'multi_city_hotel_package_cities',
+          'multi_city_hotel_pricing_packages',
+          'multi_city_hotel_package_day_plans',
+          'multi_city_hotel_package_inclusions',
+          'multi_city_hotel_package_exclusions',
+        ];
+        break;
+      case 'Fixed Departure Flight':
+        tableName = 'fixed_departure_flight_packages';
+        imageTableName = 'fixed_departure_flight_package_images';
+        relatedTables = [
+          'fixed_departure_flight_package_cities',
+          'fixed_departure_flight_pricing_packages',
+          'fixed_departure_flight_package_day_plans',
+          'fixed_departure_flight_package_inclusions',
+          'fixed_departure_flight_package_exclusions',
+        ];
+        break;
       default:
         return NextResponse.json(
           { error: 'Invalid package type' },

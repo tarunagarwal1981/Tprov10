@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { createClient } from '@/lib/supabase/client';
+// Removed Supabase - using AWS-based API routes instead
 import { PackageConfigModal } from './PackageConfigModal';
 
 interface Package {
@@ -41,7 +41,7 @@ export function PackageSearchPanel({
   itineraryId,
   onPackageAdded,
 }: PackageSearchPanelProps) {
-  const supabase = createClient();
+  // Using AWS-based API routes instead of Supabase
   const [packages, setPackages] = useState<Package[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<Package | null>(null);
@@ -61,254 +61,195 @@ export function PackageSearchPanel({
   const fetchPackages = async () => {
     setLoading(true);
     try {
-      // Search across all package types
+      // Search across all package types using API routes
       const allPackages: Package[] = [];
+
+      // Helper function to filter packages client-side
+      const matchesFilter = (pkg: any, search: string, destination: string | null) => {
+        const searchLower = search?.toLowerCase() || '';
+        const destLower = destination?.toLowerCase() || '';
+        
+        if (searchLower && !pkg.title?.toLowerCase().includes(searchLower)) {
+          return false;
+        }
+        
+        if (destLower) {
+          const destParts = destLower.split(',').map(d => d.trim());
+          const matchesDest = destParts.some(part => 
+            pkg.destination_country?.toLowerCase().includes(part) ||
+            pkg.destination_city?.toLowerCase().includes(part) ||
+            pkg.destination_region?.toLowerCase().includes(part)
+          );
+          if (!matchesDest) return false;
+        }
+        
+        return true;
+      };
 
       // Activity Packages
       if (selectedType === 'all' || selectedType === 'activity') {
-        let query = supabase
-          .from('activity_packages')
-          .select('id, title, destination_country, destination_city, operator_id, base_price, currency, status')
-          .eq('status', 'published');
-
-        // Apply filters - handle destination with commas properly
-        const orConditions: string[] = [];
-        if (selectedDestination) {
-          // Split destination by comma and search for each part separately
-          const destinationParts = selectedDestination.split(',').map(d => d.trim()).filter(d => d);
-          destinationParts.forEach(part => {
-            orConditions.push(`destination_country.ilike.%${part}%`);
-            orConditions.push(`destination_city.ilike.%${part}%`);
-          });
-        }
-        if (searchQuery) {
-          // Add search OR conditions
-          orConditions.push(`title.ilike.%${searchQuery}%`);
-          orConditions.push(`short_description.ilike.%${searchQuery}%`);
-        }
-        if (orConditions.length > 0) {
-          // Supabase OR syntax: wrap in parentheses and join with comma
-          query = query.or(`(${orConditions.join(',')})`);
-        }
-
-        const { data } = await query.limit(20);
-        if (data) {
-          const packagesTyped = data as unknown as Array<{ id: string; title: string; destination_country: string; destination_city: string; operator_id: string; base_price: number | null; currency: string | null }>;
-          allPackages.push(...packagesTyped.map(p => ({
-            id: p.id,
-            title: p.title,
-            destination_country: p.destination_country,
-            destination_city: p.destination_city,
-            package_type: 'activity' as const,
-            operator_id: p.operator_id,
-            featured_image_url: undefined,
-            base_price: p.base_price || undefined,
-            currency: p.currency || undefined,
-          })));
+        try {
+          // Note: We'll need to create a search API or fetch all and filter client-side
+          // For now, fetch from operator packages API (limited to 20 for performance)
+          const response = await fetch('/api/packages/search?type=activity&limit=50');
+          if (response.ok) {
+            const data = await response.json();
+            const packages = (data.packages || []).filter((p: any) => 
+              p.status === 'published' && matchesFilter(p, searchQuery, selectedDestination)
+            ).slice(0, 20);
+            
+            allPackages.push(...packages.map((p: any) => ({
+              id: p.id,
+              title: p.title,
+              destination_country: p.destination_country || '',
+              destination_city: p.destination_city || '',
+              package_type: 'activity' as const,
+              operator_id: p.operator_id,
+              featured_image_url: p.featured_image_url,
+              base_price: p.base_price || undefined,
+              currency: p.currency || undefined,
+            })));
+          }
+        } catch (err) {
+          console.warn('Error fetching activity packages:', err);
         }
       }
 
       // Transfer Packages
       if (selectedType === 'all' || selectedType === 'transfer') {
-        let query = supabase
-          .from('transfer_packages')
-          .select('id, title, destination_country, destination_city, operator_id, base_price, currency, status')
-          .eq('status', 'published');
-
-        // Apply filters - handle destination with commas properly
-        const orConditions: string[] = [];
-        if (selectedDestination) {
-          // Split destination by comma and search for each part separately
-          const destinationParts = selectedDestination.split(',').map(d => d.trim()).filter(d => d);
-          destinationParts.forEach(part => {
-            orConditions.push(`destination_country.ilike.%${part}%`);
-            orConditions.push(`destination_city.ilike.%${part}%`);
-          });
-        }
-        if (searchQuery) {
-          // Add search OR conditions
-          orConditions.push(`title.ilike.%${searchQuery}%`);
-          orConditions.push(`short_description.ilike.%${searchQuery}%`);
-        }
-        if (orConditions.length > 0) {
-          // Supabase OR syntax: wrap in parentheses and join with comma
-          query = query.or(`(${orConditions.join(',')})`);
-        }
-
-        const { data } = await query.limit(20);
-        if (data) {
-          const packagesTyped = data as unknown as Array<{ id: string; title: string; destination_country: string; destination_city: string; operator_id: string; base_price: number | null; currency: string | null }>;
-          allPackages.push(...packagesTyped.map(p => ({
-            id: p.id,
-            title: p.title,
-            destination_country: p.destination_country,
-            destination_city: p.destination_city,
-            package_type: 'transfer' as const,
-            operator_id: p.operator_id,
-            featured_image_url: undefined,
-            base_price: p.base_price || undefined,
-            currency: p.currency || undefined,
-          })));
+        try {
+          const response = await fetch('/api/packages/search?type=transfer&limit=50');
+          if (response.ok) {
+            const data = await response.json();
+            const packages = (data.packages || []).filter((p: any) => 
+              p.status === 'published' && matchesFilter(p, searchQuery, selectedDestination)
+            ).slice(0, 20);
+            
+            allPackages.push(...packages.map((p: any) => ({
+              id: p.id,
+              title: p.title,
+              destination_country: p.destination_country || '',
+              destination_city: p.destination_city || '',
+              package_type: 'transfer' as const,
+              operator_id: p.operator_id,
+              featured_image_url: p.featured_image_url,
+              base_price: p.base_price || undefined,
+              currency: p.currency || undefined,
+            })));
+          }
+        } catch (err) {
+          console.warn('Error fetching transfer packages:', err);
         }
       }
 
       // Multi-City Packages
       if (selectedType === 'all' || selectedType === 'multi_city') {
-        let query = supabase
-          .from('multi_city_packages')
-          .select('id, title, destination_region, operator_id, base_price, currency, status')
-          .eq('status', 'published');
-
-        // Apply filters - handle destination with commas properly
-        const orConditions: string[] = [];
-        if (selectedDestination) {
-          // Split destination by comma and search for each part separately
-          const destinationParts = selectedDestination.split(',').map(d => d.trim()).filter(d => d);
-          destinationParts.forEach(part => {
-            orConditions.push(`destination_region.ilike.%${part}%`);
-          });
-        }
-        if (searchQuery) {
-          // Add search OR conditions
-          orConditions.push(`title.ilike.%${searchQuery}%`);
-          orConditions.push(`short_description.ilike.%${searchQuery}%`);
-        }
-        if (orConditions.length > 0) {
-          // Supabase OR syntax: wrap in parentheses and join with comma
-          query = query.or(`(${orConditions.join(',')})`);
-        }
-
-        const { data } = await query.limit(20);
-        if (data) {
-          const packagesTyped = data as unknown as Array<{ 
-            id: string; 
-            title: string; 
-            destination_region: string | null; 
-            operator_id: string; 
-            base_price: number | null;
-            currency: string | null;
-          }>;
-          allPackages.push(...packagesTyped.map(p => ({
-            id: p.id,
-            title: p.title,
-            destination_country: p.destination_region || '',
-            destination_city: '',
-            package_type: 'multi_city' as const,
-            operator_id: p.operator_id,
-            featured_image_url: undefined,
-            base_price: p.base_price || undefined,
-            currency: p.currency || undefined,
-          })));
+        try {
+          const response = await fetch('/api/packages/multi-city');
+          if (response.ok) {
+            const data = await response.json();
+            const packages = (data.packages || []).filter((p: any) => 
+              matchesFilter(p, searchQuery, selectedDestination)
+            ).slice(0, 20);
+            
+            allPackages.push(...packages.map((p: any) => ({
+              id: p.id,
+              title: p.title,
+              destination_country: p.destination_region || '',
+              destination_city: '',
+              package_type: 'multi_city' as const,
+              operator_id: p.operator_id,
+              featured_image_url: p.featured_image_url,
+              base_price: p.base_price || undefined,
+              currency: p.currency || undefined,
+            })));
+          }
+        } catch (err) {
+          console.warn('Error fetching multi-city packages:', err);
         }
       }
 
       // Multi-City Hotel Packages
       if (selectedType === 'all' || selectedType === 'multi_city_hotel') {
-        let query = supabase
-          .from('multi_city_hotel_packages' as any)
-          .select('id, title, destination_region, operator_id, base_price, currency, status')
-          .eq('status', 'published');
-
-        // Apply filters - handle destination with commas properly
-        const orConditions: string[] = [];
-        if (selectedDestination) {
-          // Split destination by comma and search for each part separately
-          const destinationParts = selectedDestination.split(',').map(d => d.trim()).filter(d => d);
-          destinationParts.forEach(part => {
-            orConditions.push(`destination_region.ilike.%${part}%`);
-          });
-        }
-        if (searchQuery) {
-          // Add search OR conditions
-          orConditions.push(`title.ilike.%${searchQuery}%`);
-          orConditions.push(`short_description.ilike.%${searchQuery}%`);
-        }
-        if (orConditions.length > 0) {
-          // Supabase OR syntax: wrap in parentheses and join with comma
-          query = query.or(`(${orConditions.join(',')})`);
-        }
-
-        const { data } = await query.limit(20);
-        if (data) {
-          const packagesTyped = data as unknown as Array<{ id: string; title: string; destination_region: string | null; operator_id: string; base_price: number | null; currency: string | null }>;
-          allPackages.push(...packagesTyped.map(p => ({
-            id: p.id,
-            title: p.title,
-            destination_country: p.destination_region || '',
-            destination_city: '',
-            package_type: 'multi_city_hotel' as const,
-            operator_id: p.operator_id,
-            featured_image_url: undefined,
-            base_price: p.base_price || undefined,
-            currency: p.currency || undefined,
-          })));
+        try {
+          const response = await fetch('/api/packages/multi-city-hotel');
+          if (response.ok) {
+            const data = await response.json();
+            const packages = (data.packages || []).filter((p: any) => 
+              matchesFilter(p, searchQuery, selectedDestination)
+            ).slice(0, 20);
+            
+            allPackages.push(...packages.map((p: any) => ({
+              id: p.id,
+              title: p.title,
+              destination_country: p.destination_region || '',
+              destination_city: '',
+              package_type: 'multi_city_hotel' as const,
+              operator_id: p.operator_id,
+              featured_image_url: p.featured_image_url,
+              base_price: p.base_price || undefined,
+              currency: p.currency || undefined,
+            })));
+          }
+        } catch (err) {
+          console.warn('Error fetching multi-city hotel packages:', err);
         }
       }
 
       // Fixed Departure Packages
       if (selectedType === 'all' || selectedType === 'fixed_departure') {
-        let query = supabase
-          .from('fixed_departure_flight_packages' as any)
-          .select('id, title, destination_region, operator_id, base_price, currency, status')
-          .eq('status', 'published');
-
-        // Apply filters - handle destination with commas properly
-        const orConditions: string[] = [];
-        if (selectedDestination) {
-          // Split destination by comma and search for each part separately
-          const destinationParts = selectedDestination.split(',').map(d => d.trim()).filter(d => d);
-          destinationParts.forEach(part => {
-            orConditions.push(`destination_region.ilike.%${part}%`);
-          });
-        }
-        if (searchQuery) {
-          // Add search OR conditions
-          orConditions.push(`title.ilike.%${searchQuery}%`);
-          orConditions.push(`short_description.ilike.%${searchQuery}%`);
-        }
-        if (orConditions.length > 0) {
-          // Supabase OR syntax: wrap in parentheses and join with comma
-          query = query.or(`(${orConditions.join(',')})`);
-        }
-
-        const { data } = await query.limit(20);
-        if (data) {
-          const packagesTyped = data as unknown as Array<{ id: string; title: string; destination_region: string | null; operator_id: string; base_price: number | null; currency: string | null }>;
-          allPackages.push(...packagesTyped.map(p => ({
-            id: p.id,
-            title: p.title,
-            destination_country: p.destination_region || '',
-            destination_city: '',
-            package_type: 'fixed_departure' as const,
-            operator_id: p.operator_id,
-            featured_image_url: undefined,
-            base_price: p.base_price || undefined,
-            currency: p.currency || undefined,
-          })));
+        try {
+          // Note: Need to create API route for fixed departure packages
+          // For now, skip or use a placeholder
+          // Fixed departure packages - fetch from API
+          try {
+            const response = await fetch('/api/packages/search?type=fixed_departure&limit=50');
+            if (response.ok) {
+              const data = await response.json();
+              const packages = (data.packages || []).filter((p: any) => 
+                matchesFilter(p, searchQuery, selectedDestination)
+              ).slice(0, 20);
+              
+              allPackages.push(...packages.map((p: any) => ({
+                id: p.id,
+                title: p.title,
+                destination_country: p.destination_region || '',
+                destination_city: '',
+                package_type: 'fixed_departure' as const,
+                operator_id: p.operator_id,
+                featured_image_url: p.featured_image_url,
+                base_price: p.base_price || undefined,
+                currency: p.currency || undefined,
+              })));
+            }
+          } catch (err) {
+            console.warn('Error fetching fixed departure packages:', err);
+          }
+        } catch (err) {
+          console.warn('Error fetching fixed departure packages:', err);
         }
       }
 
-      // Get operator names - Try to get from auth.users or use email as fallback
+      // Get operator names
       const operatorIds = [...new Set(allPackages.map(p => p.operator_id))];
+      const operatorMap = new Map<string, string>();
       
-      // Try to get operator info - if profiles table doesn't exist, use fallback
-      let operatorMap = new Map<string, string>();
-      
-      // Only query if we have operator IDs
+      // Fetch operator info via API
       if (operatorIds.length > 0) {
-      try {
-        const { data: operators } = await supabase
-          .from('profiles' as any)
-          .select('id, company_name')
-          .in('id', operatorIds);
-
-        if (operators) {
-          const operatorsTyped = operators as unknown as Array<{ id: string; company_name: string | null }>;
-          operatorMap = new Map(operatorsTyped.map(o => [o.id, o.company_name || 'Unknown Operator']));
-        }
-      } catch (err) {
-        // Profiles table might not exist, use default
-        console.warn('Profiles table not found, using default operator names');
+        try {
+          const response = await fetch('/api/operators');
+          if (response.ok) {
+            const { operators } = await response.json();
+            if (operators) {
+              operators.forEach((op: any) => {
+                if (operatorIds.includes(op.id)) {
+                  operatorMap.set(op.id, op.company_name || op.name || 'Unknown Operator');
+                }
+              });
+            }
+          }
+        } catch (err) {
+          console.warn('Error fetching operators:', err);
         }
       }
 

@@ -31,7 +31,7 @@ import {
   DEFAULT_FORM_DATA,
 } from "@/lib/types/activity-package";
 import { useActivityPackage } from "@/hooks/useActivityPackage";
-import { databaseToFormData } from "@/lib/supabase/activity-packages";
+import { databaseToFormData } from "@/lib/api/activity-packages";
 
 // Import tab components
 import { BasicInformationTab } from "./tabs/BasicInformationTab";
@@ -184,7 +184,7 @@ export const ActivityPackageForm: React.FC<ActivityPackageFormProps> = ({
         
         // Load pricing packages and convert to simple format
         try {
-          const { getPricingPackages, convertPricingPackageToSimple } = await import('@/lib/supabase/activity-pricing-simple');
+          const { getPricingPackages, convertPricingPackageToSimple } = await import('@/lib/api/activity-pricing-simple');
           const pricingPackages = await getPricingPackages(packageId);
           // Convert database format to simple format for form (now async to load vehicles)
           if (Array.isArray(pricingPackages)) {

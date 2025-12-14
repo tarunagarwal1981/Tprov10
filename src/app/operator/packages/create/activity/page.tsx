@@ -6,7 +6,7 @@ import { ActivityPackageFormData } from "@/lib/types/activity-package";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { useAuth } from "@/context/CognitoAuthContext";
-import { formDataToDatabase, createActivityPackage, updateActivityPackage } from "@/lib/supabase/activity-packages";
+import { formDataToDatabase, createActivityPackage, updateActivityPackage } from "@/lib/api/activity-packages";
 
 export default function CreateActivityPackagePage() {
   const router = useRouter();
@@ -88,7 +88,7 @@ export default function CreateActivityPackagePage() {
       if (savedPackageId && data.pricingOptions && Array.isArray(data.pricingOptions)) {
         try {
           console.log('💾 Saving pricing options for package:', savedPackageId);
-          const { savePricingPackagesWithVehicles } = await import('@/lib/supabase/activity-pricing-simple');
+          const { savePricingPackagesWithVehicles } = await import('@/lib/api/activity-pricing-simple');
           // Save pricing packages and their associated vehicles
           await savePricingPackagesWithVehicles(savedPackageId, data.pricingOptions);
           console.log('✅ Pricing options and vehicles saved successfully');
@@ -166,7 +166,7 @@ export default function CreateActivityPackagePage() {
       if (savedPackageId && data.pricingOptions && Array.isArray(data.pricingOptions)) {
         try {
           console.log('💾 Saving pricing options for package:', savedPackageId);
-          const { savePricingPackagesWithVehicles } = await import('@/lib/supabase/activity-pricing-simple');
+          const { savePricingPackagesWithVehicles } = await import('@/lib/api/activity-pricing-simple');
           // Save pricing packages and their associated vehicles
           await savePricingPackagesWithVehicles(savedPackageId, data.pricingOptions);
           console.log('✅ Pricing options and vehicles saved successfully');

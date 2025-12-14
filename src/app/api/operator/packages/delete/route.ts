@@ -33,6 +33,12 @@ export async function DELETE(request: NextRequest) {
       case 'Multi-City':
         tableName = 'multi_city_packages';
         break;
+      case 'Multi-City Hotel':
+        tableName = 'multi_city_hotel_packages';
+        break;
+      case 'Fixed Departure Flight':
+        tableName = 'fixed_departure_flight_packages';
+        break;
       default:
         return NextResponse.json(
           { error: 'Invalid package type' },

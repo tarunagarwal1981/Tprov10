@@ -101,8 +101,11 @@ async function invokeLambda(
       });
       
       // Create an error object that preserves the original error details
-      const error = new Error(errorBody.message || errorBody.error || 'Lambda invocation failed');
+      const errorMessage = errorBody.message || errorBody.error || errorBody.detail || 'Lambda invocation failed';
+      const error = new Error(errorMessage);
       (error as any).code = errorBody.code;
+      (error as any).detail = errorBody.detail;
+      (error as any).constraint = errorBody.constraint;
       (error as any).originalError = errorBody;
       throw error;
     }

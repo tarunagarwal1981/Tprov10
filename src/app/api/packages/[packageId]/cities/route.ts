@@ -27,6 +27,17 @@ export async function GET(
       );
 
       return NextResponse.json({ cities: result.rows || [] });
+    } else if (packageType === 'multi_city') {
+      // For multi_city packages, fetch from multi_city_package_cities table
+      const result = await query<any>(
+        `SELECT id, name, nights, city_order as display_order, country
+         FROM multi_city_package_cities 
+         WHERE package_id::text = $1 
+         ORDER BY city_order ASC`,
+        [packageId]
+      );
+
+      return NextResponse.json({ cities: result.rows || [] });
     } else {
       return NextResponse.json({ cities: [] });
     }

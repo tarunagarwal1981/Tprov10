@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/aws/lambda-database';
+import { matchCityNames } from '@/lib/utils/cityMatching';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -21,7 +22,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const queryCities = destinations.map((d: any) => d.city.toLowerCase().trim());
+    // Store original query cities for matching (matchCityNames handles normalization internally)
+    const queryCities = destinations.map((d: any) => d.city);
     const queryNights = destinations.map((d: any) => d.nights || 1);
     const queryCountries = destinations.map((d: any) => {
       // Extract country if available (e.g., "Bali, Indonesia" -> "Indonesia")
@@ -94,7 +96,8 @@ export async function POST(request: NextRequest) {
       
       if (pkgCities.length === 0) return;
 
-      const pkgCityNames = pkgCities.map((c: any) => c.name.toLowerCase().trim());
+      // Store original package city names for matching (matchCityNames handles normalization internally)
+      const pkgCityNames = pkgCities.map((c: any) => c.name);
       const pkgNights = pkgCities.map((c: any) => c.nights || 1);
 
       console.log(`[Multi-City Match API] Checking package "${pkg.title}":`, {
@@ -102,16 +105,26 @@ export async function POST(request: NextRequest) {
         queryCities,
         pkgNights,
         queryNights,
-        cityMatch: pkgCityNames.length === queryCities.length && pkgCityNames.every((city: string, idx: number) => city === queryCities[idx]),
-        nightsMatch: pkgNights.every((nights: number, idx: number) => nights === queryNights[idx])
       });
 
-      // Check for exact match
-      if (
-        pkgCityNames.length === queryCities.length &&
-        pkgCityNames.every((city: string, idx: number) => city === queryCities[idx]) &&
-        pkgNights.every((nights: number, idx: number) => nights === queryNights[idx])
-      ) {
+      // Check for exact match using intelligent city matching
+      // First check if cities match (using intelligent matching)
+      const citiesMatch = pkgCityNames.length === queryCities.length &&
+        pkgCityNames.every((pkgCity: string, idx: number) => {
+          const queryCity = queryCities[idx];
+          const match = matchCityNames(queryCity, pkgCity);
+          // Accept exact, normalized, or alias matches
+          const isMatch = match === 'exact' || match === 'normalized' || match === 'alias';
+          if (!isMatch) {
+            console.log(`[Multi-City Match API] City mismatch: "${queryCity}" vs "${pkgCity}" (match: ${match})`);
+          }
+          return isMatch;
+        });
+
+      // Then check if nights match
+      const nightsMatch = pkgNights.every((nights: number, idx: number) => nights === queryNights[idx]);
+
+      if (citiesMatch && nightsMatch) {
         const image = imagesResult.rows.find((img: any) => img.package_id === pkg.id);
         exactMatches.push({
           ...pkg,
@@ -119,14 +132,12 @@ export async function POST(request: NextRequest) {
           cities: pkgCities,
           matchType: 'exact',
         });
+        console.log(`[Multi-City Match API] ✅ Exact match found: "${pkg.title}"`);
         return;
       }
 
-      // Check for same cities but different nights
-      if (
-        pkgCityNames.length === queryCities.length &&
-        pkgCityNames.every((city: string, idx: number) => city === queryCities[idx])
-      ) {
+      // Check for same cities but different nights (using intelligent matching)
+      if (citiesMatch) {
         const image = imagesResult.rows.find((img: any) => img.package_id === pkg.id);
         sameCitiesDifferentNights.push({
           ...pkg,
@@ -134,14 +145,14 @@ export async function POST(request: NextRequest) {
           cities: pkgCities,
           matchType: 'sameCities',
         });
+        console.log(`[Multi-City Match API] ✅ Same cities match found: "${pkg.title}"`);
         return;
       }
 
-      // Check for same countries
-      const pkgCountries = pkgCityNames.map((city: string) => {
-        // Try to extract country from city name or use destination_region
-        const parts = city.split(',').map((p: string) => p.trim());
-        return parts.length > 1 ? parts[parts.length - 1] : null;
+      // Check for same countries (extract from original city names, not normalized)
+      const pkgCountries = pkgCities.map((c: any) => {
+        const parts = c.name.split(',').map((p: string) => p.trim());
+        return parts.length > 1 ? parts[parts.length - 1].toLowerCase() : null;
       }).filter((country): country is string => Boolean(country));
 
       if (queryCountries.length > 0 && pkgCountries.some((country: string) => 
@@ -154,6 +165,7 @@ export async function POST(request: NextRequest) {
           cities: pkgCities,
           matchType: 'sameCountries',
         });
+        console.log(`[Multi-City Match API] ✅ Same countries match found: "${pkg.title}"`);
       }
     });
 

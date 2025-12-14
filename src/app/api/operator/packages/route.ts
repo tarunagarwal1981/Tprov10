@@ -6,7 +6,7 @@ export const runtime = 'nodejs';
 
 /**
  * GET /api/operator/packages?operatorId=xxx
- * Get all packages (activity, transfer, multi-city) for an operator
+ * Get all packages (activity, transfer, multi-city, multi-city-hotel, fixed-departure-flight) for an operator
  */
 export async function GET(request: NextRequest) {
   try {
@@ -209,10 +209,108 @@ export async function GET(request: NextRequest) {
       };
     });
 
+    // Fetch multi-city hotel packages
+    const multiCityHotelPackagesResult = await query<any>(
+      `SELECT 
+        mchp.id, mchp.title, mchp.short_description, mchp.status, mchp.base_price, mchp.currency,
+        mchp.destination_region, mchp.total_cities, mchp.total_nights, mchp.created_at, mchp.published_at
+       FROM multi_city_hotel_packages mchp
+       WHERE mchp.operator_id::text = $1
+       ORDER BY mchp.created_at DESC`,
+      [operatorId]
+    );
+
+    const multiCityHotelPackageIds = multiCityHotelPackagesResult.rows?.map((p: any) => p.id) || [];
+    
+    // Fetch images for multi-city hotel packages
+    let multiCityHotelImages: any[] = [];
+    if (multiCityHotelPackageIds.length > 0) {
+      try {
+        const imagesResult = await query<any>(
+          `SELECT package_id, id, public_url, is_cover
+           FROM multi_city_hotel_package_images
+           WHERE package_id::text = ANY($1::text[])`,
+          [multiCityHotelPackageIds]
+        );
+        multiCityHotelImages = imagesResult.rows || [];
+      } catch (error: any) {
+        if (error.message?.includes('does not exist') || error.code === '42P01') {
+          console.warn('multi_city_hotel_package_images table not found, skipping image data');
+          multiCityHotelImages = [];
+        } else {
+          console.warn('Error fetching multi-city hotel images (non-fatal):', error.message);
+          multiCityHotelImages = [];
+        }
+      }
+    }
+
+    // Combine multi-city hotel packages with images
+    const multiCityHotelPackages = (multiCityHotelPackagesResult.rows || []).map((pkg: any) => {
+      const pkgImages = multiCityHotelImages.filter((img: any) => img.package_id === pkg.id);
+      const coverImage = pkgImages.find((img: any) => img.is_cover);
+      const imageUrl = coverImage?.public_url || pkgImages[0]?.public_url || '';
+
+      return {
+        ...pkg,
+        imageUrl,
+        images: pkgImages,
+      };
+    });
+
+    // Fetch fixed departure flight packages
+    const fixedDepartureFlightPackagesResult = await query<any>(
+      `SELECT 
+        fdfp.id, fdfp.title, fdfp.short_description, fdfp.status, fdfp.base_price, fdfp.currency,
+        fdfp.destination_region, fdfp.created_at, fdfp.published_at
+       FROM fixed_departure_flight_packages fdfp
+       WHERE fdfp.operator_id::text = $1
+       ORDER BY fdfp.created_at DESC`,
+      [operatorId]
+    );
+
+    const fixedDepartureFlightPackageIds = fixedDepartureFlightPackagesResult.rows?.map((p: any) => p.id) || [];
+    
+    // Fetch images for fixed departure flight packages (if table exists)
+    let fixedDepartureFlightImages: any[] = [];
+    if (fixedDepartureFlightPackageIds.length > 0) {
+      try {
+        const imagesResult = await query<any>(
+          `SELECT package_id, id, public_url, is_cover
+           FROM fixed_departure_flight_package_images
+           WHERE package_id::text = ANY($1::text[])`,
+          [fixedDepartureFlightPackageIds]
+        );
+        fixedDepartureFlightImages = imagesResult.rows || [];
+      } catch (error: any) {
+        if (error.message?.includes('does not exist') || error.code === '42P01') {
+          console.warn('fixed_departure_flight_package_images table not found, skipping image data');
+          fixedDepartureFlightImages = [];
+        } else {
+          console.warn('Error fetching fixed departure flight images (non-fatal):', error.message);
+          fixedDepartureFlightImages = [];
+        }
+      }
+    }
+
+    // Combine fixed departure flight packages with images
+    const fixedDepartureFlightPackages = (fixedDepartureFlightPackagesResult.rows || []).map((pkg: any) => {
+      const pkgImages = fixedDepartureFlightImages.filter((img: any) => img.package_id === pkg.id);
+      const coverImage = pkgImages.find((img: any) => img.is_cover);
+      const imageUrl = coverImage?.public_url || pkgImages[0]?.public_url || '';
+
+      return {
+        ...pkg,
+        imageUrl,
+        images: pkgImages,
+      };
+    });
+
     return NextResponse.json({
       activityPackages,
       transferPackages,
       multiCityPackages,
+      multiCityHotelPackages,
+      fixedDepartureFlightPackages,
     });
   } catch (error) {
     console.error('Error fetching operator packages:', error);

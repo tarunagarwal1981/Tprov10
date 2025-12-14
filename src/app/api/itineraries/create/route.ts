@@ -31,12 +31,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Create new itinerary (allow multiple itineraries per lead)
-    // Generate UUID for id column since RDS uses TEXT without default
+    // Generate UUID for id column - use UUID type directly
     const insertResult = await query<{ id: string }>(
       `INSERT INTO itineraries (
         id, lead_id, agent_id, name, adults_count, children_count, 
         infants_count, start_date, end_date, status, total_price, currency, query_id
-      ) VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      ) VALUES (gen_random_uuid(), $1::uuid, $2::uuid, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::uuid)
       RETURNING id`,
       [
         leadId,
