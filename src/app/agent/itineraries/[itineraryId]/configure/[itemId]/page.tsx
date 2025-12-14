@@ -190,7 +190,7 @@ export default function PackageConfigurationPage() {
             const citiesData = await citiesResponse.json();
             const cities = citiesData.cities || [];
 
-            // Fetch hotels for each city
+          // Fetch hotels for each city
             const cityIds = cities.map((c: any) => c.id);
             const hotelsResponse = await fetch(`/api/packages/${packageId}/hotels?cityIds=${cityIds.join(',')}`);
             if (!hotelsResponse.ok) {
@@ -733,7 +733,7 @@ export default function PackageConfigurationPage() {
       // If pricing option is selected, fetch it and calculate price
       if (selectedPricingId) {
         const pricingResponse = await fetch(`/api/activities/${activity.id}/pricing/${selectedPricingId}`);
-        
+
         if (!pricingResponse.ok) {
           console.error('Error fetching pricing option');
         } else {
@@ -741,23 +741,23 @@ export default function PackageConfigurationPage() {
           const pricing = pricingData.pricingPackage;
           
           if (pricing) {
-            const adults = itineraryInfo?.adults_count || 0;
-            const children = itineraryInfo?.children_count || 0;
-            
-            // Calculate total price
-            const adultTotal = (pricing.adult_price || 0) * adults;
-            const childTotal = (pricing.child_price || 0) * children;
-            const transferAdult = (pricing.transfer_price_adult || 0) * adults;
-            const transferChild = (pricing.transfer_price_child || 0) * children;
-            
-            calculatedPrice = adultTotal + childTotal + transferAdult + transferChild;
-            pricingConfig = {
-              pricing_package_id: selectedPricingId,
-              pricing_package_name: pricing.package_name,
-              adult_price: pricing.adult_price,
-              child_price: pricing.child_price,
-              transfer_included: pricing.transfer_included,
-            };
+          const adults = itineraryInfo?.adults_count || 0;
+          const children = itineraryInfo?.children_count || 0;
+          
+          // Calculate total price
+          const adultTotal = (pricing.adult_price || 0) * adults;
+          const childTotal = (pricing.child_price || 0) * children;
+          const transferAdult = (pricing.transfer_price_adult || 0) * adults;
+          const transferChild = (pricing.transfer_price_child || 0) * children;
+          
+          calculatedPrice = adultTotal + childTotal + transferAdult + transferChild;
+          pricingConfig = {
+            pricing_package_id: selectedPricingId,
+            pricing_package_name: pricing.package_name,
+            adult_price: pricing.adult_price,
+            child_price: pricing.child_price,
+            transfer_included: pricing.transfer_included,
+          };
           }
         }
       }
@@ -1024,20 +1024,20 @@ export default function PackageConfigurationPage() {
       const existingDaysTyped = (existingDays || []) as unknown as Array<{ id: string; day_number: number }>;
       
       try {
-        for (const day of days) {
-          // Check if day already exists
-          const existingDay = existingDaysTyped.find((d) => d.day_number === currentDayNumber);
-          
-          if (existingDay) {
-            // Update existing day - try with time_slots first, fallback without if column doesn't exist
-            const updateData: any = {
-              city_name: day.city_name,
-              time_slots: {
-                morning: { time: '', activities: day.activities.filter(a => a.id).map(a => a.id), transfers: [] },
-                afternoon: { time: '', activities: [], transfers: day.transfers.filter(t => t.id).map(t => t.id) },
-                evening: { time: '', activities: [], transfers: [] },
-              },
-            };
+      for (const day of days) {
+        // Check if day already exists
+        const existingDay = existingDaysTyped.find((d) => d.day_number === currentDayNumber);
+        
+        if (existingDay) {
+          // Update existing day - try with time_slots first, fallback without if column doesn't exist
+          const updateData: any = {
+            city_name: day.city_name,
+            time_slots: {
+              morning: { time: '', activities: day.activities.filter(a => a.id).map(a => a.id), transfers: [] },
+              afternoon: { time: '', activities: [], transfers: day.transfers.filter(t => t.id).map(t => t.id) },
+              evening: { time: '', activities: [], transfers: [] },
+            },
+          };
 
             let updateDayError = null;
             try {
@@ -1058,9 +1058,9 @@ export default function PackageConfigurationPage() {
               updateDayError = err instanceof Error ? err : new Error('Failed to update day');
             }
 
-            // If error is about time_slots column not existing, retry without it
+          // If error is about time_slots column not existing, retry without it
             if (updateDayError && (updateDayError.message?.includes('time_slots') || (updateDayError as any).code === '42703')) {
-              console.warn('time_slots column not found, updating without it');
+            console.warn('time_slots column not found, updating without it');
               let retryError = null;
               try {
                 const retryResponse = await fetch(`/api/itineraries/${itineraryId}/days/${existingDay.id}`, {
@@ -1081,13 +1081,13 @@ export default function PackageConfigurationPage() {
 
               if (retryError) {
                 throw retryError;
-              }
+          }
             } else if (updateDayError) {
               throw updateDayError;
             }
-            dayIds.push(existingDay.id);
-          } else {
-            // Create new day - try with time_slots first, fallback without if column doesn't exist
+          dayIds.push(existingDay.id);
+        } else {
+          // Create new day - try with time_slots first, fallback without if column doesn't exist
             let createDayError = null;
             try {
               const createResponse = await fetch(`/api/itineraries/${itineraryId}/days/create`, {
@@ -1097,10 +1097,10 @@ export default function PackageConfigurationPage() {
                   cityName: day.city_name,
                   dayNumber: currentDayNumber,
                   timeSlots: {
-                    morning: { time: '', activities: day.activities.filter(a => a.id).map(a => a.id), transfers: [] },
-                    afternoon: { time: '', activities: [], transfers: day.transfers.filter(t => t.id).map(t => t.id) },
-                    evening: { time: '', activities: [], transfers: [] },
-                  },
+              morning: { time: '', activities: day.activities.filter(a => a.id).map(a => a.id), transfers: [] },
+              afternoon: { time: '', activities: [], transfers: day.transfers.filter(t => t.id).map(t => t.id) },
+              evening: { time: '', activities: [], transfers: [] },
+            },
                 }),
               });
 
@@ -1115,7 +1115,7 @@ export default function PackageConfigurationPage() {
               createDayError = err instanceof Error ? err : new Error('Failed to create day');
             }
 
-            // If error is about time_slots column not existing, retry without it
+          // If error is about time_slots column not existing, retry without it
             if (createDayError && (createDayError.message?.includes('time_slots') || (createDayError as any).code === '42703')) {
               console.warn('time_slots column not found, creating without it');
               try {
@@ -1137,13 +1137,13 @@ export default function PackageConfigurationPage() {
                 }
               } catch (err) {
                 throw err instanceof Error ? err : new Error('Failed to create day');
-              }
+          }
             } else if (createDayError) {
               throw createDayError;
-            }
           }
-          
-          currentDayNumber++;
+        }
+
+        currentDayNumber++;
         }
       } catch (err) {
         console.error('Error saving days:', err);
@@ -1375,9 +1375,9 @@ export default function PackageConfigurationPage() {
                           onClick={() => {
                             if (!hasInsufficientCapacity) {
                               setInitialConfig({ 
-                                ...initialConfig, 
-                                selectedPricingRowId: row.id,
-                                selectedVehicle: row.id,
+                            ...initialConfig, 
+                            selectedPricingRowId: row.id,
+                            selectedVehicle: row.id,
                               });
                             }
                           }}

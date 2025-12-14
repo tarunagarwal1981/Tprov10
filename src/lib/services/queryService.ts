@@ -149,10 +149,11 @@ export class QueryService {
         updated_at: string;
       }>(
         `INSERT INTO itinerary_queries (
-          lead_id, agent_id, destinations, leaving_from, nationality,
+          id, lead_id, agent_id, destinations, leaving_from, nationality,
           leaving_on, travelers, star_rating, add_transfers
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-        RETURNING *`,
+        ) VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6, $7, $8, $9)
+        RETURNING id, lead_id, agent_id, destinations, leaving_from, nationality,
+          leaving_on, travelers, star_rating, add_transfers, created_at, updated_at`,
         [
           queryData.lead_id,
           queryData.agent_id,
@@ -177,19 +178,38 @@ export class QueryService {
       }
 
       // Log the created row for debugging
-      console.log('[QueryService] Created query row:', {
+      console.log('[QueryService] Created query row (full):', JSON.stringify(createdRow, null, 2));
+      console.log('[QueryService] Created query row (summary):', {
         hasId: !!createdRow.id,
         id: createdRow.id,
         idType: typeof createdRow.id,
         rowKeys: Object.keys(createdRow),
+        allValues: Object.entries(createdRow).map(([k, v]) => [k, typeof v, v]),
       });
+
+      // Check if id exists in the raw row before mapping
+      // Try different possible field names (case-insensitive)
+      const idValue = createdRow.id || createdRow.ID || createdRow.Id || 
+                      (Object.keys(createdRow).find(k => k.toLowerCase() === 'id') ? createdRow[Object.keys(createdRow).find(k => k.toLowerCase() === 'id')!] : null);
+      
+      if (!idValue) {
+        console.error('[QueryService] ERROR: Created row missing id field:', createdRow);
+        console.error('[QueryService] Full result object:', JSON.stringify(result, null, 2));
+        console.error('[QueryService] All field names:', Object.keys(createdRow));
+        throw new Error('Query created but ID field is missing in database response');
+      }
+      
+      // If id was found with different casing, normalize it
+      if (!createdRow.id && idValue) {
+        createdRow.id = idValue;
+      }
 
       const mappedQuery = this.mapQueryFromDB(createdRow);
       
-      // Ensure ID is present
+      // Ensure ID is present after mapping
       if (!mappedQuery.id) {
-        console.error('[QueryService] Created query row:', createdRow);
-        console.error('[QueryService] Mapped query:', mappedQuery);
+        console.error('[QueryService] ERROR: Mapped query missing id:', mappedQuery);
+        console.error('[QueryService] Original row:', createdRow);
         throw new Error('Query created but ID is missing in mapped result');
       }
       

@@ -194,19 +194,19 @@ export default function InsertItineraryPage() {
     try {
       // Fetch operators only if not already loaded
       if (Object.keys(operators).length === 0) {
-        const operatorsResponse = await fetch('/api/operators');
-        if (operatorsResponse.ok) {
-          const { operators: operatorsData } = await operatorsResponse.json();
-          const operatorsMap: Record<string, OperatorInfo> = {};
-          operatorsData.forEach((op: any) => {
-            operatorsMap[op.id] = {
-              id: op.id,
-              name: op.name || 'Unknown Operator',
-              email: op.email,
-            };
-          });
-          setOperators(operatorsMap);
-        }
+      const operatorsResponse = await fetch('/api/operators');
+      if (operatorsResponse.ok) {
+        const { operators: operatorsData } = await operatorsResponse.json();
+        const operatorsMap: Record<string, OperatorInfo> = {};
+        operatorsData.forEach((op: any) => {
+          operatorsMap[op.id] = {
+            id: op.id,
+            name: op.name || 'Unknown Operator',
+            email: op.email,
+          };
+        });
+        setOperators(operatorsMap);
+      }
       }
 
       // Fetch Multi-City Packages with exact matching
@@ -518,7 +518,7 @@ export default function InsertItineraryPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/30">
-      <div className="p-4 lg:p-6 max-w-7xl mx-auto">
+    <div className="p-4 lg:p-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-6">
         <Button
@@ -600,13 +600,13 @@ export default function InsertItineraryPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {multiCityPackages.map((pkg) => (
+              {multiCityPackages.map((pkg) => (
                           <TableRow key={pkg.id}>
                             <TableCell className="px-4 py-3">
                               <div className="font-medium text-gray-900">{pkg.title}</div>
                               {pkg.destination_region && (
                                 <div className="text-xs text-gray-500 mt-1">{pkg.destination_region}</div>
-                              )}
+                    )}
                             </TableCell>
                             <TableCell className="px-4 py-3">
                               <div className="text-sm text-gray-700">
@@ -618,13 +618,13 @@ export default function InsertItineraryPage() {
                                       </span>
                                     ))
                                   : 'N/A'}
-                              </div>
+                        </div>
                             </TableCell>
                             <TableCell className="px-4 py-3">
                               <div className="flex items-center gap-1 text-sm text-gray-600">
-                                <FiCalendar className="w-4 h-4" />
-                                <span>{pkg.total_nights} nights</span>
-                              </div>
+                          <FiCalendar className="w-4 h-4" />
+                          <span>{pkg.total_nights} nights</span>
+                        </div>
                             </TableCell>
                             <TableCell className="px-4 py-3">
                               <div className="text-sm text-gray-600">
@@ -756,10 +756,10 @@ export default function InsertItineraryPage() {
                             </TableBody>
                           </Table>
                         </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
               )}
             </div>
           )}
@@ -809,13 +809,13 @@ export default function InsertItineraryPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {multiCityHotelPackages.map((pkg) => (
+              {multiCityHotelPackages.map((pkg) => (
                           <TableRow key={pkg.id}>
                             <TableCell className="px-4 py-3">
                               <div className="font-medium text-gray-900">{pkg.title}</div>
                               {pkg.destination_region && (
                                 <div className="text-xs text-gray-500 mt-1">{pkg.destination_region}</div>
-                              )}
+                    )}
                             </TableCell>
                             <TableCell className="px-4 py-3">
                               <div className="text-sm text-gray-700">
@@ -827,13 +827,13 @@ export default function InsertItineraryPage() {
                                       </span>
                                     ))
                                   : 'N/A'}
-                              </div>
+                        </div>
                             </TableCell>
                             <TableCell className="px-4 py-3">
                               <div className="flex items-center gap-1 text-sm text-gray-600">
-                                <FiCalendar className="w-4 h-4" />
-                                <span>{pkg.total_nights} nights</span>
-                              </div>
+                          <FiCalendar className="w-4 h-4" />
+                          <span>{pkg.total_nights} nights</span>
+                        </div>
                             </TableCell>
                             <TableCell className="px-4 py-3">
                               <div className="text-sm text-gray-600">
@@ -965,10 +965,10 @@ export default function InsertItineraryPage() {
                             </TableBody>
                           </Table>
                         </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
               )}
             </div>
           )}

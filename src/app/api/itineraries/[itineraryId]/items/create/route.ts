@@ -55,19 +55,19 @@ export async function POST(
 
     // Insert itinerary item
     const insertValues = [
-      itineraryId,
-      dayId,
-      packageType,
-      packageId,
-      operatorId,
-      packageTitle,
-      packageImageUrl,
-      configuration ? JSON.stringify(configuration) : null,
-      unitPrice,
-      quantity,
-      totalPrice,
-      finalDisplayOrder,
-      notes,
+        itineraryId,
+        dayId,
+        packageType,
+        packageId,
+        operatorId,
+        packageTitle,
+        packageImageUrl,
+        configuration ? JSON.stringify(configuration) : null,
+        unitPrice,
+        quantity,
+        totalPrice,
+        finalDisplayOrder,
+        notes,
     ];
 
     console.log('[Create Item] Inserting with values:', { 
