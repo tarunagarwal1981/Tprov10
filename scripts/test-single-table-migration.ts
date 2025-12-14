@@ -12,13 +12,24 @@ const LAMBDA_FUNCTION_NAME = process.env.DATABASE_LAMBDA_NAME || 'travel-app-dat
 const TEST_TABLE = 'users'; // Start with a simple table
 
 async function testMigration() {
-  const lambdaClient = new LambdaClient({
+  const lambdaClientConfig: {
+    region: string;
+    credentials?: {
+      accessKeyId: string;
+      secretAccessKey: string;
+    };
+  } = {
     region: AWS_REGION,
-    credentials: {
+  };
+
+  if (AWS_ACCESS_KEY_ID && AWS_SECRET_ACCESS_KEY) {
+    lambdaClientConfig.credentials = {
       accessKeyId: AWS_ACCESS_KEY_ID,
       secretAccessKey: AWS_SECRET_ACCESS_KEY,
-    },
-  });
+    };
+  }
+
+  const lambdaClient = new LambdaClient(lambdaClientConfig);
 
   try {
     console.log(`Testing migration of ${TEST_TABLE}...\n`);

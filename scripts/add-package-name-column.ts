@@ -17,14 +17,29 @@ async function addPackageNameColumn() {
   console.log(`🌍 Region: ${AWS_REGION}`);
   console.log('');
 
-  // Initialize Lambda client with credentials
-  const lambdaClient = new LambdaClient({
+  // Initialize Lambda client with credentials (if provided)
+  // If credentials are not provided, AWS SDK will use default credentials (IAM role, ~/.aws/credentials, etc.)
+  const lambdaClientConfig: {
+    region: string;
+    credentials?: {
+      accessKeyId: string;
+      secretAccessKey: string;
+    };
+  } = {
     region: AWS_REGION,
-    credentials: {
+  };
+
+  // Only add credentials if both are provided
+  if (AWS_ACCESS_KEY_ID && AWS_SECRET_ACCESS_KEY) {
+    lambdaClientConfig.credentials = {
       accessKeyId: AWS_ACCESS_KEY_ID,
       secretAccessKey: AWS_SECRET_ACCESS_KEY,
-    },
-  });
+    };
+  } else {
+    console.log('ℹ️  Using default AWS credentials (IAM role, ~/.aws/credentials, or environment)');
+  }
+
+  const lambdaClient = new LambdaClient(lambdaClientConfig);
 
   try {
     // First, check if column already exists

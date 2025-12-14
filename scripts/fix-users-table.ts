@@ -42,13 +42,24 @@ async function getLambdaResponse(lambdaClient: LambdaClient, query: string, para
 }
 
 async function fixUsersTable() {
-  const lambdaClient = new LambdaClient({
+  const lambdaClientConfig: {
+    region: string;
+    credentials?: {
+      accessKeyId: string;
+      secretAccessKey: string;
+    };
+  } = {
     region: AWS_REGION,
-    credentials: {
+  };
+
+  if (AWS_ACCESS_KEY_ID && AWS_SECRET_ACCESS_KEY) {
+    lambdaClientConfig.credentials = {
       accessKeyId: AWS_ACCESS_KEY_ID,
       secretAccessKey: AWS_SECRET_ACCESS_KEY,
-    },
-  });
+    };
+  }
+
+  const lambdaClient = new LambdaClient(lambdaClientConfig);
 
   try {
     console.log('🔧 Fixing users table...\n');

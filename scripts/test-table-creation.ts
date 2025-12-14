@@ -10,13 +10,24 @@ const AWS_REGION = process.env.AWS_REGION || 'us-east-1';
 const LAMBDA_FUNCTION_NAME = process.env.DATABASE_LAMBDA_NAME || 'travel-app-database-service';
 
 async function testCreation() {
-  const lambdaClient = new LambdaClient({
+  const lambdaClientConfig: {
+    region: string;
+    credentials?: {
+      accessKeyId: string;
+      secretAccessKey: string;
+    };
+  } = {
     region: AWS_REGION,
-    credentials: {
+  };
+
+  if (AWS_ACCESS_KEY_ID && AWS_SECRET_ACCESS_KEY) {
+    lambdaClientConfig.credentials = {
       accessKeyId: AWS_ACCESS_KEY_ID,
       secretAccessKey: AWS_SECRET_ACCESS_KEY,
-    },
-  });
+    };
+  }
+
+  const lambdaClient = new LambdaClient(lambdaClientConfig);
 
   try {
     // First, test a simple query to see if connection works
