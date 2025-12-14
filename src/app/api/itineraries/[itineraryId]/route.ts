@@ -89,14 +89,8 @@ export async function PATCH(
     }
 
     if (queryId !== undefined) {
-      // Try to update query_id, but handle case where column doesn't exist
-      try {
-        updates.push(`query_id = $${paramIndex++}`);
-        values.push(queryId);
-      } catch (error) {
-        // Column doesn't exist, skip it
-        console.warn('query_id column does not exist, skipping update. Please run migration 019.');
-      }
+      updates.push(`query_id = $${paramIndex++}`);
+      values.push(queryId);
     }
 
     if (updates.length === 0) {
@@ -119,35 +113,7 @@ export async function PATCH(
       RETURNING *
     `;
 
-    let result;
-    try {
-      result = await queryOne<any>(updateQuery, values);
-    } catch (error: any) {
-      // If query_id column doesn't exist, retry without it
-      if (error?.code === '42703' || error?.message?.includes('query_id')) {
-        console.warn('query_id column does not exist, updating without it. Please run migration 019.');
-        // Remove query_id from updates and retry
-        const updatesWithoutQueryId = updates.filter(u => !u.includes('query_id'));
-        if (updatesWithoutQueryId.length === 0) {
-          return NextResponse.json(
-            { error: 'No fields to update (query_id column does not exist)' },
-            { status: 400 }
-          );
-        }
-        // Rebuild values array without queryId
-        const valuesWithoutQueryId = values.slice(0, -2); // Remove queryId and itineraryId
-        valuesWithoutQueryId.push(itineraryId); // Add itineraryId back
-        const retryQuery = `
-          UPDATE itineraries 
-          SET ${updatesWithoutQueryId.join(', ')}
-          WHERE id::text = $${updatesWithoutQueryId.length}
-          RETURNING *
-        `;
-        result = await queryOne<any>(retryQuery, valuesWithoutQueryId);
-      } else {
-        throw error;
-      }
-    }
+    const result = await queryOne<any>(updateQuery, values);
 
     if (!result) {
       return NextResponse.json(
