@@ -369,15 +369,23 @@ const BasicInformationTab: React.FC = () => {
         currentDate.setDate(currentDate.getDate() + 1);
       }
       
-      // For each city, create nights + 1 days
-      // For intermediate cities, the last day (departure) is also the arrival of next city
-      const daysToCreate = isFirstCity || isLastCity ? nights + 1 : nights;
+      // For each city, create days based on nights
+      // First city: needs arrival + nights + departure = nights + 1 days
+      // Intermediate cities: arrival already counted (as previous city's departure), so needs nights + departure = nights days
+      // Last city: arrival already counted (as previous city's departure), so needs nights + departure = nights days
+      // Special case: if only one city, it needs nights + 1 days (arrival + nights + departure)
+      const daysToCreate = isFirstCity && cities.length === 1 ? nights + 1 : isFirstCity ? nights + 1 : nights;
       
       for (let i = 0; i < daysToCreate; i++) {
         const dayIndex = isFirstCity ? i : (i + 1); // For non-first cities, start from day 1 (not arrival day)
         const isArrivalDay = isFirstCity && i === 0;
-        const isDepartureDay = (isLastCity && i === nights) || (!isLastCity && i === nights);
+        // Departure day is the last day created for each city
+        const isDepartureDay = i === daysToCreate - 1;
         const isMiddleDay = i > 0 && i < nights;
+        // Calculate city-specific night number
+        // For first city: Night 1 = i+1 (i=0 is arrival with Night 1)
+        // For other cities: Night 1 is on transition day (previous city's departure), so Night 2 = i+2
+        const cityNightNumber = isFirstCity ? (i + 1) : (i + 2);
         
         // Calculate date for this day
         let dayDate: string | undefined;
@@ -396,7 +404,7 @@ const BasicInformationTab: React.FC = () => {
         } else if (isDepartureDay && isLastCity) {
           dayTitle = `Departure - ${city.name}`;
         } else {
-          dayTitle = `Day ${dayIndex} - ${city.name} (Night ${dayIndex})`;
+          dayTitle = `Day ${dayIndex} - ${city.name} (Night ${cityNightNumber})`;
         }
         
         newDays.push({
@@ -409,7 +417,7 @@ const BasicInformationTab: React.FC = () => {
             ? `Departure from ${city.name} and arrival in ${cities[cityIndex + 1]?.name || ''}. Overnight stay in ${cities[cityIndex + 1]?.name || ''} (Night 1).`
             : isDepartureDay && isLastCity
             ? `Final day in ${city.name}. Check-out and departure.`
-            : `Full day in ${city.name}. Overnight stay (Night ${dayIndex}).`,
+            : `Full day in ${city.name}. Overnight stay (Night ${cityNightNumber}).`,
           photoUrl: "",
           hasFlights: false,
           flights: [],
