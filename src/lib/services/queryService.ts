@@ -172,10 +172,29 @@ export class QueryService {
 
       const createdRow = result.rows[0];
       if (!createdRow) {
+        console.error('Query creation result:', result);
         throw new Error('Failed to create query - no data returned');
       }
 
-      return this.mapQueryFromDB(createdRow);
+      // Log the created row for debugging
+      console.log('[QueryService] Created query row:', {
+        hasId: !!createdRow.id,
+        id: createdRow.id,
+        idType: typeof createdRow.id,
+        rowKeys: Object.keys(createdRow),
+      });
+
+      const mappedQuery = this.mapQueryFromDB(createdRow);
+      
+      // Ensure ID is present
+      if (!mappedQuery.id) {
+        console.error('[QueryService] Created query row:', createdRow);
+        console.error('[QueryService] Mapped query:', mappedQuery);
+        throw new Error('Query created but ID is missing in mapped result');
+      }
+      
+      console.log('[QueryService] Query created successfully with ID:', mappedQuery.id);
+      return mappedQuery;
     } catch (error) {
       console.error('Error creating query:', error);
       throw error;
@@ -308,30 +327,10 @@ export class QueryService {
    */
   async upsertQuery(queryData: CreateQueryData): Promise<ItineraryQuery> {
     try {
-      // First check if query exists
-      const existing = await this.getQueryByLeadId(queryData.lead_id);
-
-      if (existing) {
-        // Update existing
-        try {
-          return await this.updateQuery(existing.id, {
-            destinations: queryData.destinations,
-            leaving_from: queryData.leaving_from,
-            nationality: queryData.nationality,
-            leaving_on: queryData.leaving_on,
-            travelers: queryData.travelers,
-            star_rating: queryData.star_rating,
-            add_transfers: queryData.add_transfers,
-          });
-        } catch (updateError) {
-          // If update fails (e.g., query was deleted), create a new one
-          console.warn('Update query failed, creating new query:', updateError);
-          return this.createQuery(queryData);
-        }
-      } else {
-        // Create new
-        return this.createQuery(queryData);
-      }
+      // Since we allow multiple queries per lead (one per itinerary),
+      // we should always create a new query unless we're explicitly updating
+      // For now, always create a new query - the caller should use updateQuery if they want to update
+      return this.createQuery(queryData);
     } catch (error) {
       console.error('Error in upsertQuery:', error);
       throw error;
