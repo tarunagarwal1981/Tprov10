@@ -101,7 +101,9 @@ export default function MultiCityPackagePage() {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Failed to publish package');
+        console.error("[MultiCity] API Error Response:", error);
+        const errorMessage = error.details || error.error || 'Failed to publish package';
+        throw new Error(errorMessage);
       }
 
       const result = await response.json();
@@ -120,9 +122,13 @@ export default function MultiCityPackagePage() {
         code: error.code,
         details: error.details,
         hint: error.hint,
-        error: error
+        constraint: error.constraint,
+        fullError: error
       });
-      toast.error(error.message || "Failed to publish multi-city package");
+      
+      // Show detailed error in toast
+      const errorMessage = error.details || error.message || "Failed to publish multi-city package";
+      toast.error(errorMessage);
     }
   };
 

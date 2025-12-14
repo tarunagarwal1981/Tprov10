@@ -40,12 +40,28 @@ async function invokeLambda(
       AWS_SESSION_TOKEN: process.env.AWS_SESSION_TOKEN ? 'SET' : 'NOT SET',
     });
     
-    // In Amplify, API routes run in Lambda environment
-    // The SDK should automatically use the execution role's credentials
-    // Don't specify credentials - let the SDK use the default provider chain
-    const client = new LambdaClient({ 
+    // For local development, use explicit credentials from environment variables
+    // For production (Amplify/Lambda), use default provider chain (execution role)
+    const isLocalDev = !process.env.AWS_EXECUTION_ENV && !process.env.AWS_LAMBDA_FUNCTION_NAME;
+    
+    const clientConfig: any = {
       region: AWS_REGION,
-    });
+    };
+    
+    // In local development, use environment variables if available
+    // The SDK will automatically pick up AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY from env
+    if (isLocalDev && process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
+      clientConfig.credentials = {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+        ...(process.env.AWS_SESSION_TOKEN && { sessionToken: process.env.AWS_SESSION_TOKEN }),
+      };
+      console.log('[Lambda Client] Using credentials from environment variables (local dev)');
+    } else if (isLocalDev) {
+      console.warn('[Lambda Client] ⚠️  No AWS credentials found. Please set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY in .env.local for local development');
+    }
+    
+    const client = new LambdaClient(clientConfig);
     
     console.log(`[Lambda Client] Lambda client created for region: ${AWS_REGION}`);
     
@@ -85,8 +101,11 @@ async function invokeLambda(
       });
       
       // Create an error object that preserves the original error details
-      const error = new Error(errorBody.message || errorBody.error || 'Lambda invocation failed');
+      const errorMessage = errorBody.message || errorBody.error || errorBody.detail || 'Lambda invocation failed';
+      const error = new Error(errorMessage);
       (error as any).code = errorBody.code;
+      (error as any).detail = errorBody.detail;
+      (error as any).constraint = errorBody.constraint;
       (error as any).originalError = errorBody;
       throw error;
     }

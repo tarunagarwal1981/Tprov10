@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { createClient } from '@/lib/supabase/client';
+// Removed Supabase - using AWS-based API routes instead
 import { useToast } from '@/hooks/useToast';
 
 interface Package {
@@ -42,7 +42,7 @@ export function PackageConfigModal({
   onPackageAdded,
   onNavigateToConfigure,
 }: PackageConfigModalProps) {
-  const supabase = createClient();
+  // Using AWS-based API routes instead of Supabase
   const toast = useToast();
   const [loading, setLoading] = useState(false);
   const [packageData, setPackageData] = useState<any>(null);
@@ -59,14 +59,21 @@ export function PackageConfigModal({
     let isMounted = true;
     
     const fetchItinerary = async () => {
-      const { data } = await supabase
-        .from('itineraries' as any)
-        .select('adults_count, children_count, infants_count, currency')
-        .eq('id', itineraryId)
-        .single();
-
-      if (data && isMounted) {
-        setItineraryInfo(data);
+      try {
+        const response = await fetch(`/api/itineraries/${itineraryId}`);
+        if (response.ok) {
+          const { itinerary } = await response.json();
+          if (itinerary && isMounted) {
+            setItineraryInfo({
+              adults_count: itinerary.adults_count,
+              children_count: itinerary.children_count,
+              infants_count: itinerary.infants_count,
+              currency: itinerary.currency || 'USD',
+            });
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching itinerary:', err);
       }
     };
 
@@ -82,16 +89,14 @@ export function PackageConfigModal({
   useEffect(() => {
     if (showDayAssignment) {
       const fetchDays = async () => {
-        const { data, error } = await supabase
-          .from('itinerary_days' as any)
-          .select('*')
-          .eq('itinerary_id', itineraryId)
-          .order('day_number', { ascending: true });
-
-        if (error) {
-          console.error('Error fetching days:', error);
-        } else if (data) {
-          setDays(data || []);
+        try {
+          const response = await fetch(`/api/itineraries/${itineraryId}/days`);
+          if (response.ok) {
+            const { days: daysData } = await response.json();
+            setDays(daysData || []);
+          }
+        } catch (err) {
+          console.error('Error fetching days:', err);
         }
       };
 
@@ -111,38 +116,30 @@ export function PackageConfigModal({
         let query: any;
         
         if (pkg.package_type === 'activity') {
-          // Fetch activity package and its pricing packages
-          const { data: packageData, error: packageError } = await supabase
-            .from('activity_packages')
-            .select('*')
-            .eq('id', pkg.id)
-            .single();
+          // Use AWS-based API route instead of Supabase
+          const response = await fetch(`/api/packages/${pkg.id}?type=activity`);
+          if (!response.ok) {
+            throw new Error('Failed to fetch activity package');
+          }
+          const { package: packageData } = await response.json();
 
-          if (packageError) throw packageError;
-
-          // Fetch pricing packages
-          const pricingTable = 'activity_pricing_packages' as any;
-          const { data: pricingData, error: pricingError } = await supabase
-            .from(pricingTable)
-            .select('*')
-            .eq('package_id', pkg.id)
-            .eq('is_active', true)
-            .order('display_order', { ascending: true });
-
-          if (pricingError && pricingError.code !== 'PGRST116') { // PGRST116 = no rows found
-            console.warn('Error fetching pricing packages:', pricingError);
+          // Fetch pricing packages via API
+          const pricingResponse = await fetch(`/api/packages/${pkg.id}/pricing?type=activity`);
+          let pricingData: any[] = [];
+          if (pricingResponse.ok) {
+            const pricingResult = await pricingResponse.json();
+            pricingData = pricingResult.pricingPackages || [];
           }
 
           setPackageData({
             ...packageData,
-            pricing_packages: (pricingData || []) as any[],
+            pricing_packages: pricingData,
           });
 
           // Initialize default config
-          const pricingArray = (pricingData || []) as any[];
           setConfig({
             packageType: 'TICKET_ONLY',
-            selectedPricingPackageId: pricingArray[0]?.id || null,
+            selectedPricingPackageId: pricingData[0]?.id || null,
             selectedVehicle: null,
             quantity: 1,
           });
@@ -151,59 +148,41 @@ export function PackageConfigModal({
           }
           return;
         } else if (pkg.package_type === 'transfer') {
-          query = supabase.from('transfer_packages').select('*').eq('id', pkg.id).single();
+          // Use AWS-based API route instead of Supabase
+          const response = await fetch(`/api/packages/${pkg.id}?type=transfer`);
+          if (!response.ok) {
+            throw new Error('Failed to fetch transfer package');
+          }
+          const { package: transferData } = await response.json();
+          
+          if (transferData && isMounted) {
+            setPackageData(transferData);
+            setConfig({
+              pricingType: 'point-to-point',
+              selectedOption: null,
+              hours: 1,
+              quantity: 1,
+            });
+          }
+          if (isMounted) {
+            setLoading(false);
+          }
+          return;
         } else if (pkg.package_type === 'multi_city') {
-          const { data: packageData, error: packageError } = await supabase
-            .from('multi_city_packages')
-            .select('id, title, destination_region, operator_id, base_price, currency, total_nights, total_days, total_cities')
-            .eq('id', pkg.id)
-            .single();
-
-          if (packageError) throw packageError;
-
-          // Fetch pricing packages
-          const { data: pricingPackages, error: pricingError } = await supabase
-            .from('multi_city_pricing_packages' as any)
-            .select('*')
-            .eq('package_id', pkg.id)
-            .order('created_at', { ascending: true });
-
-          if (pricingError && pricingError.code !== 'PGRST116') {
-            console.warn('Error fetching pricing packages:', pricingError);
+          // Use AWS-based API route instead of Supabase
+          const response = await fetch(`/api/packages/${pkg.id}/details?type=multi_city`);
+          if (!response.ok) {
+            throw new Error('Failed to fetch package details');
           }
+          const { package: packageData } = await response.json();
 
-          const pricingPkg = (pricingPackages?.[0] as any) || null;
-          let sicRows: any[] = [];
-          let privateRows: any[] = [];
-
-          if (pricingPkg) {
-            if (pricingPkg.pricing_type === 'SIC') {
-              // Fetch SIC pricing rows
-              const { data: rows } = await supabase
-                .from('multi_city_pricing_rows' as any)
-                .select('*')
-                .eq('pricing_package_id', pricingPkg.id)
-                .order('display_order', { ascending: true });
-              sicRows = (rows as any[]) || [];
-            } else if (pricingPkg.pricing_type === 'PRIVATE_PACKAGE') {
-              // Fetch PRIVATE_PACKAGE pricing rows
-              const { data: rows } = await supabase
-                .from('multi_city_private_package_rows' as any)
-                .select('*')
-                .eq('pricing_package_id', pricingPkg.id)
-                .order('display_order', { ascending: true });
-              privateRows = (rows as any[]) || [];
-            }
-          }
-
-          setPackageData({
-            ...(packageData as any),
-            pricing_package: pricingPkg,
-            sic_pricing_rows: sicRows,
-            private_package_rows: privateRows,
-          });
+          setPackageData(packageData);
 
           // Initialize default config
+          const pricingPkg = packageData.pricing_package;
+          const sicRows = packageData.sic_pricing_rows || [];
+          const privateRows = packageData.private_package_rows || [];
+
           setConfig({
             pricingType: (pricingPkg?.pricing_type as 'SIC' | 'PRIVATE_PACKAGE') || 'SIC',
             selectedPricingRowId: sicRows[0]?.id || privateRows[0]?.id || null,
@@ -217,88 +196,30 @@ export function PackageConfigModal({
           }
           return;
         } else if (pkg.package_type === 'multi_city_hotel') {
-          const { data: packageData, error: packageError } = await supabase
-            .from('multi_city_hotel_packages' as any)
-            .select('id, title, destination_region, operator_id, base_price, currency, total_nights, total_cities')
-            .eq('id', pkg.id)
-            .single();
-
-          if (packageError) throw packageError;
-
-          // Fetch pricing packages
-          const { data: pricingPackages, error: pricingError } = await supabase
-            .from('multi_city_hotel_pricing_packages' as any)
-            .select('*')
-            .eq('package_id', pkg.id)
-            .order('created_at', { ascending: true });
-
-          if (pricingError && pricingError.code !== 'PGRST116') {
-            console.warn('Error fetching pricing packages:', pricingError);
+          // Use AWS-based API route instead of Supabase
+          const response = await fetch(`/api/packages/${pkg.id}/details?type=multi_city_hotel`);
+          if (!response.ok) {
+            throw new Error('Failed to fetch package details');
           }
+          const { package: packageData } = await response.json();
 
-          const pricingPkg = (pricingPackages?.[0] as any) || null;
-          let sicRows: any[] = [];
-          let privateRows: any[] = [];
-
-          if (pricingPkg) {
-            if (pricingPkg.pricing_type === 'SIC') {
-              const { data: rows } = await supabase
-                .from('multi_city_hotel_pricing_rows' as any)
-                .select('*')
-                .eq('pricing_package_id', pricingPkg.id)
-                .order('display_order', { ascending: true });
-              sicRows = (rows as any[]) || [];
-            } else if (pricingPkg.pricing_type === 'PRIVATE_PACKAGE') {
-              const { data: rows } = await supabase
-                .from('multi_city_hotel_private_package_rows' as any)
-                .select('*')
-                .eq('pricing_package_id', pricingPkg.id)
-                .order('display_order', { ascending: true });
-              privateRows = (rows as any[]) || [];
-            }
-          }
-
-          // Fetch cities and hotels
-          const { data: cities } = await supabase
-            .from('multi_city_hotel_package_cities' as any)
-            .select('id, name, nights, city_order')
-            .eq('package_id', pkg.id)
-            .order('city_order', { ascending: true });
-
-          const cityIds = (cities as any[])?.map((c: any) => c.id) || [];
-          const hotelsByCity: Record<string, any[]> = {};
-
-          if (cityIds.length > 0) {
-            const { data: hotels } = await supabase
-              .from('multi_city_hotel_package_city_hotels' as any)
-              .select('*')
-              .in('city_id', cityIds)
-              .order('display_order', { ascending: true });
-
-            // Group hotels by city
-            if (hotels && Array.isArray(hotels)) {
-              (hotels as any[]).forEach((hotel: any) => {
-                if (hotel.city_id) {
-                  if (!hotelsByCity[hotel.city_id]) {
-                    hotelsByCity[hotel.city_id] = [];
-                  }
-                  hotelsByCity[hotel.city_id]!.push(hotel);
-                }
-              });
-            }
-          }
+          const pricingPkg = packageData.pricing_package;
+          const sicRows = packageData.sic_pricing_rows || [];
+          const privateRows = packageData.private_package_rows || [];
+          const cities = packageData.cities || [];
+          const hotelsByCity = packageData.hotels_by_city || {};
 
           setPackageData({
-            ...(packageData as any),
+            ...packageData,
             pricing_package: pricingPkg,
             sic_pricing_rows: sicRows,
             private_package_rows: privateRows,
-            cities: (cities as any[]) || [],
+            cities: cities,
             hotels_by_city: hotelsByCity,
           });
 
           // Initialize default config with hotel selections
-          const defaultHotels = ((cities as any[]) || []).map((city: any) => ({
+          const defaultHotels = (cities || []).map((city: any) => ({
             city_id: city.id,
             city_name: city.name,
             hotel_id: hotelsByCity[city.id]?.[0]?.id || null,
@@ -318,40 +239,19 @@ export function PackageConfigModal({
           }
           return;
         } else if (pkg.package_type === 'fixed_departure') {
-          const { data: fixedData, error: fixedError } = await supabase
-            .from('fixed_departure_flight_packages' as any)
-            .select('*')
-            .eq('id', pkg.id)
-            .single();
-
-          if (fixedError) throw fixedError;
+          // Use AWS-based API route instead of Supabase
+          const response = await fetch(`/api/packages/${pkg.id}?type=fixed_departure`);
+          if (!response.ok) {
+            throw new Error('Failed to fetch fixed departure package');
+          }
+          const { package: fixedData } = await response.json();
+          
           if (fixedData && isMounted) {
             setPackageData(fixedData);
             setConfig({
               pricingType: 'SIC',
               selectedVehicle: null,
               selectedHotels: [],
-              quantity: 1,
-            });
-          }
-          if (isMounted) {
-            setLoading(false);
-          }
-          return;
-        } else if (pkg.package_type === 'transfer') {
-          const { data: transferData, error: transferError } = await supabase
-            .from('transfer_packages')
-            .select('*')
-            .eq('id', pkg.id)
-            .single();
-
-          if (transferError) throw transferError;
-          if (transferData && isMounted) {
-            setPackageData(transferData);
-            setConfig({
-              pricingType: 'point-to-point',
-              selectedOption: null,
-              hours: 1,
               quantity: 1,
             });
           }
@@ -498,30 +398,33 @@ export function PackageConfigModal({
 
     setLoading(true);
     try {
-      // Create itinerary item
-      const { data: item, error } = await supabase
-        .from('itinerary_items' as any)
-        .insert({
-          itinerary_id: itineraryId,
-          day_id: null, // Unassigned initially
-          package_type: pkg.package_type,
-          package_id: pkg.id,
-          operator_id: pkg.operator_id,
-          package_title: pkg.title,
-          package_image_url: pkg.featured_image_url,
+      // Create itinerary item via API
+      const response = await fetch(`/api/itineraries/${itineraryId}/items/create`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          dayId: null, // Unassigned initially
+          packageType: pkg.package_type,
+          packageId: pkg.id,
+          operatorId: pkg.operator_id,
+          packageTitle: pkg.title,
+          packageImageUrl: pkg.featured_image_url,
           configuration: config,
-          unit_price: calculatedPrice / (config.quantity || 1),
+          unitPrice: calculatedPrice / (config.quantity || 1),
           quantity: config.quantity || 1,
-          total_price: calculatedPrice,
-          display_order: 0,
-        })
-        .select()
-        .single();
+          displayOrder: 0,
+        }),
+      });
 
-      if (error) throw error;
-      if (!item) throw new Error('Failed to create itinerary item');
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to create itinerary item');
+      }
 
-      const itemTyped = item as unknown as { id: string };
+      const { item } = await response.json();
+      if (!item || !item.id) throw new Error('Failed to create itinerary item');
+
+      const itemTyped = { id: item.id };
 
       // For multi-city and multi-city hotel packages, navigate directly to configuration page
       if (pkg.package_type === 'multi_city' || pkg.package_type === 'multi_city_hotel') {
@@ -558,13 +461,17 @@ export function PackageConfigModal({
 
     setLoading(true);
     try {
-      // Update item with selected day
-      const { error } = await supabase
-        .from('itinerary_items' as any)
-        .update({ day_id: selectedDayId })
-        .eq('id', addedItem.id);
+      // Update item with selected day via API
+      const response = await fetch(`/api/itineraries/${itineraryId}/items/${addedItem.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dayId: selectedDayId }),
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to update item');
+      }
 
       onPackageAdded({ ...addedItem, day_id: selectedDayId });
       toast.success('Package assigned to day successfully');
@@ -588,10 +495,10 @@ export function PackageConfigModal({
     try {
       const newDayNumber = days.length > 0 ? Math.max(...days.map(d => d.day_number)) + 1 : 1;
       
-      const { data: newDay, error } = await supabase
-        .from('itinerary_days' as any)
-        .insert({
-          itinerary_id: itineraryId,
+      const response = await fetch(`/api/itineraries/${itineraryId}/days/create`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           day_number: newDayNumber,
           display_order: newDayNumber,
           time_slots: {
@@ -599,14 +506,18 @@ export function PackageConfigModal({
             afternoon: { time: '', activities: [], transfers: [] },
             evening: { time: '', activities: [], transfers: [] },
           },
-        })
-        .select()
-        .single();
+        }),
+      });
 
-      if (error) throw error;
-      if (!newDay) throw new Error('Failed to create day');
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to create day');
+      }
 
-      const newDayTyped = newDay as unknown as { id: string; day_number: number; date: string | null; city_name: string | null };
+      const { day } = await response.json();
+      if (!day) throw new Error('Failed to create day');
+
+      const newDayTyped = day as unknown as { id: string; day_number: number; date: string | null; city_name: string | null };
       setDays([...days, newDayTyped]);
       setSelectedDayId(newDayTyped.id);
       toast.success('Day created successfully');

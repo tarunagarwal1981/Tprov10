@@ -112,6 +112,8 @@ export default function PackagesPage() {
 				const activityData = Array.isArray(data?.activityPackages) ? data.activityPackages : [];
 				const transferData = Array.isArray(data?.transferPackages) ? data.transferPackages : [];
 				const multiCityData = Array.isArray(data?.multiCityPackages) ? data.multiCityPackages : [];
+				const multiCityHotelData = Array.isArray(data?.multiCityHotelPackages) ? data.multiCityHotelPackages : [];
+				const fixedDepartureFlightData = Array.isArray(data?.fixedDepartureFlightPackages) ? data.fixedDepartureFlightPackages : [];
 
 				// Transform activity packages
 				const activityPackages: ActivityPackageCardData[] = (Array.isArray(activityData) ? activityData : []).map((pkg: any) => {
@@ -191,8 +193,60 @@ export default function PackagesPage() {
 					};
 				});
 
-				// Store remaining packages (multi-city, etc.) separately
-				const allPackages = [...multiCityPackages]
+				// Transform multi-city hotel packages
+				const multiCityHotelPackages: Package[] = (Array.isArray(multiCityHotelData) ? multiCityHotelData : []).map((pkg: any) => {
+					let displayStatus: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED' = 'DRAFT';
+					if (pkg.status === 'published') {
+						displayStatus = 'PUBLISHED';
+					} else if (pkg.status === 'draft') {
+						displayStatus = 'DRAFT';
+					} else if (pkg.status === 'archived' || pkg.status === 'suspended') {
+						displayStatus = 'ARCHIVED';
+					}
+
+					return {
+						id: pkg.id,
+						title: pkg.title,
+						type: 'Multi-City Hotel',
+						status: displayStatus,
+						price: pkg.base_price || 0,
+						rating: 0,
+						reviews: 0,
+						bookings: 0,
+						views: 0,
+						image: pkg.imageUrl || '',
+						createdAt: new Date(pkg.created_at),
+					};
+				});
+
+				// Transform fixed departure flight packages
+				const fixedDepartureFlightPackages: Package[] = (Array.isArray(fixedDepartureFlightData) ? fixedDepartureFlightData : []).map((pkg: any) => {
+					let displayStatus: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED' = 'DRAFT';
+					if (pkg.status === 'published') {
+						displayStatus = 'PUBLISHED';
+					} else if (pkg.status === 'draft') {
+						displayStatus = 'DRAFT';
+					} else if (pkg.status === 'archived' || pkg.status === 'suspended') {
+						displayStatus = 'ARCHIVED';
+					}
+
+					return {
+						id: pkg.id,
+						title: pkg.title,
+						type: 'Fixed Departure Flight',
+						status: displayStatus,
+						price: pkg.base_price || 0,
+						rating: 0,
+						reviews: 0,
+						bookings: 0,
+						views: 0,
+						image: pkg.imageUrl || '',
+						createdAt: new Date(pkg.created_at),
+					};
+				});
+
+				// Store remaining packages (multi-city, multi-city-hotel, fixed-departure-flight) separately
+				const allPackages = [...multiCityPackages, ...multiCityHotelPackages, ...fixedDepartureFlightPackages]
 					.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
 				setPackages(allPackages);
@@ -300,6 +354,10 @@ export default function PackagesPage() {
 			? `/operator/packages/create/transfer?id=${pkg.id}&view=true`
 			: pkg.type === 'Multi-City'
 			? `/operator/packages/create/multi-city?id=${pkg.id}&view=true`
+			: pkg.type === 'Multi-City Hotel'
+			? `/operator/packages/create/multi-city-hotel?id=${pkg.id}&view=true`
+			: pkg.type === 'Fixed Departure Flight'
+			? `/operator/packages/create/fixed-departure-flight?id=${pkg.id}&view=true`
 			: `/operator/packages/create?id=${pkg.id}&view=true`;
 		router.push(viewPath);
 	};
@@ -312,6 +370,10 @@ export default function PackagesPage() {
 			? `/operator/packages/create/transfer?id=${pkg.id}`
 			: pkg.type === 'Multi-City'
 			? `/operator/packages/create/multi-city?id=${pkg.id}`
+			: pkg.type === 'Multi-City Hotel'
+			? `/operator/packages/create/multi-city-hotel?id=${pkg.id}`
+			: pkg.type === 'Fixed Departure Flight'
+			? `/operator/packages/create/fixed-departure-flight?id=${pkg.id}`
 			: `/operator/packages/create?id=${pkg.id}`;
 		router.push(editPath);
 	};

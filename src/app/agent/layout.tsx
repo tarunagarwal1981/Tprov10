@@ -59,13 +59,13 @@ export default function AgentLayout({ children }: { children: React.ReactNode })
         // Fallback: cognito_tokens (legacy JSON format)
         if (!accessToken) {
           const tokens = localStorage.getItem('cognito_tokens');
-          if (tokens) {
-            try {
-              const parsed = JSON.parse(tokens);
-              accessToken = parsed.accessToken;
-            } catch (e) {
-              // Invalid token format
-            }
+        if (tokens) {
+          try {
+            const parsed = JSON.parse(tokens);
+            accessToken = parsed.accessToken;
+          } catch (e) {
+            // Invalid token format
+          }
           }
         }
         

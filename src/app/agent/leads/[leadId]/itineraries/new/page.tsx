@@ -52,7 +52,7 @@ export default function CreateItineraryPage() {
   const toast = useToast();
 
   const leadId = params.leadId as string;
-  
+
   // State
   const [lead, setLead] = useState<LeadDetails | null>(null);
   const [query, setQuery] = useState<ItineraryQuery | null>(null);
@@ -68,7 +68,7 @@ export default function CreateItineraryPage() {
   useEffect(() => {
     const fetchData = async () => {
       if (!leadId || !user?.id) return;
-      
+
       try {
         // Fetch query data (optional - if not exists, query form will be shown)
         const queryResponse = await fetch(`/api/queries/${leadId}`);
@@ -507,17 +507,17 @@ export default function CreateItineraryPage() {
         throw new Error('No days generated from query destinations');
       }
 
-      const daysResponse = await fetch(`/api/itineraries/${itineraryId}/days/bulk-create`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ days: daysToInsert }),
-      });
+        const daysResponse = await fetch(`/api/itineraries/${itineraryId}/days/bulk-create`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ days: daysToInsert }),
+        });
 
-      if (!daysResponse.ok) {
-        const error = await daysResponse.json();
+        if (!daysResponse.ok) {
+          const error = await daysResponse.json();
         console.error('Failed to create itinerary days:', error);
-        throw new Error(error.error || 'Failed to create itinerary days');
-      }
+          throw new Error(error.error || 'Failed to create itinerary days');
+        }
 
       // Fetch package details
       const packageResponse = await fetch(`/api/packages/${packageId}?type=${packageType}`);
@@ -595,25 +595,25 @@ export default function CreateItineraryPage() {
   if (loading && !query) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading lead data...</p>
+          </div>
         </div>
-      </div>
     );
   }
 
   if (!lead) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center">
-          <p className="text-gray-600 mb-4">Lead not found</p>
-          <Button onClick={() => router.push('/agent/leads')}>
-            <FiArrowLeft className="w-4 h-4 mr-2" />
-            Back to Leads
-          </Button>
+          <div className="text-center">
+            <p className="text-gray-600 mb-4">Lead not found</p>
+            <Button onClick={() => router.push('/agent/leads')}>
+              <FiArrowLeft className="w-4 h-4 mr-2" />
+              Back to Leads
+            </Button>
+          </div>
         </div>
-      </div>
     );
   }
 
@@ -627,9 +627,9 @@ export default function CreateItineraryPage() {
           onClick={() => router.push(`/agent/leads/${leadId}`)}
           className="mb-4"
         >
-          <FiArrowLeft className="w-4 h-4 mr-2" />
+                <FiArrowLeft className="w-4 h-4 mr-2" />
           Back to Lead Details
-        </Button>
+              </Button>
         <h1 className="text-2xl font-bold text-gray-900">Create Itinerary</h1>
         <p className="text-gray-600 mt-2">
           {showingSimilar 
@@ -640,7 +640,7 @@ export default function CreateItineraryPage() {
                 ? 'Select a package matching your query'
                 : 'Create a query to find matching packages'}
         </p>
-      </div>
+              </div>
 
       {/* Main Content with Sidebar */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -651,9 +651,9 @@ export default function CreateItineraryPage() {
               lead={lead}
               query={query}
               onEditQuery={() => setQueryModalOpen(true)}
-            />
+                  />
           )}
-        </div>
+              </div>
 
         {/* Right Side - Packages Table */}
         <div className="lg:col-span-3">
@@ -662,9 +662,9 @@ export default function CreateItineraryPage() {
             onSelectPackage={handlePackageSelect}
             loading={loading}
             rowsPerPage={20}
-          />
-        </div>
-      </div>
+                  />
+                </div>
+              </div>
 
       {/* Query Modal */}
       <QueryModal
@@ -689,7 +689,7 @@ export default function CreateItineraryPage() {
         onYes={handleShowSimilar}
         onNo={handleDontShowSimilar}
       />
+              </div>
       </div>
-    </div>
   );
 }

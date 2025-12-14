@@ -91,9 +91,10 @@ export default function LeadDetailPage() {
       
       if (!response.ok) {
         if (response.status === 404) {
-          toast.error('Lead not found');
-          router.push('/agent/leads');
-          return;
+          console.error('[LeadDetailPage] Lead not found - 404 response');
+          setLead(null);
+          setLoading(false);
+          return; // Don't navigate away, just show error state
         }
         throw new Error('Failed to fetch lead details');
       }
@@ -101,9 +102,10 @@ export default function LeadDetailPage() {
       const { lead: leadData } = await response.json();
 
       if (!leadData) {
-        toast.error('Lead not found');
-        router.push('/agent/leads');
-        return;
+        console.error('[LeadDetailPage] Lead data is null');
+        setLead(null);
+        setLoading(false);
+        return; // Don't navigate away, just show error state
       }
 
       setLead(leadData);
@@ -175,11 +177,30 @@ export default function LeadDetailPage() {
       }
 
       const responseData = await response.json();
+      console.log('[LeadDetailPage] Query API response:', responseData);
+      
       const savedQuery = responseData.query;
       
-      if (!savedQuery || !savedQuery.id) {
+      if (!responseData) {
+        console.error('[LeadDetailPage] Empty response from query API');
+        throw new Error('Invalid response from query API');
+      }
+      
+      if (!savedQuery) {
+        console.error('[LeadDetailPage] No query in response:', responseData);
+        throw new Error('Query not returned in API response');
+      }
+      
+      if (!savedQuery.id) {
+        console.error('[LeadDetailPage] Query created but missing ID:', {
+          query: savedQuery,
+          queryKeys: Object.keys(savedQuery),
+          fullResponse: responseData,
+        });
         throw new Error('Query created but no ID returned');
       }
+      
+      console.log('[LeadDetailPage] Query saved successfully with ID:', savedQuery.id);
       
       // If editing an existing itinerary's query, update the itinerary's query_id
       if (editingQueryForItinerary) {
@@ -190,7 +211,7 @@ export default function LeadDetailPage() {
         });
         setQueries(prev => ({ ...prev, [editingQueryForItinerary]: savedQuery }));
         setEditingQueryForItinerary(null);
-        toast.success('Query updated successfully!');
+      toast.success('Query updated successfully!');
       } else {
         // Creating a new itinerary - create itinerary and link query
         const itineraryResponse = await fetch('/api/itineraries/create', {
@@ -208,17 +229,19 @@ export default function LeadDetailPage() {
         });
 
         if (!itineraryResponse.ok) {
-          throw new Error('Failed to create itinerary');
+          const errorData = await itineraryResponse.json().catch(() => ({}));
+          console.error('[LeadDetailPage] Failed to create itinerary:', {
+            status: itineraryResponse.status,
+            statusText: itineraryResponse.statusText,
+            error: errorData,
+          });
+          throw new Error(errorData.details || errorData.error || 'Failed to create itinerary');
         }
 
         const { itinerary } = await itineraryResponse.json();
+        console.log('[LeadDetailPage] Itinerary created successfully:', itinerary);
         
-        // Update itinerary with query_id
-        await fetch(`/api/itineraries/${itinerary.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query_id: savedQuery.id }),
-        });
+        // Note: query_id is already set during creation, no need to PATCH
 
         // Refresh itineraries
         const itinerariesResponse = await fetch(`/api/itineraries/leads/${leadId}`);
@@ -230,11 +253,22 @@ export default function LeadDetailPage() {
 
         toast.success('Query and itinerary created successfully!');
         
-        // Navigate based on action
-        if (queryAction === 'insert') {
-          router.push(`/agent/leads/${leadId}/insert?queryId=${savedQuery.id}&itineraryId=${itinerary.id}`);
-        } else if (queryAction === 'create') {
-          router.push(`/agent/leads/${leadId}/itineraries/new?queryId=${savedQuery.id}&itineraryId=${itinerary.id}`);
+        // Refresh the page data to show the new itinerary
+        await fetchLeadData();
+        
+        // Only navigate if lead data is available
+        if (lead) {
+          // Navigate based on action (after a short delay to ensure state is updated)
+          setTimeout(() => {
+            if (queryAction === 'insert') {
+              router.push(`/agent/leads/${leadId}/insert?queryId=${savedQuery.id}&itineraryId=${itinerary.id}`);
+            } else if (queryAction === 'create') {
+              router.push(`/agent/leads/${leadId}/itineraries/new?queryId=${savedQuery.id}&itineraryId=${itinerary.id}`);
+            }
+          }, 100);
+        } else {
+          console.warn('[LeadDetailPage] Cannot navigate - lead data not available');
+          // Stay on the page and let user manually navigate if needed
         }
       }
       
@@ -376,15 +410,15 @@ export default function LeadDetailPage() {
               
               return (
                 <Card key={itinerary.id} className="hover:shadow-lg transition-shadow">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <CardTitle className="text-lg font-semibold line-clamp-1">
-                        {itinerary.name}
-                      </CardTitle>
-                      <Badge variant="secondary">{itinerary.status}</Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <CardTitle className="text-lg font-semibold line-clamp-1">
+                      {itinerary.name}
+                    </CardTitle>
+                    <Badge variant="secondary">{itinerary.status}</Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
                     {/* Query Details for this itinerary */}
                     {itineraryQuery ? (
                       <div className="bg-gray-50 p-3 rounded-md space-y-2 text-sm">
@@ -422,28 +456,28 @@ export default function LeadDetailPage() {
                       </div>
                     )}
                     
-                    <div className="flex items-center gap-4 text-sm text-gray-600">
-                      <span>{itinerary.adults_count} Adults</span>
-                      {itinerary.children_count > 0 && (
-                        <span>{itinerary.children_count} Children</span>
-                      )}
-                    </div>
-                    <div className="flex items-center justify-between pt-2 border-t">
-                      <span className="text-sm text-gray-600">Total Price</span>
-                      <span className="text-xl font-bold text-green-600">
-                        ${itinerary.total_price.toFixed(2)}
-                      </span>
-                    </div>
+                  <div className="flex items-center gap-4 text-sm text-gray-600">
+                    <span>{itinerary.adults_count} Adults</span>
+                    {itinerary.children_count > 0 && (
+                      <span>{itinerary.children_count} Children</span>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between pt-2 border-t">
+                    <span className="text-sm text-gray-600">Total Price</span>
+                    <span className="text-xl font-bold text-green-600">
+                      ${itinerary.total_price.toFixed(2)}
+                    </span>
+                  </div>
                     <div className="flex gap-2 pt-2 border-t">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => router.push(`/agent/itineraries/${itinerary.id}/builder`)}
-                        className="flex-1"
-                      >
-                        <FiEye className="w-4 h-4 mr-1" />
-                        View
-                      </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => router.push(`/agent/itineraries/${itinerary.id}/builder`)}
+                      className="flex-1"
+                    >
+                      <FiEye className="w-4 h-4 mr-1" />
+                      View
+                    </Button>
                       {isInsertItinerary && (
                         <Button
                           variant="outline"
@@ -455,9 +489,9 @@ export default function LeadDetailPage() {
                           Insert Packages
                         </Button>
                       )}
-                    </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </CardContent>
+              </Card>
               );
             })}
 

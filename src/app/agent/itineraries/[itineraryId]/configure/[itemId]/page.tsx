@@ -15,6 +15,21 @@ import { useToast } from '@/hooks/useToast';
 import { ActivitySelectorModal } from '@/components/itinerary/ActivitySelectorModal';
 import { TransferSelectorModal } from '@/components/itinerary/TransferSelectorModal';
 
+interface TimeSlotItems {
+  activities: Array<{
+    id: string;
+    package_id: string;
+    title: string;
+    price: number;
+  }>;
+  transfers: Array<{
+    id: string;
+    package_id: string;
+    title: string;
+    price: number;
+  }>;
+}
+
 interface PackageDay {
   id: string;
   day_number: number;
@@ -31,6 +46,12 @@ interface PackageDay {
     child_price?: number;
   }>;
   selected_hotel_id?: string | null;
+  timeSlots: {
+    morning: TimeSlotItems;
+    afternoon: TimeSlotItems;
+    evening: TimeSlotItems;
+  };
+  // Legacy support - computed from timeSlots
   activities: Array<{
     id: string;
     package_id: string;
@@ -51,6 +72,26 @@ interface PricingBreakdown {
   activitiesPrice: number;
   transfersPrice: number;
   total: number;
+}
+
+// Helper function to create a day with default timeSlots
+function createDayWithTimeSlots(dayData: Partial<PackageDay>): PackageDay {
+  return {
+    id: dayData.id || '',
+    day_number: dayData.day_number || 0,
+    city_id: dayData.city_id || '',
+    city_name: dayData.city_name || '',
+    nights: dayData.nights || 0,
+    hotels: dayData.hotels || [],
+    selected_hotel_id: dayData.selected_hotel_id || null,
+    timeSlots: dayData.timeSlots || {
+      morning: { activities: [], transfers: [] },
+      afternoon: { activities: [], transfers: [] },
+      evening: { activities: [], transfers: [] },
+    },
+    activities: dayData.activities || [],
+    transfers: dayData.transfers || [],
+  };
 }
 
 export default function PackageConfigurationPage() {
@@ -82,6 +123,7 @@ export default function PackageConfigurationPage() {
     total: 0,
   });
   const [selectedDayForActivity, setSelectedDayForActivity] = useState<PackageDay | null>(null);
+  const [selectedTimeSlotForActivity, setSelectedTimeSlotForActivity] = useState<'morning' | 'afternoon' | 'evening'>('afternoon');
   const [selectedDayForTransfer, setSelectedDayForTransfer] = useState<PackageDay | null>(null);
   const [showActivityModal, setShowActivityModal] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
@@ -167,6 +209,19 @@ export default function PackageConfigurationPage() {
             sic_pricing_rows: sicRows,
             private_package_rows: privateRows,
           });
+          
+          // Load saved configuration or set defaults for multi_city_hotel
+          const config = itemTyped.configuration || {};
+          
+          // Set pricing type from saved config or package
+          const savedPricingType = config.pricingType || pricingPkg?.pricing_type || 'SIC';
+          setInitialConfig((prev: typeof initialConfig) => ({
+            ...prev,
+            pricingType: savedPricingType,
+            selectedPricingRowId: config.selectedPricingRowId || null,
+            selectedVehicle: config.selectedVehicle || null,
+            quantity: config.quantity || 1,
+          }));
 
           // Fetch day plans from the database (not cities - day plans have all the days)
           const dayPlansResponse = await fetch(`/api/packages/${packageId}/day-plans?type=multi_city_hotel`);
@@ -190,7 +245,7 @@ export default function PackageConfigurationPage() {
             const citiesData = await citiesResponse.json();
             const cities = citiesData.cities || [];
 
-            // Fetch hotels for each city
+          // Fetch hotels for each city
             const cityIds = cities.map((c: any) => c.id);
             const hotelsResponse = await fetch(`/api/packages/${packageId}/hotels?cityIds=${cityIds.join(',')}`);
             if (!hotelsResponse.ok) {
@@ -235,7 +290,7 @@ export default function PackageConfigurationPage() {
               }
             });
 
-            return {
+            return createDayWithTimeSlots({
               id: `day-${dayNumber}`,
               day_number: dayNumber++,
               city_id: city.id,
@@ -250,9 +305,7 @@ export default function PackageConfigurationPage() {
                 child_price: parseFloat(h.child_price || 0),
               })),
               selected_hotel_id: cheapestHotel ? cheapestHotel.id : (cityHotels[0]?.id || null),
-              activities: [],
-              transfers: [],
-            };
+            });
           });
 
           setDays(packageDays);
@@ -312,29 +365,25 @@ export default function PackageConfigurationPage() {
                 }
               });
 
-              // Extract activities and transfers from time_slots
+              // Extract activities and transfers from time_slots (operator-defined)
               const timeSlots = dayPlan.time_slots || {
                 morning: { time: "", activities: [], transfers: [] },
                 afternoon: { time: "", activities: [], transfers: [] },
                 evening: { time: "", activities: [], transfers: [] },
               };
               
-              // Collect all activities and transfers from all time slots
-              const allActivities: any[] = [];
-              const allTransfers: any[] = [];
-              
-              ['morning', 'afternoon', 'evening'].forEach((slot: string) => {
-                const slotData = timeSlots[slot as keyof typeof timeSlots];
-                if (slotData?.activities) {
-                  allActivities.push(...slotData.activities);
-                }
-                if (slotData?.transfers) {
-                  allTransfers.push(...slotData.transfers);
-                }
-              });
+              // Convert operator-defined activities/transfers (strings) to display format
+              const convertOperatorItems = (items: string[]): Array<{ id: string; package_id: string; title: string; price: number }> => {
+                return items.map((item, idx) => ({
+                  id: `operator-item-${dayPlan.id}-${idx}-${Date.now()}`,
+                  package_id: '',
+                  title: item,
+                  price: 0, // Operator-defined items don't have prices
+                }));
+              };
 
               const cityData = cities.find((c: any) => c.id === dayPlan.city_id);
-              return {
+              return createDayWithTimeSlots({
                 id: dayPlan.id || `day-${dayPlan.day_number}`,
                 day_number: dayPlan.day_number,
                 city_id: dayPlan.city_id || '',
@@ -349,113 +398,154 @@ export default function PackageConfigurationPage() {
                   child_price: parseFloat(h.child_price || 0),
                 })),
                 selected_hotel_id: cheapestHotel ? cheapestHotel.id : (cityHotels[0]?.id || null),
-                activities: allActivities.map((act: string, idx: number) => ({
-                  id: `activity-${dayPlan.day_number}-${idx}`,
-                  package_id: packageId,
-                  title: act,
-                  price: 0, // Activities from time slots don't have prices
-                })),
-                transfers: allTransfers.map((trans: string, idx: number) => ({
-                  id: `transfer-${dayPlan.day_number}-${idx}`,
-                  package_id: packageId,
-                  title: trans,
-                  price: 0, // Transfers from time slots don't have prices
-                })),
-              };
+                timeSlots: {
+                  morning: {
+                    activities: convertOperatorItems(timeSlots.morning?.activities || []),
+                    transfers: convertOperatorItems(timeSlots.morning?.transfers || []),
+                  },
+                  afternoon: {
+                    activities: convertOperatorItems(timeSlots.afternoon?.activities || []),
+                    transfers: convertOperatorItems(timeSlots.afternoon?.transfers || []),
+                  },
+                  evening: {
+                    activities: convertOperatorItems(timeSlots.evening?.activities || []),
+                    transfers: convertOperatorItems(timeSlots.evening?.transfers || []),
+                  },
+                },
+                // Legacy arrays - combine all time slots
+                activities: [
+                  ...convertOperatorItems(timeSlots.morning?.activities || []),
+                  ...convertOperatorItems(timeSlots.afternoon?.activities || []),
+                  ...convertOperatorItems(timeSlots.evening?.activities || []),
+                ],
+                transfers: [
+                  ...convertOperatorItems(timeSlots.morning?.transfers || []),
+                  ...convertOperatorItems(timeSlots.afternoon?.transfers || []),
+                  ...convertOperatorItems(timeSlots.evening?.transfers || []),
+                ],
+              });
             });
 
             setDays(packageDays);
-          }
-
-          // Load existing configuration from item
-          const config = itemTyped.configuration || {};
-          if (config.selectedHotels) {
-            setDays(prevDays =>
-              prevDays.map(day => {
-                const hotelConfig = config.selectedHotels.find(
-                  (h: any) => h.city_id === day.city_id
-                );
-                return {
-                  ...day,
-                  selected_hotel_id: hotelConfig?.hotel_id || day.selected_hotel_id,
-                };
-              })
-            );
-          }
-
-          // Load activities and transfers from existing itinerary_items
-          if (config.activities && Array.isArray(config.activities)) {
-            // Fetch activity items from database
-            const activityItemIds = config.activities
-              .map((a: any) => a.activity_item_id)
-              .filter((id: any) => id);
             
-            if (activityItemIds.length > 0) {
-              // Fetch activity items - we'll need to fetch them individually or create a batch endpoint
-              // For now, we'll skip this and rely on the config
-              const activityItems: any[] = [];
-
-              if (activityItems.length > 0) {
-                const activityItemsTyped = activityItems as unknown as Array<{
-                  id: string;
-                  package_id: string;
-                  package_title: string;
-                  total_price: number;
-                }>;
+            // Load activities and transfers from itinerary_items after days are set
+            const itemsResponse = await fetch(`/api/itineraries/${itineraryId}/items`);
+            if (itemsResponse.ok) {
+              const itemsData = await itemsResponse.json();
+              const allItems = itemsData.items || [];
+              
+              // Separate activities and transfers
+              const activityItems = allItems.filter((item: any) => item.package_type === 'activity');
+              const transferItems = allItems.filter((item: any) => item.package_type === 'transfer');
+              
+              // Get itinerary days to map items to days
+              const daysResponse = await fetch(`/api/itineraries/${itineraryId}/days`);
+              if (daysResponse.ok) {
+                const daysData = await daysResponse.json();
+                const itineraryDays = daysData.days || [];
                 
+                // Load saved hotel selections
+                const config = itemTyped.configuration || {};
+                
+                // Map items to days based on day_id
                 setDays(prevDays =>
                   prevDays.map(day => {
-                    const dayActivities = config.activities
-                      .filter((a: any) => a.city_id === day.city_id)
-                      .map((a: any) => {
-                        const item = activityItemsTyped.find((item) => item.id === a.activity_item_id);
-                        return {
-                          id: a.activity_item_id,
-                          package_id: a.activity_package_id || item?.package_id || '',
-                          title: a.activity_title || item?.package_title || '',
-                          price: a.price || item?.total_price || 0,
-                        };
-                      });
-                    return { ...day, activities: dayActivities };
-                  })
-                );
-              }
-            }
-          }
-
-          if (config.transfers && Array.isArray(config.transfers)) {
-            // Fetch transfer items from database
-            const transferItemIds = config.transfers
-              .map((t: any) => t.transfer_item_id)
-              .filter((id: any) => id);
-            
-            if (transferItemIds.length > 0) {
-              // Fetch transfer items - we'll need to fetch them individually or create a batch endpoint
-              // For now, we'll skip this and rely on the config
-              const transferItems: any[] = [];
-
-              if (transferItems.length > 0) {
-                const transferItemsTyped = transferItems as unknown as Array<{
-                  id: string;
-                  package_id: string;
-                  package_title: string;
-                  total_price: number;
-                }>;
-                
-                setDays(prevDays =>
-                  prevDays.map(day => {
-                    const dayTransfers = config.transfers
-                      .filter((t: any) => t.city_id === day.city_id)
-                      .map((t: any) => {
-                        const item = transferItemsTyped.find((item) => item.id === t.transfer_item_id);
-                        return {
-                          id: t.transfer_item_id,
-                          package_id: t.transfer_package_id || item?.package_id || '',
-                          title: t.transfer_title || item?.package_title || '',
-                          price: t.price || item?.total_price || 0,
-                        };
-                      });
-                    return { ...day, transfers: dayTransfers };
+                    // Find matching itinerary day by city_name or day_number
+                    const itineraryDay = itineraryDays.find((id: any) => 
+                      id.city_name === day.city_name || 
+                      id.day_number === day.day_number
+                    );
+                    
+                    // Load saved hotel selection
+                    const hotelConfig = config.selectedHotels?.find(
+                      (h: any) => h.city_id === day.city_id
+                    );
+                    
+                    if (itineraryDay) {
+                      // Group activities and transfers by time slot from itinerary_items (agent-added)
+                      const activitiesBySlot: Record<string, any[]> = { morning: [], afternoon: [], evening: [] };
+                      const transfersBySlot: Record<string, any[]> = { morning: [], afternoon: [], evening: [] };
+                      
+                      activityItems
+                        .filter((item: any) => item.day_id === itineraryDay.id)
+                        .forEach((item: any) => {
+                          const timeSlot: 'morning' | 'afternoon' | 'evening' = (item.configuration?.timeSlot || 'afternoon') as 'morning' | 'afternoon' | 'evening';
+                          const slot = activitiesBySlot[timeSlot];
+                          if (slot) {
+                            slot.push({
+                              id: item.id,
+                              package_id: item.package_id,
+                              title: item.package_title,
+                              price: item.unit_price || 0,
+                            });
+                          }
+                        });
+                      
+                      transferItems
+                        .filter((item: any) => item.day_id === itineraryDay.id)
+                        .forEach((item: any) => {
+                          const timeSlot: 'morning' | 'afternoon' | 'evening' = (item.configuration?.timeSlot || 'afternoon') as 'morning' | 'afternoon' | 'evening';
+                          const slot = transfersBySlot[timeSlot];
+                          if (slot) {
+                            slot.push({
+                              id: item.id,
+                              package_id: item.package_id,
+                              title: item.package_title,
+                              price: item.unit_price || 0,
+                            });
+                          }
+                        });
+                      
+                      // Merge operator-defined items (from day.timeSlots) with agent-added items (from itinerary_items)
+                      // Operator items are already in day.timeSlots, so we add agent items to them
+                      const morningActivities = [...(day.timeSlots?.morning?.activities || []), ...(activitiesBySlot.morning || [])];
+                      const morningTransfers = [...(day.timeSlots?.morning?.transfers || []), ...(transfersBySlot.morning || [])];
+                      const afternoonActivities = [...(day.timeSlots?.afternoon?.activities || []), ...(activitiesBySlot.afternoon || [])];
+                      const afternoonTransfers = [...(day.timeSlots?.afternoon?.transfers || []), ...(transfersBySlot.afternoon || [])];
+                      const eveningActivities = [...(day.timeSlots?.evening?.activities || []), ...(activitiesBySlot.evening || [])];
+                      const eveningTransfers = [...(day.timeSlots?.evening?.transfers || []), ...(transfersBySlot.evening || [])];
+                      
+                      return { 
+                        ...day, 
+                        timeSlots: {
+                          morning: { 
+                            activities: morningActivities,
+                            transfers: morningTransfers,
+                          },
+                          afternoon: { 
+                            activities: afternoonActivities,
+                            transfers: afternoonTransfers,
+                          },
+                          evening: { 
+                            activities: eveningActivities,
+                            transfers: eveningTransfers,
+                          },
+                        },
+                        activities: [
+                          ...(day.activities || []),
+                          ...(activitiesBySlot.morning || []),
+                          ...(activitiesBySlot.afternoon || []),
+                          ...(activitiesBySlot.evening || []),
+                        ],
+                        transfers: [
+                          ...(day.transfers || []),
+                          ...(transfersBySlot.morning || []),
+                          ...(transfersBySlot.afternoon || []),
+                          ...(transfersBySlot.evening || []),
+                        ],
+                        selected_hotel_id: hotelConfig?.hotel_id || day.selected_hotel_id,
+                      };
+                    }
+                    
+                    return {
+                      ...day,
+                      timeSlots: day.timeSlots || {
+                        morning: { activities: [], transfers: [] },
+                        afternoon: { activities: [], transfers: [] },
+                        evening: { activities: [], transfers: [] },
+                      },
+                      selected_hotel_id: hotelConfig?.hotel_id || day.selected_hotel_id,
+                    };
                   })
                 );
               }
@@ -470,11 +560,25 @@ export default function PackageConfigurationPage() {
           const pkgData = await pkgResponse.json();
           const pkg = pkgData.package;
 
-          // Fetch pricing packages (for multi_city, we'll use a similar structure)
-          // Note: This may need a different endpoint for multi_city packages
-          const pricingPkg = null;
-          const sicRows: any[] = [];
-          const privateRows: any[] = [];
+          // Fetch pricing packages for multi_city
+          const pricingResponse = await fetch(`/api/packages/${packageId}/pricing?type=multi_city`);
+          let pricingPkg = null;
+          let sicRows: any[] = [];
+          let privateRows: any[] = [];
+          
+          if (pricingResponse.ok) {
+            const pricingData = await pricingResponse.json();
+            pricingPkg = pricingData.pricingPackage;
+            sicRows = pricingData.sicRows || [];
+            privateRows = pricingData.privateRows || [];
+            console.log('[Configure] Pricing fetched:', { 
+              pricingType: pricingPkg?.pricing_type, 
+              sicRowsCount: sicRows.length, 
+              privateRowsCount: privateRows.length 
+            });
+          } else {
+            console.warn('[Configure] Failed to fetch pricing:', await pricingResponse.text());
+          }
 
           setPackageData({
             ...(pkg as any),
@@ -482,10 +586,22 @@ export default function PackageConfigurationPage() {
             sic_pricing_rows: sicRows,
             private_package_rows: privateRows,
           });
+          
+          // Load saved configuration or set defaults
+          const config = itemTyped.configuration || {};
+          
+          // Set pricing type from saved config or package
+          const savedPricingType = config.pricingType || pricingPkg?.pricing_type || 'SIC';
+          setInitialConfig((prev: typeof initialConfig) => ({
+            ...prev,
+            pricingType: savedPricingType,
+            selectedPricingRowId: config.selectedPricingRowId || null,
+            selectedVehicle: config.selectedVehicle || null,
+            quantity: config.quantity || 1,
+          }));
 
           // Auto-select transport option if PRIVATE_PACKAGE and no selection exists
-          const config = itemTyped.configuration || {};
-          if (!config.selectedPricingRowId && (pricingPkg as any)?.pricing_type === 'PRIVATE_PACKAGE' && privateRows.length > 0) {
+          if (!config.selectedPricingRowId && savedPricingType === 'PRIVATE_PACKAGE' && privateRows.length > 0) {
             const itineraryTyped = itineraryData as unknown as { adults_count?: number; children_count?: number } | null;
             const adults = itineraryTyped?.adults_count || 0;
             const children = itineraryTyped?.children_count || 0;
@@ -507,6 +623,7 @@ export default function PackageConfigurationPage() {
           }
 
           // Fetch day plans from the database (not cities - day plans have all the days)
+          console.log('[Configure] Fetching day plans for multi_city package:', packageId);
           const dayPlansResponse = await fetch(`/api/packages/${packageId}/day-plans?type=multi_city`);
           let dayPlans: any[] = [];
           let dayPlansError = null;
@@ -514,9 +631,11 @@ export default function PackageConfigurationPage() {
           if (dayPlansResponse.ok) {
             const dayPlansData = await dayPlansResponse.json();
             dayPlans = dayPlansData.dayPlans || [];
+            console.log('[Configure] Day plans fetched successfully:', dayPlans.length, 'plans');
           } else {
-            dayPlansError = new Error('Failed to fetch day plans');
-            console.error('Error fetching day plans:', dayPlansError);
+            const errorText = await dayPlansResponse.text();
+            dayPlansError = new Error(`Failed to fetch day plans: ${errorText}`);
+            console.error('[Configure] Error fetching day plans:', dayPlansError);
           }
 
           console.log('[Configure] Fetched day plans:', { 
@@ -528,73 +647,213 @@ export default function PackageConfigurationPage() {
 
           if (dayPlansError || dayPlans.length === 0) {
             // Fallback: if day plans don't exist, fetch cities and create basic days
+            console.log('[Configure] No day plans found, fetching cities as fallback...');
             const citiesResponse = await fetch(`/api/packages/${packageId}/cities?type=multi_city`);
             if (!citiesResponse.ok) {
-              throw new Error('Failed to fetch cities');
+              const errorText = await citiesResponse.text();
+              console.error('[Configure] Failed to fetch cities:', errorText);
+              throw new Error(`Failed to fetch cities: ${errorText}`);
             }
             const citiesData = await citiesResponse.json();
             const cities = citiesData.cities || [];
+            console.log('[Configure] Cities fetched:', cities.length, 'cities', cities);
 
           let dayNumber = 1;
-          const packageDays: PackageDay[] = (cities || []).map((city: any) => ({
-            id: `day-${dayNumber}`,
-            day_number: dayNumber++,
-            city_id: city.id,
-            city_name: city.name,
-            nights: city.nights,
-            activities: [],
-            transfers: [],
-          }));
+          const packageDays: PackageDay[] = (cities || []).map((city: any) => 
+            createDayWithTimeSlots({
+              id: `day-${dayNumber}`,
+              day_number: dayNumber++,
+              city_id: city.id,
+              city_name: city.name,
+              nights: city.nights,
+            })
+          );
 
           setDays(packageDays);
           } else if (dayPlans && dayPlans.length > 0) {
             // Convert day plans to PackageDay format
             console.log('[Configure] Converting day plans to PackageDay format:', dayPlans.length, 'days');
             const packageDays: PackageDay[] = (dayPlans || []).map((dayPlan: any) => {
-              // Extract activities and transfers from time_slots
+              // Extract activities and transfers from time_slots (operator-defined)
               const timeSlots = dayPlan.time_slots || {
                 morning: { time: "", activities: [], transfers: [] },
                 afternoon: { time: "", activities: [], transfers: [] },
                 evening: { time: "", activities: [], transfers: [] },
               };
               
-              // Collect all activities and transfers from all time slots
-              const allActivities: any[] = [];
-              const allTransfers: any[] = [];
-              
-              ['morning', 'afternoon', 'evening'].forEach((slot: string) => {
-                const slotData = timeSlots[slot as keyof typeof timeSlots];
-                if (slotData?.activities) {
-                  allActivities.push(...slotData.activities);
-                }
-                if (slotData?.transfers) {
-                  allTransfers.push(...slotData.transfers);
-                }
-              });
+              // Convert operator-defined activities/transfers (strings) to display format
+              // These are informational items from the package, not actual itinerary items
+              const convertOperatorItems = (items: string[]): Array<{ id: string; package_id: string; title: string; price: number }> => {
+                return items.map((item, idx) => ({
+                  id: `operator-item-${dayPlan.id}-${idx}-${Date.now()}`,
+                  package_id: '',
+                  title: item,
+                  price: 0, // Operator-defined items don't have prices
+                }));
+              };
 
-              return {
+              return createDayWithTimeSlots({
                 id: dayPlan.id || `day-${dayPlan.day_number}`,
                 day_number: dayPlan.day_number,
                 city_id: dayPlan.city_id || '',
                 city_name: dayPlan.city_name || '',
                 nights: 1, // Will be calculated from cities if needed
-                activities: allActivities.map((act: string, idx: number) => ({
-                  id: `activity-${dayPlan.day_number}-${idx}`,
-                  package_id: packageId,
-                  title: act,
-                  price: 0, // Activities from time slots don't have prices
-                })),
-                transfers: allTransfers.map((trans: string, idx: number) => ({
-                  id: `transfer-${dayPlan.day_number}-${idx}`,
-                  package_id: packageId,
-                  title: trans,
-                  price: 0, // Transfers from time slots don't have prices
-                })),
-              };
+                timeSlots: {
+                  morning: {
+                    activities: convertOperatorItems(timeSlots.morning?.activities || []),
+                    transfers: convertOperatorItems(timeSlots.morning?.transfers || []),
+                  },
+                  afternoon: {
+                    activities: convertOperatorItems(timeSlots.afternoon?.activities || []),
+                    transfers: convertOperatorItems(timeSlots.afternoon?.transfers || []),
+                  },
+                  evening: {
+                    activities: convertOperatorItems(timeSlots.evening?.activities || []),
+                    transfers: convertOperatorItems(timeSlots.evening?.transfers || []),
+                  },
+                },
+                // Legacy arrays - combine all time slots
+                activities: [
+                  ...convertOperatorItems(timeSlots.morning?.activities || []),
+                  ...convertOperatorItems(timeSlots.afternoon?.activities || []),
+                  ...convertOperatorItems(timeSlots.evening?.activities || []),
+                ],
+                transfers: [
+                  ...convertOperatorItems(timeSlots.morning?.transfers || []),
+                  ...convertOperatorItems(timeSlots.afternoon?.transfers || []),
+                  ...convertOperatorItems(timeSlots.evening?.transfers || []),
+                ],
+              });
             });
 
             console.log('[Configure] Converted package days:', packageDays.length, 'days');
             setDays(packageDays);
+            
+            // Load activities and transfers from itinerary_items after days are set
+            const itemsResponse = await fetch(`/api/itineraries/${itineraryId}/items`);
+            if (itemsResponse.ok) {
+              const itemsData = await itemsResponse.json();
+              const allItems = itemsData.items || [];
+              
+              // Separate activities and transfers
+              const activityItems = allItems.filter((item: any) => item.package_type === 'activity');
+              const transferItems = allItems.filter((item: any) => item.package_type === 'transfer');
+              
+              // Get itinerary days to map items to days
+              const daysResponse = await fetch(`/api/itineraries/${itineraryId}/days`);
+              if (daysResponse.ok) {
+                const daysData = await daysResponse.json();
+                const itineraryDays = daysData.days || [];
+                
+                // Map items to days based on day_id
+                setDays(prevDays =>
+                  prevDays.map(day => {
+                    // Find matching itinerary day by city_name or day_number
+                    const itineraryDay = itineraryDays.find((id: any) => 
+                      id.city_name === day.city_name || 
+                      id.day_number === day.day_number
+                    );
+                    
+                    if (itineraryDay) {
+                      // Group activities and transfers by time slot
+                      const activitiesBySlot: Record<string, any[]> = { morning: [], afternoon: [], evening: [] };
+                      const transfersBySlot: Record<string, any[]> = { morning: [], afternoon: [], evening: [] };
+                      
+                      activityItems
+                        .filter((item: any) => item.day_id === itineraryDay.id)
+                        .forEach((item: any) => {
+                          const timeSlot: 'morning' | 'afternoon' | 'evening' = (item.configuration?.timeSlot || 'afternoon') as 'morning' | 'afternoon' | 'evening';
+                          const slot = activitiesBySlot[timeSlot];
+                          if (slot) {
+                            slot.push({
+                              id: item.id,
+                              package_id: item.package_id,
+                              title: item.package_title,
+                              price: item.unit_price || 0,
+                            });
+                          }
+                        });
+                      
+                      transferItems
+                        .filter((item: any) => item.day_id === itineraryDay.id)
+                        .forEach((item: any) => {
+                          const timeSlot: 'morning' | 'afternoon' | 'evening' = (item.configuration?.timeSlot || 'afternoon') as 'morning' | 'afternoon' | 'evening';
+                          const slot = transfersBySlot[timeSlot];
+                          if (slot) {
+                            slot.push({
+                              id: item.id,
+                              package_id: item.package_id,
+                              title: item.package_title,
+                              price: item.unit_price || 0,
+                            });
+                          }
+                        });
+                      
+                      // Merge operator-defined items (from day.timeSlots) with agent-added items (from itinerary_items)
+                      const morningActivities: Array<{ id: string; package_id: string; title: string; price: number }> = [
+                        ...(day.timeSlots?.morning?.activities || []),
+                        ...(activitiesBySlot.morning || [])
+                      ];
+                      const morningTransfers: Array<{ id: string; package_id: string; title: string; price: number }> = [
+                        ...(day.timeSlots?.morning?.transfers || []),
+                        ...(transfersBySlot.morning || [])
+                      ];
+                      const afternoonActivities: Array<{ id: string; package_id: string; title: string; price: number }> = [
+                        ...(day.timeSlots?.afternoon?.activities || []),
+                        ...(activitiesBySlot.afternoon || [])
+                      ];
+                      const afternoonTransfers: Array<{ id: string; package_id: string; title: string; price: number }> = [
+                        ...(day.timeSlots?.afternoon?.transfers || []),
+                        ...(transfersBySlot.afternoon || [])
+                      ];
+                      const eveningActivities: Array<{ id: string; package_id: string; title: string; price: number }> = [
+                        ...(day.timeSlots?.evening?.activities || []),
+                        ...(activitiesBySlot.evening || [])
+                      ];
+                      const eveningTransfers: Array<{ id: string; package_id: string; title: string; price: number }> = [
+                        ...(day.timeSlots?.evening?.transfers || []),
+                        ...(transfersBySlot.evening || [])
+                      ];
+                      
+                      const allActivities = [
+                        ...(day.activities || []),
+                        ...(activitiesBySlot.morning || []),
+                        ...(activitiesBySlot.afternoon || []),
+                        ...(activitiesBySlot.evening || []),
+                      ];
+                      const allTransfers = [
+                        ...(day.transfers || []),
+                        ...(transfersBySlot.morning || []),
+                        ...(transfersBySlot.afternoon || []),
+                        ...(transfersBySlot.evening || []),
+                      ];
+                      
+                      return { 
+                        ...day, 
+                        timeSlots: {
+                          morning: { 
+                            activities: morningActivities,
+                            transfers: morningTransfers,
+                          },
+                          afternoon: { 
+                            activities: afternoonActivities,
+                            transfers: afternoonTransfers,
+                          },
+                          evening: { 
+                            activities: eveningActivities,
+                            transfers: eveningTransfers,
+                          },
+                        },
+                        activities: allActivities, 
+                        transfers: allTransfers,
+                      };
+                    }
+                    
+                    return day;
+                  })
+                );
+              }
+            }
           } else {
             // No day plans found - show empty state
             console.warn('[Configure] No day plans found for package:', packageId);
@@ -612,9 +871,9 @@ export default function PackageConfigurationPage() {
     fetchData();
   }, [itemId, itineraryId]);
 
-  // Calculate pricing when days, initial config, or itinerary info change
+  // Calculate pricing when days, initial config, itinerary info, or packageData change
   useEffect(() => {
-    if (!itineraryItem || !itineraryInfo || days.length === 0 || !packageData) return;
+    if (!itineraryItem || !itineraryInfo || !packageData) return;
 
     const adults = itineraryInfo.adults_count || 0;
     const children = itineraryInfo.children_count || 0;
@@ -626,41 +885,83 @@ export default function PackageConfigurationPage() {
     
     if (pricingType === 'SIC') {
       const sicRows = pkgData.sic_pricing_rows || [];
-      let selectedRow = null;
+      let selectedRow: any = null;
       
       if (initialConfig.selectedPricingRowId) {
         selectedRow = sicRows.find((row: any) => row.id === initialConfig.selectedPricingRowId);
       }
       
-      if (!selectedRow) {
+      if (!selectedRow && sicRows.length > 0) {
+        // Try to find exact match first
         selectedRow = sicRows.find((row: any) => 
           row.number_of_adults === adults && row.number_of_children === children
-        ) || sicRows.find((row: any) => 
-          row.number_of_adults >= adults && row.number_of_children >= children
-        ) || sicRows[sicRows.length - 1];
+        );
+        
+        // If no exact match, find closest match (at least enough capacity)
+        if (!selectedRow) {
+          selectedRow = sicRows.find((row: any) => 
+            row.number_of_adults >= adults && row.number_of_children >= children
+          );
+        }
+        
+        // If still no match, use the last row (usually highest capacity)
+        if (!selectedRow) {
+          selectedRow = sicRows[sicRows.length - 1];
+        }
+        
+        // Auto-select this row if found
+        if (selectedRow && !initialConfig.selectedPricingRowId) {
+          setInitialConfig((prev: typeof initialConfig) => ({
+            ...prev,
+            selectedPricingRowId: selectedRow.id,
+          }));
+        }
       }
       
       if (selectedRow) {
-        basePrice = selectedRow.total_price || 0;
+        basePrice = parseFloat(selectedRow.total_price) || 0;
       }
     } else if (pricingType === 'PRIVATE_PACKAGE') {
       const privateRows = pkgData.private_package_rows || [];
-      let selectedRow = null;
+      let selectedRow: any = null;
       
       if (initialConfig.selectedPricingRowId) {
         selectedRow = privateRows.find((row: any) => row.id === initialConfig.selectedPricingRowId);
       }
       
-      if (!selectedRow) {
+      if (!selectedRow && privateRows.length > 0) {
+        const totalTravelers = adults + children;
+        
+        // Try to find exact match first
         selectedRow = privateRows.find((row: any) => 
-          row.number_of_adults === adults && row.number_of_children === children
-        ) || privateRows.find((row: any) => 
-          row.number_of_adults >= adults && row.number_of_children >= children
-        ) || privateRows[privateRows.length - 1];
+          row.number_of_adults === adults && row.number_of_children === children &&
+          row.vehicle_capacity >= totalTravelers
+        );
+        
+        // If no exact match, find vehicle with sufficient capacity
+        if (!selectedRow) {
+          selectedRow = privateRows.find((row: any) => 
+            row.vehicle_capacity >= totalTravelers
+          );
+        }
+        
+        // If still no match, use the last row
+        if (!selectedRow) {
+          selectedRow = privateRows[privateRows.length - 1];
+        }
+        
+        // Auto-select this row if found
+        if (selectedRow && !initialConfig.selectedPricingRowId) {
+          setInitialConfig((prev: typeof initialConfig) => ({
+            ...prev,
+            selectedPricingRowId: selectedRow.id,
+            selectedVehicle: selectedRow.id,
+          }));
+        }
       }
       
       if (selectedRow) {
-        basePrice = selectedRow.total_price || 0;
+        basePrice = parseFloat(selectedRow.total_price) || 0;
       }
     }
 
@@ -713,14 +1014,10 @@ export default function PackageConfigurationPage() {
     );
   };
 
-  const handleAddActivity = (day: PackageDay) => {
+  const handleAddActivity = (day: PackageDay, timeSlot: 'morning' | 'afternoon' | 'evening' = 'afternoon') => {
     setSelectedDayForActivity(day);
+    setSelectedTimeSlotForActivity(timeSlot);
     setShowActivityModal(true);
-  };
-
-  const handleAddTransfer = (day: PackageDay) => {
-    setSelectedDayForTransfer(day);
-    setShowTransferModal(true);
   };
 
   const handleActivitySelected = async (activity: any, selectedPricingId?: string) => {
@@ -733,7 +1030,7 @@ export default function PackageConfigurationPage() {
       // If pricing option is selected, fetch it and calculate price
       if (selectedPricingId) {
         const pricingResponse = await fetch(`/api/activities/${activity.id}/pricing/${selectedPricingId}`);
-        
+
         if (!pricingResponse.ok) {
           console.error('Error fetching pricing option');
         } else {
@@ -741,23 +1038,23 @@ export default function PackageConfigurationPage() {
           const pricing = pricingData.pricingPackage;
           
           if (pricing) {
-            const adults = itineraryInfo?.adults_count || 0;
-            const children = itineraryInfo?.children_count || 0;
-            
-            // Calculate total price
-            const adultTotal = (pricing.adult_price || 0) * adults;
-            const childTotal = (pricing.child_price || 0) * children;
-            const transferAdult = (pricing.transfer_price_adult || 0) * adults;
-            const transferChild = (pricing.transfer_price_child || 0) * children;
-            
-            calculatedPrice = adultTotal + childTotal + transferAdult + transferChild;
-            pricingConfig = {
-              pricing_package_id: selectedPricingId,
-              pricing_package_name: pricing.package_name,
-              adult_price: pricing.adult_price,
-              child_price: pricing.child_price,
-              transfer_included: pricing.transfer_included,
-            };
+          const adults = itineraryInfo?.adults_count || 0;
+          const children = itineraryInfo?.children_count || 0;
+          
+          // Calculate total price
+          const adultTotal = (pricing.adult_price || 0) * adults;
+          const childTotal = (pricing.child_price || 0) * children;
+          const transferAdult = (pricing.transfer_price_adult || 0) * adults;
+          const transferChild = (pricing.transfer_price_child || 0) * children;
+          
+          calculatedPrice = adultTotal + childTotal + transferAdult + transferChild;
+          pricingConfig = {
+            pricing_package_id: selectedPricingId,
+            pricing_package_name: pricing.package_name,
+            adult_price: pricing.adult_price,
+            child_price: pricing.child_price,
+            transfer_included: pricing.transfer_included,
+          };
           }
         }
       }
@@ -773,7 +1070,7 @@ export default function PackageConfigurationPage() {
           operatorId: activity.operator_id || itineraryItem.operator_id,
           packageTitle: activity.title,
           packageImageUrl: activity.featured_image_url,
-          configuration: pricingConfig,
+          configuration: { ...pricingConfig, timeSlot: selectedTimeSlotForActivity },
           unitPrice: calculatedPrice,
           quantity: 1,
           displayOrder: 0,
@@ -797,6 +1094,22 @@ export default function PackageConfigurationPage() {
           day.id === selectedDayForActivity.id
             ? {
                 ...day,
+                timeSlots: {
+                  ...day.timeSlots,
+                  [selectedTimeSlotForActivity]: {
+                    ...day.timeSlots[selectedTimeSlotForActivity],
+                    activities: [
+                      ...day.timeSlots[selectedTimeSlotForActivity].activities,
+                      {
+                        id: activityItemTyped.id,
+                        package_id: activity.id,
+                        title: activity.title,
+                        price: calculatedPrice,
+                      },
+                    ],
+                  },
+                },
+                // Update legacy activities array for backward compatibility
                 activities: [
                   ...day.activities,
                   {
@@ -820,6 +1133,13 @@ export default function PackageConfigurationPage() {
     }
   };
 
+  const handleAddTransfer = (day: PackageDay, timeSlot: 'morning' | 'afternoon' | 'evening' = 'afternoon') => {
+    setSelectedDayForTransfer(day);
+    setSelectedTimeSlotForActivity(timeSlot);
+    setShowTransferModal(true);
+  };
+
+
   const handleTransferSelected = async (transfer: any) => {
     if (!selectedDayForTransfer || !itineraryItem) return;
 
@@ -835,7 +1155,7 @@ export default function PackageConfigurationPage() {
           operatorId: transfer.operator_id || itineraryItem.operator_id,
           packageTitle: transfer.title,
           packageImageUrl: transfer.featured_image_url,
-          configuration: {},
+          configuration: { timeSlot: selectedTimeSlotForActivity },
           unitPrice: transfer.base_price || 0,
           quantity: 1,
           displayOrder: 0,
@@ -859,6 +1179,21 @@ export default function PackageConfigurationPage() {
           day.id === selectedDayForTransfer.id
             ? {
                 ...day,
+                timeSlots: {
+                  ...day.timeSlots,
+                  [selectedTimeSlotForActivity]: {
+                    ...day.timeSlots[selectedTimeSlotForActivity],
+                    transfers: [
+                      ...day.timeSlots[selectedTimeSlotForActivity].transfers,
+                      {
+                        id: transferItemTyped.id,
+                        package_id: transfer.id,
+                        title: transfer.title,
+                        price: transfer.base_price || 0,
+                      },
+                    ],
+                  },
+                },
                 transfers: [
                   ...day.transfers,
                   {
@@ -884,7 +1219,29 @@ export default function PackageConfigurationPage() {
 
   const handleRemoveActivity = async (day: PackageDay, activityId: string) => {
     try {
-      // Delete itinerary item
+      // Check if this is an operator-defined item (starts with 'operator-item-')
+      // Operator-defined items are just informational and don't need to be deleted from database
+      if (activityId.startsWith('operator-item-')) {
+        setDays(prevDays =>
+          prevDays.map(d =>
+            d.id === day.id
+              ? {
+                  ...d,
+                  timeSlots: {
+                    morning: { ...d.timeSlots.morning, activities: d.timeSlots.morning.activities.filter(a => a.id !== activityId) },
+                    afternoon: { ...d.timeSlots.afternoon, activities: d.timeSlots.afternoon.activities.filter(a => a.id !== activityId) },
+                    evening: { ...d.timeSlots.evening, activities: d.timeSlots.evening.activities.filter(a => a.id !== activityId) },
+                  },
+                  activities: d.activities.filter(a => a.id !== activityId),
+                }
+              : d
+          )
+        );
+        toast.success('Activity removed');
+        return;
+      }
+
+      // Delete itinerary item from database
       const deleteResponse = await fetch(`/api/itineraries/${itineraryId}/items/${activityId}/delete`, {
         method: 'DELETE',
       });
@@ -899,6 +1256,11 @@ export default function PackageConfigurationPage() {
           d.id === day.id
             ? {
                 ...d,
+                timeSlots: {
+                  morning: { ...d.timeSlots.morning, activities: d.timeSlots.morning.activities.filter(a => a.id !== activityId) },
+                  afternoon: { ...d.timeSlots.afternoon, activities: d.timeSlots.afternoon.activities.filter(a => a.id !== activityId) },
+                  evening: { ...d.timeSlots.evening, activities: d.timeSlots.evening.activities.filter(a => a.id !== activityId) },
+                },
                 activities: d.activities.filter(a => a.id !== activityId),
               }
             : d
@@ -913,7 +1275,29 @@ export default function PackageConfigurationPage() {
 
   const handleRemoveTransfer = async (day: PackageDay, transferId: string) => {
     try {
-      // Delete itinerary item
+      // Check if this is an operator-defined item (starts with 'operator-item-')
+      // Operator-defined items are just informational and don't need to be deleted from database
+      if (transferId.startsWith('operator-item-')) {
+        setDays(prevDays =>
+          prevDays.map(d =>
+            d.id === day.id
+              ? {
+                  ...d,
+                  timeSlots: {
+                    morning: { ...d.timeSlots.morning, transfers: d.timeSlots.morning.transfers.filter(t => t.id !== transferId) },
+                    afternoon: { ...d.timeSlots.afternoon, transfers: d.timeSlots.afternoon.transfers.filter(t => t.id !== transferId) },
+                    evening: { ...d.timeSlots.evening, transfers: d.timeSlots.evening.transfers.filter(t => t.id !== transferId) },
+                  },
+                  transfers: d.transfers.filter(t => t.id !== transferId),
+                }
+              : d
+          )
+        );
+        toast.success('Transfer removed');
+        return;
+      }
+
+      // Delete itinerary item from database
       const deleteResponse = await fetch(`/api/itineraries/${itineraryId}/items/${transferId}/delete`, {
         method: 'DELETE',
       });
@@ -928,6 +1312,11 @@ export default function PackageConfigurationPage() {
           d.id === day.id
             ? {
                 ...d,
+                timeSlots: {
+                  morning: { ...d.timeSlots.morning, transfers: d.timeSlots.morning.transfers.filter(t => t.id !== transferId) },
+                  afternoon: { ...d.timeSlots.afternoon, transfers: d.timeSlots.afternoon.transfers.filter(t => t.id !== transferId) },
+                  evening: { ...d.timeSlots.evening, transfers: d.timeSlots.evening.transfers.filter(t => t.id !== transferId) },
+                },
                 transfers: d.transfers.filter(t => t.id !== transferId),
               }
             : d
@@ -1024,20 +1413,20 @@ export default function PackageConfigurationPage() {
       const existingDaysTyped = (existingDays || []) as unknown as Array<{ id: string; day_number: number }>;
       
       try {
-        for (const day of days) {
-          // Check if day already exists
-          const existingDay = existingDaysTyped.find((d) => d.day_number === currentDayNumber);
-          
-          if (existingDay) {
-            // Update existing day - try with time_slots first, fallback without if column doesn't exist
-            const updateData: any = {
-              city_name: day.city_name,
-              time_slots: {
-                morning: { time: '', activities: day.activities.filter(a => a.id).map(a => a.id), transfers: [] },
-                afternoon: { time: '', activities: [], transfers: day.transfers.filter(t => t.id).map(t => t.id) },
-                evening: { time: '', activities: [], transfers: [] },
-              },
-            };
+      for (const day of days) {
+        // Check if day already exists
+        const existingDay = existingDaysTyped.find((d) => d.day_number === currentDayNumber);
+        
+        if (existingDay) {
+          // Update existing day - try with time_slots first, fallback without if column doesn't exist
+          const updateData: any = {
+            city_name: day.city_name,
+            time_slots: {
+              morning: { time: '', activities: day.activities.filter(a => a.id).map(a => a.id), transfers: [] },
+              afternoon: { time: '', activities: [], transfers: day.transfers.filter(t => t.id).map(t => t.id) },
+              evening: { time: '', activities: [], transfers: [] },
+            },
+          };
 
             let updateDayError = null;
             try {
@@ -1058,9 +1447,9 @@ export default function PackageConfigurationPage() {
               updateDayError = err instanceof Error ? err : new Error('Failed to update day');
             }
 
-            // If error is about time_slots column not existing, retry without it
+          // If error is about time_slots column not existing, retry without it
             if (updateDayError && (updateDayError.message?.includes('time_slots') || (updateDayError as any).code === '42703')) {
-              console.warn('time_slots column not found, updating without it');
+            console.warn('time_slots column not found, updating without it');
               let retryError = null;
               try {
                 const retryResponse = await fetch(`/api/itineraries/${itineraryId}/days/${existingDay.id}`, {
@@ -1081,13 +1470,13 @@ export default function PackageConfigurationPage() {
 
               if (retryError) {
                 throw retryError;
-              }
+          }
             } else if (updateDayError) {
               throw updateDayError;
             }
-            dayIds.push(existingDay.id);
-          } else {
-            // Create new day - try with time_slots first, fallback without if column doesn't exist
+          dayIds.push(existingDay.id);
+        } else {
+          // Create new day - try with time_slots first, fallback without if column doesn't exist
             let createDayError = null;
             try {
               const createResponse = await fetch(`/api/itineraries/${itineraryId}/days/create`, {
@@ -1097,10 +1486,10 @@ export default function PackageConfigurationPage() {
                   cityName: day.city_name,
                   dayNumber: currentDayNumber,
                   timeSlots: {
-                    morning: { time: '', activities: day.activities.filter(a => a.id).map(a => a.id), transfers: [] },
-                    afternoon: { time: '', activities: [], transfers: day.transfers.filter(t => t.id).map(t => t.id) },
-                    evening: { time: '', activities: [], transfers: [] },
-                  },
+              morning: { time: '', activities: day.activities.filter(a => a.id).map(a => a.id), transfers: [] },
+              afternoon: { time: '', activities: [], transfers: day.transfers.filter(t => t.id).map(t => t.id) },
+              evening: { time: '', activities: [], transfers: [] },
+            },
                 }),
               });
 
@@ -1115,7 +1504,7 @@ export default function PackageConfigurationPage() {
               createDayError = err instanceof Error ? err : new Error('Failed to create day');
             }
 
-            // If error is about time_slots column not existing, retry without it
+          // If error is about time_slots column not existing, retry without it
             if (createDayError && (createDayError.message?.includes('time_slots') || (createDayError as any).code === '42703')) {
               console.warn('time_slots column not found, creating without it');
               try {
@@ -1137,13 +1526,13 @@ export default function PackageConfigurationPage() {
                 }
               } catch (err) {
                 throw err instanceof Error ? err : new Error('Failed to create day');
-              }
+          }
             } else if (createDayError) {
               throw createDayError;
-            }
           }
-          
-          currentDayNumber++;
+        }
+
+        currentDayNumber++;
         }
       } catch (err) {
         console.error('Error saving days:', err);
@@ -1284,7 +1673,7 @@ export default function PackageConfigurationPage() {
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Pricing Type Selection */}
-              {(packageData as any).pricing_package && (
+              {((packageData as any).pricing_package || (packageData as any).sic_pricing_rows?.length > 0 || (packageData as any).private_package_rows?.length > 0) && (
                 <div>
                   <Label className="text-base font-semibold mb-3 block">Pricing Type</Label>
                   <RadioGroup
@@ -1375,9 +1764,9 @@ export default function PackageConfigurationPage() {
                           onClick={() => {
                             if (!hasInsufficientCapacity) {
                               setInitialConfig({ 
-                                ...initialConfig, 
-                                selectedPricingRowId: row.id,
-                                selectedVehicle: row.id,
+                            ...initialConfig, 
+                            selectedPricingRowId: row.id,
+                            selectedVehicle: row.id,
                               });
                             }
                           }}
@@ -1536,86 +1925,209 @@ export default function PackageConfigurationPage() {
                   </div>
                 )}
 
-                {/* Activities Section */}
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <label className="text-sm font-semibold text-gray-700">
-                      Activities
-                    </label>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleAddActivity(day)}
-                    >
-                      <FiPlus className="w-4 h-4 mr-2" />
-                      Add Activity
-                    </Button>
-                  </div>
-                  {day.activities.length === 0 ? (
-                    <p className="text-sm text-gray-500 italic">No activities added yet</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {day.activities.map((activity) => (
-                        <div
-                          key={activity.id}
-                          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                {/* Time Slots Section */}
+                <div className="space-y-4">
+                  <label className="text-sm font-semibold text-gray-700 block">
+                    Daily Schedule
+                  </label>
+                  
+                  {/* Morning Slot */}
+                  <div className="border rounded-lg p-4 bg-orange-50/30">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-gray-900">🌅 Morning</span>
+                        <span className="text-xs text-gray-600">08:00 AM</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleAddActivity(day, 'morning')}
+                          className="text-xs h-7"
                         >
-                          <div>
-                            <p className="font-medium text-sm text-gray-900">{activity.title}</p>
-                            <p className="text-xs text-gray-600">${activity.price.toFixed(2)}</p>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleRemoveActivity(day, activity.id)}
-                          >
-                            Remove
-                          </Button>
-                        </div>
-                      ))}
+                          <FiPlus className="w-3 h-3 mr-1" />
+                          Activity
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleAddTransfer(day, 'morning')}
+                          className="text-xs h-7"
+                        >
+                          <FiPlus className="w-3 h-3 mr-1" />
+                          Transfer
+                        </Button>
+                      </div>
                     </div>
-                  )}
-                </div>
+                    <div className="space-y-2">
+                      {day.timeSlots.morning.activities.length === 0 && day.timeSlots.morning.transfers.length === 0 ? (
+                        <p className="text-xs text-gray-500 italic">No items scheduled</p>
+                      ) : (
+                        <>
+                          {day.timeSlots.morning.activities.map((activity) => (
+                            <div key={activity.id} className="flex items-center justify-between p-2 bg-white rounded border">
+                              <div>
+                                <p className="text-xs font-medium text-gray-900">
+                                  Activity: {activity.title}
+                                  {activity.id.startsWith('operator-item-') && (
+                                    <Badge variant="outline" className="ml-2 text-xs">Package</Badge>
+                                  )}
+                                </p>
+                                {activity.price > 0 ? (
+                                  <p className="text-xs text-gray-600">${activity.price.toFixed(2)}</p>
+                                ) : activity.id.startsWith('operator-item-') ? (
+                                  <p className="text-xs text-gray-500 italic">Included in package</p>
+                                ) : null}
+                              </div>
+                              <Button variant="ghost" size="sm" onClick={() => handleRemoveActivity(day, activity.id)} className="h-6 text-xs">
+                                Remove
+                              </Button>
+                            </div>
+                          ))}
+                          {day.timeSlots.morning.transfers.map((transfer) => (
+                            <div key={transfer.id} className="flex items-center justify-between p-2 bg-white rounded border">
+                              <div>
+                                <p className="text-xs font-medium text-gray-900">
+                                  Transfer: {transfer.title}
+                                  {transfer.id.startsWith('operator-item-') && (
+                                    <Badge variant="outline" className="ml-2 text-xs">Package</Badge>
+                                  )}
+                                </p>
+                                {transfer.price > 0 ? (
+                                  <p className="text-xs text-gray-600">${transfer.price.toFixed(2)}</p>
+                                ) : transfer.id.startsWith('operator-item-') ? (
+                                  <p className="text-xs text-gray-500 italic">Included in package</p>
+                                ) : null}
+                              </div>
+                              <Button variant="ghost" size="sm" onClick={() => handleRemoveTransfer(day, transfer.id)} className="h-6 text-xs">
+                                Remove
+                              </Button>
+                            </div>
+                          ))}
+                        </>
+                      )}
+                    </div>
+                  </div>
 
-                {/* Transfers Section */}
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <label className="text-sm font-semibold text-gray-700">
-                      Transfers
-                    </label>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleAddTransfer(day)}
-                    >
-                      <FiPlus className="w-4 h-4 mr-2" />
-                      Add Transfer
-                    </Button>
-                  </div>
-                  {day.transfers.length === 0 ? (
-                    <p className="text-sm text-gray-500 italic">No transfers added yet</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {day.transfers.map((transfer) => (
-                        <div
-                          key={transfer.id}
-                          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                  {/* Afternoon Slot */}
+                  <div className="border rounded-lg p-4 bg-yellow-50/30">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-gray-900">☀️ Afternoon</span>
+                        <span className="text-xs text-gray-600">12:30 PM</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleAddActivity(day, 'afternoon')}
+                          className="text-xs h-7"
                         >
-                          <div>
-                            <p className="font-medium text-sm text-gray-900">{transfer.title}</p>
-                            <p className="text-xs text-gray-600">${transfer.price.toFixed(2)}</p>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleRemoveTransfer(day, transfer.id)}
-                          >
-                            Remove
-                          </Button>
-                        </div>
-                      ))}
+                          <FiPlus className="w-3 h-3 mr-1" />
+                          Activity
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleAddTransfer(day, 'afternoon')}
+                          className="text-xs h-7"
+                        >
+                          <FiPlus className="w-3 h-3 mr-1" />
+                          Transfer
+                        </Button>
+                      </div>
                     </div>
-                  )}
+                    <div className="space-y-2">
+                      {day.timeSlots.afternoon.activities.length === 0 && day.timeSlots.afternoon.transfers.length === 0 ? (
+                        <p className="text-xs text-gray-500 italic">No items scheduled</p>
+                      ) : (
+                        <>
+                          {day.timeSlots.afternoon.activities.map((activity) => (
+                            <div key={activity.id} className="flex items-center justify-between p-2 bg-white rounded border">
+                              <div>
+                                <p className="text-xs font-medium text-gray-900">Activity: {activity.title}</p>
+                                <p className="text-xs text-gray-600">${activity.price.toFixed(2)}</p>
+                              </div>
+                              <Button variant="ghost" size="sm" onClick={() => handleRemoveActivity(day, activity.id)} className="h-6 text-xs">
+                                Remove
+                              </Button>
+                            </div>
+                          ))}
+                          {day.timeSlots.afternoon.transfers.map((transfer) => (
+                            <div key={transfer.id} className="flex items-center justify-between p-2 bg-white rounded border">
+                              <div>
+                                <p className="text-xs font-medium text-gray-900">Transfer: {transfer.title}</p>
+                                <p className="text-xs text-gray-600">${transfer.price.toFixed(2)}</p>
+                              </div>
+                              <Button variant="ghost" size="sm" onClick={() => handleRemoveTransfer(day, transfer.id)} className="h-6 text-xs">
+                                Remove
+                              </Button>
+                            </div>
+                          ))}
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Evening Slot */}
+                  <div className="border rounded-lg p-4 bg-purple-50/30">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-gray-900">🌙 Evening</span>
+                        <span className="text-xs text-gray-600">05:00 PM</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleAddActivity(day, 'evening')}
+                          className="text-xs h-7"
+                        >
+                          <FiPlus className="w-3 h-3 mr-1" />
+                          Activity
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleAddTransfer(day, 'evening')}
+                          className="text-xs h-7"
+                        >
+                          <FiPlus className="w-3 h-3 mr-1" />
+                          Transfer
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      {day.timeSlots.evening.activities.length === 0 && day.timeSlots.evening.transfers.length === 0 ? (
+                        <p className="text-xs text-gray-500 italic">No items scheduled</p>
+                      ) : (
+                        <>
+                          {day.timeSlots.evening.activities.map((activity) => (
+                            <div key={activity.id} className="flex items-center justify-between p-2 bg-white rounded border">
+                              <div>
+                                <p className="text-xs font-medium text-gray-900">Activity: {activity.title}</p>
+                                <p className="text-xs text-gray-600">${activity.price.toFixed(2)}</p>
+                              </div>
+                              <Button variant="ghost" size="sm" onClick={() => handleRemoveActivity(day, activity.id)} className="h-6 text-xs">
+                                Remove
+                              </Button>
+                            </div>
+                          ))}
+                          {day.timeSlots.evening.transfers.map((transfer) => (
+                            <div key={transfer.id} className="flex items-center justify-between p-2 bg-white rounded border">
+                              <div>
+                                <p className="text-xs font-medium text-gray-900">Transfer: {transfer.title}</p>
+                                <p className="text-xs text-gray-600">${transfer.price.toFixed(2)}</p>
+                              </div>
+                              <Button variant="ghost" size="sm" onClick={() => handleRemoveTransfer(day, transfer.id)} className="h-6 text-xs">
+                                Remove
+                              </Button>
+                            </div>
+                          ))}
+                        </>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -1633,7 +2145,7 @@ export default function PackageConfigurationPage() {
             setSelectedDayForActivity(null);
           }}
           cityName={selectedDayForActivity.city_name}
-          timeSlot="afternoon"
+          timeSlot={selectedTimeSlotForActivity}
           arrivalTime={null}
           enableSuggestions={false}
           adultsCount={itineraryInfo?.adults_count || 0}
@@ -1642,18 +2154,25 @@ export default function PackageConfigurationPage() {
         />
       )}
 
-      {showTransferModal && selectedDayForTransfer && (
-        <TransferSelectorModal
-          isOpen={showTransferModal}
-          onClose={() => {
-            setShowTransferModal(false);
-            setSelectedDayForTransfer(null);
-          }}
-          fromCity={selectedDayForTransfer.city_name}
-          toCity=""
-          onSelect={handleTransferSelected}
-        />
-      )}
+      {showTransferModal && selectedDayForTransfer && (() => {
+        // Find next day's city for transfer destination
+        const currentDayIndex = days.findIndex(d => d.id === selectedDayForTransfer.id);
+        const nextDay = currentDayIndex >= 0 && currentDayIndex < days.length - 1 ? days[currentDayIndex + 1] : null;
+        const toCity = nextDay?.city_name || selectedDayForTransfer.city_name; // Fallback to same city if last day
+        
+        return (
+          <TransferSelectorModal
+            isOpen={showTransferModal}
+            onClose={() => {
+              setShowTransferModal(false);
+              setSelectedDayForTransfer(null);
+            }}
+            fromCity={selectedDayForTransfer.city_name}
+            toCity={toCity}
+            onSelect={handleTransferSelected}
+          />
+        );
+      })()}
     </div>
   );
 }

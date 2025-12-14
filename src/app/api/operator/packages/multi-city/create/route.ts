@@ -33,43 +33,47 @@ export async function POST(request: NextRequest) {
     const totalDays = data.days?.length || 0;
 
     // Insert main package
-    const packageResult = await query<{ id: string }>(
-      `INSERT INTO multi_city_packages (
-        operator_id, title, short_description, destination_region,
-        package_validity_date, base_price, currency, deposit_percent,
-        balance_due_days, payment_methods, visa_requirements,
-        insurance_requirement, health_requirements, terms_and_conditions,
-        total_nights, total_days, total_cities, status, published_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
-      RETURNING id`,
-      [
-        operatorId,
-        data.basic?.title || 'Untitled Package',
-        data.basic?.shortDescription || '',
-        data.basic?.destinationRegion || null,
-        data.basic?.packageValidityDate || null,
-        basePrice,
-        'USD',
-        data.policies?.depositPercent || 0,
-        data.policies?.balanceDueDays || 7,
-        data.policies?.paymentMethods ? JSON.stringify(data.policies.paymentMethods) : null,
-        data.policies?.visaRequirements || null,
-        data.policies?.insuranceRequirement || 'OPTIONAL',
-        data.policies?.healthRequirements || null,
-        data.policies?.terms || null,
-        totalNights,
-        totalDays,
-        totalCities,
-        isDraft ? 'draft' : 'published',
-        isDraft ? null : new Date().toISOString(),
-      ]
-    );
-
-    if (!packageResult.rows || !packageResult.rows[0]) {
-      return NextResponse.json(
-        { error: 'Failed to create package' },
-        { status: 500 }
+    let packageResult;
+    try {
+      packageResult = await query<{ id: string }>(
+        `INSERT INTO multi_city_packages (
+          operator_id, title, short_description, destination_region,
+          package_validity_date, base_price, currency, deposit_percent,
+          balance_due_days, payment_methods, visa_requirements,
+          insurance_requirement, health_requirements, terms_and_conditions,
+          total_nights, total_days, total_cities, status, published_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+        RETURNING id`,
+        [
+          operatorId,
+          data.basic?.title || 'Untitled Package',
+          data.basic?.shortDescription || '',
+          data.basic?.destinationRegion || null,
+          data.basic?.packageValidityDate || null,
+          basePrice,
+          'USD',
+          data.policies?.depositPercent || 0,
+          data.policies?.balanceDueDays || 7,
+          data.policies?.paymentMethods ? JSON.stringify(data.policies.paymentMethods) : null,
+          data.policies?.visaRequirements || null,
+          data.policies?.insuranceRequirement || 'OPTIONAL',
+          data.policies?.healthRequirements || null,
+          data.policies?.terms || null,
+          totalNights,
+          totalDays,
+          totalCities,
+          isDraft ? 'draft' : 'published',
+          isDraft ? null : new Date().toISOString(),
+        ]
       );
+    } catch (packageError: any) {
+      console.error('Error inserting main package:', packageError);
+      throw new Error(`Failed to insert main package: ${packageError.message || packageError.detail || 'Unknown error'}`);
+    }
+
+    if (!packageResult || !packageResult.rows || !packageResult.rows[0]) {
+      console.error('Package result is empty:', packageResult);
+      throw new Error('Failed to create package - no ID returned from database');
     }
 
     const packageId = packageResult.rows[0].id;
@@ -101,23 +105,35 @@ export async function POST(request: NextRequest) {
     }
 
     // Insert pricing configuration
-    const pricingResult = await query<{ id: string }>(
-      `INSERT INTO multi_city_pricing_packages (
-        package_id, package_name, pricing_type, has_child_age_restriction,
-        child_min_age, child_max_age
-      ) VALUES ($1, $2, $3, $4, $5, $6)
-      RETURNING id`,
-      [
-        packageId,
-        data.basic?.title || 'Untitled Package',
-        data.pricing?.pricingType || 'SIC',
-        data.pricing?.hasChildAgeRestriction || false,
-        data.pricing?.hasChildAgeRestriction ? data.pricing.childMinAge : null,
-        data.pricing?.hasChildAgeRestriction ? data.pricing.childMaxAge : null,
-      ]
-    );
+    const pricingType = (data.pricing?.pricingType || 'SIC').toUpperCase();
+    let pricingResult;
+    try {
+      pricingResult = await query<{ id: string }>(
+        `INSERT INTO multi_city_pricing_packages (
+          package_id, package_name, pricing_type, has_child_age_restriction,
+          child_min_age, child_max_age
+        ) VALUES ($1, $2, $3::multi_city_pricing_type, $4, $5, $6)
+        RETURNING id`,
+        [
+          packageId,
+          data.basic?.title || 'Untitled Package',
+          pricingType,
+          data.pricing?.hasChildAgeRestriction || false,
+          data.pricing?.hasChildAgeRestriction ? data.pricing.childMinAge : null,
+          data.pricing?.hasChildAgeRestriction ? data.pricing.childMaxAge : null,
+        ]
+      );
+    } catch (pricingError: any) {
+      console.error('Error inserting pricing configuration:', pricingError);
+      throw new Error(`Failed to insert pricing configuration: ${pricingError.message || pricingError.detail || 'Unknown error'}`);
+    }
 
-    const pricingPackageId = pricingResult.rows?.[0]?.id;
+    if (!pricingResult || !pricingResult.rows || !pricingResult.rows[0]) {
+      console.error('Pricing result is empty:', pricingResult);
+      throw new Error('Failed to create pricing configuration - no ID returned');
+    }
+
+    const pricingPackageId = pricingResult.rows[0].id;
 
     // Insert SIC pricing rows
     if (data.pricing?.pricingType === 'SIC' && data.pricing?.pricingRows && pricingPackageId) {
@@ -231,8 +247,22 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error creating multi-city package:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    const errorDetails = error instanceof Error ? {
+      message: errorMessage,
+      stack: errorStack,
+      name: error.name,
+    } : { message: 'Unknown error' };
+    
+    console.error('Error details:', errorDetails);
+    
     return NextResponse.json(
-      { error: 'Failed to create package', details: error instanceof Error ? error.message : 'Unknown error' },
+      { 
+        error: 'Failed to create package', 
+        details: errorMessage,
+        ...(process.env.NODE_ENV === 'development' && { fullError: errorDetails })
+      },
       { status: 500 }
     );
   }

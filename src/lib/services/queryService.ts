@@ -80,7 +80,7 @@ export class QueryService {
         created_at: string;
         updated_at: string;
       }>(
-        'SELECT * FROM itinerary_queries WHERE id = $1 LIMIT 1',
+        'SELECT * FROM itinerary_queries WHERE id::text = $1 LIMIT 1',
         [queryId]
       );
 
@@ -114,7 +114,7 @@ export class QueryService {
         created_at: string;
         updated_at: string;
       }>(
-        'SELECT * FROM itinerary_queries WHERE lead_id = $1 LIMIT 1',
+        'SELECT * FROM itinerary_queries WHERE lead_id::text = $1 LIMIT 1',
         [leadId]
       );
 
@@ -149,10 +149,11 @@ export class QueryService {
         updated_at: string;
       }>(
         `INSERT INTO itinerary_queries (
-          lead_id, agent_id, destinations, leaving_from, nationality,
+          id, lead_id, agent_id, destinations, leaving_from, nationality,
           leaving_on, travelers, star_rating, add_transfers
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-        RETURNING *`,
+        ) VALUES (gen_random_uuid(), $1::uuid, $2::uuid, $3::jsonb, $4, $5, $6, $7::jsonb, $8, $9)
+        RETURNING id, lead_id, agent_id, destinations, leaving_from, nationality,
+          leaving_on, travelers, star_rating, add_transfers, created_at, updated_at`,
         [
           queryData.lead_id,
           queryData.agent_id,
@@ -172,10 +173,49 @@ export class QueryService {
 
       const createdRow = result.rows[0];
       if (!createdRow) {
+        console.error('Query creation result:', result);
         throw new Error('Failed to create query - no data returned');
       }
 
-      return this.mapQueryFromDB(createdRow);
+      // Log the created row for debugging
+      console.log('[QueryService] Created query row (full):', JSON.stringify(createdRow, null, 2));
+      console.log('[QueryService] Created query row (summary):', {
+        hasId: !!createdRow.id,
+        id: createdRow.id,
+        idType: typeof createdRow.id,
+        rowKeys: Object.keys(createdRow),
+        allValues: Object.entries(createdRow).map(([k, v]) => [k, typeof v, v]),
+      });
+
+      // Check if id exists in the raw row before mapping
+      // Try different possible field names (case-insensitive)
+      const createdRowAny = createdRow as any;
+      const idValue = createdRow.id || createdRowAny.ID || createdRowAny.Id || 
+                      (Object.keys(createdRow).find(k => k.toLowerCase() === 'id') ? createdRowAny[Object.keys(createdRow).find(k => k.toLowerCase() === 'id')!] : null);
+      
+      if (!idValue) {
+        console.error('[QueryService] ERROR: Created row missing id field:', createdRow);
+        console.error('[QueryService] Full result object:', JSON.stringify(result, null, 2));
+        console.error('[QueryService] All field names:', Object.keys(createdRow));
+        throw new Error('Query created but ID field is missing in database response');
+      }
+      
+      // If id was found with different casing, normalize it
+      if (!createdRow.id && idValue) {
+        createdRow.id = idValue;
+      }
+
+      const mappedQuery = this.mapQueryFromDB(createdRow);
+      
+      // Ensure ID is present after mapping
+      if (!mappedQuery.id) {
+        console.error('[QueryService] ERROR: Mapped query missing id:', mappedQuery);
+        console.error('[QueryService] Original row:', createdRow);
+        throw new Error('Query created but ID is missing in mapped result');
+      }
+      
+      console.log('[QueryService] Query created successfully with ID:', mappedQuery.id);
+      return mappedQuery;
     } catch (error) {
       console.error('Error creating query:', error);
       throw error;
@@ -204,7 +244,7 @@ export class QueryService {
         add_transfers: boolean;
         created_at: string;
         updated_at: string;
-      }>('SELECT * FROM itinerary_queries WHERE id = $1 LIMIT 1', [queryId]);
+      }>('SELECT * FROM itinerary_queries WHERE id::text = $1 LIMIT 1', [queryId]);
       
       if (!existing) {
         throw new Error('Query not found');
@@ -262,7 +302,7 @@ export class QueryService {
       const sql = `
         UPDATE itinerary_queries
         SET ${updates.join(', ')}
-        WHERE id = $${paramIndex}
+        WHERE id::text = $${paramIndex}
         RETURNING *
       `;
 
@@ -308,30 +348,10 @@ export class QueryService {
    */
   async upsertQuery(queryData: CreateQueryData): Promise<ItineraryQuery> {
     try {
-      // First check if query exists
-      const existing = await this.getQueryByLeadId(queryData.lead_id);
-
-      if (existing) {
-        // Update existing
-        try {
-          return await this.updateQuery(existing.id, {
-            destinations: queryData.destinations,
-            leaving_from: queryData.leaving_from,
-            nationality: queryData.nationality,
-            leaving_on: queryData.leaving_on,
-            travelers: queryData.travelers,
-            star_rating: queryData.star_rating,
-            add_transfers: queryData.add_transfers,
-          });
-        } catch (updateError) {
-          // If update fails (e.g., query was deleted), create a new one
-          console.warn('Update query failed, creating new query:', updateError);
-          return this.createQuery(queryData);
-        }
-      } else {
-        // Create new
-        return this.createQuery(queryData);
-      }
+      // Since we allow multiple queries per lead (one per itinerary),
+      // we should always create a new query unless we're explicitly updating
+      // For now, always create a new query - the caller should use updateQuery if they want to update
+      return this.createQuery(queryData);
     } catch (error) {
       console.error('Error in upsertQuery:', error);
       throw error;
@@ -344,7 +364,7 @@ export class QueryService {
    */
   async deleteQuery(queryId: string): Promise<void> {
     try {
-      await query('DELETE FROM itinerary_queries WHERE id = $1', [queryId]);
+      await query('DELETE FROM itinerary_queries WHERE id::text = $1', [queryId]);
     } catch (error) {
       console.error('Error deleting query:', error);
       throw error;

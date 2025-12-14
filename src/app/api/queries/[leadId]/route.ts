@@ -37,14 +37,36 @@ export async function POST(
   try {
     const { leadId } = await params;
     const body = await request.json();
+    
+    console.log('[API /queries/[leadId]] Creating query with data:', {
+      leadId,
+      bodyKeys: Object.keys(body),
+      hasAgentId: !!body.agent_id,
+    });
+    
     const query = await queryService.upsertQuery({
       ...body,
       lead_id: leadId,
     });
     
+    console.log('[API /queries/[leadId]] Query created:', {
+      hasQuery: !!query,
+      hasId: !!query?.id,
+      id: query?.id,
+      queryKeys: query ? Object.keys(query) : [],
+    });
+    
+    if (!query || !query.id) {
+      console.error('[API /queries/[leadId]] ERROR: Query missing ID:', query);
+      return NextResponse.json(
+        { error: 'Query created but ID is missing', details: 'The query was created but did not return an ID' },
+        { status: 500 }
+      );
+    }
+    
     return NextResponse.json({ query });
   } catch (error) {
-    console.error('Error upserting query:', error);
+    console.error('[API /queries/[leadId]] Error upserting query:', error);
     return NextResponse.json(
       { error: 'Failed to upsert query', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }

@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { createClient } from '@/lib/supabase/client';
+// Removed Supabase - using AWS-based API routes instead
 
 interface ItineraryDay {
   id: string;
@@ -62,27 +62,34 @@ export function ItineraryBuilderPanel({
   onItemsChange,
   onAddDay,
 }: ItineraryBuilderPanelProps) {
-  const supabase = createClient();
+  // Using AWS-based API routes instead of Supabase
   const [editingDay, setEditingDay] = useState<string | null>(null);
 
   const handleDeleteDay = async (dayId: string) => {
     if (!confirm('Delete this day? All items in this day will also be removed.')) return;
 
     try {
-      const { error } = await supabase
-        .from('itinerary_days' as any)
-        .delete()
-        .eq('id', dayId);
+      // Delete day via API
+      const dayResponse = await fetch(`/api/itineraries/${itinerary.id}/days/${dayId}`, {
+        method: 'DELETE',
+      });
 
-      if (error) throw error;
+      if (!dayResponse.ok) {
+        const error = await dayResponse.json();
+        throw new Error(error.error || 'Failed to delete day');
+      }
 
-      // Remove items for this day
-      const { error: itemsError } = await supabase
-        .from('itinerary_items' as any)
-        .delete()
-        .eq('day_id', dayId);
-
-      if (itemsError) throw error;
+      // Items will be deleted via CASCADE, but we can also delete them explicitly
+      const dayItems = items.filter(i => i.day_id === dayId);
+      for (const item of dayItems) {
+        try {
+          await fetch(`/api/itineraries/${itinerary.id}/items/${item.id}`, {
+            method: 'DELETE',
+          });
+        } catch (err) {
+          console.warn('Error deleting item:', err);
+        }
+      }
 
       onDaysChange(days.filter(d => d.id !== dayId));
       onItemsChange(items.filter(i => i.day_id !== dayId));
@@ -94,16 +101,23 @@ export function ItineraryBuilderPanel({
 
   const handleUpdateDay = async (dayId: string, updates: Partial<ItineraryDay>) => {
     try {
-      const { data, error } = await supabase
-        .from('itinerary_days' as any)
-        .update(updates)
-        .eq('id', dayId)
-        .select()
-        .single();
+      const response = await fetch(`/api/itineraries/${itinerary.id}/days/${dayId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cityName: updates.city_name,
+          date: updates.date,
+          notes: updates.notes,
+        }),
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to update day');
+      }
 
-      const updatedDay = data as unknown as ItineraryDay;
+      const { day } = await response.json();
+      const updatedDay = day as unknown as ItineraryDay;
       onDaysChange(days.map(d => d.id === dayId ? updatedDay : d));
       setEditingDay(null);
     } catch (err) {
@@ -114,12 +128,14 @@ export function ItineraryBuilderPanel({
 
   const handleDeleteItem = async (itemId: string) => {
     try {
-      const { error } = await supabase
-        .from('itinerary_items' as any)
-        .delete()
-        .eq('id', itemId);
+      const response = await fetch(`/api/itineraries/${itinerary.id}/items/${itemId}`, {
+        method: 'DELETE',
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to delete item');
+      }
 
       onItemsChange(items.filter(i => i.id !== itemId));
     } catch (err) {
@@ -130,12 +146,16 @@ export function ItineraryBuilderPanel({
 
   const handleMoveItem = async (itemId: string, dayId: string | null) => {
     try {
-      const { error } = await supabase
-        .from('itinerary_items' as any)
-        .update({ day_id: dayId })
-        .eq('id', itemId);
+      const response = await fetch(`/api/itineraries/${itinerary.id}/items/${itemId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dayId }),
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to move item');
+      }
 
       onItemsChange(items.map(i => i.id === itemId ? { ...i, day_id: dayId } : i));
     } catch (err) {

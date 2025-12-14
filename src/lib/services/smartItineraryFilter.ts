@@ -110,47 +110,65 @@ export class SmartItineraryFilter {
       const params: any[] = [];
       let paramIndex = 1;
 
-      // Filter by city or country
+      // Filter by city or country - use exact match first, then fallback to ILIKE
       if (cityName && country) {
-        sql += ` AND (destination_city ILIKE $${paramIndex} OR destination_country ILIKE $${paramIndex + 1})`;
-        params.push(`%${cityName}%`, `%${country}%`);
-        paramIndex += 2;
+        sql += ` AND (destination_city = $${paramIndex} OR destination_city ILIKE $${paramIndex + 1} OR destination_country = $${paramIndex + 2} OR destination_country ILIKE $${paramIndex + 3})`;
+        params.push(cityName, `%${cityName}%`, country, `%${country}%`);
+        paramIndex += 4;
       } else if (cityName) {
-        sql += ` AND destination_city ILIKE $${paramIndex}`;
-        params.push(`%${cityName}%`);
-        paramIndex++;
+        sql += ` AND (destination_city = $${paramIndex} OR destination_city ILIKE $${paramIndex + 1})`;
+        params.push(cityName, `%${cityName}%`);
+        paramIndex += 2;
       } else if (country) {
-        sql += ` AND destination_country ILIKE $${paramIndex}`;
-        params.push(`%${country}%`);
-        paramIndex++;
+        sql += ` AND (destination_country = $${paramIndex} OR destination_country ILIKE $${paramIndex + 1})`;
+        params.push(country, `%${country}%`);
+        paramIndex += 2;
       }
 
-      sql += ` LIMIT 50`;
+      if (cityName || country) {
+        sql += ` ORDER BY destination_city = $${paramIndex} DESC, title ASC LIMIT 50`;
+        if (cityName) {
+          params.push(cityName);
+        } else if (country) {
+          params.push(country);
+        }
+      } else {
+        sql += ` ORDER BY title ASC LIMIT 50`;
+      }
 
       const result = await query<ActivityPackage>(sql, params);
       const activities = result.rows;
 
-      // Fetch pricing packages for each activity
-      const activitiesWithPricing = await Promise.all(
-        activities.map(async (activity) => {
-          try {
-            const pricingResult = await query<ActivityPricingPackage>(
-              `SELECT * FROM activity_pricing_packages 
-               WHERE package_id = $1 AND is_active = true 
-               ORDER BY display_order ASC`,
-              [activity.id]
-            );
+      // Batch fetch pricing packages for all activities at once
+      if (activities.length === 0) {
+        return [];
+      }
 
-            return {
-              ...activity,
-              pricing_packages: pricingResult.rows,
-            };
-          } catch (err) {
-            console.warn(`Error fetching pricing for activity ${activity.id}:`, err);
-            return activity;
-          }
-        })
+      const activityIds = activities.map(a => a.id);
+      const pricingRows = await queryMany<ActivityPricingPackage>(
+        `SELECT * FROM activity_pricing_packages 
+         WHERE package_id = ANY($1::uuid[]) AND is_active = true 
+         ORDER BY package_id, display_order ASC`,
+        [activityIds]
       );
+
+      // Group pricing packages by activity ID
+      const pricingByActivity: Record<string, ActivityPricingPackage[]> = {};
+      pricingRows.forEach((pricing) => {
+        const packageId = pricing.package_id;
+        if (packageId) {
+          if (!pricingByActivity[packageId]) {
+            pricingByActivity[packageId] = [];
+          }
+          pricingByActivity[packageId].push(pricing);
+        }
+      });
+
+      // Attach pricing packages to activities
+      const activitiesWithPricing = activities.map((activity) => ({
+        ...activity,
+        pricing_packages: pricingByActivity[activity.id] || [],
+      }));
 
       return activitiesWithPricing;
     } catch (error) {

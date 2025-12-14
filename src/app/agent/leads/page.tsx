@@ -307,7 +307,7 @@ export default function MyLeadsPage() {
   const handleCreateItinerary = async (leadId: string) => {
     if (!user?.id) return;
     // Navigate directly to lead detail page - query form will appear when card is clicked
-    router.push(`/agent/leads/${leadId}`);
+          router.push(`/agent/leads/${leadId}`);
   };
 
 

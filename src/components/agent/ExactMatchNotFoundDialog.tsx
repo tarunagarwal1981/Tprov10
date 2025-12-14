@@ -23,6 +23,10 @@ export const ExactMatchNotFoundDialog: React.FC<ExactMatchNotFoundDialogProps> =
   onYes,
   onNo,
 }) => {
+  React.useEffect(() => {
+    console.log('[ExactMatchNotFoundDialog] Dialog isOpen prop:', isOpen);
+  }, [isOpen]);
+
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
       <DialogContent className="sm:max-w-md" onInteractOutside={(e) => e.preventDefault()}>

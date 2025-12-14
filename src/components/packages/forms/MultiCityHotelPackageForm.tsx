@@ -411,21 +411,28 @@ const BasicInformationTab: React.FC = () => {
     if (!cities || cities.length === 0) return;
     
     const newDays: DayPlan[] = [];
+    let globalDayNumber = 1;
+    
     cities.forEach((city, cityIndex) => {
       const nights = city.nights || 1;
       const isLastCity = cityIndex === cities.length - 1;
       const isFirstCity = cityIndex === 0;
       
-      // For each city, create nights + 1 days
-      // For intermediate cities, the last day (departure) is also the arrival of next city
-      // So we create: nights + 1 days for first city, nights days for intermediate cities, nights + 1 for last city
-      const daysToCreate = isFirstCity || isLastCity ? nights + 1 : nights;
+      // For each city, create days based on nights
+      // First city: needs arrival + nights + departure = nights + 1 days
+      // Intermediate cities: arrival already counted (as previous city's departure), so needs nights + departure = nights days
+      // Last city: arrival already counted (as previous city's departure), so needs nights + departure = nights days
+      // Special case: if only one city, it needs nights + 1 days (arrival + nights + departure)
+      const daysToCreate = isFirstCity && cities.length === 1 ? nights + 1 : isFirstCity ? nights + 1 : nights;
       
       for (let i = 0; i < daysToCreate; i++) {
-        const dayIndex = isFirstCity ? i : (i + 1); // For non-first cities, start from day 1 (not arrival day)
         const isArrivalDay = isFirstCity && i === 0;
-        const isDepartureDay = (isLastCity && i === nights) || (!isLastCity && i === nights);
-        const isMiddleDay = i > 0 && i < nights;
+        // Departure day is the last day created for each city
+        const isDepartureDay = i === daysToCreate - 1;
+        // Calculate city-specific night number
+        // For first city: Night 1 = i+1 (i=0 is arrival with Night 1)
+        // For other cities: Night 1 is on transition day (previous city's departure), so Night 2 = i+2
+        const cityNightNumber = isFirstCity ? (i + 1) : (i + 2);
         
         // Determine the day type label
         let dayTitle = "";
@@ -436,7 +443,7 @@ const BasicInformationTab: React.FC = () => {
         } else if (isDepartureDay && isLastCity) {
           dayTitle = `Departure - ${city.name}`;
         } else {
-          dayTitle = `Day ${dayIndex} - ${city.name} (Night ${dayIndex})`;
+          dayTitle = `Day ${globalDayNumber} - ${city.name} (Night ${cityNightNumber})`;
         }
         
         newDays.push({
@@ -449,11 +456,18 @@ const BasicInformationTab: React.FC = () => {
             ? `Departure from ${city.name} and arrival in ${cities[cityIndex + 1]?.name || ''}. Overnight stay in ${cities[cityIndex + 1]?.name || ''} (Night 1).`
             : isDepartureDay && isLastCity
             ? `Final day in ${city.name}. Check-out and departure.`
-            : `Full day in ${city.name}. Overnight stay (Night ${dayIndex}).`,
+            : `Full day in ${city.name}. Overnight stay (Night ${cityNightNumber}).`,
           photoUrl: "",
           hasFlights: false,
           flights: [],
+          timeSlots: {
+            morning: { time: "08:00", activities: [], transfers: [] },
+            afternoon: { time: "12:30", activities: [], transfers: [] },
+            evening: { time: "17:00", activities: [], transfers: [] },
+          },
         });
+        
+        globalDayNumber++;
       }
     });
     
@@ -760,20 +774,34 @@ const TimeSlotEditor: React.FC<{
   };
 
   const slotLabels = {
-    morning: "Morning",
-    afternoon: "Afternoon",
-    evening: "Evening",
+    morning: { label: "🌅 Morning", bgColor: "bg-orange-50/30", defaultTime: "08:00" },
+    afternoon: { label: "☀️ Afternoon", bgColor: "bg-yellow-50/30", defaultTime: "12:30" },
+    evening: { label: "🌙 Evening", bgColor: "bg-purple-50/30", defaultTime: "17:00" },
+  };
+
+  const slotConfig = slotLabels[slotName];
+  const displayTime = slot.time || slotConfig.defaultTime;
+  
+  // Convert 24h to 12h format for display
+  const formatTimeForDisplay = (time24h: string) => {
+    if (!time24h) return slotConfig.defaultTime === "08:00" ? "08:00 AM" : slotConfig.defaultTime === "12:30" ? "12:30 PM" : "05:00 PM";
+    const [hours, minutes] = time24h.split(':');
+    const hour = parseInt(hours || '0');
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const hour12 = hour % 12 || 12;
+    return `${hour12.toString().padStart(2, '0')}:${minutes || '00'} ${ampm}`;
   };
 
   return (
-    <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50">
-      <div className="flex items-center gap-3 mb-3">
-        <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 min-w-[100px]">
-          {slotLabels[slotName]}
-        </h4>
+    <div className={`p-4 border rounded-lg ${slotConfig.bgColor}`}>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold text-gray-900">{slotConfig.label}</span>
+          <span className="text-xs text-gray-600">{formatTimeForDisplay(displayTime)}</span>
+        </div>
         <Input
           type="time"
-          value={slot.time}
+          value={slot.time || slotConfig.defaultTime}
           onChange={(e) => updateTimeSlot({ time: e.target.value })}
           className="package-text-fix text-sm w-32"
           placeholder="HH:MM"
@@ -782,7 +810,6 @@ const TimeSlotEditor: React.FC<{
 
       {/* Activities Section */}
       <div className="mb-3">
-        <label className="text-xs font-medium mb-1 block text-gray-600 dark:text-gray-400">Activities</label>
         <div className="flex gap-2 mb-2">
           <Input
             placeholder="Add activity..."
@@ -803,35 +830,41 @@ const TimeSlotEditor: React.FC<{
             variant="outline"
             onClick={addActivity}
             disabled={isFirstOrLastDay || !activityText.trim()}
-            className="package-button-fix"
+            className="text-xs h-7"
           >
-            <FaPlus className="h-3 w-3" />
+            <FaPlus className="w-3 h-3 mr-1" />
+            Activity
           </Button>
         </div>
-        {slot.activities.length > 0 && (
-          <div className="space-y-1">
-            {slot.activities.map((activity, idx) => (
-              <div key={idx} className="flex items-center gap-2 p-2 bg-white dark:bg-gray-900 rounded text-sm">
-                <span className="flex-1">{activity}</span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => removeActivity(idx)}
-                  className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
-                  disabled={isFirstOrLastDay}
-                >
-                  <FaTrash className="h-3 w-3" />
-                </Button>
-              </div>
-            ))}
-          </div>
-        )}
+        <div className="space-y-2">
+          {slot.activities.length === 0 && slot.transfers.length === 0 ? (
+            <p className="text-xs text-gray-500 italic">No items scheduled</p>
+          ) : (
+            <>
+              {slot.activities.map((activity, idx) => (
+                <div key={idx} className="flex items-center justify-between p-2 bg-white rounded border">
+                  <div>
+                    <p className="text-xs font-medium text-gray-900">Activity: {activity}</p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => removeActivity(idx)}
+                    className="h-6 text-xs"
+                    disabled={isFirstOrLastDay}
+                  >
+                    Remove
+                  </Button>
+                </div>
+              ))}
+            </>
+          )}
+        </div>
       </div>
 
       {/* Transfers Section */}
       <div>
-        <label className="text-xs font-medium mb-1 block text-gray-600 dark:text-gray-400">Transfers</label>
         <div className="flex gap-2 mb-2">
           <Input
             placeholder="Add transfer..."
@@ -852,30 +885,35 @@ const TimeSlotEditor: React.FC<{
             variant="outline"
             onClick={addTransfer}
             disabled={isFirstOrLastDay || !transferText.trim()}
-            className="package-button-fix"
+            className="text-xs h-7"
           >
-            <FaPlus className="h-3 w-3" />
+            <FaPlus className="w-3 h-3 mr-1" />
+            Transfer
           </Button>
         </div>
-        {slot.transfers.length > 0 && (
-          <div className="space-y-1">
-            {slot.transfers.map((transfer, idx) => (
-              <div key={idx} className="flex items-center gap-2 p-2 bg-white dark:bg-gray-900 rounded text-sm">
-                <span className="flex-1">{transfer}</span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => removeTransfer(idx)}
-                  className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
-                  disabled={isFirstOrLastDay}
-                >
-                  <FaTrash className="h-3 w-3" />
-                </Button>
-              </div>
-            ))}
-          </div>
-        )}
+        <div className="space-y-2">
+          {slot.transfers.length > 0 && (
+            <>
+              {slot.transfers.map((transfer, idx) => (
+                <div key={idx} className="flex items-center justify-between p-2 bg-white rounded border">
+                  <div>
+                    <p className="text-xs font-medium text-gray-900">Transfer: {transfer}</p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => removeTransfer(idx)}
+                    className="h-6 text-xs"
+                    disabled={isFirstOrLastDay}
+                  >
+                    Remove
+                  </Button>
+                </div>
+              ))}
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -899,23 +937,39 @@ const ItineraryTab: React.FC = () => {
     }
   };
 
-  // Initialize time slots for days that don't have them
+  // Initialize time slots for days that don't have them with default times
   React.useEffect(() => {
     const d = [...days];
     let updated = false;
     d.forEach((day, idx) => {
       if (!day.timeSlots) {
         d[idx]!.timeSlots = {
-          morning: { time: "", activities: [], transfers: [] },
-          afternoon: { time: "", activities: [], transfers: [] },
-          evening: { time: "", activities: [], transfers: [] },
+          morning: { time: "08:00", activities: [], transfers: [] },
+          afternoon: { time: "12:30", activities: [], transfers: [] },
+          evening: { time: "17:00", activities: [], transfers: [] },
         };
         updated = true;
+      } else {
+        // Ensure default times are set if empty
+        const timeSlots = d[idx]!.timeSlots!;
+        if (!timeSlots.morning.time) {
+          timeSlots.morning.time = "08:00";
+          updated = true;
+        }
+        if (!timeSlots.afternoon.time) {
+          timeSlots.afternoon.time = "12:30";
+          updated = true;
+        }
+        if (!timeSlots.evening.time) {
+          timeSlots.evening.time = "17:00";
+          updated = true;
+        }
       }
     });
     if (updated) {
       setValue("days", d);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [days.length, setValue]);
 
   return (

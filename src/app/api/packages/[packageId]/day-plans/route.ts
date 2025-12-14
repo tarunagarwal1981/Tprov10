@@ -27,6 +27,43 @@ export async function GET(
       );
 
       return NextResponse.json({ dayPlans: result.rows || [] });
+    } else if (packageType === 'multi_city') {
+      // For multi_city packages, fetch from multi_city_package_day_plans table
+      try {
+        const result = await query<any>(
+          `SELECT id, package_id, city_id, day_number, city_name, title, description, photo_url, has_flights, time_slots
+           FROM multi_city_package_day_plans 
+           WHERE package_id::text = $1 
+           ORDER BY day_number ASC`,
+          [packageId]
+        );
+
+        return NextResponse.json({ dayPlans: result.rows || [] });
+      } catch (error: any) {
+        // If time_slots column doesn't exist, fetch without it
+        if (error?.message?.includes('time_slots') || error?.code === '42703') {
+          const result = await query<any>(
+            `SELECT id, package_id, city_id, day_number, city_name, title, description, photo_url, has_flights
+             FROM multi_city_package_day_plans 
+             WHERE package_id::text = $1 
+             ORDER BY day_number ASC`,
+            [packageId]
+          );
+          
+          const dayPlans = (result.rows || []).map((plan: any) => ({
+            ...plan,
+            time_slots: {
+              morning: { time: '', activities: [], transfers: [] },
+              afternoon: { time: '', activities: [], transfers: [] },
+              evening: { time: '', activities: [], transfers: [] },
+            },
+          }));
+          
+          return NextResponse.json({ dayPlans });
+        } else {
+          throw error;
+        }
+      }
     } else {
       return NextResponse.json({ dayPlans: [] });
     }

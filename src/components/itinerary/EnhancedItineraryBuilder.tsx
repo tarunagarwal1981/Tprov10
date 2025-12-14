@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { createClient } from '@/lib/supabase/client';
+// Removed Supabase - using AWS-based API routes instead
 import { getAvailableTimeSlots, type TimeSlot } from '@/lib/utils/timeSlots';
 import { ActivitySelectorModal } from './ActivitySelectorModal';
 import { TransferSelectorModal } from './TransferSelectorModal';
@@ -75,8 +75,7 @@ export function EnhancedItineraryBuilder({
   onItemsChange,
   onEditPackage,
 }: EnhancedItineraryBuilderProps) {
-  const supabase = createClient();
-  // filterService methods now accessed via API routes
+  // Using AWS-based API routes instead of Supabase
 
   const [selectedDay, setSelectedDay] = useState<ItineraryDay | null>(null);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlot | null>(null);
@@ -125,69 +124,82 @@ export function EnhancedItineraryBuilder({
   const handleActivitySelected = async (activity: any) => {
     if (!selectedDay || !selectedTimeSlot) return;
 
-    // Create itinerary item
-    const { data: item, error } = await supabase
-      .from('itinerary_items' as any)
-      .insert({
-        itinerary_id: itineraryId,
-        day_id: selectedDay.id,
-        package_type: 'activity',
-        package_id: activity.id,
-        operator_id: activity.operator_id,
-        package_title: activity.title,
-        package_image_url: activity.featured_image_url,
-        configuration: {},
-        unit_price: activity.base_price || 0,
-        quantity: 1,
-        total_price: activity.base_price || 0,
-        display_order: items.length,
-      })
-      .select()
-      .single();
+    // Create itinerary item via API
+    try {
+      const response = await fetch(`/api/itineraries/${itineraryId}/items/create`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          dayId: selectedDay.id,
+          packageType: 'activity',
+          packageId: activity.id,
+          operatorId: activity.operator_id,
+          packageTitle: activity.title,
+          packageImageUrl: activity.featured_image_url,
+          configuration: {},
+          unitPrice: activity.base_price || 0,
+          quantity: 1,
+          displayOrder: items.length,
+        }),
+      });
 
-    if (error) {
-      console.error('Error adding activity:', error);
-      return;
-    }
-
-    // Update day's time slot
-    const updatedDays = days.map(d => {
-      if (d.id === selectedDay.id) {
-        const timeSlots = d.time_slots || {
-          morning: { time: '', activities: [], transfers: [] },
-          afternoon: { time: '', activities: [], transfers: [] },
-          evening: { time: '', activities: [], transfers: [] },
-        };
-        
-        timeSlots[selectedTimeSlot].activities.push((item as unknown as ItineraryItem).id);
-        
-        return {
-          ...d,
-          time_slots: timeSlots,
-        };
+      if (!response.ok) {
+        const error = await response.json();
+        console.error('Error adding activity:', error);
+        return;
       }
-      return d;
-    });
 
-    // Update day in database - handle backward compatibility for time_slots
-    const dayToUpdate = updatedDays.find(d => d.id === selectedDay.id);
-    if (dayToUpdate?.time_slots) {
-      const { error } = await supabase
-        .from('itinerary_days' as any)
-        .update({ time_slots: dayToUpdate.time_slots })
-        .eq('id', selectedDay.id);
-      
-      // If error is about time_slots column not existing, silently ignore (backward compatibility)
-      if (error && !error.message?.includes('time_slots') && error.code !== '42703') {
-        console.error('Error updating day time_slots:', error);
+      const { item } = await response.json();
+
+      // Update day's time slot
+      const updatedDays = days.map(d => {
+        if (d.id === selectedDay.id) {
+          const timeSlots = d.time_slots || {
+            morning: { time: '', activities: [], transfers: [] },
+            afternoon: { time: '', activities: [], transfers: [] },
+            evening: { time: '', activities: [], transfers: [] },
+          };
+          
+          timeSlots[selectedTimeSlot].activities.push((item as unknown as ItineraryItem).id);
+          
+          return {
+            ...d,
+            time_slots: timeSlots,
+          };
+        }
+        return d;
+      });
+
+      // Update day in database - handle backward compatibility for time_slots
+      const dayToUpdate = updatedDays.find(d => d.id === selectedDay.id);
+      if (dayToUpdate?.time_slots) {
+        try {
+          const dayResponse = await fetch(`/api/itineraries/${itineraryId}/days/${selectedDay.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ timeSlots: dayToUpdate.time_slots }),
+          });
+          
+          if (!dayResponse.ok) {
+            const error = await dayResponse.json();
+            // If error is about time_slots column not existing, silently ignore (backward compatibility)
+            if (!error.details?.includes('time_slots') && error.code !== '42703') {
+              console.error('Error updating day time_slots:', error);
+            }
+          }
+        } catch (err) {
+          console.error('Error updating day time_slots:', err);
+        }
       }
-    }
 
-    onDaysChange(updatedDays);
-    onItemsChange([...items, item as unknown as ItineraryItem]);
-    setShowActivityModal(false);
-    setSelectedDay(null);
-    setSelectedTimeSlot(null);
+      onDaysChange(updatedDays);
+      onItemsChange([...items, item as unknown as ItineraryItem]);
+      setShowActivityModal(false);
+      setSelectedDay(null);
+      setSelectedTimeSlot(null);
+    } catch (err) {
+      console.error('Error adding activity:', err);
+    }
   };
 
   const getUnassignedItems = () => {
@@ -196,10 +208,10 @@ export function EnhancedItineraryBuilder({
 
   const handleCreateFirstDay = async () => {
     try {
-      const { data, error } = await supabase
-        .from('itinerary_days' as any)
-        .insert({
-          itinerary_id: itineraryId,
+      const response = await fetch(`/api/itineraries/${itineraryId}/days/create`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           day_number: 1,
           display_order: 1,
           time_slots: {
@@ -207,13 +219,16 @@ export function EnhancedItineraryBuilder({
             afternoon: { time: '', activities: [], transfers: [] },
             evening: { time: '', activities: [], transfers: [] },
           },
-        })
-        .select()
-        .single();
+        }),
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to create day');
+      }
 
-      onDaysChange([data as unknown as ItineraryDay]);
+      const { day } = await response.json();
+      onDaysChange([day as unknown as ItineraryDay]);
     } catch (err) {
       console.error('Error creating first day:', err);
     }
@@ -600,12 +615,16 @@ export function EnhancedItineraryBuilder({
                           if (days.length > 0 && days[0]) {
                             const firstDay = days[0];
                             try {
-                              const { error } = await supabase
-                                .from('itinerary_items' as any)
-                                .update({ day_id: firstDay.id })
-                                .eq('id', item.id);
+                              const response = await fetch(`/api/itineraries/${itineraryId}/items/${item.id}`, {
+                                method: 'PATCH',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ dayId: firstDay.id }),
+                              });
                               
-                              if (error) throw error;
+                              if (!response.ok) {
+                                const error = await response.json();
+                                throw new Error(error.error || 'Failed to update item');
+                              }
                               
                               onItemsChange(items.map(i => 
                                 i.id === item.id ? { ...i, day_id: firstDay.id } : i

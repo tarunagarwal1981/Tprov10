@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useAuth } from '@/context/CognitoAuthContext';
 import { useToast } from '@/hooks/useToast';
 import { QueryModal } from '@/components/agent/QueryModal';
+import { ExactMatchNotFoundDialog } from '@/components/agent/ExactMatchNotFoundDialog';
 import type { ItineraryQuery } from '@/lib/services/queryService';
 import type { PackageTableRow } from '@/components/agent/PackagesTable';
 import { findSimilarPackages } from '@/lib/utils/packageMatching';
@@ -80,6 +81,7 @@ export default function InsertItineraryPage() {
   const [packages, setPackages] = useState<PackageTableRow[]>([]);
   const [operators, setOperators] = useState<Record<string, OperatorInfo>>({});
   const [showSimilarPackages, setShowSimilarPackages] = useState(false);
+  const [showSimilarDialog, setShowSimilarDialog] = useState(false);
   const [activeTab, setActiveTab] = useState<'multi_city' | 'multi_city_hotel'>('multi_city');
   const [multiCityPackages, setMultiCityPackages] = useState<MultiCityPackage[]>([]);
   const [multiCityHotelPackages, setMultiCityHotelPackages] = useState<MultiCityPackage[]>([]);
@@ -96,40 +98,84 @@ export default function InsertItineraryPage() {
   // Fetch lead and query data on mount
   useEffect(() => {
     if (leadId && user?.id) {
-      fetchQueryData();
+      fetchData();
     }
   }, [leadId, user?.id]);
+
+  // Debug: Track dialog state changes
+  useEffect(() => {
+    console.log('[InsertItineraryPage] showSimilarDialog state changed:', showSimilarDialog);
+  }, [showSimilarDialog]);
 
   // Get current similar packages based on active tab
   const currentSimilarPackages = activeTab === 'multi_city' 
     ? similarPackagesMultiCity 
     : similarPackagesMultiCityHotel;
 
-  const fetchQueryData = async () => {
+  const fetchData = async () => {
+    if (!user?.id) return;
+    setLoading(true);
     try {
-      const response = await fetch(`/api/queries/${leadId}`);
-      if (!response.ok) {
+      // Fetch lead details first
+      const leadResponse = await fetch(`/api/leads/${leadId}?agentId=${user.id}`);
+      
+      if (!leadResponse.ok) {
+        if (leadResponse.status === 404) {
+          setLead(null);
+          setLoading(false);
+          return;
+        }
+        throw new Error('Failed to fetch lead details');
+      }
+
+      const { lead: leadDataRaw } = await leadResponse.json();
+
+      if (!leadDataRaw) {
+        setLead(null);
+        setLoading(false);
+        return;
+      }
+
+      // Map to LeadDetails format
+      const leadData: LeadDetails = {
+        id: leadDataRaw.id,
+        destination: leadDataRaw.destination,
+        customerName: leadDataRaw.customerName,
+        customerEmail: leadDataRaw.customerEmail,
+        customerPhone: leadDataRaw.customerPhone,
+        budgetMin: leadDataRaw.budgetMin ?? undefined,
+        budgetMax: leadDataRaw.budgetMax ?? undefined,
+        durationDays: leadDataRaw.durationDays ?? undefined,
+        travelersCount: leadDataRaw.travelersCount ?? undefined,
+      };
+
+      setLead(leadData);
+
+      // Fetch query data
+      const queryResponse = await fetch(`/api/queries/${leadId}`);
+      if (!queryResponse.ok) {
         // No query exists, show query form
         setQueryModalOpen(true);
         setLoading(false);
         return;
       }
       
-      const { query: queryData } = await response.json();
+      const { query: queryData } = await queryResponse.json();
       if (queryData && queryData.destinations && queryData.destinations.length > 0) {
         setQuery(queryData);
         const cities = queryData.destinations.map((d: any) => d.city);
         setQueryDestinations(cities);
-        fetchPackages(queryData.destinations); // Pass full destinations with nights
+        // fetchPackages will handle loading state itself
+        await fetchPackages(queryData.destinations); // Pass full destinations with nights
       } else {
         // No query exists, show query form
         setQueryModalOpen(true);
         setLoading(false);
       }
     } catch (err) {
-      console.error('Error fetching query:', err);
-      // On error, show query form
-      setQueryModalOpen(true);
+      console.error('Error fetching data:', err);
+      toast.error('Failed to load data');
+      setLead(null);
       setLoading(false);
     }
   };
@@ -189,39 +235,61 @@ export default function InsertItineraryPage() {
     const cities = destinations.map(d => d.city);
     setLoading(true);
     setShowSimilarPackages(false);
+    setShowSimilarDialog(false); // Reset dialog state
     setSimilarPackagesMultiCity({ sameCities: [], sameCountries: [] }); // Reset similar packages
     setSimilarPackagesMultiCityHotel({ sameCities: [], sameCountries: [] }); // Reset similar packages
     try {
       // Fetch operators only if not already loaded
       if (Object.keys(operators).length === 0) {
-        const operatorsResponse = await fetch('/api/operators');
-        if (operatorsResponse.ok) {
-          const { operators: operatorsData } = await operatorsResponse.json();
-          const operatorsMap: Record<string, OperatorInfo> = {};
-          operatorsData.forEach((op: any) => {
-            operatorsMap[op.id] = {
-              id: op.id,
-              name: op.name || 'Unknown Operator',
-              email: op.email,
-            };
-          });
-          setOperators(operatorsMap);
-        }
+      const operatorsResponse = await fetch('/api/operators');
+      if (operatorsResponse.ok) {
+        const { operators: operatorsData } = await operatorsResponse.json();
+        const operatorsMap: Record<string, OperatorInfo> = {};
+        operatorsData.forEach((op: any) => {
+          operatorsMap[op.id] = {
+            id: op.id,
+            name: op.name || 'Unknown Operator',
+            email: op.email,
+          };
+        });
+        setOperators(operatorsMap);
+      }
       }
 
       // Fetch Multi-City Packages with exact matching
+      console.log('[InsertItineraryPage] Fetching packages for destinations:', destinations);
       const multiCityResponse = await fetch('/api/packages/multi-city/match', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ destinations }),
       });
       
+      let multiCityExactMatches: MultiCityPackage[] = [];
+      let multiCitySimilarMatches = { sameCities: [] as MultiCityPackage[], sameCountries: [] as MultiCityPackage[] };
+      
       if (multiCityResponse.ok) {
-        const { exactMatches, similarMatches } = await multiCityResponse.json();
-        setMultiCityPackages(exactMatches as MultiCityPackage[]);
-        setSimilarPackagesMultiCity(similarMatches);
+        const responseData = await multiCityResponse.json();
+        console.log('[InsertItineraryPage] Multi-City API Response:', {
+          exactMatchesCount: responseData.exactMatches?.length || 0,
+          similarMatchesSameCities: responseData.similarMatches?.sameCities?.length || 0,
+          similarMatchesSameCountries: responseData.similarMatches?.sameCountries?.length || 0,
+          hasSimilarMatches: responseData.similarMatches ? 
+            (responseData.similarMatches.sameCities?.length > 0 || responseData.similarMatches.sameCountries?.length > 0) : false,
+          similarMatchesStructure: responseData.similarMatches,
+        });
+        const { exactMatches, similarMatches } = responseData;
+        multiCityExactMatches = exactMatches as MultiCityPackage[] || [];
+        multiCitySimilarMatches = similarMatches || { sameCities: [], sameCountries: [] };
+        console.log('[InsertItineraryPage] Parsed Multi-City:', {
+          exactCount: multiCityExactMatches.length,
+          similarCitiesCount: multiCitySimilarMatches.sameCities?.length || 0,
+          similarCountriesCount: multiCitySimilarMatches.sameCountries?.length || 0,
+        });
+        setMultiCityPackages(multiCityExactMatches);
+        setSimilarPackagesMultiCity(multiCitySimilarMatches);
       } else {
-        console.error('Failed to fetch multi-city packages:', await multiCityResponse.text());
+        const errorText = await multiCityResponse.text();
+        console.error('[InsertItineraryPage] Failed to fetch multi-city packages:', errorText);
         setMultiCityPackages([]);
       }
 
@@ -232,30 +300,93 @@ export default function InsertItineraryPage() {
         body: JSON.stringify({ destinations }),
       });
       
+      let multiCityHotelExactMatches: MultiCityPackage[] = [];
+      let multiCityHotelSimilarMatches = { sameCities: [] as MultiCityPackage[], sameCountries: [] as MultiCityPackage[] };
+      
       if (multiCityHotelResponse.ok) {
-        const { exactMatches, similarMatches } = await multiCityHotelResponse.json();
-        setMultiCityHotelPackages(exactMatches as MultiCityPackage[]);
-        setSimilarPackagesMultiCityHotel(similarMatches);
+        const responseData = await multiCityHotelResponse.json();
+        console.log('[InsertItineraryPage] Multi-City Hotel API Response:', {
+          exactMatchesCount: responseData.exactMatches?.length || 0,
+          similarMatchesSameCities: responseData.similarMatches?.sameCities?.length || 0,
+          similarMatchesSameCountries: responseData.similarMatches?.sameCountries?.length || 0,
+          hasSimilarMatches: responseData.similarMatches ? 
+            (responseData.similarMatches.sameCities?.length > 0 || responseData.similarMatches.sameCountries?.length > 0) : false,
+          similarMatchesStructure: responseData.similarMatches,
+        });
+        const { exactMatches, similarMatches } = responseData;
+        multiCityHotelExactMatches = exactMatches as MultiCityPackage[] || [];
+        multiCityHotelSimilarMatches = similarMatches || { sameCities: [], sameCountries: [] };
+        console.log('[InsertItineraryPage] Parsed Multi-City Hotel:', {
+          exactCount: multiCityHotelExactMatches.length,
+          similarCitiesCount: multiCityHotelSimilarMatches.sameCities?.length || 0,
+          similarCountriesCount: multiCityHotelSimilarMatches.sameCountries?.length || 0,
+        });
+        setMultiCityHotelPackages(multiCityHotelExactMatches);
+        setSimilarPackagesMultiCityHotel(multiCityHotelSimilarMatches);
       } else {
-        console.error('Failed to fetch multi-city hotel packages:', await multiCityHotelResponse.text());
+        const errorText = await multiCityHotelResponse.text();
+        console.error('[InsertItineraryPage] Failed to fetch multi-city hotel packages:', errorText);
         setMultiCityHotelPackages([]);
+      }
+
+      // Set loading to false first
+      setLoading(false);
+
+      // Check if we should show the dialog: no exact matches (show dialog to ask if user wants to see all packages)
+      const hasExactMatches = multiCityExactMatches.length > 0 || multiCityHotelExactMatches.length > 0;
+      const multiCityHasSimilar = multiCitySimilarMatches.sameCities.length > 0 || multiCitySimilarMatches.sameCountries.length > 0;
+      const multiCityHotelHasSimilar = multiCityHotelSimilarMatches.sameCities.length > 0 || multiCityHotelSimilarMatches.sameCountries.length > 0;
+      const hasSimilarMatches = multiCityHasSimilar || multiCityHotelHasSimilar;
+
+      console.log('[InsertItineraryPage] ========== PACKAGE MATCHING RESULTS ==========');
+      console.log('[InsertItineraryPage] Exact Matches - Multi-City:', multiCityExactMatches.length);
+      console.log('[InsertItineraryPage] Exact Matches - Multi-City Hotel:', multiCityHotelExactMatches.length);
+      console.log('[InsertItineraryPage] hasExactMatches:', hasExactMatches);
+      console.log('[InsertItineraryPage] Similar Matches - Multi-City Cities:', multiCitySimilarMatches.sameCities.length);
+      console.log('[InsertItineraryPage] Similar Matches - Multi-City Countries:', multiCitySimilarMatches.sameCountries.length);
+      console.log('[InsertItineraryPage] Similar Matches - Multi-City Hotel Cities:', multiCityHotelSimilarMatches.sameCities.length);
+      console.log('[InsertItineraryPage] Similar Matches - Multi-City Hotel Countries:', multiCityHotelSimilarMatches.sameCountries.length);
+      console.log('[InsertItineraryPage] multiCityHasSimilar:', multiCityHasSimilar);
+      console.log('[InsertItineraryPage] multiCityHotelHasSimilar:', multiCityHotelHasSimilar);
+      console.log('[InsertItineraryPage] hasSimilarMatches:', hasSimilarMatches);
+      console.log('[InsertItineraryPage] Should show dialog (!hasExactMatches):', !hasExactMatches);
+      console.log('[InsertItineraryPage] ===============================================');
+
+      // Show dialog if no exact matches (regardless of similar matches - user can choose to see all packages)
+      if (!hasExactMatches) {
+        console.log('[InsertItineraryPage] ✅✅✅ NO EXACT MATCHES - Setting showSimilarDialog to TRUE ✅✅✅');
+        setShowSimilarDialog(true);
+      } else {
+        console.log('[InsertItineraryPage] ✅ Has exact matches, no dialog needed');
       }
     } catch (err) {
       console.error('Error fetching packages:', err);
       toast.error('Failed to load packages');
-    } finally {
       setLoading(false);
     }
   };
 
   const handleShowSimilar = async () => {
     if (!query) return;
-
-    setShowSimilarPackages(true);
+    
+    setShowSimilarDialog(false);
     setLoading(true);
-
+    
     try {
-      // Fetch operators only if not already loaded
+      // First, check if we already have similar matches from the initial API call
+      const hasSimilarFromAPI = 
+        (similarPackagesMultiCity.sameCities.length > 0 || similarPackagesMultiCity.sameCountries.length > 0) ||
+        (similarPackagesMultiCityHotel.sameCities.length > 0 || similarPackagesMultiCityHotel.sameCountries.length > 0);
+
+      if (hasSimilarFromAPI) {
+        // We already have similar packages from the API, just show them
+        console.log('[InsertItineraryPage] Using similar packages from API');
+        setShowSimilarPackages(true);
+        setLoading(false);
+        return;
+      }
+
+      // Fetch operators if not already loaded
       if (Object.keys(operators).length === 0) {
         const operatorsResponse = await fetch('/api/operators');
         if (operatorsResponse.ok) {
@@ -272,7 +403,7 @@ export default function InsertItineraryPage() {
         }
       }
 
-      // Fetch all packages again (we need all for similar matching)
+      // Fetch ALL packages to check for similar ones
       const cities = query.destinations.map((d: any) => d.city);
       const citiesParam = cities.join(',');
 
@@ -299,30 +430,68 @@ export default function InsertItineraryPage() {
         })));
       }
 
-      // Find similar packages
+      // Use findSimilarPackages utility to find similar packages from all available
       const similarPackages = findSimilarPackages(query.destinations, allPackages);
 
-      // Convert to table format
-      const tableRows: PackageTableRow[] = similarPackages.map((pkg) => ({
-        id: pkg.id,
-        title: pkg.title,
-        cities: pkg.cities || [],
-        totalNights: pkg.total_nights || 0,
-        price: pkg.base_price || pkg.adult_price || null,
-        currency: pkg.currency || 'USD',
-        operatorName: operators[pkg.operator_id]?.name,
-        featuredImageUrl: pkg.featured_image_url,
-        type: (pkg as any).type || 'multi_city',
-      }));
+      console.log('[InsertItineraryPage] Found similar packages:', similarPackages.length);
 
-      setPackages(tableRows);
+      // Check if we found any similar packages
+      if (similarPackages.length === 0) {
+        // No similar packages available
+        toast.error('No similar packages available. Please try different destinations or dates.');
+        setLoading(false);
+        return;
+      }
+
+      // Convert to table format and set as similar packages
+      const multiCitySimilar: MultiCityPackage[] = [];
+      const multiCityHotelSimilar: MultiCityPackage[] = [];
+      
+      similarPackages.forEach((pkg) => {
+        const packageData: MultiCityPackage = {
+          id: pkg.id,
+          title: pkg.title,
+          destination_region: pkg.destination_region || null,
+          operator_id: pkg.operator_id,
+          base_price: pkg.base_price || pkg.adult_price || null,
+          adult_price: pkg.adult_price || null,
+          currency: pkg.currency || 'USD',
+          total_nights: pkg.total_nights || 0,
+          total_cities: pkg.total_cities || 0,
+          featured_image_url: pkg.featured_image_url,
+          cities: pkg.cities || [],
+        };
+        
+        if (pkg.type === 'multi_city_hotel') {
+          multiCityHotelSimilar.push(packageData);
+        } else {
+          multiCitySimilar.push(packageData);
+        }
+      });
+
+      // Update state with similar packages
+      setSimilarPackagesMultiCity({
+        sameCities: multiCitySimilar,
+        sameCountries: [],
+      });
+      setSimilarPackagesMultiCityHotel({
+        sameCities: multiCityHotelSimilar,
+        sameCountries: [],
+      });
+      
       setShowSimilarPackages(true);
+      toast.success(`Found ${similarPackages.length} similar package${similarPackages.length > 1 ? 's' : ''}`);
     } catch (err) {
-      console.error('Error fetching similar packages:', err);
-      toast.error('Failed to load similar packages');
+      console.error('Error fetching all packages:', err);
+      toast.error('Failed to load packages');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDontShowSimilar = () => {
+    setShowSimilarDialog(false);
+    router.push(`/agent/leads/${leadId}`);
   };
 
 
@@ -518,7 +687,7 @@ export default function InsertItineraryPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/30">
-      <div className="p-4 lg:p-6 max-w-7xl mx-auto">
+    <div className="p-4 lg:p-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-6">
         <Button
@@ -600,13 +769,13 @@ export default function InsertItineraryPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {multiCityPackages.map((pkg) => (
+              {multiCityPackages.map((pkg) => (
                           <TableRow key={pkg.id}>
                             <TableCell className="px-4 py-3">
                               <div className="font-medium text-gray-900">{pkg.title}</div>
                               {pkg.destination_region && (
                                 <div className="text-xs text-gray-500 mt-1">{pkg.destination_region}</div>
-                              )}
+                    )}
                             </TableCell>
                             <TableCell className="px-4 py-3">
                               <div className="text-sm text-gray-700">
@@ -618,13 +787,13 @@ export default function InsertItineraryPage() {
                                       </span>
                                     ))
                                   : 'N/A'}
-                              </div>
+                        </div>
                             </TableCell>
                             <TableCell className="px-4 py-3">
                               <div className="flex items-center gap-1 text-sm text-gray-600">
-                                <FiCalendar className="w-4 h-4" />
-                                <span>{pkg.total_nights} nights</span>
-                              </div>
+                          <FiCalendar className="w-4 h-4" />
+                          <span>{pkg.total_nights} nights</span>
+                        </div>
                             </TableCell>
                             <TableCell className="px-4 py-3">
                               <div className="text-sm text-gray-600">
@@ -756,10 +925,10 @@ export default function InsertItineraryPage() {
                             </TableBody>
                           </Table>
                         </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
               )}
             </div>
           )}
@@ -809,13 +978,13 @@ export default function InsertItineraryPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {multiCityHotelPackages.map((pkg) => (
+              {multiCityHotelPackages.map((pkg) => (
                           <TableRow key={pkg.id}>
                             <TableCell className="px-4 py-3">
                               <div className="font-medium text-gray-900">{pkg.title}</div>
                               {pkg.destination_region && (
                                 <div className="text-xs text-gray-500 mt-1">{pkg.destination_region}</div>
-                              )}
+                    )}
                             </TableCell>
                             <TableCell className="px-4 py-3">
                               <div className="text-sm text-gray-700">
@@ -827,13 +996,13 @@ export default function InsertItineraryPage() {
                                       </span>
                                     ))
                                   : 'N/A'}
-                              </div>
+                        </div>
                             </TableCell>
                             <TableCell className="px-4 py-3">
                               <div className="flex items-center gap-1 text-sm text-gray-600">
-                                <FiCalendar className="w-4 h-4" />
-                                <span>{pkg.total_nights} nights</span>
-                              </div>
+                          <FiCalendar className="w-4 h-4" />
+                          <span>{pkg.total_nights} nights</span>
+                        </div>
                             </TableCell>
                             <TableCell className="px-4 py-3">
                               <div className="text-sm text-gray-600">
@@ -965,10 +1134,10 @@ export default function InsertItineraryPage() {
                             </TableBody>
                           </Table>
                         </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
               )}
             </div>
           )}
@@ -988,6 +1157,13 @@ export default function InsertItineraryPage() {
         initialData={query}
         leadId={leadId}
         loading={queryLoading}
+      />
+
+      {/* Exact Match Not Found Dialog */}
+      <ExactMatchNotFoundDialog
+        isOpen={showSimilarDialog}
+        onYes={handleShowSimilar}
+        onNo={handleDontShowSimilar}
       />
       </div>
     </div>

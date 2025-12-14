@@ -81,9 +81,9 @@ export async function POST(request: NextRequest) {
     
     const insertResult = await query<{ id: string }>(
       `INSERT INTO leads (
-        agent_id, marketplace_lead_id, customer_name, customer_email, 
-        customer_phone, destination, requirements, status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        id, agent_id, marketplace_lead_id, customer_name, customer_email, 
+        customer_phone, destination, requirements, stage, is_purchased, purchased_from_marketplace
+      ) VALUES (gen_random_uuid(), $1::uuid, $2::uuid, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING id`,
       [
         agentId,
@@ -93,7 +93,9 @@ export async function POST(request: NextRequest) {
         marketplaceLead.customer_phone || null,
         marketplaceLead.destination || '',
         marketplaceLead.special_requirements || null,
-        'active'
+        'NEW', // stage
+        true, // is_purchased
+        true  // purchased_from_marketplace
       ]
     );
 
@@ -110,9 +112,22 @@ export async function POST(request: NextRequest) {
       created: true 
     });
   } catch (error) {
-    console.error('Error ensuring lead exists:', error);
+    console.error('[Leads Ensure] Error ensuring lead exists:', error);
+    console.error('[Leads Ensure] Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : undefined,
+    });
     return NextResponse.json(
-      { error: 'Failed to ensure lead exists', details: error instanceof Error ? error.message : 'Unknown error' },
+      { 
+        error: 'Failed to ensure lead exists', 
+        details: error instanceof Error ? error.message : 'Unknown error',
+        fullError: error instanceof Error ? {
+          message: error.message,
+          stack: error.stack,
+          name: error.name,
+        } : error
+      },
       { status: 500 }
     );
   }

@@ -6,8 +6,7 @@ import { TransferPackageFormData } from "@/lib/types/transfer-package";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { useAuth } from "@/context/CognitoAuthContext";
-import { formDataToDatabase, createTransferPackage, updateTransferPackage, getTransferPackage, databaseToFormData } from "@/lib/supabase/transfer-packages";
-import { TransferPackageInsert } from "@/lib/supabase/types";
+import { formDataToDatabase, createTransferPackage, updateTransferPackage, getTransferPackage, databaseToFormData } from "@/lib/api/transfer-packages";
 
 export default function CreateTransferPackagePage() {
   const router = useRouter();
