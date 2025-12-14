@@ -189,8 +189,9 @@ export class QueryService {
 
       // Check if id exists in the raw row before mapping
       // Try different possible field names (case-insensitive)
-      const idValue = createdRow.id || createdRow.ID || createdRow.Id || 
-                      (Object.keys(createdRow).find(k => k.toLowerCase() === 'id') ? createdRow[Object.keys(createdRow).find(k => k.toLowerCase() === 'id')!] : null);
+      const createdRowAny = createdRow as any;
+      const idValue = createdRow.id || createdRowAny.ID || createdRowAny.Id || 
+                      (Object.keys(createdRow).find(k => k.toLowerCase() === 'id') ? createdRowAny[Object.keys(createdRow).find(k => k.toLowerCase() === 'id')!] : null);
       
       if (!idValue) {
         console.error('[QueryService] ERROR: Created row missing id field:', createdRow);

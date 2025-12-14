@@ -39,7 +39,12 @@ export async function POST(request: NextRequest) {
        WHERE status = 'published'`
     );
 
+    console.log('[Multi-City Match API] Query cities:', queryCities);
+    console.log('[Multi-City Match API] Query nights:', queryNights);
+    console.log('[Multi-City Match API] Found packages:', packagesResult.rows.length);
+
     if (packagesResult.rows.length === 0) {
+      console.log('[Multi-City Match API] No published packages found');
       return NextResponse.json({ 
         exactMatches: [],
         similarMatches: { sameCities: [], sameCountries: [] }
@@ -77,6 +82,8 @@ export async function POST(request: NextRequest) {
       });
     });
 
+    console.log('[Multi-City Match API] Cities by package:', JSON.stringify(citiesByPackage, null, 2));
+
     // Find exact matches (same cities in same sequence + same nights)
     const exactMatches: any[] = [];
     const sameCitiesDifferentNights: any[] = [];
@@ -89,6 +96,15 @@ export async function POST(request: NextRequest) {
 
       const pkgCityNames = pkgCities.map((c: any) => c.name.toLowerCase().trim());
       const pkgNights = pkgCities.map((c: any) => c.nights || 1);
+
+      console.log(`[Multi-City Match API] Checking package "${pkg.title}":`, {
+        pkgCityNames,
+        queryCities,
+        pkgNights,
+        queryNights,
+        cityMatch: pkgCityNames.length === queryCities.length && pkgCityNames.every((city: string, idx: number) => city === queryCities[idx]),
+        nightsMatch: pkgNights.every((nights: number, idx: number) => nights === queryNights[idx])
+      });
 
       // Check for exact match
       if (
