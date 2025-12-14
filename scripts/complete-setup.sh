@@ -15,14 +15,21 @@ export COGNITO_USER_POOL_ID=us-east-1_oF5qfa2IX
 export DATABASE_LAMBDA_NAME=travel-app-database-service
 export DEPLOYMENT_REGION=us-east-1
 export AWS_REGION=us-east-1
-export RDS_DB=postgres
-export RDS_DATABASE=postgres
-export RDS_HOST=travel-app-db.c61sa44wsvgz.us-east-1.rds.amazonaws.com
-export RDS_HOSTNAME=travel-app-db.c61sa44wsvgz.us-east-1.rds.amazonaws.com
-export RDS_PASSWORD=ju3vrLHJUW8PqDG4
-export RDS_PORT=5432
-export RDS_USER=postgres
-export RDS_USERNAME=postgres
+export RDS_DB="${RDS_DB:-postgres}"
+export RDS_DATABASE="${RDS_DATABASE:-postgres}"
+export RDS_HOST="${RDS_HOST:-travel-app-db.c61sa44wsvgz.us-east-1.rds.amazonaws.com}"
+export RDS_HOSTNAME="${RDS_HOSTNAME:-travel-app-db.c61sa44wsvgz.us-east-1.rds.amazonaws.com}"
+export RDS_PASSWORD="${RDS_PASSWORD:-${PGPASSWORD}}"
+export RDS_PORT="${RDS_PORT:-5432}"
+export RDS_USER="${RDS_USER:-postgres}"
+export RDS_USERNAME="${RDS_USERNAME:-postgres}"
+
+# Validate required password
+if [ -z "$RDS_PASSWORD" ]; then
+    echo "⚠️  Warning: RDS_PASSWORD or PGPASSWORD not set"
+    echo "💡 Please set it before running database operations:"
+    echo "   export RDS_PASSWORD=your_password"
+fi
 
 # Add AWS CLI to PATH if installed via pip
 export PATH="$HOME/Library/Python/3.9/bin:$PATH"

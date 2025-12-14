@@ -20,11 +20,16 @@ const SUPABASE_PORT = parseInt(process.env.SUPABASE_DB_PORT || '5432');
 const SUPABASE_USER = 'postgres';
 const SUPABASE_DATABASE = 'postgres';
 
-const RDS_ENDPOINT = 'travel-app-db.c61sa44wsvgz.us-east-1.rds.amazonaws.com';
-const RDS_PORT = 5432;
-const RDS_USER = 'postgres';
-const RDS_PASSWORD = 'ju3vrLHJUW8PqDG4';
-const RDS_DATABASE = 'postgres';
+const RDS_ENDPOINT = process.env.RDS_HOST || process.env.RDS_HOSTNAME || 'travel-app-db.c61sa44wsvgz.us-east-1.rds.amazonaws.com';
+const RDS_PORT = parseInt(process.env.RDS_PORT || '5432');
+const RDS_USER = process.env.RDS_USERNAME || process.env.RDS_USER || 'postgres';
+const RDS_PASSWORD = process.env.RDS_PASSWORD || process.env.PGPASSWORD || (() => {
+  console.error('❌ RDS_PASSWORD or PGPASSWORD environment variable is required');
+  console.error('Please set it before running this script:');
+  console.error('  export RDS_PASSWORD=your_password');
+  process.exit(1);
+})();
+const RDS_DATABASE = process.env.RDS_DATABASE || process.env.RDS_DB || 'postgres';
 
 interface TableInfo {
   table_name: string;

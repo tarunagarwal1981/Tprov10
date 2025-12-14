@@ -8,12 +8,22 @@ echo "🚀 Starting database migration..."
 echo "📦 Installing PostgreSQL client..."
 sudo yum install -y postgresql15
 
-# Set password
-export PGPASSWORD='ju3vrLHJUW8PqDG4'
+# Set password from environment variable
+if [ -z "$RDS_PASSWORD" ] && [ -z "$PGPASSWORD" ]; then
+    echo "❌ Error: RDS_PASSWORD or PGPASSWORD environment variable is required"
+    echo "Please set it before running this script:"
+    echo "  export RDS_PASSWORD=your_password"
+    exit 1
+fi
+export PGPASSWORD="${RDS_PASSWORD:-${PGPASSWORD}}"
+
+RDS_HOST="${RDS_HOST:-${RDS_HOSTNAME:-travel-app-db.c61sa44wsvgz.us-east-1.rds.amazonaws.com}}"
+RDS_USER="${RDS_USERNAME:-${RDS_USER:-postgres}}"
+RDS_DB="${RDS_DATABASE:-${RDS_DB:-postgres}}"
 
 # Test connection
 echo "🔌 Testing connection..."
-psql -h travel-app-db.c61sa44wsvgz.us-east-1.rds.amazonaws.com -U postgres -d postgres -c "SELECT version();" || {
+psql -h "$RDS_HOST" -U "$RDS_USER" -d "$RDS_DB" -c "SELECT version();" || {
     echo "❌ Connection failed!"
     exit 1
 }
@@ -21,7 +31,7 @@ psql -h travel-app-db.c61sa44wsvgz.us-east-1.rds.amazonaws.com -U postgres -d po
 echo "✅ Connected! Running migration..."
 
 # Run migration (paste SQL content here or use heredoc)
-psql -h travel-app-db.c61sa44wsvgz.us-east-1.rds.amazonaws.com -U postgres -d postgres << 'MIGRATION_SQL'
+psql -h "$RDS_HOST" -U "$RDS_USER" -d "$RDS_DB" << 'MIGRATION_SQL'
 -- Migration: Phone OTP Authentication Schema
 ALTER TABLE users 
 ADD COLUMN IF NOT EXISTS country_code VARCHAR(5),
@@ -206,7 +216,7 @@ echo ""
 echo "✅ Migration completed!"
 echo ""
 echo "🔍 Verifying..."
-psql -h travel-app-db.c61sa44wsvgz.us-east-1.rds.amazonaws.com -U postgres -d postgres -c "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('otp_codes', 'account_details', 'brand_details', 'business_details', 'documents', 'otp_rate_limits') ORDER BY table_name;"
+psql -h "$RDS_HOST" -U "$RDS_USER" -d "$RDS_DB" -c "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('otp_codes', 'account_details', 'brand_details', 'business_details', 'documents', 'otp_rate_limits') ORDER BY table_name;"
 
 echo ""
 echo "🎉 Done!"

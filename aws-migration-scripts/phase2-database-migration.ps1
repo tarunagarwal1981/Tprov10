@@ -7,12 +7,17 @@ Write-Host "🚀 Phase 2: Database Migration" -ForegroundColor Green
 Write-Host "=" * 60 -ForegroundColor Cyan
 Write-Host ""
 
-# Configuration
+# Configuration - Use environment variables for security
 $supabaseProjectRef = "megmjzszmqnmzdxwzigt"
-$rdsEndpoint = "travel-app-db.c61sa44wsvgz.us-east-1.rds.amazonaws.com"
-$rdsPassword = "ju3vrLHJUW8PqDG4"
-$rdsUser = "postgres"
-$rdsDatabase = "postgres"
+$rdsEndpoint = if ($env:RDS_HOST) { $env:RDS_HOST } elseif ($env:RDS_HOSTNAME) { $env:RDS_HOSTNAME } else { "travel-app-db.c61sa44wsvgz.us-east-1.rds.amazonaws.com" }
+$rdsPassword = if ($env:RDS_PASSWORD) { $env:RDS_PASSWORD } elseif ($env:PGPASSWORD) { $env:PGPASSWORD } else {
+    Write-Host "❌ Error: RDS_PASSWORD or PGPASSWORD environment variable is required" -ForegroundColor Red
+    Write-Host "Please set it before running this script:" -ForegroundColor Yellow
+    Write-Host "  `$env:RDS_PASSWORD='your_password'" -ForegroundColor Cyan
+    exit 1
+}
+$rdsUser = if ($env:RDS_USERNAME) { $env:RDS_USERNAME } elseif ($env:RDS_USER) { $env:RDS_USER } else { "postgres" }
+$rdsDatabase = if ($env:RDS_DATABASE) { $env:RDS_DATABASE } elseif ($env:RDS_DB) { $env:RDS_DB } else { "postgres" }
 
 # Check if PostgreSQL tools are installed
 Write-Host "📋 Checking PostgreSQL client tools..." -ForegroundColor Yellow

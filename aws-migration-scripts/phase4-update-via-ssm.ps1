@@ -79,7 +79,17 @@ Write-Host ""
 
 # Step 2: Run SQL update
 Write-Host "Step 2: Running SQL update..." -ForegroundColor Yellow
-$command2 = "export PGPASSWORD='ju3vrLHJUW8PqDG4' && psql --host=travel-app-db.c61sa44wsvgz.us-east-1.rds.amazonaws.com --port=5432 --username=postgres --dbname=postgres --file=/tmp/update-urls.sql"
+
+# Get RDS password from environment variable
+$rdsPassword = if ($env:RDS_PASSWORD) { $env:RDS_PASSWORD } elseif ($env:PGPASSWORD) { $env:PGPASSWORD } else {
+    Write-Host "❌ Error: RDS_PASSWORD or PGPASSWORD environment variable is required" -ForegroundColor Red
+    Write-Host "Please set it before running this script:" -ForegroundColor Yellow
+    Write-Host "  `$env:RDS_PASSWORD='your_password'" -ForegroundColor Cyan
+    exit 1
+}
+
+$rdsHost = if ($env:RDS_HOST) { $env:RDS_HOST } elseif ($env:RDS_HOSTNAME) { $env:RDS_HOSTNAME } else { "travel-app-db.c61sa44wsvgz.us-east-1.rds.amazonaws.com" }
+$command2 = "export PGPASSWORD='$rdsPassword' && psql --host=$rdsHost --port=5432 --username=postgres --dbname=postgres --file=/tmp/update-urls.sql"
 $result2 = aws ssm send-command `
   --instance-ids $INSTANCE_ID `
   --document-name "AWS-RunShellScript" `

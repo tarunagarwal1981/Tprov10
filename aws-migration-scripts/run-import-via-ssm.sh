@@ -3,15 +3,23 @@
 # Run this in CloudShell or your local terminal
 
 INSTANCE_ID="i-0cf90a4dc4f39debd"
-RDS_ENDPOINT="travel-app-db.c61sa44wsvgz.us-east-1.rds.amazonaws.com"
-RDS_PASSWORD="ju3vrLHJUW8PqDG4"
+RDS_ENDPOINT="${RDS_HOST:-${RDS_HOSTNAME:-travel-app-db.c61sa44wsvgz.us-east-1.rds.amazonaws.com}}"
+RDS_PASSWORD="${RDS_PASSWORD:-${PGPASSWORD}}"
+
+# Validate required password
+if [ -z "$RDS_PASSWORD" ]; then
+    echo "❌ Error: RDS_PASSWORD or PGPASSWORD environment variable is required"
+    echo "Please set it before running this script:"
+    echo "  export RDS_PASSWORD=your_password"
+    exit 1
+fi
 
 echo "🚀 Running import on EC2 instance via SSM..."
 echo ""
 
 # Command to run on EC2 instance
-COMMAND=$(cat <<'EOF'
-export PGPASSWORD='ju3vrLHJUW8PqDG4'
+COMMAND=$(cat <<EOF
+export PGPASSWORD='${RDS_PASSWORD}'
 
 # Download files if not already there
 if [ ! -f /tmp/supabase_schema.sql ]; then

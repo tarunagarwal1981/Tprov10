@@ -6,12 +6,20 @@ set -e
 
 echo "🚀 Starting database migration from EC2..."
 
-# RDS Configuration
-RDS_HOST="travel-app-db.c61sa44wsvgz.us-east-1.rds.amazonaws.com"
-RDS_PORT="5432"
-RDS_DB="postgres"
-RDS_USER="postgres"
-RDS_PASSWORD="ju3vrLHJUW8PqDG4"
+# RDS Configuration - Use environment variables for security
+RDS_HOST="${RDS_HOST:-travel-app-db.c61sa44wsvgz.us-east-1.rds.amazonaws.com}"
+RDS_PORT="${RDS_PORT:-5432}"
+RDS_DB="${RDS_DATABASE:-${RDS_DB:-postgres}}"
+RDS_USER="${RDS_USERNAME:-${RDS_USER:-postgres}}"
+RDS_PASSWORD="${RDS_PASSWORD:-${PGPASSWORD}}"
+
+# Validate required password
+if [ -z "$RDS_PASSWORD" ]; then
+    echo "❌ Error: RDS_PASSWORD or PGPASSWORD environment variable is required"
+    echo "Please set it before running this script:"
+    echo "  export RDS_PASSWORD=your_password"
+    exit 1
+fi
 
 # Migration file path (adjust if needed)
 MIGRATION_FILE="/home/ec2-user/migration/001_phone_auth_schema.sql"

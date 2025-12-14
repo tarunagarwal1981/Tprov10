@@ -80,9 +80,9 @@ Write-Host "   # Create update script" -ForegroundColor Gray
 Write-Host "   cat > /tmp/update-urls.ts << 'EOF'" -ForegroundColor Green
 Write-Host "   import { Pool } from 'pg';" -ForegroundColor Green
 Write-Host "   const pool = new Pool({" -ForegroundColor Green
-Write-Host "     host: 'travel-app-db.c61sa44wsvgz.us-east-1.rds.amazonaws.com'," -ForegroundColor Green
+Write-Host "     host: process.env.RDS_HOST || 'travel-app-db.c61sa44wsvgz.us-east-1.rds.amazonaws.com'," -ForegroundColor Green
 Write-Host "     port: 5432, database: 'postgres'," -ForegroundColor Green
-Write-Host "     user: 'postgres', password: 'ju3vrLHJUW8PqDG4'," -ForegroundColor Green
+Write-Host "     user: 'postgres', password: process.env.RDS_PASSWORD || process.env.PGPASSWORD," -ForegroundColor Green
 Write-Host "     ssl: { rejectUnauthorized: false }" -ForegroundColor Green
 Write-Host "   });" -ForegroundColor Green
 Write-Host "   const S3_BASE = 'https://travel-app-storage-1769.s3.us-east-1.amazonaws.com';" -ForegroundColor Green

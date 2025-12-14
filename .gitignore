@@ -44,3 +44,10 @@ next-env.d.ts
 
 # OS
 Thumbs.db
+
+# SSH keys and sensitive files
+*.pem
+*-key
+*-key.pem
+dbeaver-ec2-key
+*.key

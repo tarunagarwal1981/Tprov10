@@ -8,11 +8,19 @@ echo "🚀 Phase 2: Importing to RDS via CloudShell"
 echo "============================================================"
 echo ""
 
-# Configuration
-RDS_ENDPOINT="travel-app-db.c61sa44wsvgz.us-east-1.rds.amazonaws.com"
-RDS_USER="postgres"
-RDS_PASSWORD="ju3vrLHJUW8PqDG4"
-RDS_DATABASE="postgres"
+# Configuration - Use environment variables for security
+RDS_ENDPOINT="${RDS_HOST:-${RDS_HOSTNAME:-travel-app-db.c61sa44wsvgz.us-east-1.rds.amazonaws.com}}"
+RDS_USER="${RDS_USERNAME:-${RDS_USER:-postgres}}"
+RDS_PASSWORD="${RDS_PASSWORD:-${PGPASSWORD}}"
+RDS_DATABASE="${RDS_DATABASE:-${RDS_DB:-postgres}}"
+
+# Validate required password
+if [ -z "$RDS_PASSWORD" ]; then
+    echo "❌ Error: RDS_PASSWORD or PGPASSWORD environment variable is required"
+    echo "Please set it before running this script:"
+    echo "  export RDS_PASSWORD=your_password"
+    exit 1
+fi
 S3_BUCKET="travel-app-storage-1769"
 
 # Install PostgreSQL client if not already installed
