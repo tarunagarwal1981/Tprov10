@@ -175,11 +175,30 @@ export default function LeadDetailPage() {
       }
 
       const responseData = await response.json();
+      console.log('[LeadDetailPage] Query API response:', responseData);
+      
       const savedQuery = responseData.query;
       
-      if (!savedQuery || !savedQuery.id) {
+      if (!responseData) {
+        console.error('[LeadDetailPage] Empty response from query API');
+        throw new Error('Invalid response from query API');
+      }
+      
+      if (!savedQuery) {
+        console.error('[LeadDetailPage] No query in response:', responseData);
+        throw new Error('Query not returned in API response');
+      }
+      
+      if (!savedQuery.id) {
+        console.error('[LeadDetailPage] Query created but missing ID:', {
+          query: savedQuery,
+          queryKeys: Object.keys(savedQuery),
+          fullResponse: responseData,
+        });
         throw new Error('Query created but no ID returned');
       }
+      
+      console.log('[LeadDetailPage] Query saved successfully with ID:', savedQuery.id);
       
       // If editing an existing itinerary's query, update the itinerary's query_id
       if (editingQueryForItinerary) {

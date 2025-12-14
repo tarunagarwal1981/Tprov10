@@ -17,9 +17,28 @@ import {
   AdminGetUserCommand,
 } from "@aws-sdk/client-cognito-identity-provider";
 
-const client = new CognitoIdentityProviderClient({ 
-  region: process.env.DEPLOYMENT_REGION || process.env.REGION || 'us-east-1' 
-});
+// For local development, use explicit credentials from environment variables
+// For production (Amplify/Lambda), use default provider chain (execution role)
+const isLocalDev = typeof window === 'undefined' && !process.env.AWS_EXECUTION_ENV && !process.env.AWS_LAMBDA_FUNCTION_NAME;
+
+const clientConfig: any = {
+  region: process.env.DEPLOYMENT_REGION || process.env.REGION || 'us-east-1',
+};
+
+// In local development, use environment variables if available
+// The SDK will automatically pick up AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY from env
+if (isLocalDev && process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
+  clientConfig.credentials = {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    ...(process.env.AWS_SESSION_TOKEN && { sessionToken: process.env.AWS_SESSION_TOKEN }),
+  };
+  console.log('[Cognito Client] Using credentials from environment variables (local dev)');
+} else if (isLocalDev) {
+  console.warn('[Cognito Client] ⚠️  No AWS credentials found. Please set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY in .env.local for local development');
+}
+
+const client = new CognitoIdentityProviderClient(clientConfig);
 
 // Only check environment variables in server-side (Node.js) environment
 // In browser, these will be undefined but that's OK - API routes handle auth
