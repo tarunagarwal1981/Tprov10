@@ -14,7 +14,7 @@ export enum FraudCheckType {
   BEHAVIORAL = 'behavioral',
 }
 
-export enum FraudCheckResult {
+export enum FraudCheckStatus {
   PASSED = 'passed',
   FAILED = 'failed',
   FLAGGED = 'flagged',
@@ -23,7 +23,7 @@ export enum FraudCheckResult {
 export interface FraudCheckResult {
   passed: boolean;
   checkType: FraudCheckType;
-  result: FraudCheckResult;
+  result: FraudCheckStatus;
   riskScore: number; // 0-100
   reason?: string;
   details?: Record<string, any>;
@@ -108,7 +108,7 @@ export class FraudPreventionService {
     const finalRiskScore = Math.min(100, Math.round(totalRiskScore / checks.length));
 
     // Determine if passed (risk score < 70)
-    const passed = finalRiskScore < 70 && checks.every((c) => c.result !== FraudCheckResult.FAILED);
+    const passed = finalRiskScore < 70 && checks.every((c) => c.result !== FraudCheckStatus.FAILED);
 
     // Log fraud check
     const logId = await this.logFraudCheck({
@@ -162,17 +162,17 @@ export class FraudPreventionService {
     const dailyPurchases = parseInt(dailyCount?.count || '0', 10);
 
     let riskScore = 0;
-    let result = FraudCheckResult.PASSED;
+    let result = FraudCheckStatus.PASSED;
     let reason: string | undefined;
 
     // Check hourly limit
     if (hourlyPurchases >= this.config.maxPurchasesPerHour) {
       riskScore = 100;
-      result = FraudCheckResult.FAILED;
+      result = FraudCheckStatus.FAILED;
       reason = `Too many purchases in the last hour: ${hourlyPurchases} (max: ${this.config.maxPurchasesPerHour})`;
     } else if (hourlyPurchases >= this.config.maxPurchasesPerHour * 0.8) {
       riskScore = 70;
-      result = FraudCheckResult.FLAGGED;
+      result = FraudCheckStatus.FLAGGED;
       reason = `High purchase velocity: ${hourlyPurchases} purchases in the last hour`;
     } else if (hourlyPurchases >= this.config.maxPurchasesPerHour * 0.5) {
       riskScore = 40;
@@ -182,18 +182,18 @@ export class FraudPreventionService {
     // Check daily limit
     if (dailyPurchases >= this.config.maxPurchasesPerDay) {
       riskScore = Math.max(riskScore, 100);
-      result = FraudCheckResult.FAILED;
+      result = FraudCheckStatus.FAILED;
       reason = `Too many purchases today: ${dailyPurchases} (max: ${this.config.maxPurchasesPerDay})`;
     } else if (dailyPurchases >= this.config.maxPurchasesPerDay * 0.8) {
       riskScore = Math.max(riskScore, 70);
-      if (result === FraudCheckResult.PASSED) {
-        result = FraudCheckResult.FLAGGED;
+      if (result === FraudCheckStatus.PASSED) {
+        result = FraudCheckStatus.FLAGGED;
       }
       reason = `High daily purchase count: ${dailyPurchases} purchases today`;
     }
 
     return {
-      passed: result !== FraudCheckResult.FAILED,
+      passed: result !== FraudCheckStatus.FAILED,
       checkType: FraudCheckType.VELOCITY,
       result,
       riskScore,
@@ -227,17 +227,17 @@ export class FraudPreventionService {
     const dailyAmount = parseFloat(dailyTotal?.total || '0');
 
     let riskScore = 0;
-    let result = FraudCheckResult.PASSED;
+    let result = FraudCheckStatus.PASSED;
     let reason: string | undefined;
 
     // Check transaction amount limit
     if (amount > this.config.maxAmountPerTransaction) {
       riskScore = 100;
-      result = FraudCheckResult.FAILED;
+      result = FraudCheckStatus.FAILED;
       reason = `Transaction amount exceeds limit: $${amount} (max: $${this.config.maxAmountPerTransaction})`;
     } else if (amount > this.config.suspiciousAmountThreshold) {
       riskScore = 60;
-      result = FraudCheckResult.FLAGGED;
+      result = FraudCheckStatus.FLAGGED;
       reason = `High transaction amount: $${amount}`;
     }
 
@@ -245,18 +245,18 @@ export class FraudPreventionService {
     const newDailyTotal = dailyAmount + amount;
     if (newDailyTotal > this.config.maxAmountPerDay) {
       riskScore = Math.max(riskScore, 100);
-      result = FraudCheckResult.FAILED;
+      result = FraudCheckStatus.FAILED;
       reason = `Daily spending limit exceeded: $${newDailyTotal} (max: $${this.config.maxAmountPerDay})`;
     } else if (newDailyTotal > this.config.maxAmountPerDay * 0.8) {
       riskScore = Math.max(riskScore, 70);
-      if (result === FraudCheckResult.PASSED) {
-        result = FraudCheckResult.FLAGGED;
+      if (result === FraudCheckStatus.PASSED) {
+        result = FraudCheckStatus.FLAGGED;
       }
       reason = `Approaching daily spending limit: $${newDailyTotal}`;
     }
 
     return {
-      passed: result !== FraudCheckResult.FAILED,
+      passed: result !== FraudCheckStatus.FAILED,
       checkType: FraudCheckType.AMOUNT,
       result,
       riskScore,
@@ -291,19 +291,19 @@ export class FraudPreventionService {
     const uniqueUsers = parseInt(userCount?.count || '0', 10);
 
     let riskScore = 0;
-    let result = FraudCheckResult.PASSED;
+    let result = FraudCheckStatus.PASSED;
 
     // If IP used by more than 5 different users in 24 hours, flag it
     if (uniqueUsers > 10) {
       riskScore = 90;
-      result = FraudCheckResult.FAILED;
+      result = FraudCheckStatus.FAILED;
     } else if (uniqueUsers > 5) {
       riskScore = 60;
-      result = FraudCheckResult.FLAGGED;
+      result = FraudCheckStatus.FLAGGED;
     }
 
     return {
-      passed: result !== FraudCheckResult.FAILED,
+      passed: result !== FraudCheckStatus.FAILED,
       checkType: FraudCheckType.IP_REPUTATION,
       result,
       riskScore,
@@ -335,19 +335,19 @@ export class FraudPreventionService {
     const uniqueUsers = parseInt(userCount?.count || '0', 10);
 
     let riskScore = 0;
-    let result = FraudCheckResult.PASSED;
+    let result = FraudCheckStatus.PASSED;
 
     // If device used by more than 3 different users in 24 hours, flag it
     if (uniqueUsers > 5) {
       riskScore = 90;
-      result = FraudCheckResult.FAILED;
+      result = FraudCheckStatus.FAILED;
     } else if (uniqueUsers > 3) {
       riskScore = 50;
-      result = FraudCheckResult.FLAGGED;
+      result = FraudCheckStatus.FLAGGED;
     }
 
     return {
-      passed: result !== FraudCheckResult.FAILED,
+      passed: result !== FraudCheckStatus.FAILED,
       checkType: FraudCheckType.DEVICE_FINGERPRINT,
       result,
       riskScore,
