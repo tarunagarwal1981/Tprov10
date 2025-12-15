@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { CheckCircle2, XCircle, Clock, AlertCircle, RefreshCw, Ban } from 'lucide-react';
+import { CheckCircle, Clock } from 'lucide-react';
 import { PaymentStatus } from '@/lib/services/paymentService';
 
 interface PaymentStatusBadgeProps {
@@ -31,37 +31,37 @@ export function PaymentStatusBadge({
     },
     [PaymentStatus.PROCESSING]: {
       label: 'Processing',
-      icon: RefreshCw,
+      icon: Clock,
       color: 'bg-blue-100 text-blue-800 border-blue-200',
       iconColor: 'text-blue-600',
     },
     [PaymentStatus.COMPLETED]: {
       label: 'Completed',
-      icon: CheckCircle2,
+      icon: CheckCircle,
       color: 'bg-green-100 text-green-800 border-green-200',
       iconColor: 'text-green-600',
     },
     [PaymentStatus.FAILED]: {
       label: 'Failed',
-      icon: XCircle,
+      icon: Clock,
       color: 'bg-red-100 text-red-800 border-red-200',
       iconColor: 'text-red-600',
     },
     [PaymentStatus.CANCELLED]: {
       label: 'Cancelled',
-      icon: Ban,
+      icon: Clock,
       color: 'bg-gray-100 text-gray-800 border-gray-200',
       iconColor: 'text-gray-600',
     },
     [PaymentStatus.REFUNDED]: {
       label: 'Refunded',
-      icon: RefreshCw,
+      icon: CheckCircle,
       color: 'bg-purple-100 text-purple-800 border-purple-200',
       iconColor: 'text-purple-600',
     },
     [PaymentStatus.PARTIALLY_REFUNDED]: {
       label: 'Partially Refunded',
-      icon: AlertCircle,
+      icon: CheckCircle,
       color: 'bg-orange-100 text-orange-800 border-orange-200',
       iconColor: 'text-orange-600',
     },

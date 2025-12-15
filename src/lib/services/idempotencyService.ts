@@ -70,7 +70,7 @@ export class IdempotencyService {
     const requestHash = this.hashRequestBody(requestBody);
 
     // Check for existing idempotency record
-    const existing = await queryOne<IdempotencyRecord>(
+    const existing = await queryOne<any>(
       `SELECT * FROM payment_idempotency 
        WHERE idempotency_key = $1 
          AND user_id = $2 

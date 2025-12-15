@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { MarketplaceService } from '@/lib/services/marketplaceService';
-import { PaymentService, PaymentStatus } from '@/lib/services/paymentService';
+import { PaymentService, PaymentStatus, PaymentMethod } from '@/lib/services/paymentService';
 import { IdempotencyService } from '@/lib/services/idempotencyService';
 import { FraudPreventionService } from '@/lib/services/fraudPreventionService';
 import { TermsService } from '@/lib/services/termsService';
@@ -178,7 +178,7 @@ export async function POST(request: NextRequest) {
       console.log('[Purchase API] PLACEHOLDER: Processing payment with gateway...');
       const gatewayResult = await PaymentService.processPaymentWithGateway(
         payment.id,
-        PaymentService.PaymentMethod.STRIPE, // Placeholder
+        PaymentMethod.STRIPE, // Placeholder
         {} // Payment data
       );
 

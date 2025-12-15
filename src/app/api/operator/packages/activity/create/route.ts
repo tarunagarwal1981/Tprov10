@@ -143,24 +143,23 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Insert time slots
+    // Insert time slots (aligned with activity_package_time_slots schema)
     if (time_slots && time_slots.length > 0) {
       for (const slot of time_slots) {
         await query(
           `INSERT INTO activity_package_time_slots (
-            package_id, start_time, end_time, duration_minutes, is_available,
-            max_capacity, current_bookings, price_adjustment, notes
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+            package_id, start_time, end_time, capacity, is_active, days, price_override
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
           [
             packageId,
             slot.start_time || null,
             slot.end_time || null,
-            slot.duration_minutes || null,
-            slot.is_available !== undefined ? slot.is_available : true,
-            slot.max_capacity || null,
-            slot.current_bookings || 0,
-            slot.price_adjustment || null,
-            slot.notes || null,
+            // capacity / active / days come from formDataToDatabase mapping
+            slot.capacity || 1,
+            slot.is_active !== undefined ? slot.is_active : true,
+            slot.days || [],
+            // No per-slot override from the form yet
+            null,
           ]
         );
       }

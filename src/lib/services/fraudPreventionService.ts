@@ -158,8 +158,8 @@ export class FraudPreventionService {
       [userId, oneDayAgo.toISOString()]
     );
 
-    const hourlyPurchases = parseInt(hourlyCount?.count || '0', 10);
-    const dailyPurchases = parseInt(dailyCount?.count || '0', 10);
+    const hourlyPurchases = Number(hourlyCount?.count ?? 0);
+    const dailyPurchases = Number(dailyCount?.count ?? 0);
 
     let riskScore = 0;
     let result = FraudCheckStatus.PASSED;
@@ -224,7 +224,7 @@ export class FraudPreventionService {
       [userId, oneDayAgo.toISOString()]
     );
 
-    const dailyAmount = parseFloat(dailyTotal?.total || '0');
+    const dailyAmount = Number(dailyTotal?.total ?? 0);
 
     let riskScore = 0;
     let result = FraudCheckStatus.PASSED;
@@ -288,7 +288,7 @@ export class FraudPreventionService {
       [ipAddress]
     );
 
-    const uniqueUsers = parseInt(userCount?.count || '0', 10);
+    const uniqueUsers = Number(userCount?.count ?? 0);
 
     let riskScore = 0;
     let result = FraudCheckStatus.PASSED;
@@ -332,7 +332,7 @@ export class FraudPreventionService {
       [deviceFingerprint]
     );
 
-    const uniqueUsers = parseInt(userCount?.count || '0', 10);
+    const uniqueUsers = Number(userCount?.count ?? 0);
 
     let riskScore = 0;
     let result = FraudCheckStatus.PASSED;
