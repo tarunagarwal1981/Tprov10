@@ -67,6 +67,7 @@ export async function POST(request: NextRequest) {
     };
 
     // Prepare JSONB values with validation
+    // Note: difficulty_level, languages_supported, and tags may not be in formData but have defaults
     const jsonbValues = {
       languages_supported: ensureJSONB(pkgData.languages_supported, ['EN']),
       tags: ensureJSONB(pkgData.tags, []),
@@ -171,7 +172,8 @@ export async function POST(request: NextRequest) {
         JSON.stringify(jsonbValues.what_to_bring), // JSONB - stringify to ensure proper format
         pkgData.important_information || null,
         pkgData.minimum_age || 0,
-        pkgData.maximum_age || null,
+        // maximum_age is TEXT in DB - ensure it's a string
+        pkgData.maximum_age ? String(pkgData.maximum_age) : null,
         pkgData.child_policy || null,
         pkgData.infant_policy || null,
         pkgData.age_verification_required || false,
@@ -194,9 +196,23 @@ export async function POST(request: NextRequest) {
         JSON.stringify(jsonbValues.group_discounts), // JSONB - stringify to ensure proper format
         JSON.stringify(jsonbValues.seasonal_pricing), // JSONB - stringify to ensure proper format
         pkgData.dynamic_pricing_enabled || false,
-        pkgData.dynamic_pricing_base_multiplier || null,
-        pkgData.dynamic_pricing_demand_multiplier || null,
-        pkgData.dynamic_pricing_season_multiplier || null,
+        // Dynamic pricing multipliers are INTEGER in DB
+        // Store as integer (multiply by 100 for precision: 1.5 becomes 150)
+        pkgData.dynamic_pricing_base_multiplier 
+          ? (typeof pkgData.dynamic_pricing_base_multiplier === 'number' && pkgData.dynamic_pricing_base_multiplier >= 0 && pkgData.dynamic_pricing_base_multiplier < 100)
+            ? Math.round(pkgData.dynamic_pricing_base_multiplier * 100)
+            : Math.round(Number(pkgData.dynamic_pricing_base_multiplier) || 100)
+          : 100, // Default 1.0 = 100
+        pkgData.dynamic_pricing_demand_multiplier 
+          ? (typeof pkgData.dynamic_pricing_demand_multiplier === 'number' && pkgData.dynamic_pricing_demand_multiplier >= 0 && pkgData.dynamic_pricing_demand_multiplier < 100)
+            ? Math.round(pkgData.dynamic_pricing_demand_multiplier * 100)
+            : Math.round(Number(pkgData.dynamic_pricing_demand_multiplier) || 100)
+          : 100, // Default 1.0 = 100
+        pkgData.dynamic_pricing_season_multiplier 
+          ? (typeof pkgData.dynamic_pricing_season_multiplier === 'number' && pkgData.dynamic_pricing_season_multiplier >= 0 && pkgData.dynamic_pricing_season_multiplier < 100)
+            ? Math.round(pkgData.dynamic_pricing_season_multiplier * 100)
+            : Math.round(Number(pkgData.dynamic_pricing_season_multiplier) || 100)
+          : 100, // Default 1.0 = 100
         pkgData.slug || null,
         pkgData.meta_title || null,
         pkgData.meta_description || null,

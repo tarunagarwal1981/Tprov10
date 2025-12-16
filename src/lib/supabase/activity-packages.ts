@@ -712,9 +712,9 @@ export function formDataToDatabase(
     destination_coordinates: `${formData.basicInformation.destination?.coordinates?.longitude || 0},${formData.basicInformation.destination?.coordinates?.latitude || 0}`,
     duration_hours: formData.basicInformation.duration?.hours || 2,
     duration_minutes: formData.basicInformation.duration?.minutes || 0,
-    // difficulty_level: formData.basicInformation.difficultyLevel || 'EASY',
-    // languages_supported: formData.basicInformation.languagesSupported || ['EN'],
-    // tags: formData.basicInformation.tags || [],
+    difficulty_level: (formData.basicInformation as any).difficultyLevel || 'EASY', // Default if not in form
+    languages_supported: (formData.basicInformation as any).languagesSupported || ['EN'], // Default if not in form
+    tags: (formData.basicInformation as any).tags || [], // Default if not in form
     meeting_point_name: formData.activityDetails?.meetingPoint?.name || '',
     meeting_point_address: formData.activityDetails?.meetingPoint?.address || '',
     meeting_point_coordinates: `${formData.activityDetails?.meetingPoint?.coordinates?.longitude || 0},${formData.activityDetails?.meetingPoint?.coordinates?.latitude || 0}`,
@@ -725,7 +725,10 @@ export function formDataToDatabase(
     what_to_bring: formData.activityDetails?.whatToBring || [],
     important_information: formData.activityDetails?.importantInformation || null,
     minimum_age: formData.policiesRestrictions?.ageRestrictions?.minimumAge || 0,
-    maximum_age: formData.policiesRestrictions?.ageRestrictions?.maximumAge || null,
+    // maximum_age is TEXT in DB (despite TypeScript type saying number), convert number to string if provided
+    maximum_age: (formData.policiesRestrictions?.ageRestrictions?.maximumAge 
+      ? String(formData.policiesRestrictions.ageRestrictions.maximumAge) 
+      : null) as any, // Type mismatch: DB has TEXT but TypeScript type says number
     child_policy: formData.policiesRestrictions?.ageRestrictions?.childPolicy || null,
     infant_policy: formData.policiesRestrictions?.ageRestrictions?.infantPolicy || null,
     age_verification_required: formData.policiesRestrictions?.ageRestrictions?.ageVerificationRequired || false,
@@ -748,9 +751,17 @@ export function formDataToDatabase(
     group_discounts: (formData.pricing?.groupDiscounts || []) as any,
     seasonal_pricing: (formData.pricing?.seasonalPricing || []) as any,
     dynamic_pricing_enabled: formData.pricing?.dynamicPricing?.enabled || false,
-    dynamic_pricing_base_multiplier: formData.pricing?.dynamicPricing?.baseMultiplier || 1.0,
-    dynamic_pricing_demand_multiplier: formData.pricing?.dynamicPricing?.demandMultiplier || 1.0,
-    dynamic_pricing_season_multiplier: formData.pricing?.dynamicPricing?.seasonMultiplier || 1.0,
+    // Dynamic pricing multipliers are INTEGER in DB
+    // Store as integer (multiply by 100 for precision: 1.5 becomes 150, divide by 100 when reading)
+    dynamic_pricing_base_multiplier: formData.pricing?.dynamicPricing?.baseMultiplier 
+      ? Math.round((formData.pricing.dynamicPricing.baseMultiplier || 1.0) * 100) 
+      : 100, // Default 1.0 = 100
+    dynamic_pricing_demand_multiplier: formData.pricing?.dynamicPricing?.demandMultiplier 
+      ? Math.round((formData.pricing.dynamicPricing.demandMultiplier || 1.0) * 100) 
+      : 100, // Default 1.0 = 100
+    dynamic_pricing_season_multiplier: formData.pricing?.dynamicPricing?.seasonMultiplier 
+      ? Math.round((formData.pricing.dynamicPricing.seasonMultiplier || 1.0) * 100) 
+      : 100, // Default 1.0 = 100
   };
 
   console.log('📦 [formDataToDatabase] Processing images', {

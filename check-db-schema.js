@@ -5,7 +5,13 @@
 
 const { Pool } = require('pg');
 const { SecretsManagerClient, GetSecretValueCommand } = require('@aws-sdk/client-secrets-manager');
+const { LambdaClient, InvokeCommand } = require('@aws-sdk/client-lambda');
 require('dotenv').config({ path: '.env.local' });
+
+// Use provided AWS credentials
+process.env.AWS_ACCESS_KEY_ID = process.env.AWS_ACCESS_KEY_ID || 'REDACTED_AWS_ACCESS_KEY';
+process.env.AWS_SECRET_ACCESS_KEY = process.env.AWS_SECRET_ACCESS_KEY || '/REDACTED_AWS_SECRET_KEY/';
+process.env.AWS_REGION = process.env.AWS_REGION || 'us-east-1';
 
 // Try to get RDS credentials from Secrets Manager or environment
 async function getRDSConfig() {
@@ -75,27 +81,43 @@ async function getRDSConfig() {
 
 let pool = null;
 
+// Use Lambda to query database instead of direct connection
+async function queryViaLambda(query, params = []) {
+  const lambdaClient = new LambdaClient({
+    region: process.env.AWS_REGION || 'us-east-1',
+    credentials: {
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    },
+  });
+
+  const command = new InvokeCommand({
+    FunctionName: 'travel-app-database-service',
+    Payload: JSON.stringify({
+      action: 'query',
+      query,
+      params,
+    }),
+  });
+
+  const response = await lambdaClient.send(command);
+  const result = JSON.parse(Buffer.from(response.Payload).toString());
+  
+  if (result.statusCode !== 200) {
+    const errorBody = typeof result.body === 'string' ? JSON.parse(result.body) : result.body;
+    throw new Error(errorBody.error || errorBody.message || 'Lambda error');
+  }
+  
+  const body = typeof result.body === 'string' ? JSON.parse(result.body) : result.body;
+  return body;
+}
+
 async function checkTableSchema() {
   try {
-    console.log('Getting RDS configuration...');
-    const rdsConfig = await getRDSConfig();
-    
-    console.log('Connecting to database:', {
-      host: rdsConfig.host,
-      port: rdsConfig.port,
-      database: rdsConfig.database,
-      user: rdsConfig.user,
-    });
-    
-    pool = new Pool({
-      ...rdsConfig,
-      ssl: {
-        rejectUnauthorized: false,
-      },
-    });
+    console.log('Connecting to database via Lambda...');
     
     // Get column information for activity_packages table
-    const result = await pool.query(`
+    const result = await queryViaLambda(`
       SELECT 
         column_name,
         data_type,
@@ -134,7 +156,7 @@ async function checkTableSchema() {
 
     // Check activity_package_time_slots table
     console.log('\n=== activity_package_time_slots Table Schema ===\n');
-    const timeSlotsResult = await pool.query(`
+    const timeSlotsResult = await queryViaLambda(`
       SELECT 
         column_name,
         data_type,
@@ -161,7 +183,7 @@ async function checkTableSchema() {
 
     // Check activity_package_variants table
     console.log('\n=== activity_package_variants Table Schema ===\n');
-    const variantsResult = await pool.query(`
+    const variantsResult = await queryViaLambda(`
       SELECT 
         column_name,
         data_type,
@@ -186,12 +208,50 @@ async function checkTableSchema() {
       );
     });
 
-    await pool.end();
+    // Check activity_pricing_packages table
+    console.log('\n=== activity_pricing_packages Table Schema ===\n');
+    try {
+      const pricingResult = await queryViaLambda(`
+        SELECT 
+          column_name,
+          data_type,
+          udt_name,
+          is_nullable,
+          column_default
+        FROM information_schema.columns
+        WHERE table_name = 'activity_pricing_packages'
+        ORDER BY ordinal_position;
+      `);
+
+      console.log('Column Name'.padEnd(40), 'Data Type'.padEnd(20), 'Nullable'.padEnd(10), 'Default');
+      console.log('-'.repeat(100));
+      
+      pricingResult.rows.forEach(row => {
+        const dataType = row.udt_name === 'jsonb' ? 'JSONB' : row.data_type.toUpperCase();
+        console.log(
+          row.column_name.padEnd(40),
+          dataType.padEnd(20),
+          row.is_nullable.padEnd(10),
+          row.column_default || ''
+        );
+      });
+
+      // Check for JSONB columns in pricing packages
+      const pricingJsonbColumns = pricingResult.rows.filter(row => row.udt_name === 'jsonb');
+      if (pricingJsonbColumns.length > 0) {
+        console.log('\n=== JSONB Columns in activity_pricing_packages ===');
+        pricingJsonbColumns.forEach(col => {
+          console.log(`- ${col.column_name}`);
+        });
+      }
+    } catch (error) {
+      console.log('⚠️  Could not fetch activity_pricing_packages table:', error.message);
+    }
+
     console.log('\n✅ Database check complete');
   } catch (error) {
     console.error('❌ Error:', error.message);
     console.error('Stack:', error.stack);
-    await pool.end();
     process.exit(1);
   }
 }

@@ -12,6 +12,12 @@ export async function POST(request: NextRequest) {
   try {
     const { packageId, pricingPackages, vehicles } = await request.json();
 
+    console.log('[Pricing API] Received request:', {
+      packageId,
+      pricingPackagesCount: pricingPackages?.length || 0,
+      vehiclesCount: vehicles?.length || 0,
+    });
+
     if (!packageId) {
       return NextResponse.json(
         { error: 'packageId is required' },
@@ -28,8 +34,38 @@ export async function POST(request: NextRequest) {
 
     const savedPackageIds: string[] = [];
 
+    // Helper to ensure array values are properly formatted for PostgreSQL ARRAY type
+    const ensureArray = (value: any): string[] => {
+      if (!value) return [];
+      if (Array.isArray(value)) {
+        // Ensure all items are strings (PostgreSQL TEXT[] array)
+        return value.map(item => String(item)).filter(item => item.trim() !== '');
+      }
+      if (typeof value === 'string') {
+        try {
+          const parsed = JSON.parse(value);
+          if (Array.isArray(parsed)) {
+            return parsed.map(item => String(item)).filter(item => item.trim() !== '');
+          }
+          return [String(parsed)];
+        } catch {
+          return [value];
+        }
+      }
+      return [String(value)];
+    };
+
     // Save pricing packages
     for (const pkg of pricingPackages) {
+      console.log('[Pricing API] Processing package:', {
+        id: pkg.id,
+        packageName: pkg.packageName,
+        includedItems: pkg.includedItems,
+        excludedItems: pkg.excludedItems,
+        includedItemsType: typeof pkg.includedItems,
+        excludedItemsType: typeof pkg.excludedItems,
+      });
+      
       // Check if this is an update (has id and not temp) or create
       if (pkg.id && !pkg.id.startsWith('temp-')) {
         // Update existing
@@ -61,8 +97,10 @@ export async function POST(request: NextRequest) {
             pkg.pickupInstructions || null,
             pkg.dropoffLocation || null,
             pkg.dropoffInstructions || null,
-            pkg.includedItems ? JSON.stringify(pkg.includedItems) : null,
-            pkg.excludedItems ? JSON.stringify(pkg.excludedItems) : null,
+            // included_items and excluded_items are ARRAY type (TEXT[])
+            // Ensure they're proper arrays of strings
+            ensureArray(pkg.includedItems),
+            ensureArray(pkg.excludedItems),
             pkg.isActive !== undefined ? pkg.isActive : true,
             pkg.isFeatured || false,
             pkg.displayOrder || 0,
@@ -101,8 +139,10 @@ export async function POST(request: NextRequest) {
             pkg.pickupInstructions || null,
             pkg.dropoffLocation || null,
             pkg.dropoffInstructions || null,
-            pkg.includedItems ? JSON.stringify(pkg.includedItems) : null,
-            pkg.excludedItems ? JSON.stringify(pkg.excludedItems) : null,
+            // included_items and excluded_items are ARRAY type (TEXT[])
+            // Ensure they're proper arrays of strings
+            ensureArray(pkg.includedItems),
+            ensureArray(pkg.excludedItems),
             pkg.isActive !== undefined ? pkg.isActive : true,
             pkg.isFeatured || false,
             pkg.displayOrder || 0,
@@ -153,8 +193,23 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('Error saving pricing packages:', error);
+    console.error('Error details:', {
+      message: error.message,
+      detail: error.detail,
+      code: error.code,
+      hint: error.hint,
+      constraint: error.constraint,
+      table: error.table,
+      column: error.column,
+      stack: error.stack,
+    });
     return NextResponse.json(
-      { error: 'Failed to save pricing packages', details: error.message },
+      { 
+        error: 'Failed to save pricing packages', 
+        details: error.message || 'Unknown error',
+        hint: error.hint || error.detail || null,
+        code: error.code || null,
+      },
       { status: 500 }
     );
   }
