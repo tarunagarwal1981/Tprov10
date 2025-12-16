@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
         return '(0,0)'; // Default to origin if empty
       }
       const parts = coordString.split(',');
-      if (parts.length === 2) {
+      if (parts.length === 2 && parts[0] && parts[1]) {
         const lon = parseFloat(parts[0].trim()) || 0;
         const lat = parseFloat(parts[1].trim()) || 0;
         return `(${lon},${lat})`;
