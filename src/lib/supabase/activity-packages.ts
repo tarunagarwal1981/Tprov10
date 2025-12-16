@@ -92,8 +92,6 @@ export async function createActivityPackage(
   data: CreateActivityPackageData,
   userId: string
 ): Promise<{ data: ActivityPackageWithRelations | null; error: SupabaseError | null }> {
-  const supabase = createSupabaseBrowserClient();
-  
   return withErrorHandling(async () => {
     // First, upload any base64 images to storage
     const finalImages: ActivityPackageImageInsert[] = [];
@@ -177,62 +175,29 @@ export async function createActivityPackage(
 }
 
 /**
- * Get activity package by ID with all relations
+ * Get activity package by ID with all relations from RDS
  */
 export async function getActivityPackage(
   id: string
 ): Promise<{ data: ActivityPackageWithRelations | null; error: SupabaseError | null }> {
-  const supabase = createSupabaseBrowserClient();
-  
   return withErrorHandling(async () => {
-    // Get the main package
-    const { data: packageData, error: packageError } = await supabase
-      .from('activity_packages')
-      .select('*')
-      .eq('id', id)
-      .single();
+    // Use API route for RDS database operations
+    const response = await fetch(`/api/operator/packages/activity/${id}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    });
 
-    if (packageError) {
-      throw packageError;
+    if (!response.ok) {
+      if (response.status === 404) {
+        return { data: null, error: null };
+      }
+      const errorData = await response.json();
+      const errorMessage = errorData.error || 'Failed to fetch package';
+      throw new Error(errorMessage);
     }
 
-    if (!packageData) {
-      return { data: null, error: null };
-    }
-
-    // Get related data
-    const [imagesResult, timeSlotsResult, variantsResult, faqsResult] = await Promise.all([
-      supabase
-        .from('activity_package_images')
-        .select('*')
-        .eq('package_id', id)
-        .order('display_order'),
-      supabase
-        .from('activity_package_time_slots')
-        .select('*')
-        .eq('package_id', id)
-        .order('start_time'),
-      supabase
-        .from('activity_package_variants')
-        .select('*')
-        .eq('package_id', id)
-        .order('display_order'),
-      supabase
-        .from('activity_package_faqs')
-        .select('*')
-        .eq('package_id', id)
-        .order('display_order'),
-    ]);
-
-    const result: ActivityPackageWithRelations = {
-      ...packageData,
-      images: imagesResult.data || [],
-      time_slots: timeSlotsResult.data || [],
-      variants: variantsResult.data || [],
-      faqs: faqsResult.data || [],
-    };
-
-    return { data: result, error: null };
+    const apiResult = await response.json();
+    return { data: apiResult.data || null, error: null };
   });
 }
 
@@ -243,8 +208,6 @@ export async function updateActivityPackage(
   id: string,
   data: UpdateActivityPackageData
 ): Promise<{ data: ActivityPackageWithRelations | null; error: SupabaseError | null }> {
-  const supabase = createSupabaseBrowserClient();
-  
   console.log('🔄 [updateActivityPackage] Starting update', {
     packageId: id,
     hasImages: !!data.images,
@@ -383,15 +346,24 @@ export async function updateActivityPackage(
 export async function deleteActivityPackage(
   id: string
 ): Promise<{ data: boolean; error: SupabaseError | null }> {
-  const supabase = createSupabaseBrowserClient();
-  
   const result = await withErrorHandling(async () => {
-    const { error } = await supabase
-      .from('activity_packages')
-      .delete()
-      .eq('id', id);
+    // Use API route for RDS database operations
+    const response = await fetch('/api/operator/packages/delete', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        packageId: id,
+        packageType: 'Activity',
+      }),
+    });
 
-    return { data: true, error };
+    if (!response.ok) {
+      const errorData = await response.json();
+      const errorMessage = errorData.error || 'Failed to delete package';
+      throw new Error(errorMessage);
+    }
+
+    return { data: true, error: null };
   });
 
   return {
