@@ -20,24 +20,77 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Helper function to ensure JSONB arrays are properly stringified
+    // Helper function to ensure JSONB arrays are properly formatted
     // The actual database stores arrays as JSONB, not PostgreSQL arrays
     const ensureJSONB = (value: any, defaultValue: any = []): any => {
+      // Handle null/undefined
       if (value === null || value === undefined) {
         return defaultValue;
       }
+      
+      // Handle empty strings - treat as default
+      if (typeof value === 'string' && value.trim() === '') {
+        return defaultValue;
+      }
+      
       // If already a string, try to parse it first to validate
       if (typeof value === 'string') {
         try {
           const parsed = JSON.parse(value);
-          return parsed;
-        } catch {
+          // Ensure parsed value is an array or object (valid JSONB)
+          if (Array.isArray(parsed) || (typeof parsed === 'object' && parsed !== null)) {
+            return parsed;
+          }
+          // If parsed value is not array/object, return default
+          return defaultValue;
+        } catch (e) {
+          // Invalid JSON string, return default
+          console.warn('[ensureJSONB] Invalid JSON string, using default:', { value, error: e });
           return defaultValue;
         }
       }
+      
       // If it's already an array or object, return as-is (will be JSON.stringify'd by pg)
-      return value;
+      if (Array.isArray(value) || (typeof value === 'object' && value !== null)) {
+        return value;
+      }
+      
+      // For any other type (number, boolean, etc.), wrap in array if default is array
+      if (Array.isArray(defaultValue)) {
+        return [value];
+      }
+      
+      // Otherwise return default
+      return defaultValue;
     };
+
+    // Prepare JSONB values with validation
+    const jsonbValues = {
+      languages_supported: ensureJSONB(packageData.languages_supported, ['EN']),
+      tags: ensureJSONB(packageData.tags, []),
+      operating_days: ensureJSONB(packageData.operating_days, []),
+      whats_included: ensureJSONB(packageData.whats_included, []),
+      whats_not_included: ensureJSONB(packageData.whats_not_included, []),
+      what_to_bring: ensureJSONB(packageData.what_to_bring, []),
+      accessibility_facilities: ensureJSONB(packageData.accessibility_facilities, []),
+      health_safety_requirements: ensureJSONB(packageData.health_safety_requirements, []),
+      group_discounts: ensureJSONB(packageData.group_discounts, []),
+      seasonal_pricing: ensureJSONB(packageData.seasonal_pricing, []),
+    };
+
+    // Log JSONB values for debugging
+    console.log('[Package Create] JSONB values prepared:', {
+      languages_supported: jsonbValues.languages_supported,
+      tags: jsonbValues.tags,
+      operating_days: jsonbValues.operating_days,
+      whats_included: jsonbValues.whats_included,
+      whats_not_included: jsonbValues.whats_not_included,
+      what_to_bring: jsonbValues.what_to_bring,
+      accessibility_facilities: jsonbValues.accessibility_facilities,
+      health_safety_requirements: jsonbValues.health_safety_requirements,
+      group_discounts: jsonbValues.group_discounts,
+      seasonal_pricing: jsonbValues.seasonal_pricing,
+    });
 
     // Insert main package
     // Note: Coordinates are stored as TEXT (not POINT), arrays are stored as JSONB
@@ -89,16 +142,16 @@ export async function POST(request: NextRequest) {
         packageData.duration_hours || 2,
         packageData.duration_minutes || 0,
         packageData.difficulty_level || 'EASY',
-        ensureJSONB(packageData.languages_supported, ['EN']), // JSONB
-        ensureJSONB(packageData.tags, []), // JSONB
+        jsonbValues.languages_supported, // JSONB
+        jsonbValues.tags, // JSONB
         packageData.meeting_point_name || '',
         packageData.meeting_point_address || '',
         packageData.meeting_point_coordinates || '', // TEXT, not POINT
         packageData.meeting_point_instructions || null,
-        ensureJSONB(packageData.operating_days, []), // JSONB
-        ensureJSONB(packageData.whats_included, []), // JSONB
-        ensureJSONB(packageData.whats_not_included, []), // JSONB
-        ensureJSONB(packageData.what_to_bring, []), // JSONB
+        jsonbValues.operating_days, // JSONB
+        jsonbValues.whats_included, // JSONB
+        jsonbValues.whats_not_included, // JSONB
+        jsonbValues.what_to_bring, // JSONB
         packageData.important_information || null,
         packageData.minimum_age || 0,
         packageData.maximum_age || null,
@@ -106,14 +159,14 @@ export async function POST(request: NextRequest) {
         packageData.infant_policy || null,
         packageData.age_verification_required || false,
         packageData.wheelchair_accessible || false,
-        ensureJSONB(packageData.accessibility_facilities, []), // JSONB
+        jsonbValues.accessibility_facilities, // JSONB
         packageData.special_assistance || null,
         packageData.cancellation_policy_type || 'MODERATE',
         packageData.cancellation_policy_custom || null,
         packageData.cancellation_refund_percentage || 80,
         packageData.cancellation_deadline_hours ?? 24, // Use nullish coalescing to respect 0
         packageData.weather_policy || null,
-        ensureJSONB(packageData.health_safety_requirements, []), // JSONB
+        jsonbValues.health_safety_requirements, // JSONB
         packageData.health_safety_additional_info || null,
         packageData.base_price ?? 0, // Use nullish coalescing to respect 0
         packageData.currency || 'USD',
@@ -121,8 +174,8 @@ export async function POST(request: NextRequest) {
         packageData.child_price_type || null,
         packageData.child_price_value || null,
         packageData.infant_price || null,
-        ensureJSONB(packageData.group_discounts, []), // JSONB
-        ensureJSONB(packageData.seasonal_pricing, []), // JSONB
+        jsonbValues.group_discounts, // JSONB
+        jsonbValues.seasonal_pricing, // JSONB
         packageData.dynamic_pricing_enabled || false,
         packageData.dynamic_pricing_base_multiplier || null,
         packageData.dynamic_pricing_demand_multiplier || null,
@@ -241,13 +294,34 @@ export async function POST(request: NextRequest) {
       detail: error.detail,
       code: error.code,
       hint: error.hint,
+      constraint: error.constraint,
+      table: error.table,
+      column: error.column,
       stack: error.stack,
     });
+    
+    // If it's a JSON error, log the package data to help identify the problematic field
+    if (error.message?.includes('json') || error.detail?.includes('json')) {
+      console.error('JSON error detected. Package data:', {
+        languages_supported: packageData.languages_supported,
+        tags: packageData.tags,
+        operating_days: packageData.operating_days,
+        whats_included: packageData.whats_included,
+        whats_not_included: packageData.whats_not_included,
+        what_to_bring: packageData.what_to_bring,
+        accessibility_facilities: packageData.accessibility_facilities,
+        health_safety_requirements: packageData.health_safety_requirements,
+        group_discounts: packageData.group_discounts,
+        seasonal_pricing: packageData.seasonal_pricing,
+      });
+    }
+    
     return NextResponse.json(
       { 
         error: 'Failed to create package', 
         details: error.message || 'Unknown error',
         hint: error.hint || error.detail || null,
+        code: error.code || null,
       },
       { status: 500 }
     );
