@@ -80,22 +80,37 @@ export async function POST(request: NextRequest) {
       seasonal_pricing: ensureJSONB(pkgData.seasonal_pricing, []),
     };
 
-    // Log JSONB values for debugging
+    // Log JSONB values for debugging with type information
     console.log('[Package Create] JSONB values prepared:', {
-      languages_supported: jsonbValues.languages_supported,
-      tags: jsonbValues.tags,
-      operating_days: jsonbValues.operating_days,
-      whats_included: jsonbValues.whats_included,
-      whats_not_included: jsonbValues.whats_not_included,
-      what_to_bring: jsonbValues.what_to_bring,
-      accessibility_facilities: jsonbValues.accessibility_facilities,
-      health_safety_requirements: jsonbValues.health_safety_requirements,
-      group_discounts: jsonbValues.group_discounts,
-      seasonal_pricing: jsonbValues.seasonal_pricing,
+      languages_supported: { value: jsonbValues.languages_supported, type: typeof jsonbValues.languages_supported, isArray: Array.isArray(jsonbValues.languages_supported) },
+      tags: { value: jsonbValues.tags, type: typeof jsonbValues.tags, isArray: Array.isArray(jsonbValues.tags) },
+      operating_days: { value: jsonbValues.operating_days, type: typeof jsonbValues.operating_days, isArray: Array.isArray(jsonbValues.operating_days) },
+      whats_included: { value: jsonbValues.whats_included, type: typeof jsonbValues.whats_included, isArray: Array.isArray(jsonbValues.whats_included) },
+      whats_not_included: { value: jsonbValues.whats_not_included, type: typeof jsonbValues.whats_not_included, isArray: Array.isArray(jsonbValues.whats_not_included) },
+      what_to_bring: { value: jsonbValues.what_to_bring, type: typeof jsonbValues.what_to_bring, isArray: Array.isArray(jsonbValues.what_to_bring) },
+      accessibility_facilities: { value: jsonbValues.accessibility_facilities, type: typeof jsonbValues.accessibility_facilities, isArray: Array.isArray(jsonbValues.accessibility_facilities) },
+      health_safety_requirements: { value: jsonbValues.health_safety_requirements, type: typeof jsonbValues.health_safety_requirements, isArray: Array.isArray(jsonbValues.health_safety_requirements) },
+      group_discounts: { value: jsonbValues.group_discounts, type: typeof jsonbValues.group_discounts, isArray: Array.isArray(jsonbValues.group_discounts) },
+      seasonal_pricing: { value: jsonbValues.seasonal_pricing, type: typeof jsonbValues.seasonal_pricing, isArray: Array.isArray(jsonbValues.seasonal_pricing) },
+    });
+    
+    // Also log the original values to see what came in
+    console.log('[Package Create] Original packageData JSONB fields:', {
+      languages_supported: { value: pkgData.languages_supported, type: typeof pkgData.languages_supported },
+      tags: { value: pkgData.tags, type: typeof pkgData.tags },
+      operating_days: { value: pkgData.operating_days, type: typeof pkgData.operating_days },
+      whats_included: { value: pkgData.whats_included, type: typeof pkgData.whats_included },
+      whats_not_included: { value: pkgData.whats_not_included, type: typeof pkgData.whats_not_included },
+      what_to_bring: { value: pkgData.what_to_bring, type: typeof pkgData.what_to_bring },
+      accessibility_facilities: { value: pkgData.accessibility_facilities, type: typeof pkgData.accessibility_facilities },
+      health_safety_requirements: { value: pkgData.health_safety_requirements, type: typeof pkgData.health_safety_requirements },
+      group_discounts: { value: pkgData.group_discounts, type: typeof pkgData.group_discounts },
+      seasonal_pricing: { value: pkgData.seasonal_pricing, type: typeof pkgData.seasonal_pricing },
     });
 
     // Insert main package
     // Note: Coordinates are stored as TEXT (not POINT), arrays are stored as JSONB
+    // Explicitly cast JSONB parameters to ensure proper type handling through Lambda
     const packageResult = await query<{ id: string }>(
       `INSERT INTO activity_packages (
         operator_id, title, short_description, full_description, status,
@@ -144,16 +159,16 @@ export async function POST(request: NextRequest) {
         pkgData.duration_hours || 2,
         pkgData.duration_minutes || 0,
         pkgData.difficulty_level || 'EASY',
-        jsonbValues.languages_supported, // JSONB
-        jsonbValues.tags, // JSONB
+        JSON.stringify(jsonbValues.languages_supported), // JSONB - stringify to ensure proper format
+        JSON.stringify(jsonbValues.tags), // JSONB - stringify to ensure proper format
         pkgData.meeting_point_name || '',
         pkgData.meeting_point_address || '',
         pkgData.meeting_point_coordinates || '', // TEXT, not POINT
         pkgData.meeting_point_instructions || null,
-        jsonbValues.operating_days, // JSONB
-        jsonbValues.whats_included, // JSONB
-        jsonbValues.whats_not_included, // JSONB
-        jsonbValues.what_to_bring, // JSONB
+        JSON.stringify(jsonbValues.operating_days), // JSONB - stringify to ensure proper format
+        JSON.stringify(jsonbValues.whats_included), // JSONB - stringify to ensure proper format
+        JSON.stringify(jsonbValues.whats_not_included), // JSONB - stringify to ensure proper format
+        JSON.stringify(jsonbValues.what_to_bring), // JSONB - stringify to ensure proper format
         pkgData.important_information || null,
         pkgData.minimum_age || 0,
         pkgData.maximum_age || null,
@@ -161,14 +176,14 @@ export async function POST(request: NextRequest) {
         pkgData.infant_policy || null,
         pkgData.age_verification_required || false,
         pkgData.wheelchair_accessible || false,
-        jsonbValues.accessibility_facilities, // JSONB
+        JSON.stringify(jsonbValues.accessibility_facilities), // JSONB - stringify to ensure proper format
         pkgData.special_assistance || null,
         pkgData.cancellation_policy_type || 'MODERATE',
         pkgData.cancellation_policy_custom || null,
         pkgData.cancellation_refund_percentage || 80,
         pkgData.cancellation_deadline_hours ?? 24, // Use nullish coalescing to respect 0
         pkgData.weather_policy || null,
-        jsonbValues.health_safety_requirements, // JSONB
+        JSON.stringify(jsonbValues.health_safety_requirements), // JSONB - stringify to ensure proper format
         pkgData.health_safety_additional_info || null,
         pkgData.base_price ?? 0, // Use nullish coalescing to respect 0
         pkgData.currency || 'USD',
@@ -176,8 +191,8 @@ export async function POST(request: NextRequest) {
         pkgData.child_price_type || null,
         pkgData.child_price_value || null,
         pkgData.infant_price || null,
-        jsonbValues.group_discounts, // JSONB
-        jsonbValues.seasonal_pricing, // JSONB
+        JSON.stringify(jsonbValues.group_discounts), // JSONB - stringify to ensure proper format
+        JSON.stringify(jsonbValues.seasonal_pricing), // JSONB - stringify to ensure proper format
         pkgData.dynamic_pricing_enabled || false,
         pkgData.dynamic_pricing_base_multiplier || null,
         pkgData.dynamic_pricing_demand_multiplier || null,
@@ -236,7 +251,7 @@ export async function POST(request: NextRequest) {
             // capacity / active / days come from formDataToDatabase mapping
             slot.capacity || 1,
             slot.is_active !== undefined ? slot.is_active : true,
-            ensureJSONB(slot.days, []), // JSONB
+            JSON.stringify(ensureJSONB(slot.days, [])), // JSONB - stringify to ensure proper format
             // No per-slot override from the form yet
             null,
           ]
@@ -257,7 +272,7 @@ export async function POST(request: NextRequest) {
             variant.name || '',
             variant.description || null,
             variant.price_adjustment || 0,
-            ensureJSONB(variant.features, []), // JSONB
+            JSON.stringify(ensureJSONB(variant.features, [])), // JSONB - stringify to ensure proper format
             variant.max_capacity || variant.max_quantity || 1,
             variant.is_active !== undefined ? variant.is_active : (variant.is_available !== undefined ? variant.is_available : true),
             variant.display_order || 0,
