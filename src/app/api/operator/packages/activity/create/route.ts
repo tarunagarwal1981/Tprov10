@@ -20,37 +20,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Helper function to parse coordinates string "longitude,latitude" to POINT format
-    // PostgreSQL POINT type accepts text format "(x,y)" which gets cast to point
-    const parsePoint = (coordString: string | null | undefined): string => {
-      if (!coordString || coordString === '') {
-        return '(0,0)'; // Default to origin if empty
+    // Helper function to ensure JSONB arrays are properly stringified
+    // The actual database stores arrays as JSONB, not PostgreSQL arrays
+    const ensureJSONB = (value: any, defaultValue: any = []): any => {
+      if (value === null || value === undefined) {
+        return defaultValue;
       }
-      const parts = coordString.split(',');
-      if (parts.length === 2 && parts[0] && parts[1]) {
-        const lon = parseFloat(parts[0].trim()) || 0;
-        const lat = parseFloat(parts[1].trim()) || 0;
-        return `(${lon},${lat})`;
-      }
-      return '(0,0)';
-    };
-
-    // Helper function to ensure arrays are passed as arrays (not JSON strings)
-    const ensureArray = (value: any, defaultValue: any[] = []): any[] => {
-      if (Array.isArray(value)) return value;
+      // If already a string, try to parse it first to validate
       if (typeof value === 'string') {
         try {
           const parsed = JSON.parse(value);
-          return Array.isArray(parsed) ? parsed : defaultValue;
+          return parsed;
         } catch {
           return defaultValue;
         }
       }
-      return defaultValue;
+      // If it's already an array or object, return as-is (will be JSON.stringify'd by pg)
+      return value;
     };
 
     // Insert main package
-    // Note: POINT coordinates need to be cast, arrays should be passed directly
+    // Note: Coordinates are stored as TEXT (not POINT), arrays are stored as JSONB
     const packageResult = await query<{ id: string }>(
       `INSERT INTO activity_packages (
         operator_id, title, short_description, full_description, status,
@@ -73,8 +63,8 @@ export async function POST(request: NextRequest) {
         dynamic_pricing_demand_multiplier, dynamic_pricing_season_multiplier,
         slug, meta_title, meta_description, published_at
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::point, $12, $13, $14, $15, $16,
-        $17, $18, $19::point, $20, $21, $22, $23, $24,
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16,
+        $17, $18, $19, $20, $21, $22, $23, $24,
         $25, $26, $27, $28, $29, $30,
         $31, $32, $33, $34, $35, $36,
         $37, $38, $39, $40,
@@ -95,20 +85,20 @@ export async function POST(request: NextRequest) {
         packageData.destination_city || '',
         packageData.destination_country || '',
         packageData.destination_postal_code || null,
-        parsePoint(packageData.destination_coordinates),
+        packageData.destination_coordinates || '', // TEXT, not POINT
         packageData.duration_hours || 2,
         packageData.duration_minutes || 0,
         packageData.difficulty_level || 'EASY',
-        ensureArray(packageData.languages_supported, ['EN']),
-        ensureArray(packageData.tags, []),
+        ensureJSONB(packageData.languages_supported, ['EN']), // JSONB
+        ensureJSONB(packageData.tags, []), // JSONB
         packageData.meeting_point_name || '',
         packageData.meeting_point_address || '',
-        parsePoint(packageData.meeting_point_coordinates),
+        packageData.meeting_point_coordinates || '', // TEXT, not POINT
         packageData.meeting_point_instructions || null,
-        ensureArray(packageData.operating_days, []),
-        ensureArray(packageData.whats_included, []),
-        ensureArray(packageData.whats_not_included, []),
-        ensureArray(packageData.what_to_bring, []),
+        ensureJSONB(packageData.operating_days, []), // JSONB
+        ensureJSONB(packageData.whats_included, []), // JSONB
+        ensureJSONB(packageData.whats_not_included, []), // JSONB
+        ensureJSONB(packageData.what_to_bring, []), // JSONB
         packageData.important_information || null,
         packageData.minimum_age || 0,
         packageData.maximum_age || null,
@@ -116,14 +106,14 @@ export async function POST(request: NextRequest) {
         packageData.infant_policy || null,
         packageData.age_verification_required || false,
         packageData.wheelchair_accessible || false,
-        ensureArray(packageData.accessibility_facilities, []),
+        ensureJSONB(packageData.accessibility_facilities, []), // JSONB
         packageData.special_assistance || null,
         packageData.cancellation_policy_type || 'MODERATE',
         packageData.cancellation_policy_custom || null,
         packageData.cancellation_refund_percentage || 80,
         packageData.cancellation_deadline_hours ?? 24, // Use nullish coalescing to respect 0
         packageData.weather_policy || null,
-        packageData.health_safety_requirements || [],
+        ensureJSONB(packageData.health_safety_requirements, []), // JSONB
         packageData.health_safety_additional_info || null,
         packageData.base_price ?? 0, // Use nullish coalescing to respect 0
         packageData.currency || 'USD',
@@ -131,8 +121,8 @@ export async function POST(request: NextRequest) {
         packageData.child_price_type || null,
         packageData.child_price_value || null,
         packageData.infant_price || null,
-        packageData.group_discounts || [],
-        packageData.seasonal_pricing || [],
+        ensureJSONB(packageData.group_discounts, []), // JSONB
+        ensureJSONB(packageData.seasonal_pricing, []), // JSONB
         packageData.dynamic_pricing_enabled || false,
         packageData.dynamic_pricing_base_multiplier || null,
         packageData.dynamic_pricing_demand_multiplier || null,
@@ -191,7 +181,7 @@ export async function POST(request: NextRequest) {
             // capacity / active / days come from formDataToDatabase mapping
             slot.capacity || 1,
             slot.is_active !== undefined ? slot.is_active : true,
-            ensureArray(slot.days, []),
+            ensureJSONB(slot.days, []), // JSONB
             // No per-slot override from the form yet
             null,
           ]
@@ -212,7 +202,7 @@ export async function POST(request: NextRequest) {
             variant.name || '',
             variant.description || null,
             variant.price_adjustment || 0,
-            ensureArray(variant.features, []),
+            ensureJSONB(variant.features, []), // JSONB
             variant.max_capacity || variant.max_quantity || 1,
             variant.is_active !== undefined ? variant.is_active : (variant.is_available !== undefined ? variant.is_available : true),
             variant.display_order || 0,
