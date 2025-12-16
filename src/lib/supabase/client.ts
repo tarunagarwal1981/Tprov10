@@ -12,14 +12,19 @@ const rawSupabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const supabaseUrl = (rawSupabaseUrl || '').trim();
 const supabaseAnonKey = (rawSupabaseAnonKey || '').trim();
 
-// Warn in development if using placeholder values
+// Note: Supabase is optional - this app uses AWS/RDS for activity packages
+// The warning below is informational only and can be ignored if using AWS services
 if (process.env.NODE_ENV === 'development') {
   const maskedKey = supabaseAnonKey ? `${supabaseAnonKey.slice(0, 6)}…len:${supabaseAnonKey.length}` : 'undefined';
-  console.debug('[Supabase][env] URL:', supabaseUrl || 'undefined');
-  console.debug('[Supabase][env] ANON key (masked):', maskedKey);
-  if (!supabaseUrl || !supabaseAnonKey) {
-    console.warn('⚠️  Missing Supabase credentials. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in your .env.local file');
+  // Only log if explicitly enabled via env var to reduce console noise
+  if (process.env.NEXT_PUBLIC_DEBUG_SUPABASE === 'true') {
+    console.debug('[Supabase][env] URL:', supabaseUrl || 'undefined');
+    console.debug('[Supabase][env] ANON key (masked):', maskedKey);
   }
+  // Suppress warning - Supabase is optional when using AWS/RDS
+  // if (!supabaseUrl || !supabaseAnonKey) {
+  //   console.warn('⚠️  Missing Supabase credentials. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in your .env.local file');
+  // }
 }
 
 /**

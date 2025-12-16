@@ -52,7 +52,7 @@ export default function CreateActivityPackagePage() {
       // Check if we're editing an existing package or creating a new one
       if (currentPackageId) {
         // Update existing package
-        const { data: packageResult, error: packageError } = await updateActivityPackage(currentPackageId, dbData);
+        const { data: packageResult, error: packageError } = await updateActivityPackage(currentPackageId, dbData, user.id);
         
         if (packageError) {
           console.error('Package update error:', packageError);
@@ -133,7 +133,7 @@ export default function CreateActivityPackagePage() {
       // Check if we're editing an existing package or creating a new one
       if (currentPackageId) {
         // Update existing package
-        const { data: packageResult, error: packageError } = await updateActivityPackage(currentPackageId, dbData);
+        const { data: packageResult, error: packageError } = await updateActivityPackage(currentPackageId, dbData, user.id);
         
         if (packageError) {
           console.error('Package update error:', packageError);

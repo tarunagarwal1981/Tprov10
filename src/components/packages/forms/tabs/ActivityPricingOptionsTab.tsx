@@ -468,11 +468,11 @@ const SimplePricingCard: React.FC<SimplePricingCardProps> = ({
         <div className="grid grid-cols-2 gap-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
           <div>
             <p className="text-xs text-gray-500">Adult</p>
-            <p className="text-lg font-bold text-green-600">{currency}{option.adultPrice.toFixed(2)}</p>
+            <p className="text-lg font-bold text-green-600">{currency}{(option.adultPrice ?? 0).toFixed(2)}</p>
           </div>
           <div>
             <p className="text-xs text-gray-500">Child ({option.childMinAge}-{option.childMaxAge} yrs)</p>
-            <p className="text-lg font-bold text-blue-600">{currency}{option.childPrice.toFixed(2)}</p>
+            <p className="text-lg font-bold text-blue-600">{currency}{(option.childPrice ?? 0).toFixed(2)}</p>
           </div>
         </div>
 
@@ -636,8 +636,8 @@ export const ActivityPricingOptionsTab: React.FC = () => {
                           {ticketOnly.map((option) => (
                             <tr key={option.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-800">
                               <td className="p-3">{option.activityName}</td>
-                              <td className="p-3">{currency}{option.adultPrice.toFixed(2)}</td>
-                              <td className="p-3">{currency}{option.childPrice.toFixed(2)}</td>
+                              <td className="p-3">{currency}{(option.adultPrice ?? 0).toFixed(2)}</td>
+                              <td className="p-3">{currency}{(option.childPrice ?? 0).toFixed(2)}</td>
                               <td className="p-3">{option.childMinAge}-{option.childMaxAge} years</td>
                               <td className="p-3">
                                 <div className="flex items-center justify-center gap-2">
@@ -703,8 +703,8 @@ export const ActivityPricingOptionsTab: React.FC = () => {
                           {sharedTransfer.map((option) => (
                             <tr key={option.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-800">
                               <td className="p-3">{option.activityName}</td>
-                              <td className="p-3">{currency}{option.adultPrice.toFixed(2)}</td>
-                              <td className="p-3">{currency}{option.childPrice.toFixed(2)}</td>
+                              <td className="p-3">{currency}{(option.adultPrice ?? 0).toFixed(2)}</td>
+                              <td className="p-3">{currency}{(option.childPrice ?? 0).toFixed(2)}</td>
                               <td className="p-3">{option.childMinAge}-{option.childMaxAge} years</td>
                               <td className="p-3">
                                 <div className="flex items-center justify-center gap-2">
@@ -778,8 +778,8 @@ export const ActivityPricingOptionsTab: React.FC = () => {
                                 <tr key={option.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-800">
                                   <td className="p-3">{option.activityName}</td>
                                   <td className="p-3 text-gray-400 italic" colSpan={3}>No vehicles added</td>
-                                  <td className="p-3">{currency}{option.adultPrice.toFixed(2)}</td>
-                                  <td className="p-3">{currency}{option.childPrice.toFixed(2)}</td>
+                                  <td className="p-3">{currency}{(option.adultPrice ?? 0).toFixed(2)}</td>
+                                  <td className="p-3">{currency}{(option.childPrice ?? 0).toFixed(2)}</td>
                                   <td className="p-3">{option.childMinAge}-{option.childMaxAge} yrs</td>
                                   <td className="p-3">
                                     <div className="flex items-center justify-center gap-2">
@@ -821,9 +821,9 @@ export const ActivityPricingOptionsTab: React.FC = () => {
                                 <td className="p-3">{option.activityName}</td>
                                 <td className="p-3">{vehicle.vehicleType}</td>
                                 <td className="p-3">{vehicle.maxCapacity} pax</td>
-                                <td className="p-3">{currency}{vehicle.price.toFixed(2)}</td>
-                                <td className="p-3">{currency}{option.adultPrice.toFixed(2)}</td>
-                                <td className="p-3">{currency}{option.childPrice.toFixed(2)}</td>
+                                <td className="p-3">{currency}{(vehicle.price ?? 0).toFixed(2)}</td>
+                                <td className="p-3">{currency}{(option.adultPrice ?? 0).toFixed(2)}</td>
+                                <td className="p-3">{currency}{(option.childPrice ?? 0).toFixed(2)}</td>
                                 <td className="p-3">{option.childMinAge}-{option.childMaxAge} yrs</td>
                                 <td className="p-3">
                                   <div className="flex items-center justify-center gap-2">

@@ -25,9 +25,8 @@ export interface BasicInformation {
   fullDescription: string;
   destination: LocationInfo;
   duration: DurationInfo;
-  // difficultyLevel: DifficultyLevel;
-  // languagesSupported: Language[];
-  // tags: Tag[];
+  // Note: difficultyLevel, languagesSupported, and tags are not used in the UI
+  // They are set to defaults in the database (EASY, ['EN'], [])
   featuredImage: ImageInfo | null;
   imageGallery: ImageInfo[];
 }
@@ -122,7 +121,11 @@ export interface PackageVariant {
 // ============================================================================
 // POLICIES & RESTRICTIONS TYPES
 // ============================================================================
+// NOTE: These types are kept for reference but are NOT used in the form UI.
+// The Policies tab is commented out. These fields are set to defaults in the database.
+// If you need to re-enable policies, uncomment the PoliciesRestrictionsTab in ActivityPackageForm.
 
+// @deprecated - Not used in UI, kept for database compatibility
 export interface PoliciesRestrictions {
   ageRestrictions: AgeRestrictions;
   accessibility: AccessibilityInfo;
@@ -131,6 +134,7 @@ export interface PoliciesRestrictions {
   healthSafety: HealthSafetyInfo;
 }
 
+// @deprecated
 export interface AgeRestrictions {
   minimumAge: number;
   maximumAge?: number;
@@ -139,6 +143,7 @@ export interface AgeRestrictions {
   ageVerificationRequired: boolean;
 }
 
+// @deprecated
 export interface AccessibilityInfo {
   wheelchairAccessible: boolean;
   facilities: AccessibilityFacility[];
@@ -147,6 +152,7 @@ export interface AccessibilityInfo {
 
 export type AccessibilityFacility = 'RESTROOMS' | 'PARKING' | 'ELEVATOR' | 'RAMP' | 'SIGN_LANGUAGE' | 'BRAILLE' | 'AUDIO_GUIDE';
 
+// @deprecated
 export interface CancellationPolicy {
   type: 'FLEXIBLE' | 'MODERATE' | 'STRICT' | 'CUSTOM';
   customPolicy?: string;
@@ -154,11 +160,13 @@ export interface CancellationPolicy {
   cancellationDeadline: number; // hours before activity
 }
 
+// @deprecated
 export interface HealthSafetyInfo {
   requirements: HealthSafetyRequirement[];
   additionalInfo: string;
 }
 
+// @deprecated
 export interface HealthSafetyRequirement {
   id: string;
   requirement: string;
@@ -186,22 +194,23 @@ export interface FAQItem {
 // PRICING TYPES
 // ============================================================================
 
+// Simplified pricing - only currency is used in the UI
+// All pricing is handled through pricingOptions (ActivityPricingOptionsTab)
 export interface PricingInfo {
-  basePrice: number;
   currency: Currency;
-  priceType: PriceType;
-  childPrice?: ChildPriceInfo;
-  infantPrice?: number;
-  groupDiscounts: GroupDiscount[];
-  seasonalPricing: SeasonalPricing[];
-  dynamicPricing: DynamicPricingInfo;
+  // Note: basePrice, priceType, childPrice, infantPrice, groupDiscounts,
+  // seasonalPricing, and dynamicPricing are NOT used in the UI.
+  // They are set to defaults in the database.
+  // Pricing is managed through pricingOptions array instead.
 }
 
+// @deprecated - Not used in UI, kept for database compatibility
 export interface ChildPriceInfo {
   type: 'PERCENTAGE' | 'FIXED';
   value: number;
 }
 
+// @deprecated - Not used in UI
 export interface GroupDiscount {
   id: string;
   minPeople: number;
@@ -209,6 +218,7 @@ export interface GroupDiscount {
   description: string;
 }
 
+// @deprecated - Not used in UI
 export interface SeasonalPricing {
   id: string;
   name: string;
@@ -218,6 +228,7 @@ export interface SeasonalPricing {
   description: string;
 }
 
+// @deprecated - Not used in UI
 export interface DynamicPricingInfo {
   enabled: boolean;
   baseMultiplier: number;
@@ -289,7 +300,8 @@ export interface ActivityPackageFormData {
   basicInformation: BasicInformation;
   activityDetails: ActivityDetails;
   packageVariants: PackageVariants;
-  policiesRestrictions: PoliciesRestrictions;
+  // @deprecated - Policies tab is commented out, fields set to defaults in DB
+  policiesRestrictions?: PoliciesRestrictions;
   faq: FAQSection;
   pricing: PricingInfo;
   pricingOptions?: ActivityPricingOptions | any[]; // Can be old format or new simplified array
@@ -385,9 +397,8 @@ export const DEFAULT_FORM_DATA: ActivityPackageFormData = {
       country: '',
     },
     duration: { hours: 2, minutes: 0 },
-    // difficultyLevel: 'EASY',
-    // languagesSupported: ['EN'],
-    // tags: [],
+    // Note: difficultyLevel, languagesSupported, and tags are not used
+    // They default to 'EASY', ['EN'], [] in the database
     featuredImage: null,
     imageGallery: [],
   },
@@ -411,44 +422,15 @@ export const DEFAULT_FORM_DATA: ActivityPackageFormData = {
   packageVariants: {
     variants: [],
   },
-  policiesRestrictions: {
-    ageRestrictions: {
-      minimumAge: 0,
-      childPolicy: '',
-      infantPolicy: '',
-      ageVerificationRequired: false,
-    },
-    accessibility: {
-      wheelchairAccessible: false,
-      facilities: [],
-      specialAssistance: '',
-    },
-    cancellationPolicy: {
-      type: 'MODERATE',
-      refundPercentage: 80,
-      cancellationDeadline: 24,
-    },
-    weatherPolicy: '',
-    healthSafety: {
-      requirements: [],
-      additionalInfo: '',
-    },
-  },
+  // Policies are not used in UI - set to defaults in database
+  // policiesRestrictions: undefined,
   faq: {
     faqs: [],
   },
   pricing: {
-    basePrice: 0,
+    // Only currency is used in UI
+    // All other pricing fields default in database
     currency: 'USD',
-    priceType: 'PERSON',
-    groupDiscounts: [],
-    seasonalPricing: [],
-    dynamicPricing: {
-      enabled: false,
-      baseMultiplier: 1,
-      demandMultiplier: 1,
-      seasonMultiplier: 1,
-    },
   },
   pricingOptions: [],
 };
@@ -461,9 +443,9 @@ export const REQUIRED_FIELDS = {
   basicInformation: ['title', 'shortDescription', 'destination', 'duration'],
   activityDetails: ['operationalHours', 'meetingPoint'],
   packageVariants: [],
-  policiesRestrictions: ['cancellationPolicy'],
+  // policiesRestrictions: [], // Not used - tab commented out
   faq: [],
-  pricing: ['basePrice', 'currency'],
+  pricing: ['currency'], // Only currency is required
 } as const;
 
 export const FIELD_LIMITS = {

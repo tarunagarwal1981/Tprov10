@@ -106,12 +106,42 @@ export async function getPresignedDownloadUrl(
   key: string,
   expiresIn: number = 3600
 ): Promise<string> {
+  console.log('🔐 [S3] Generating presigned URL:', {
+    key: key.substring(0, 80) + '...',
+    bucket: BUCKET_NAME,
+    expiresIn,
+    region: process.env.DEPLOYMENT_REGION || process.env.REGION || 'us-east-1',
+  });
+
   const command = new GetObjectCommand({
     Bucket: BUCKET_NAME,
     Key: key,
+    // Don't set ResponseContentType - let S3 use the original content type
   });
 
-  return await getSignedUrl(s3, command, { expiresIn });
+  try {
+    const signedUrl = await getSignedUrl(s3, command, { expiresIn });
+    console.log('✅ [S3] Presigned URL generated:', {
+      key: key.substring(0, 60),
+      url_preview: signedUrl.substring(0, 150) + '...',
+      url_length: signedUrl.length,
+      has_query_params: signedUrl.includes('?'),
+      query_params_count: (signedUrl.match(/\?/g) || []).length,
+      contains_credential: signedUrl.includes('X-Amz-Credential'),
+      contains_signature: signedUrl.includes('X-Amz-Signature'),
+      contains_expires: signedUrl.includes('X-Amz-Expires'),
+    });
+    return signedUrl;
+  } catch (error: any) {
+    console.error('❌ [S3] Error generating presigned URL:', {
+      key: key.substring(0, 60),
+      error: error.message,
+      code: error.code,
+      name: error.name,
+      stack: error.stack,
+    });
+    throw error;
+  }
 }
 
 /**

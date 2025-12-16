@@ -186,17 +186,24 @@ export const ActivityPackageForm: React.FC<ActivityPackageFormProps> = ({
         try {
           const { getPricingPackages, convertPricingPackageToSimple } = await import('@/lib/api/activity-pricing-simple');
           const pricingPackages = await getPricingPackages(packageId);
+          console.log('📦 [ActivityPackageForm] Raw pricing packages from API:', pricingPackages);
+          
           // Convert database format to simple format for form (now async to load vehicles)
-          if (Array.isArray(pricingPackages)) {
+          if (Array.isArray(pricingPackages) && pricingPackages.length > 0) {
             const convertedOptions = await Promise.all(
-              pricingPackages.map(pkg => convertPricingPackageToSimple(pkg))
+              pricingPackages.map(pkg => {
+                console.log('🔄 [ActivityPackageForm] Converting package:', { id: pkg.id, packageName: pkg.packageName, adultPrice: pkg.adultPrice });
+                return convertPricingPackageToSimple(pkg);
+              })
             );
             formData.pricingOptions = convertedOptions;
+            console.log('✅ [ActivityPackageForm] Converted pricing options:', convertedOptions);
           } else {
+            console.log('⚠️ [ActivityPackageForm] No pricing packages found or empty array');
             formData.pricingOptions = [];
           }
           
-          console.log('✅ Loaded pricing options:', formData.pricingOptions);
+          console.log('✅ [ActivityPackageForm] Final pricing options in form:', formData.pricingOptions);
         } catch (error) {
           console.error('Error loading pricing packages:', error);
           formData.pricingOptions = [];

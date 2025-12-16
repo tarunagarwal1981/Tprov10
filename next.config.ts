@@ -82,7 +82,24 @@ const nextConfig = {
   // Image configuration - unoptimized for static export
   images: {
     unoptimized: true,
-    domains: [],
+    domains: [
+      'travel-app-storage-1769.s3.us-east-1.amazonaws.com',
+      'travel-app-storage-1769.s3.amazonaws.com',
+    ],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '*.s3.*.amazonaws.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.s3.amazonaws.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.cloudfront.net',
+      },
+    ],
     formats: ['image/webp', 'image/avif'],
   },
 };

@@ -273,9 +273,11 @@ const VariantCard: React.FC<{
           <h4 className="text-sm font-medium mb-2">Images</h4>
           <div className="flex gap-2">
             {variant.images.slice(0, 3).map((image, index) => (
-              <div key={index} className="w-12 h-12 rounded-md overflow-hidden bg-gray-100 relative">
-                <Image src={image.url} alt={image.fileName} fill sizes="48px" style={{ objectFit: "cover" }} />
-              </div>
+              image.url && image.url.trim() !== '' ? (
+                <div key={index} className="w-12 h-12 rounded-md overflow-hidden bg-gray-100 relative">
+                  <Image src={image.url} alt={image.fileName} fill sizes="48px" style={{ objectFit: "cover" }} />
+                </div>
+              ) : null
             ))}
             {variant.images.length > 3 && (
               <div className="w-12 h-12 rounded-md bg-gray-100 flex items-center justify-center text-xs text-gray-500">

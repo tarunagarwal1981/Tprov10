@@ -42,9 +42,32 @@ export async function GET(
       vehiclesMap[vehicle.pricing_package_id]!.push(vehicle);
     });
 
-    // Attach vehicles to pricing packages
+    // Transform database rows (snake_case) to ActivityPricingPackage format (camelCase)
     const pricingWithVehicles = pricingPackages.map((pkg: any) => ({
-      ...pkg,
+      id: pkg.id,
+      packageId: pkg.package_id,
+      packageName: pkg.package_name || '',
+      description: pkg.description || undefined,
+      adultPrice: Number(pkg.adult_price) || 0,
+      childPrice: Number(pkg.child_price) || 0,
+      childMinAge: Number(pkg.child_min_age) || 0,
+      childMaxAge: Number(pkg.child_max_age) || 0,
+      infantPrice: pkg.infant_price !== null ? Number(pkg.infant_price) : undefined,
+      infantMaxAge: pkg.infant_max_age || undefined,
+      transferIncluded: pkg.transfer_included || false,
+      transferType: pkg.transfer_type as 'SHARED' | 'PRIVATE' | undefined,
+      transferPriceAdult: pkg.transfer_price_adult !== null ? Number(pkg.transfer_price_adult) : undefined,
+      transferPriceChild: pkg.transfer_price_child !== null ? Number(pkg.transfer_price_child) : undefined,
+      transferPriceInfant: pkg.transfer_price_infant !== null ? Number(pkg.transfer_price_infant) : undefined,
+      pickupLocation: pkg.pickup_location || undefined,
+      pickupInstructions: pkg.pickup_instructions || undefined,
+      dropoffLocation: pkg.dropoff_location || undefined,
+      dropoffInstructions: pkg.dropoff_instructions || undefined,
+      includedItems: pkg.included_items || [],
+      excludedItems: pkg.excluded_items || undefined,
+      isActive: pkg.is_active !== undefined ? pkg.is_active : true,
+      isFeatured: pkg.is_featured || false,
+      displayOrder: pkg.display_order || 0,
       vehicles: vehiclesMap[pkg.id] || [],
     }));
 

@@ -231,13 +231,19 @@ export const TransferPackageCard: React.FC<TransferPackageCardProps> = ({
                 transition={{ duration: 0.5 }}
                 className="absolute inset-0"
               >
-                <Image
-                  src={vehicleImages[currentImageIndex]!.url}
-                  alt={vehicleImages[currentImageIndex]!.alt}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                />
+                {vehicleImages[currentImageIndex]?.url ? (
+                  <Image
+                    src={vehicleImages[currentImageIndex]!.url}
+                    alt={vehicleImages[currentImageIndex]!.alt}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                    <span className="text-gray-400 text-sm">No image</span>
+                  </div>
+                )}
                 {/* Vehicle name overlay */}
                 <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-3">
                   <p className="text-white text-sm font-medium flex items-center gap-2">

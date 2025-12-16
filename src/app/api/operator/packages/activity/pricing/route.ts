@@ -187,9 +187,12 @@ export async function POST(request: NextRequest) {
             [
               pricingPackageId,
               vehicle.vehicleType || 'SEDAN',
-              vehicle.vehicleName || '',
-              vehicle.capacity || 4,
-              vehicle.priceAdjustment || null,
+              // vehicle_name: use vehicleType if vehicleName not provided, or use description if vehicleType is "Others"
+              (vehicle.vehicleType === 'Others' && vehicle.description) 
+                ? vehicle.description 
+                : (vehicle.vehicleName || vehicle.vehicleType || 'Sedan'),
+              vehicle.maxCapacity || vehicle.capacity || 4, // Support both maxCapacity and capacity
+              vehicle.price || vehicle.priceAdjustment || null, // Support both price and priceAdjustment
               vehicle.displayOrder || 0,
             ]
           );

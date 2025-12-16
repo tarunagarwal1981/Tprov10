@@ -2,15 +2,21 @@
   "CORSRules": [
     {
       "AllowedHeaders": ["*"],
-      "AllowedMethods": ["GET", "PUT", "POST", "DELETE", "HEAD"],
+      "AllowedMethods": ["GET", "HEAD", "PUT", "POST", "DELETE"],
       "AllowedOrigins": [
         "http://localhost:3000",
+        "http://localhost:3001",
+        "https://*.netlify.app",
         "https://*.amplifyapp.com",
-        "https://*.netlify.app"
+        "*"
       ],
-      "ExposeHeaders": ["ETag", "x-amz-server-side-encryption"],
-      "MaxAgeSeconds": 3000
+      "ExposeHeaders": [
+        "ETag",
+        "x-amz-server-side-encryption",
+        "x-amz-request-id",
+        "x-amz-id-2"
+      ],
+      "MaxAgeSeconds": 3600
     }
   ]
 }
-
