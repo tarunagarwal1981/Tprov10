@@ -1,18 +1,18 @@
-\"use client\";
+"use client";
 
-import React, { useEffect, useState } from \"react\";
-import { useRouter, useSearchParams } from \"next/navigation\";
-import { toast } from \"sonner\";
-import MultiCityPackageForm, { MultiCityPackageFormData } from \"@/components/packages/forms/MultiCityPackageForm\";
-import { useAuth } from \"@/context/CognitoAuthContext\";
+import React, { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { toast } from "sonner";
+import MultiCityPackageForm, { MultiCityPackageFormData } from "@/components/packages/forms/MultiCityPackageForm";
+import { useAuth } from "@/context/CognitoAuthContext";
 
 export default function MultiCityPackagePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuth();
 
-  const urlPackageId = searchParams.get(\"id\");
-  const isViewMode = searchParams.get(\"view\") === \"true\";
+  const urlPackageId = searchParams.get("id");
+  const isViewMode = searchParams.get("view") === "true";
 
   const [currentPackageId, setCurrentPackageId] = useState<string | null>(urlPackageId);
   const [initialData, setInitialData] = useState<MultiCityPackageFormData | undefined>(undefined);
@@ -29,27 +29,27 @@ export default function MultiCityPackagePage() {
         const response = await fetch(`/api/packages/${urlPackageId}/details?type=multi_city`);
         if (!response.ok) {
           const error = await response.json().catch(() => ({}));
-          throw new Error(error.error || \"Failed to load package details\");
+          throw new Error(error.error || "Failed to load package details");
         }
         const { package: pkg } = await response.json();
 
         if (!pkg) {
-          throw new Error(\"Package not found\");
+          throw new Error("Package not found");
         }
 
         // Map API shape to form shape
         const mapped: MultiCityPackageFormData = {
           basic: {
-            title: pkg.title || \"\",
-            shortDescription: pkg.short_description || \"\",
-            destinationRegion: pkg.destination_region || \"\",
-            packageValidityDate: pkg.package_validity_date || \"\",
+            title: pkg.title || "",
+            shortDescription: pkg.short_description || "",
+            destinationRegion: pkg.destination_region || "",
+            packageValidityDate: pkg.package_validity_date || "",
             imageGallery: (pkg.images || []).map((img: any) => img.public_url).filter((u: string | null) => !!u),
           },
           cities: (pkg.cities || []).map((c: any, index: number) => ({
             id: c.id || String(index + 1),
-            name: c.name || \"\",
-            country: c.country || \"\",
+            name: c.name || "",
+            country: c.country || "",
             nights: c.nights || 1,
             highlights: c.highlights || [],
             activitiesIncluded: c.activities_included || [],
@@ -58,16 +58,16 @@ export default function MultiCityPackagePage() {
           connections: [], // not modeled yet
           days: (pkg.day_plans || []).map((d: any) => {
             const timeSlots = d.time_slots || {
-              morning: { time: \"\", activities: [], transfers: [] },
-              afternoon: { time: \"\", activities: [], transfers: [] },
-              evening: { time: \"\", activities: [], transfers: [] },
+              morning: { time: "", activities: [], transfers: [] },
+              afternoon: { time: "", activities: [], transfers: [] },
+              evening: { time: "", activities: [], transfers: [] },
             };
             return {
-              cityId: d.city_id || \"\",
-              cityName: d.city_name || \"\",
-              title: d.title || \"\",
-              description: d.description || \"\",
-              photoUrl: d.photo_url || \"\",
+              cityId: d.city_id || "",
+              cityName: d.city_name || "",
+              title: d.title || "",
+              description: d.description || "",
+              photoUrl: d.photo_url || "",
               hasFlights: d.has_flights || false,
               flights: [], // flights not stored for plain multi-city
               timeSlots,
@@ -85,9 +85,9 @@ export default function MultiCityPackagePage() {
           })),
           pricing: {
             pricingType:
-              pkg.pricing_package?.pricing_type === \"PRIVATE_PACKAGE\"
-                ? \"PRIVATE_PACKAGE\"
-                : \"SIC\",
+              pkg.pricing_package?.pricing_type === "PRIVATE_PACKAGE"
+                ? "PRIVATE_PACKAGE"
+                : "SIC",
             pricingRows: (pkg.sic_pricing_rows || []).map((row: any) => ({
               id: row.id,
               numberOfAdults: row.number_of_adults,
@@ -115,20 +115,20 @@ export default function MultiCityPackagePage() {
             depositPercent: pkg.deposit_percent ?? undefined,
             balanceDueDays: pkg.balance_due_days ?? undefined,
             paymentMethods: pkg.payment_methods || [],
-            visaRequirements: pkg.visa_requirements || \"\",
-            insuranceRequirement: pkg.insurance_requirement || \"OPTIONAL\",
-            healthRequirements: pkg.health_requirements || \"\",
-            terms: pkg.terms_and_conditions || \"\",
+            visaRequirements: pkg.visa_requirements || "",
+            insuranceRequirement: pkg.insurance_requirement || "OPTIONAL",
+            healthRequirements: pkg.health_requirements || "",
+            terms: pkg.terms_and_conditions || "",
           },
         };
 
         setInitialData(mapped);
         setCurrentPackageId(pkg.id);
-        toast.success(isViewMode ? \"Multi-city package loaded\" : \"Multi-city package loaded for editing\");
+        toast.success(isViewMode ? "Multi-city package loaded" : "Multi-city package loaded for editing");
       } catch (error: any) {
-        console.error(\"Failed to load multi-city package details:\", error);
-        toast.error(error.message || \"Failed to load package\");
-        router.push(\"/operator/packages\");
+        console.error("Failed to load multi-city package details:", error);
+        toast.error(error.message || "Failed to load package");
+        router.push("/operator/packages");
       } finally {
         setLoading(false);
       }
@@ -139,20 +139,20 @@ export default function MultiCityPackagePage() {
 
   const handleSave = async (data: MultiCityPackageFormData) => {
     try {
-      console.log(\"[MultiCity] Save draft:\", data);
+      console.log("[MultiCity] Save draft:", data);
 
       if (!user?.id) {
-        throw new Error(\"User not authenticated\");
+        throw new Error("User not authenticated");
       }
 
       const isEdit = !!currentPackageId;
       const endpoint = isEdit
-        ? \"/api/operator/packages/multi-city/update\"
-        : \"/api/operator/packages/multi-city/create\";
+        ? "/api/operator/packages/multi-city/update"
+        : "/api/operator/packages/multi-city/create";
 
       const response = await fetch(endpoint, {
-        method: \"POST\",
-        headers: { \"Content-Type\": \"application/json\" },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...data,
           operatorId: user.id,
@@ -163,30 +163,30 @@ export default function MultiCityPackagePage() {
 
       if (!response.ok) {
         const error = await response.json().catch(() => ({}));
-        throw new Error(error.error || error.details || \"Failed to save package\");
+        throw new Error(error.error || error.details || "Failed to save package");
       }
 
       const result = await response.json();
-      console.log(\"✅ Multi-city package saved:\", result);
+      console.log("✅ Multi-city package saved:", result);
 
       if (!currentPackageId && result.packageId) {
         setCurrentPackageId(result.packageId);
         // Update URL without navigation so future saves update instead of create
         const newUrl = `/operator/packages/create/multi-city?id=${result.packageId}`;
-        window.history.replaceState({}, \"\", newUrl);
+        window.history.replaceState({}, "", newUrl);
       }
 
-      toast.success(result.message || \"Multi-city package draft saved successfully!\");
+      toast.success(result.message || "Multi-city package draft saved successfully!");
     } catch (error: any) {
-      console.error(\"Save failed:\", error);
-      toast.error(error.message || \"Failed to save multi-city package draft\");
+      console.error("Save failed:", error);
+      toast.error(error.message || "Failed to save multi-city package draft");
     }
   };
 
   const handlePublish = async (data: MultiCityPackageFormData) => {
     try {
-      console.log(\"[MultiCity] Publish started:\", data);
-      console.log(\"[MultiCity] Data structure:\", {
+      console.log("[MultiCity] Publish started:", data);
+      console.log("[MultiCity] Data structure:", {
         cities: data.cities?.length || 0,
         days: data.days?.length || 0,
         pricingType: data.pricing.pricingType,
@@ -195,18 +195,18 @@ export default function MultiCityPackagePage() {
       });
 
       if (!user?.id) {
-        console.error(\"[MultiCity] User not authenticated\");
-        throw new Error(\"User not authenticated\");
+        console.error("[MultiCity] User not authenticated");
+        throw new Error("User not authenticated");
       }
 
       const isEdit = !!currentPackageId;
       const endpoint = isEdit
-        ? \"/api/operator/packages/multi-city/update\"
-        : \"/api/operator/packages/multi-city/create\";
+        ? "/api/operator/packages/multi-city/update"
+        : "/api/operator/packages/multi-city/create";
 
       const response = await fetch(endpoint, {
-        method: \"POST\",
-        headers: { \"Content-Type\": \"application/json\" },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...data,
           operatorId: user.id,
@@ -217,42 +217,42 @@ export default function MultiCityPackagePage() {
 
       if (!response.ok) {
         const error = await response.json().catch(() => ({}));
-        console.error(\"[MultiCity] API Error Response:\", error);
-        const errorMessage = error.details || error.error || \"Failed to publish package\";
+        console.error("[MultiCity] API Error Response:", error);
+        const errorMessage = error.details || error.error || "Failed to publish package";
         throw new Error(errorMessage);
       }
 
       const result = await response.json();
-      console.log(\"[MultiCity] ✅ Package published successfully!\", result);
+      console.log("[MultiCity] ✅ Package published successfully!", result);
 
       if (!currentPackageId && result.packageId) {
         setCurrentPackageId(result.packageId);
       }
 
-      toast.success(result.message || \"Multi-city package published successfully!\");
+      toast.success(result.message || "Multi-city package published successfully!");
 
       // Redirect after a short delay
       setTimeout(() => {
-        console.log(\"[MultiCity] Redirecting to packages page...\");
-        router.push(\"/operator/packages\");
+        console.log("[MultiCity] Redirecting to packages page...");
+        router.push("/operator/packages");
       }, 1000);
     } catch (error: any) {
-      console.error(\"[MultiCity] ❌ Publish failed:\", error);
-      console.error(\"[MultiCity] Error details:\", error);
-      const errorMessage = error.details || error.message || \"Failed to publish multi-city package\";
+      console.error("[MultiCity] ❌ Publish failed:", error);
+      console.error("[MultiCity] Error details:", error);
+      const errorMessage = error.details || error.message || "Failed to publish multi-city package";
       toast.error(errorMessage);
     }
   };
 
   const handlePreview = (data: MultiCityPackageFormData) => {
-    console.log(\"[MultiCity] Preview:\", data);
-    toast.info(\"Preview functionality coming soon!\");
+    console.log("[MultiCity] Preview:", data);
+    toast.info("Preview functionality coming soon!");
   };
 
   if (loading) {
     return (
-      <div className=\"min-h-screen flex items-center justify-center\">
-        <p className=\"text-gray-600\">Loading package...</p>
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-gray-600">Loading package...</p>
       </div>
     );
   }
