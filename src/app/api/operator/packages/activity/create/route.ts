@@ -9,11 +9,13 @@ export const runtime = 'nodejs';
  * Create a new activity package with all related data
  */
 export async function POST(request: NextRequest) {
+  let packageData: any = null;
   try {
     const data = await request.json();
-    const { package: packageData, images, time_slots, variants, faqs } = data;
+    const { package: pkgData, images, time_slots, variants, faqs } = data;
+    packageData = pkgData;
 
-    if (!packageData || !packageData.operator_id) {
+    if (!pkgData || !pkgData.operator_id) {
       return NextResponse.json(
         { error: 'operator_id is required in package data' },
         { status: 400 }
@@ -66,16 +68,16 @@ export async function POST(request: NextRequest) {
 
     // Prepare JSONB values with validation
     const jsonbValues = {
-      languages_supported: ensureJSONB(packageData.languages_supported, ['EN']),
-      tags: ensureJSONB(packageData.tags, []),
-      operating_days: ensureJSONB(packageData.operating_days, []),
-      whats_included: ensureJSONB(packageData.whats_included, []),
-      whats_not_included: ensureJSONB(packageData.whats_not_included, []),
-      what_to_bring: ensureJSONB(packageData.what_to_bring, []),
-      accessibility_facilities: ensureJSONB(packageData.accessibility_facilities, []),
-      health_safety_requirements: ensureJSONB(packageData.health_safety_requirements, []),
-      group_discounts: ensureJSONB(packageData.group_discounts, []),
-      seasonal_pricing: ensureJSONB(packageData.seasonal_pricing, []),
+      languages_supported: ensureJSONB(pkgData.languages_supported, ['EN']),
+      tags: ensureJSONB(pkgData.tags, []),
+      operating_days: ensureJSONB(pkgData.operating_days, []),
+      whats_included: ensureJSONB(pkgData.whats_included, []),
+      whats_not_included: ensureJSONB(pkgData.whats_not_included, []),
+      what_to_bring: ensureJSONB(pkgData.what_to_bring, []),
+      accessibility_facilities: ensureJSONB(pkgData.accessibility_facilities, []),
+      health_safety_requirements: ensureJSONB(pkgData.health_safety_requirements, []),
+      group_discounts: ensureJSONB(pkgData.group_discounts, []),
+      seasonal_pricing: ensureJSONB(pkgData.seasonal_pricing, []),
     };
 
     // Log JSONB values for debugging
@@ -128,62 +130,62 @@ export async function POST(request: NextRequest) {
       )
       RETURNING id`,
       [
-        packageData.operator_id,
-        packageData.title || '',
-        packageData.short_description || '',
-        packageData.full_description || '',
-        packageData.status || 'draft',
-        packageData.destination_name || '',
-        packageData.destination_address || '',
-        packageData.destination_city || '',
-        packageData.destination_country || '',
-        packageData.destination_postal_code || null,
-        packageData.destination_coordinates || '', // TEXT, not POINT
-        packageData.duration_hours || 2,
-        packageData.duration_minutes || 0,
-        packageData.difficulty_level || 'EASY',
+        pkgData.operator_id,
+        pkgData.title || '',
+        pkgData.short_description || '',
+        pkgData.full_description || '',
+        pkgData.status || 'draft',
+        pkgData.destination_name || '',
+        pkgData.destination_address || '',
+        pkgData.destination_city || '',
+        pkgData.destination_country || '',
+        pkgData.destination_postal_code || null,
+        pkgData.destination_coordinates || '', // TEXT, not POINT
+        pkgData.duration_hours || 2,
+        pkgData.duration_minutes || 0,
+        pkgData.difficulty_level || 'EASY',
         jsonbValues.languages_supported, // JSONB
         jsonbValues.tags, // JSONB
-        packageData.meeting_point_name || '',
-        packageData.meeting_point_address || '',
-        packageData.meeting_point_coordinates || '', // TEXT, not POINT
-        packageData.meeting_point_instructions || null,
+        pkgData.meeting_point_name || '',
+        pkgData.meeting_point_address || '',
+        pkgData.meeting_point_coordinates || '', // TEXT, not POINT
+        pkgData.meeting_point_instructions || null,
         jsonbValues.operating_days, // JSONB
         jsonbValues.whats_included, // JSONB
         jsonbValues.whats_not_included, // JSONB
         jsonbValues.what_to_bring, // JSONB
-        packageData.important_information || null,
-        packageData.minimum_age || 0,
-        packageData.maximum_age || null,
-        packageData.child_policy || null,
-        packageData.infant_policy || null,
-        packageData.age_verification_required || false,
-        packageData.wheelchair_accessible || false,
+        pkgData.important_information || null,
+        pkgData.minimum_age || 0,
+        pkgData.maximum_age || null,
+        pkgData.child_policy || null,
+        pkgData.infant_policy || null,
+        pkgData.age_verification_required || false,
+        pkgData.wheelchair_accessible || false,
         jsonbValues.accessibility_facilities, // JSONB
-        packageData.special_assistance || null,
-        packageData.cancellation_policy_type || 'MODERATE',
-        packageData.cancellation_policy_custom || null,
-        packageData.cancellation_refund_percentage || 80,
-        packageData.cancellation_deadline_hours ?? 24, // Use nullish coalescing to respect 0
-        packageData.weather_policy || null,
+        pkgData.special_assistance || null,
+        pkgData.cancellation_policy_type || 'MODERATE',
+        pkgData.cancellation_policy_custom || null,
+        pkgData.cancellation_refund_percentage || 80,
+        pkgData.cancellation_deadline_hours ?? 24, // Use nullish coalescing to respect 0
+        pkgData.weather_policy || null,
         jsonbValues.health_safety_requirements, // JSONB
-        packageData.health_safety_additional_info || null,
-        packageData.base_price ?? 0, // Use nullish coalescing to respect 0
-        packageData.currency || 'USD',
-        packageData.price_type || 'PERSON',
-        packageData.child_price_type || null,
-        packageData.child_price_value || null,
-        packageData.infant_price || null,
+        pkgData.health_safety_additional_info || null,
+        pkgData.base_price ?? 0, // Use nullish coalescing to respect 0
+        pkgData.currency || 'USD',
+        pkgData.price_type || 'PERSON',
+        pkgData.child_price_type || null,
+        pkgData.child_price_value || null,
+        pkgData.infant_price || null,
         jsonbValues.group_discounts, // JSONB
         jsonbValues.seasonal_pricing, // JSONB
-        packageData.dynamic_pricing_enabled || false,
-        packageData.dynamic_pricing_base_multiplier || null,
-        packageData.dynamic_pricing_demand_multiplier || null,
-        packageData.dynamic_pricing_season_multiplier || null,
-        packageData.slug || null,
-        packageData.meta_title || null,
-        packageData.meta_description || null,
-        packageData.published_at || null,
+        pkgData.dynamic_pricing_enabled || false,
+        pkgData.dynamic_pricing_base_multiplier || null,
+        pkgData.dynamic_pricing_demand_multiplier || null,
+        pkgData.dynamic_pricing_season_multiplier || null,
+        pkgData.slug || null,
+        pkgData.meta_title || null,
+        pkgData.meta_description || null,
+        pkgData.published_at || null,
       ]
     );
 
@@ -301,7 +303,7 @@ export async function POST(request: NextRequest) {
     });
     
     // If it's a JSON error, log the package data to help identify the problematic field
-    if (error.message?.includes('json') || error.detail?.includes('json')) {
+    if ((error.message?.includes('json') || error.detail?.includes('json')) && packageData) {
       console.error('JSON error detected. Package data:', {
         languages_supported: packageData.languages_supported,
         tags: packageData.tags,
