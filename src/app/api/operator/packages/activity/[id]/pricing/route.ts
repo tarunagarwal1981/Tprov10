@@ -48,7 +48,7 @@ export async function GET(
       vehicles: vehiclesMap[pkg.id] || [],
     }));
 
-    return NextResponse.json(pricingWithVehicles);
+    return NextResponse.json({ pricingPackages: pricingWithVehicles });
   } catch (error) {
     console.error('Error fetching pricing packages:', error);
     return NextResponse.json(
