@@ -4,6 +4,13 @@ import { query } from '@/lib/aws/lambda-database';
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
+// Simple UUID v4 validator (sufficient for distinguishing temp IDs from real DB IDs)
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const isValidUUID = (value: any): boolean =>
+  typeof value === 'string' && UUID_REGEX.test(value);
+
 /**
  * POST /api/operator/packages/activity/pricing
  * Save pricing packages with vehicles for an activity package
@@ -32,8 +39,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const savedPackageIds: string[] = [];
-
     // Helper to ensure array values are properly formatted for PostgreSQL ARRAY type
     const ensureArray = (value: any): string[] => {
       if (!value) return [];
@@ -55,10 +60,15 @@ export async function POST(request: NextRequest) {
       return [String(value)];
     };
 
+    const savedPackageIds: string[] = [];
+
     // Save pricing packages
     for (const pkg of pricingPackages) {
+      const isExistingPackage = isValidUUID(pkg.id);
+
       console.log('[Pricing API] Processing package:', {
         id: pkg.id,
+        isExistingPackage,
         packageName: pkg.packageName,
         includedItems: pkg.includedItems,
         excludedItems: pkg.excludedItems,
@@ -66,8 +76,8 @@ export async function POST(request: NextRequest) {
         excludedItemsType: typeof pkg.excludedItems,
       });
       
-      // Check if this is an update (has id and not temp) or create
-      if (pkg.id && !pkg.id.startsWith('temp-')) {
+      // Check if this is an update (has a real UUID id) or create
+      if (isExistingPackage) {
         // Update existing
         await query(
           `UPDATE activity_pricing_packages SET
