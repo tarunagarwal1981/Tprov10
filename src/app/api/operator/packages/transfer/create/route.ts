@@ -174,42 +174,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Insert stops
-    if (stops && stops.length > 0) {
-      for (const stop of stops) {
-        await query(
-          `INSERT INTO transfer_package_stops (
-            package_id, stop_name, stop_address, stop_coordinates, stop_order, notes
-          ) VALUES ($1, $2, $3, $4, $5, $6)`,
-          [
-            packageId,
-            stop.stop_name || '',
-            stop.stop_address || null,
-            stop.stop_coordinates ? JSON.stringify(stop.stop_coordinates) : null,
-            stop.stop_order || 0,
-            stop.notes || null,
-          ]
-        );
-      }
-    }
-
-    // Insert additional services
-    if (additional_services && additional_services.length > 0) {
-      for (const service of additional_services) {
-        await query(
-          `INSERT INTO transfer_additional_services (
-            package_id, service_name, description, price, is_active
-          ) VALUES ($1, $2, $3, $4, $5)`,
-          [
-            packageId,
-            service.service_name || '',
-            service.description || null,
-            service.price || 0,
-            service.is_active !== undefined ? service.is_active : true,
-          ]
-        );
-      }
-    }
+    // Stops & additional services tables are not present in the RDS schema for transfers,
+    // and the corresponding UI is disabled, so we intentionally skip inserting them here.
 
     // Insert hourly pricing
     if (hourly_pricing && hourly_pricing.length > 0) {

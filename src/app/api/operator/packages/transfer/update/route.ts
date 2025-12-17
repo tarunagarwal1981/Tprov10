@@ -101,8 +101,8 @@ export async function PUT(request: NextRequest) {
     }
     await query('DELETE FROM transfer_package_images WHERE package_id = $1', [packageId]);
     await query('DELETE FROM transfer_package_vehicles WHERE package_id = $1', [packageId]);
-    await query('DELETE FROM transfer_package_stops WHERE package_id = $1', [packageId]);
-    await query('DELETE FROM transfer_additional_services WHERE package_id = $1', [packageId]);
+    // transfer_package_stops & transfer_additional_services are not used in the current
+    // RDS schema for transfers, so we intentionally do not touch them here.
     await query('DELETE FROM transfer_hourly_pricing WHERE package_id = $1', [packageId]);
     await query('DELETE FROM transfer_point_to_point_pricing WHERE package_id = $1', [packageId]);
 
@@ -185,42 +185,8 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    // Re-insert stops
-    if (stops && stops.length > 0) {
-      for (const stop of stops) {
-        await query(
-          `INSERT INTO transfer_package_stops (
-            package_id, stop_name, stop_address, stop_coordinates, stop_order, notes
-          ) VALUES ($1, $2, $3, $4, $5, $6)`,
-          [
-            packageId,
-            stop.stop_name || '',
-            stop.stop_address || null,
-            stop.stop_coordinates ? JSON.stringify(stop.stop_coordinates) : null,
-            stop.stop_order || 0,
-            stop.notes || null,
-          ]
-        );
-      }
-    }
-
-    // Re-insert additional services
-    if (additional_services && additional_services.length > 0) {
-      for (const service of additional_services) {
-        await query(
-          `INSERT INTO transfer_additional_services (
-            package_id, service_name, description, price, is_active
-          ) VALUES ($1, $2, $3, $4, $5)`,
-          [
-            packageId,
-            service.service_name || '',
-            service.description || null,
-            service.price || 0,
-            service.is_active !== undefined ? service.is_active : true,
-          ]
-        );
-      }
-    }
+    // Stops & additional services are not yet wired for transfers in the RDS schema,
+    // and the related UI is hidden, so we skip re-inserting them here.
 
     // Re-insert hourly pricing
     if (hourly_pricing && hourly_pricing.length > 0) {

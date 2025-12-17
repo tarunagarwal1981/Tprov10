@@ -30,45 +30,22 @@ export async function GET(
 
     const packageData = packageResult.rows[0];
 
-    // Get related data in parallel
-    const [imagesResult, vehiclesResult, stopsResult, servicesResult, hourlyPricingResult, p2pPricingResult] = await Promise.all([
+    // Get related data in parallel (stops, vehicle images & additional services are not used in RDS schema for transfers)
+    const [imagesResult, vehiclesResult, hourlyPricingResult, p2pPricingResult] = await Promise.all([
       query<any>(`SELECT * FROM transfer_package_images WHERE package_id::text = $1 ORDER BY display_order`, [id]),
       query<any>(`SELECT * FROM transfer_package_vehicles WHERE package_id::text = $1 ORDER BY display_order`, [id]),
-      query<any>(`SELECT * FROM transfer_package_stops WHERE package_id::text = $1 ORDER BY stop_order`, [id]),
-      query<any>(`SELECT * FROM transfer_additional_services WHERE package_id::text = $1`, [id]),
       query<any>(`SELECT * FROM transfer_hourly_pricing WHERE package_id::text = $1 ORDER BY display_order`, [id]),
       query<any>(`SELECT * FROM transfer_point_to_point_pricing WHERE package_id::text = $1 ORDER BY display_order`, [id]),
     ]);
 
-    // Fetch vehicle images for all vehicles.
-    // We avoid array parameters / ANY() to keep the Lambda query layer simple.
-    const vehicleImagesMap: { [key: string]: any[] } = {};
-    const vehiclesRaw = vehiclesResult.rows || [];
-
-    for (const vehicle of vehiclesRaw) {
-      const vehicleId = vehicle.id;
-      if (!vehicleId) continue;
-
-      const imagesForVehicle = await query<any>(
-        `SELECT * FROM transfer_vehicle_images WHERE vehicle_id::text = $1 ORDER BY display_order`,
-        [vehicleId]
-      );
-
-      vehicleImagesMap[vehicleId] = imagesForVehicle.rows || [];
-    }
-
-    // Attach vehicle images to vehicles
-    const vehiclesWithImages = vehiclesRaw.map((vehicle: any) => ({
-      ...vehicle,
-      vehicle_images: vehicleImagesMap[vehicle.id] || [],
-    }));
-
     const result = {
       ...packageData,
       images: imagesResult.rows || [],
-      vehicles: vehiclesWithImages,
-      stops: stopsResult.rows || [],
-      additional_services: servicesResult.rows || [],
+      // Vehicle images, stops & additional services are not yet wired in the RDS schema for transfers.
+      vehicles: vehiclesResult.rows || [],
+      // Stops & additional services are not yet wired in the RDS schema for transfers.
+      stops: [],
+      additional_services: [],
       hourly_pricing: hourlyPricingResult.rows || [],
       point_to_point_pricing: p2pPricingResult.rows || [],
     };
