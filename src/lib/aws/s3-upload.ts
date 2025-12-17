@@ -8,33 +8,28 @@
 import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
-// Use explicit credentials from environment variables if provided
-// Otherwise, use default provider chain (execution role in Lambda/Amplify)
-const region = process.env.AWS_REGION || process.env.DEPLOYMENT_REGION || process.env.REGION || 'us-east-1';
+// Configure S3 client with credentials
+// In local dev, use environment variables if available
+// In production (Lambda/EC2), use default credential chain (IAM role)
+const isLocalDev = typeof window === 'undefined' && !process.env.AWS_EXECUTION_ENV && !process.env.AWS_LAMBDA_FUNCTION_NAME;
 
-const clientConfig: any = {
-  region,
+const s3ClientConfig: any = {
+  region: process.env.AWS_REGION || process.env.DEPLOYMENT_REGION || process.env.REGION || 'us-east-1',
 };
 
-// Always use credentials if provided in environment variables
-// This works for both local development and production (when credentials are explicitly set)
-if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
-  clientConfig.credentials = {
+// In local development, use explicit credentials from environment variables
+if (isLocalDev && process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
+  s3ClientConfig.credentials = {
     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
     ...(process.env.AWS_SESSION_TOKEN && { sessionToken: process.env.AWS_SESSION_TOKEN }),
   };
-  console.log('[S3 Client] Using credentials from environment variables');
-} else {
-  // In production (Lambda/Amplify), the SDK will use the execution role
-  // In local dev without credentials, it will try the default credential chain
-  const isLocalDev = typeof window === 'undefined' && !process.env.AWS_EXECUTION_ENV && !process.env.AWS_LAMBDA_FUNCTION_NAME;
-  if (isLocalDev) {
-    console.warn('[S3 Client] ⚠️  No AWS credentials found. Please set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY in .env.local for local development');
-  }
+  console.log('[S3 Client] Using credentials from environment variables (local dev)');
+} else if (isLocalDev) {
+  console.warn('[S3 Client] ⚠️  No AWS credentials found. Using default credential chain.');
 }
 
-const s3 = new S3Client(clientConfig);
+const s3 = new S3Client(s3ClientConfig);
 const BUCKET_NAME = process.env.S3_BUCKET_NAME!;
 const CLOUDFRONT_DOMAIN = process.env.CLOUDFRONT_DOMAIN;
 
@@ -132,11 +127,17 @@ export async function getPresignedDownloadUrl(
   key: string,
   expiresIn: number = 3600
 ): Promise<string> {
+  // Log which credentials are being used
+  const credentialsInfo = isLocalDev && process.env.AWS_ACCESS_KEY_ID
+    ? { source: 'environment_variables', accessKeyId: process.env.AWS_ACCESS_KEY_ID.substring(0, 8) + '...' }
+    : { source: 'default_credential_chain', note: 'Using IAM role or default credentials' };
+  
   console.log('🔐 [S3] Generating presigned URL:', {
     key: key.substring(0, 80) + '...',
     bucket: BUCKET_NAME,
     expiresIn,
     region: process.env.DEPLOYMENT_REGION || process.env.REGION || 'us-east-1',
+    credentials: credentialsInfo,
   });
 
   const command = new GetObjectCommand({

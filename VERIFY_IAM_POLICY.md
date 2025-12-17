@@ -1,104 +1,100 @@
-# Verify IAM Policy is Attached - Critical Check
+# Verify IAM Policy Configuration
 
-## The Issue
+## Current Error
 
-Even though Lambda has resource-based policies, the **Amplify execution role** itself needs an **IAM policy** attached that grants `lambda:InvokeFunction` permission.
+The XML error shows:
+```xml
+<Error>
+<Code>AccessDenied</Code>
+<Message>Access Denied</Message>
+</Error>
+```
 
-## Critical Verification Steps
+This is a generic access denied, which means IAM permissions are still blocking.
 
-### Step 1: Find Your Amplify Execution Role
+## Verify Your Allow Policy
 
-1. **Amplify Console** → Your App → **General**
-2. Find **Service role** ARN (e.g., `arn:aws:iam::815660521604:role/amplify-...`)
-3. Copy the **role name** (the part after `/role/`, e.g., `amplify-tprov10-dev-123456`)
+### Step 1: Check Policy JSON
 
-### Step 2: Verify IAM Policy is Attached
+Go to IAM → Users → tarunagarwal → Permissions → [Your Policy Name] → JSON tab
 
-1. Go to **IAM Console** → **Roles**
-2. **Search** for your Amplify role name
-3. **Click** on the role
-4. Go to **Permissions** tab
-5. **Check** if you see a policy with `lambda:InvokeFunction` permission
+Make sure it looks exactly like this:
 
-**What to look for:**
-- Policy name like `AWSLambda_FullAccess` OR
-- Custom policy with `lambda:InvokeFunction` action
-- The policy should allow: `lambda:InvokeFunction` on `travel-app-database-service`
-
-### Step 3: If Policy is Missing - Add It
-
-**Quick Fix - Attach AWSLambda_FullAccess:**
-
-1. IAM Console → **Roles** → Your Amplify role
-2. **Add permissions** → **Attach policies**
-3. **Search**: `AWSLambda_FullAccess`
-4. **Check** the box
-5. **Attach policy**
-
-**OR Create Custom Policy (More Secure):**
-
-1. IAM Console → **Policies** → **Create policy**
-2. **JSON** tab, paste:
 ```json
 {
   "Version": "2012-10-17",
   "Statement": [
     {
       "Effect": "Allow",
-      "Action": "lambda:InvokeFunction",
-      "Resource": "arn:aws:lambda:us-east-1:815660521604:function:travel-app-database-service"
+      "Action": "s3:GetObject",
+      "Resource": "arn:aws:s3:::travel-app-storage-1769/*"
     }
   ]
 }
 ```
-3. **Name**: `AmplifyLambdaInvokePolicy`
-4. **Create policy**
-5. Go back to **Roles** → Your Amplify role → **Add permissions** → **Attach policies**
-6. **Search** for `AmplifyLambdaInvokePolicy`
-7. **Attach**
 
-### Step 4: Wait for IAM Propagation
+**Critical Points:**
+- ✅ `Effect` must be `"Allow"` (not "Deny")
+- ✅ `Action` must be `"s3:GetObject"` (exact match)
+- ✅ `Resource` must end with `/*` (not just the bucket name)
+- ✅ Resource must be: `arn:aws:s3:::travel-app-storage-1769/*`
 
-After attaching the policy:
-- **Wait 2-3 minutes** for IAM changes to propagate
-- IAM changes can take a few minutes to take effect
+### Step 2: Check Policy Type
 
-### Step 5: Test Again
+Make sure the policy is:
+- ✅ **Attached to the user** (not just created)
+- ✅ **Active/Enabled** (not disabled)
+- ✅ **Inline policy** or **Managed policy** (both work)
 
-1. **Test login** again
-2. **Check logs** - should see:
-   - `[Lambda Client] Lambda invocation successful...`
-   - No more credentials errors
+### Step 3: Wait for Propagation
 
-## Why This Is Critical
+IAM changes can take **5-10 minutes**. If you just added it:
+- Wait 5 more minutes
+- Try again
 
-- **Resource-based policy on Lambda**: Says "This role CAN invoke me" ✅ (Already done)
-- **IAM policy on Amplify role**: Says "This role HAS PERMISSION to invoke Lambda" ❌ (Might be missing)
+## Alternative: Add More Permissions
 
-**Both are required!** The resource-based policy allows it, but the IAM policy grants the actual permission.
+If the basic policy doesn't work, try a more permissive one:
 
-## Quick Check Command
-
-You can verify the role has the policy using AWS CLI:
-
-```powershell
-# Replace ROLE_NAME with your Amplify role name
-$roleName = "amplify-tprov10-dev-123456"
-
-# List attached policies
-aws iam list-attached-role-policies --role-name $roleName --region us-east-1
-
-# List inline policies
-aws iam list-role-policies --role-name $roleName --region us-east-1
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:GetObjectVersion",
+        "s3:PutObject",
+        "s3:DeleteObject"
+      ],
+      "Resource": "arn:aws:s3:::travel-app-storage-1769/*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:ListBucket",
+        "s3:GetBucketLocation"
+      ],
+      "Resource": "arn:aws:s3:::travel-app-storage-1769"
+    }
+  ]
+}
 ```
 
-Look for policies that contain `lambda:InvokeFunction` permission.
+## Check for Deny Policies Again
 
-## Summary
+Even with an allow, a deny will override it. Check:
 
-The credentials error happens because:
-1. ✅ Lambda has resource-based policies (allows invocation)
-2. ❌ Amplify role might not have IAM policy (grants permission)
+1. **All user policies** - Look for any with `"Effect": "Deny"`
+2. **Groups** - If user is in groups, check group policies
+3. **Permissions boundaries** - Check if there's a boundary
 
-**Fix**: Attach IAM policy with `lambda:InvokeFunction` to the Amplify execution role.
+## Test with Different Approach
 
+If policies aren't working, the issue might be:
+
+1. **Presigned URL generation** - The credentials used to generate the URL might not have access
+2. **Different IAM user** - The presigned URL might be signed with different credentials
+
+Let's check what credentials are being used to generate presigned URLs.
