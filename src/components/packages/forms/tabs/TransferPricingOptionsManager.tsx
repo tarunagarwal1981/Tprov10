@@ -123,11 +123,11 @@ const HourlyPricingCard: React.FC<HourlyPricingCardProps> = ({
             <div>
               <Label htmlFor="vehicleType">Vehicle Type</Label>
               <Select
-                value={editData.vehicleType}
+                value={editData.vehicleType || undefined}
                 onValueChange={(value: VehicleType) => setEditData({ ...editData, vehicleType: value })}
               >
                 <SelectTrigger className="package-text-fix">
-                  <SelectValue />
+                  <SelectValue placeholder="Select vehicle type" />
                 </SelectTrigger>
                 <SelectContent className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 z-50">
                   {VEHICLE_TYPES.map((type) => (
@@ -374,11 +374,11 @@ const PointToPointPricingCard: React.FC<PointToPointPricingCardProps> = ({
             <div>
               <Label htmlFor="vehicleType">Vehicle Type</Label>
               <Select
-                value={editData.vehicleType}
+                value={editData.vehicleType || undefined}
                 onValueChange={(value: VehicleType) => setEditData({ ...editData, vehicleType: value })}
               >
                 <SelectTrigger className="package-text-fix">
-                  <SelectValue />
+                  <SelectValue placeholder="Select vehicle type" />
                 </SelectTrigger>
                 <SelectContent className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 z-50">
                   {VEHICLE_TYPES.map((type) => (

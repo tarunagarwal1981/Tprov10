@@ -497,7 +497,7 @@ const SimplePricingCard: React.FC<SimplePricingCardProps> = ({
                       <span className="text-gray-600 dark:text-gray-400">• Max {vehicle.maxCapacity} pax</span>
                     </div>
                     <span className="font-bold text-green-600">
-                      {currency}{(vehicle.price || 0).toFixed(2)}
+                      {currency}{Number(vehicle.price || 0).toFixed(2)}
                     </span>
                   </div>
                 </div>
@@ -821,7 +821,7 @@ export const ActivityPricingOptionsTab: React.FC = () => {
                                 <td className="p-3">{option.activityName}</td>
                                 <td className="p-3">{vehicle.vehicleType}</td>
                                 <td className="p-3">{vehicle.maxCapacity} pax</td>
-                                <td className="p-3">{currency}{(vehicle.price ?? 0).toFixed(2)}</td>
+                                <td className="p-3">{currency}{Number(vehicle.price ?? 0).toFixed(2)}</td>
                                 <td className="p-3">{currency}{(option.adultPrice ?? 0).toFixed(2)}</td>
                                 <td className="p-3">{currency}{(option.childPrice ?? 0).toFixed(2)}</td>
                                 <td className="p-3">{option.childMinAge}-{option.childMaxAge} yrs</td>

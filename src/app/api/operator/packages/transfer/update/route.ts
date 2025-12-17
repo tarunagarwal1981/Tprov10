@@ -40,8 +40,12 @@ export async function PUT(request: NextRequest) {
         cancellation_deadline_hours = $31, no_show_policy = $32, terms_and_conditions = $33,
         available_days = $34, advance_booking_hours = $35, maximum_advance_booking_days = $36,
         instant_confirmation = $37, special_instructions = $38, featured = $39, published_at = $40,
+        pickup_date = $41, pickup_time = $42, return_date = $43, return_time = $44,
+        pickup_location_name = $45, pickup_location_address = $46, pickup_location_coordinates = $47,
+        dropoff_location_name = $48, dropoff_location_address = $49, dropoff_location_coordinates = $50,
+        number_of_passengers = $51, number_of_luggage_pieces = $52,
         updated_at = NOW()
-      WHERE id = $41`,
+      WHERE id = $53`,
       [
         packageData.title || '',
         packageData.short_description || '',
@@ -83,6 +87,18 @@ export async function PUT(request: NextRequest) {
         packageData.special_instructions || null,
         packageData.featured || false,
         packageData.published_at || null,
+        packageData.pickup_date || null,
+        packageData.pickup_time || null,
+        packageData.return_date || null,
+        packageData.return_time || null,
+        packageData.pickup_location_name || null,
+        packageData.pickup_location_address || null,
+        packageData.pickup_location_coordinates ? JSON.stringify(packageData.pickup_location_coordinates) : null,
+        packageData.dropoff_location_name || null,
+        packageData.dropoff_location_address || null,
+        packageData.dropoff_location_coordinates ? JSON.stringify(packageData.dropoff_location_coordinates) : null,
+        packageData.number_of_passengers || null,
+        packageData.number_of_luggage_pieces || null,
         packageId,
       ]
     );
@@ -97,7 +113,16 @@ export async function PUT(request: NextRequest) {
 
     // Delete related data
     if (vehicleIds.length > 0) {
-      await query('DELETE FROM transfer_vehicle_images WHERE vehicle_id = ANY($1)', [vehicleIds]);
+      try {
+        await query('DELETE FROM transfer_vehicle_images WHERE vehicle_id = ANY($1)', [vehicleIds]);
+      } catch (error: any) {
+        // Table might not exist yet, log and continue
+        if (error.message && error.message.includes('does not exist')) {
+          console.warn('transfer_vehicle_images table does not exist yet, skipping vehicle image deletion');
+        } else {
+          throw error; // Re-throw if it's a different error
+        }
+      }
     }
     await query('DELETE FROM transfer_package_images WHERE package_id = $1', [packageId]);
     await query('DELETE FROM transfer_package_vehicles WHERE package_id = $1', [packageId]);
@@ -160,28 +185,37 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    // Re-insert vehicle images
+    // Re-insert vehicle images (if table exists)
     if (vehicleImages && vehicleImages.length > 0 && Object.keys(vehicleIdMap).length > 0) {
       for (const vehicleImageData of vehicleImages) {
         const vehicleId = vehicleIdMap[vehicleImageData.vehicleIndex];
         if (!vehicleId) continue;
 
-        await query(
-          `INSERT INTO transfer_vehicle_images (
-            vehicle_id, file_name, file_size, mime_type, storage_path, public_url,
-            alt_text, display_order
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-          [
-            vehicleId,
-            vehicleImageData.image.file_name || '',
-            vehicleImageData.image.file_size || 0,
-            vehicleImageData.image.mime_type || 'image/jpeg',
-            vehicleImageData.image.storage_path || '',
-            vehicleImageData.image.public_url || '',
-            vehicleImageData.image.alt_text || null,
-            vehicleImageData.image.display_order || 0,
-          ]
-        );
+        try {
+          await query(
+            `INSERT INTO transfer_vehicle_images (
+              vehicle_id, file_name, file_size, mime_type, storage_path, public_url,
+              alt_text, display_order
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+            [
+              vehicleId,
+              vehicleImageData.image.file_name || '',
+              vehicleImageData.image.file_size || 0,
+              vehicleImageData.image.mime_type || 'image/jpeg',
+              vehicleImageData.image.storage_path || '',
+              vehicleImageData.image.public_url || '',
+              vehicleImageData.image.alt_text || null,
+              vehicleImageData.image.display_order || 0,
+            ]
+          );
+        } catch (error: any) {
+          // Table might not exist yet, log and continue
+          if (error.message && error.message.includes('does not exist')) {
+            console.warn('transfer_vehicle_images table does not exist yet, skipping vehicle image insert');
+          } else {
+            throw error; // Re-throw if it's a different error
+          }
+        }
       }
     }
 

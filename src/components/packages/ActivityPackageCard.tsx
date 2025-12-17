@@ -74,7 +74,7 @@ export const ActivityPackageCard: React.FC<ActivityPackageCardProps> = ({
       imageString: pkg.image?.substring(0, 100),
       images: pkg.images?.map((img: any) => ({
         id: img.id,
-        file_name: img.file_name,
+        alt_text: img.alt_text,
         public_url: img.public_url, // Full URL for debugging
         public_url_length: img.public_url?.length || 0,
         public_url_preview: img.public_url ? (img.public_url.length > 150 ? img.public_url.substring(0, 150) + '...' : img.public_url) : 'MISSING',
@@ -90,7 +90,7 @@ export const ActivityPackageCard: React.FC<ActivityPackageCardProps> = ({
         .filter(img => img.public_url)
         .forEach(img => {
           console.log('📸 [Card] Adding image:', {
-            file_name: img.file_name || 'unknown',
+            alt_text: img.alt_text || 'unknown',
             url: img.public_url, // Full URL for debugging
             url_length: img.public_url?.length || 0,
             url_preview: img.public_url ? (img.public_url.length > 300 ? img.public_url.substring(0, 300) + '...' : img.public_url) : 'MISSING',
@@ -256,8 +256,10 @@ export const ActivityPackageCard: React.FC<ActivityPackageCardProps> = ({
                           if (!response.ok) {
                             return response.text().then(text => {
                               console.error('❌ [Card] Fetch error response:', text.substring(0, 500));
+                              return null;
                             });
                           }
+                          return null;
                         })
                         .catch((fetchError) => {
                           console.error('❌ [Card] Fetch request failed:', {

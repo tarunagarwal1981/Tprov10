@@ -35,11 +35,16 @@ export async function POST(request: NextRequest) {
         base_price, currency, cancellation_policy_type, cancellation_refund_percentage,
         cancellation_deadline_hours, no_show_policy, terms_and_conditions,
         available_days, advance_booking_hours, maximum_advance_booking_days,
-        instant_confirmation, special_instructions, featured
+        instant_confirmation, special_instructions, featured,
+        pickup_date, pickup_time, return_date, return_time,
+        pickup_location_name, pickup_location_address, pickup_location_coordinates,
+        dropoff_location_name, dropoff_location_address, dropoff_location_coordinates,
+        number_of_passengers, number_of_luggage_pieces
       ) VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16,
         $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30,
-        $31, $32, $33, $34, $35, $36, $37, $38, $39, $40
+        $31, $32, $33, $34, $35, $36, $37, $38, $39, $40, $41, $42, $43, $44,
+        $45, $46, $47, $48, $49, $50, $51, $52
       )
       RETURNING id`,
       [
@@ -83,6 +88,18 @@ export async function POST(request: NextRequest) {
         packageData.instant_confirmation || false,
         packageData.special_instructions || null,
         packageData.featured || false,
+        packageData.pickup_date || null,
+        packageData.pickup_time || null,
+        packageData.return_date || null,
+        packageData.return_time || null,
+        packageData.pickup_location_name || null,
+        packageData.pickup_location_address || null,
+        packageData.pickup_location_coordinates ? JSON.stringify(packageData.pickup_location_coordinates) : null,
+        packageData.dropoff_location_name || null,
+        packageData.dropoff_location_address || null,
+        packageData.dropoff_location_coordinates ? JSON.stringify(packageData.dropoff_location_coordinates) : null,
+        packageData.number_of_passengers || null,
+        packageData.number_of_luggage_pieces || null,
       ]
     );
 
@@ -149,28 +166,37 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Insert vehicle images
+    // Insert vehicle images (if table exists)
     if (vehicleImages && vehicleImages.length > 0 && Object.keys(vehicleIdMap).length > 0) {
       for (const vehicleImageData of vehicleImages) {
         const vehicleId = vehicleIdMap[vehicleImageData.vehicleIndex];
         if (!vehicleId) continue;
 
-        await query(
-          `INSERT INTO transfer_vehicle_images (
-            vehicle_id, file_name, file_size, mime_type, storage_path, public_url,
-            alt_text, display_order
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-          [
-            vehicleId,
-            vehicleImageData.image.file_name || '',
-            vehicleImageData.image.file_size || 0,
-            vehicleImageData.image.mime_type || 'image/jpeg',
-            vehicleImageData.image.storage_path || '',
-            vehicleImageData.image.public_url || '',
-            vehicleImageData.image.alt_text || null,
-            vehicleImageData.image.display_order || 0,
-          ]
-        );
+        try {
+          await query(
+            `INSERT INTO transfer_vehicle_images (
+              vehicle_id, file_name, file_size, mime_type, storage_path, public_url,
+              alt_text, display_order
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+            [
+              vehicleId,
+              vehicleImageData.image.file_name || '',
+              vehicleImageData.image.file_size || 0,
+              vehicleImageData.image.mime_type || 'image/jpeg',
+              vehicleImageData.image.storage_path || '',
+              vehicleImageData.image.public_url || '',
+              vehicleImageData.image.alt_text || null,
+              vehicleImageData.image.display_order || 0,
+            ]
+          );
+        } catch (error: any) {
+          // Table might not exist yet, log and continue
+          if (error.message && error.message.includes('does not exist')) {
+            console.warn('transfer_vehicle_images table does not exist yet, skipping vehicle image insert');
+          } else {
+            throw error; // Re-throw if it's a different error
+          }
+        }
       }
     }
 
@@ -182,12 +208,19 @@ export async function POST(request: NextRequest) {
       for (const pricing of hourly_pricing) {
         await query(
           `INSERT INTO transfer_hourly_pricing (
-            package_id, hours, rate_usd, display_order
-          ) VALUES ($1, $2, $3, $4)`,
+            package_id, hours, vehicle_type, vehicle_name, max_passengers,
+            rate_usd, description, features, is_active, display_order
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
           [
             packageId,
             pricing.hours || 1,
+            pricing.vehicle_type || 'SEDAN',
+            pricing.vehicle_name || '',
+            pricing.max_passengers || 4,
             pricing.rate_usd || 0,
+            pricing.description || null,
+            pricing.features ? JSON.stringify(pricing.features) : JSON.stringify([]),
+            pricing.is_active !== undefined ? pricing.is_active : true,
             pricing.display_order || 0,
           ]
         );
@@ -199,13 +232,30 @@ export async function POST(request: NextRequest) {
       for (const pricing of point_to_point_pricing) {
         await query(
           `INSERT INTO transfer_point_to_point_pricing (
-            package_id, from_location, to_location, cost_usd, display_order
-          ) VALUES ($1, $2, $3, $4, $5)`,
+            package_id, from_location, from_address, from_coordinates,
+            to_location, to_address, to_coordinates,
+            distance, distance_unit, estimated_duration_minutes,
+            vehicle_type, vehicle_name, max_passengers,
+            cost_usd, description, features, is_active, display_order
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
           [
             packageId,
             pricing.from_location || '',
+            pricing.from_address || null,
+            pricing.from_coordinates ? JSON.stringify(pricing.from_coordinates) : null,
             pricing.to_location || '',
+            pricing.to_address || null,
+            pricing.to_coordinates ? JSON.stringify(pricing.to_coordinates) : null,
+            pricing.distance || null,
+            pricing.distance_unit || 'KM',
+            pricing.estimated_duration_minutes || null,
+            pricing.vehicle_type || 'SEDAN',
+            pricing.vehicle_name || '',
+            pricing.max_passengers || 4,
             pricing.cost_usd || 0,
+            pricing.description || null,
+            pricing.features ? JSON.stringify(pricing.features) : JSON.stringify([]),
+            pricing.is_active !== undefined ? pricing.is_active : true,
             pricing.display_order || 0,
           ]
         );

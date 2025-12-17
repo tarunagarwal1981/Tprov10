@@ -11,7 +11,7 @@ import {
   type CreateTransferPackageDataDB as CreateTransferPackageData,
 } from '@/lib/transfer-packages-mapper';
 
-export interface SupabaseError {
+export interface ApiError {
   message: string;
   code?: string;
   details?: string;
@@ -24,7 +24,7 @@ export interface SupabaseError {
 export async function createTransferPackage(
   data: CreateTransferPackageData,
   userId: string
-): Promise<{ data: TransferPackageWithRelations | null; error: SupabaseError | null }> {
+): Promise<{ data: TransferPackageWithRelations | null; error: ApiError | null }> {
   try {
     const response = await fetch('/api/operator/packages/transfer/create', {
       method: 'POST',
@@ -69,7 +69,7 @@ export async function createTransferPackage(
  */
 export async function getTransferPackage(
   id: string
-): Promise<{ data: TransferPackageWithRelations | null; error: SupabaseError | null }> {
+): Promise<{ data: TransferPackageWithRelations | null; error: ApiError | null }> {
   try {
     const response = await fetch(`/api/operator/packages/transfer/${id}`);
 
@@ -102,7 +102,7 @@ export async function getTransferPackage(
 export async function updateTransferPackage(
   id: string,
   data: CreateTransferPackageData
-): Promise<{ data: TransferPackageWithRelations | null; error: SupabaseError | null }> {
+): Promise<{ data: TransferPackageWithRelations | null; error: ApiError | null }> {
   try {
     const response = await fetch('/api/operator/packages/transfer/update', {
       method: 'PUT',
@@ -138,6 +138,89 @@ export async function updateTransferPackage(
       data: null,
       error: {
         message: error.message || 'Failed to update transfer package',
+      },
+    };
+  }
+}
+
+/**
+ * List transfer packages
+ */
+export async function listTransferPackages(
+  filters: { operator_id?: string; status?: string } = {}
+): Promise<{ data: TransferPackageWithRelations[] | null; error: ApiError | null }> {
+  try {
+    const params = new URLSearchParams();
+    if (filters.operator_id) {
+      params.append('operatorId', filters.operator_id);
+    }
+
+    const response = await fetch(`/api/operator/packages?${params.toString()}`);
+
+    if (!response.ok) {
+      const error = await response.json();
+      return {
+        data: null,
+        error: {
+          message: error.error || 'Failed to fetch transfer packages',
+          details: error.details,
+        },
+      };
+    }
+
+    const result = await response.json();
+    const transferPackages = Array.isArray(result.transferPackages) ? result.transferPackages : [];
+    
+    // Transform to match expected format
+    const packages: TransferPackageWithRelations[] = transferPackages.map((pkg: any) => ({
+      ...pkg,
+      images: pkg.images || [],
+      vehicles: pkg.vehicles || [],
+      stops: [],
+      additional_services: [],
+      hourly_pricing: pkg.hourly_pricing || [],
+      point_to_point_pricing: pkg.point_to_point_pricing || [],
+    }));
+
+    return { data: packages, error: null };
+  } catch (error: any) {
+    return {
+      data: null,
+      error: {
+        message: error.message || 'Failed to fetch transfer packages',
+      },
+    };
+  }
+}
+
+/**
+ * Delete a transfer package
+ */
+export async function deleteTransferPackage(
+  id: string
+): Promise<{ data: boolean | null; error: ApiError | null }> {
+  try {
+    const response = await fetch(`/api/operator/packages/transfer/${id}`, {
+      method: 'DELETE',
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      return {
+        data: null,
+        error: {
+          message: error.error || 'Failed to delete transfer package',
+          details: error.details,
+        },
+      };
+    }
+
+    return { data: true, error: null };
+  } catch (error: any) {
+    return {
+      data: null,
+      error: {
+        message: error.message || 'Failed to delete transfer package',
       },
     };
   }

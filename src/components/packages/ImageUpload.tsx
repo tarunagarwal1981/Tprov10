@@ -459,7 +459,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
             {images.map((image, index) => (
               <ImageCard
-                key={image.id}
+                key={image.id || `image-${index}-${image.fileName || Date.now()}`}
                 image={image}
                 index={index}
                 isEditing={state.editingImage === image.id}
@@ -553,16 +553,12 @@ const ImageCard: React.FC<ImageCardProps> = ({
     );
   }
 
-  console.log('🖼️ [ImageCard] Rendering image:', {
-    file_name: image.fileName,
-    url: image.url, // Full URL for debugging
-    url_length: image.url.length,
-    url_preview: image.url.length > 200 ? image.url.substring(0, 200) + '...' : image.url,
-    is_presigned: image.url.includes('?X-Amz'),
-    is_s3_direct: image.url.includes('.s3.') && image.url.includes('amazonaws.com'),
-    has_query_params: image.url.includes('?'),
-    is_cover: image.isCover,
-  });
+  // Removed verbose logging - uncomment for debugging if needed
+  // console.log('🖼️ [ImageCard] Rendering image:', {
+  //   file_name: image.fileName,
+  //   url: image.url,
+  //   is_cover: image.isCover,
+  // });
 
   return (
     <div className="group relative overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">

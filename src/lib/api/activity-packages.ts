@@ -233,7 +233,21 @@ export async function updateActivityPackage(
         const failedUploads = uploadResults.filter(r => r.error || !r.data);
         if (failedUploads.length > 0) {
           console.error('❌ [updateActivityPackage] Some image uploads failed:', failedUploads);
-          throw new Error(`Failed to upload ${failedUploads.length} image(s): ${failedUploads[0]?.error?.message || 'Unknown error'}`);
+          const firstError = failedUploads[0];
+          let errorMessage = 'Unknown error';
+          if (firstError) {
+            if (firstError.error) {
+              if (typeof firstError.error === 'string') {
+                errorMessage = firstError.error;
+              } else if (firstError.error && typeof firstError.error === 'object') {
+                const errorObj = firstError.error as any;
+                errorMessage = errorObj?.message || String(errorObj) || 'Unknown error';
+              }
+            } else if (!firstError.data) {
+              errorMessage = 'Upload failed - no data returned';
+            }
+          }
+          throw new Error(`Failed to upload ${failedUploads.length} image(s): ${errorMessage}`);
         }
         
         console.log('✅ [updateActivityPackage] Upload complete', {

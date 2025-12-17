@@ -265,7 +265,7 @@ const VehicleDetailRow: React.FC<{
             Vehicle Type
           </Label>
           <Select
-            value={localVehicle.vehicleType || ''}
+            value={localVehicle.vehicleType || undefined}
             onValueChange={(value) => handleFieldChange('vehicleType', value as VehicleType)}
           >
             <SelectTrigger className="package-text-fix bg-white dark:bg-gray-800 h-9 text-sm">
@@ -486,6 +486,40 @@ export const TransferDetailsTab: React.FC = () => {
         </CardContent>
       </Card>
 
+      {/* Package Images */}
+      <Card className="package-selector-glass package-shadow-fix">
+        <CardHeader className="pb-1 pt-2 px-3">
+          <CardTitle className="flex items-center gap-2 text-sm">
+            <FaImage className="h-3 w-3 text-pink-600" />
+            Package Images
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pb-2 px-3">
+          <FormField
+            control={control}
+            name="basicInformation.imageGallery"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Image Gallery (Optional)</FormLabel>
+                <FormControl>
+                  <ImageUpload
+                    images={field.value || []}
+                    onImagesChange={(images) => {
+                      field.onChange(images);
+                    }}
+                    maxImages={10}
+                    allowMultiple={true}
+                    showMetadata={false}
+                    className="package-animation-fix"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </CardContent>
+      </Card>
+
       {/* Transfer Details - Round Trip */}
       {watchedData.transferType === 'ROUND_TRIP' && (
         <Card className="package-selector-glass package-shadow-fix">
@@ -683,20 +717,40 @@ export const TransferDetailsTab: React.FC = () => {
 
               {/* Return Details */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <FormLabel>Return Date</FormLabel>
-                  <Input
-                    type="date"
-                    className="package-text-fix"
-                  />
-                </div>
-                <div>
-                  <FormLabel>Return Time</FormLabel>
-                  <Input
-                    type="time"
-                    className="package-text-fix"
-                  />
-                </div>
+                <FormField
+                  control={control}
+                  name="transferDetails.roundTripDetails.returnDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Return Date</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          type="date"
+                          className="package-text-fix"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={control}
+                  name="transferDetails.roundTripDetails.returnTime"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Return Time</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          type="time"
+                          className="package-text-fix"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
 
               {/* Wait Time at Destination - COMMENTED OUT */}

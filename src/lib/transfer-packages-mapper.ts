@@ -54,6 +54,19 @@ export interface TransferPackageDB {
   created_at?: string;
   updated_at?: string;
   published_at?: string | null;
+  // Round Trip Details
+  pickup_date?: string | null;
+  pickup_time?: string | null;
+  return_date?: string | null;
+  return_time?: string | null;
+  pickup_location_name?: string | null;
+  pickup_location_address?: string | null;
+  pickup_location_coordinates?: any;
+  dropoff_location_name?: string | null;
+  dropoff_location_address?: string | null;
+  dropoff_location_coordinates?: any;
+  number_of_passengers?: number | null;
+  number_of_luggage_pieces?: number | null;
 }
 
 export interface TransferPackageImageDB {
@@ -217,6 +230,20 @@ export function formDataToDatabase(
     estimated_duration_hours: formData.transferDetails.routeInfo.estimatedDuration.hours,
     estimated_duration_minutes: formData.transferDetails.routeInfo.estimatedDuration.minutes,
     route_points: formData.transferDetails.routeInfo.routePoints,
+
+    // Round Trip Details (if transfer type is ROUND_TRIP)
+    pickup_date: formData.transferDetails.roundTripDetails?.pickupDate || null,
+    pickup_time: formData.transferDetails.roundTripDetails?.pickupTime || null,
+    return_date: formData.transferDetails.roundTripDetails?.returnDate || null,
+    return_time: formData.transferDetails.roundTripDetails?.returnTime || null,
+    pickup_location_name: formData.transferDetails.roundTripDetails?.pickupLocation?.name || null,
+    pickup_location_address: formData.transferDetails.roundTripDetails?.pickupLocation?.address || null,
+    pickup_location_coordinates: formData.transferDetails.roundTripDetails?.pickupLocation?.coordinates || null,
+    dropoff_location_name: formData.transferDetails.roundTripDetails?.dropoffLocation?.name || null,
+    dropoff_location_address: formData.transferDetails.roundTripDetails?.dropoffLocation?.address || null,
+    dropoff_location_coordinates: formData.transferDetails.roundTripDetails?.dropoffLocation?.coordinates || null,
+    number_of_passengers: formData.transferDetails.roundTripDetails?.numberOfPassengers || null,
+    number_of_luggage_pieces: formData.transferDetails.roundTripDetails?.numberOfLuggagePieces || null,
 
     // Driver Service
     meet_and_greet: formData.driverService.meetAndGreet,
@@ -429,6 +456,35 @@ export function databaseToFormData(
         },
         routePoints: packageData.route_points,
       },
+      // Round Trip Details
+      roundTripDetails: packageData.transfer_type === 'ROUND_TRIP' ? {
+        pickupLocation: {
+          name: packageData.pickup_location_name || '',
+          address: packageData.pickup_location_address || '',
+          coordinates: packageData.pickup_location_coordinates || { latitude: 0, longitude: 0 },
+          city: '',
+          country: '',
+        },
+        dropoffLocation: {
+          name: packageData.dropoff_location_name || '',
+          address: packageData.dropoff_location_address || '',
+          coordinates: packageData.dropoff_location_coordinates || { latitude: 0, longitude: 0 },
+          city: '',
+          country: '',
+        },
+        pickupDate: packageData.pickup_date || '',
+        pickupTime: packageData.pickup_time || '',
+        returnDate: packageData.return_date || '',
+        returnTime: packageData.return_time || '',
+        numberOfPassengers: packageData.number_of_passengers || 1,
+        numberOfLuggagePieces: packageData.number_of_luggage_pieces || 0,
+        estimatedDuration: {
+          hours: packageData.estimated_duration_hours || 0,
+          minutes: packageData.estimated_duration_minutes || 0,
+        },
+        distance: packageData.total_distance || 0,
+        distanceUnit: packageData.distance_unit || 'KM',
+      } : undefined,
       // Multi-stop details are not used in current UI; we leave them undefined.
       vehicles: (packageData.vehicles || []).map((vehicle: any, index: number) => ({
         id: vehicle.id || '',
@@ -453,6 +509,30 @@ export function databaseToFormData(
         order: index + 1,
       })),
     },
+    vehicleOptions: {
+      vehicles: (packageData.vehicles || []).map((vehicle: any, index: number) => ({
+        id: vehicle.id || '',
+        vehicleType: vehicle.vehicle_type || 'SEDAN',
+        name: vehicle.name || '',
+        description: vehicle.description || '',
+        passengerCapacity: vehicle.passenger_capacity || 1,
+        luggageCapacity: vehicle.luggage_capacity || 0,
+        features: (vehicle.features || []) as any,
+        images: (vehicle.vehicle_images || []).map((img: any) => ({
+          id: img.id || '',
+          fileName: img.file_name || '',
+          fileSize: img.file_size || 0,
+          mimeType: img.mime_type || 'image/jpeg',
+          url: img.public_url || '',
+          isCover: false,
+          order: img.display_order || 0,
+          uploadedAt: img.created_at ? new Date(img.created_at) : new Date(),
+        })),
+        basePrice: vehicle.base_price || 0,
+        isActive: vehicle.is_active !== false,
+        order: vehicle.display_order || index + 1,
+      })),
+    },
     driverService: {
       meetAndGreet: packageData.meet_and_greet || false,
       nameBoard: packageData.name_board || false,
@@ -463,6 +543,7 @@ export function databaseToFormData(
       contactDriverInAdvance: packageData.contact_driver_in_advance || false,
       contactLeadTime: packageData.contact_lead_time || 0,
       realTimeTracking: packageData.real_time_tracking || false,
+      driverLanguages: (packageData.languages_supported || ['EN']) as any, // Use package languages as default
       additionalServices: (packageData.additional_services || []).map((service) => ({
         id: service.id || '',
         name: service.name || '',
@@ -472,6 +553,7 @@ export function databaseToFormData(
       })),
     },
     pricingPolicies: {
+      basePricing: [],
       additionalCharges: [],
       cancellationPolicy: {
         type: packageData.cancellation_policy_type || 'MODERATE',
@@ -488,7 +570,7 @@ export function databaseToFormData(
         maxPassengers: pricing.max_passengers || 4,
         rateUSD: pricing.rate_usd || 0,
         description: pricing.description || '',
-        features: pricing.features || [],
+        features: (pricing.features || []) as any,
         isActive: pricing.is_active !== false,
         displayOrder: pricing.display_order || 0,
       })),
@@ -504,13 +586,13 @@ export function databaseToFormData(
         distanceUnit: pricing.distance_unit || 'KM',
         estimatedDurationMinutes: pricing.estimated_duration_minutes || 0,
         description: pricing.description || '',
-        features: pricing.features || [],
+        features: (pricing.features || []) as any,
         isActive: pricing.is_active !== false,
         displayOrder: pricing.display_order || 0,
       })),
     },
     availabilityBooking: {
-      availableDays: packageData.available_days || [],
+      availableDays: (packageData.available_days || []) as any,
       advanceBookingRequired: packageData.advance_booking_hours || 24,
       maximumAdvanceBooking: packageData.maximum_advance_booking_days || 365,
       instantConfirmation: packageData.instant_confirmation !== false,
