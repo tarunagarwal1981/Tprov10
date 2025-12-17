@@ -37,11 +37,11 @@ async function checkBucketPolicy() {
       console.log('');
       
       // Check for deny statements
-      const denyStatements = policy.Statement?.filter((stmt: any) => stmt.Effect === 'Deny') || [];
+      const denyStatements = (policy.Statement || []).filter((stmt) => stmt.Effect === 'Deny');
       
       if (denyStatements.length > 0) {
         console.log('⚠️  Found DENY statements in bucket policy:');
-        denyStatements.forEach((stmt: any, index: number) => {
+        denyStatements.forEach((stmt, index) => {
           console.log(`\n  Deny Statement ${index + 1}:`);
           console.log(`    Effect: ${stmt.Effect}`);
           console.log(`    Action: ${JSON.stringify(stmt.Action)}`);
@@ -58,7 +58,7 @@ async function checkBucketPolicy() {
     } else {
       console.log('ℹ️  No bucket policy configured');
     }
-  } catch (error: any) {
+  } catch (error) {
     if (error.name === 'NoSuchBucketPolicy') {
       console.log('ℹ️  No bucket policy configured');
     } else {
