@@ -240,11 +240,31 @@ export const ActivityPackageCard: React.FC<ActivityPackageCardProps> = ({
                         http_status: '403 Forbidden (likely S3 permissions/CORS issue)',
                       });
                       
-                      // Try to fetch the URL directly to see the actual error
-                      fetch(fullUrl, { method: 'HEAD', mode: 'no-cors' })
-                        .then(() => console.log('✅ [Card] HEAD request succeeded (but image still failed)'))
+                      // Try to fetch the URL with CORS to see the actual error
+                      fetch(fullUrl, { 
+                        method: 'GET',
+                        mode: 'cors',
+                        credentials: 'omit'
+                      })
+                        .then((response) => {
+                          console.log('🔍 [Card] Fetch response:', {
+                            status: response.status,
+                            statusText: response.statusText,
+                            ok: response.ok,
+                            headers: Object.fromEntries(response.headers.entries()),
+                          });
+                          if (!response.ok) {
+                            return response.text().then(text => {
+                              console.error('❌ [Card] Fetch error response:', text.substring(0, 500));
+                            });
+                          }
+                        })
                         .catch((fetchError) => {
-                          console.error('❌ [Card] HEAD request also failed:', fetchError);
+                          console.error('❌ [Card] Fetch request failed:', {
+                            error: fetchError.message,
+                            name: fetchError.name,
+                            stack: fetchError.stack,
+                          });
                         });
                     }}
                     onLoad={() => {

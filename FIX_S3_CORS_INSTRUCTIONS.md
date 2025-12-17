@@ -47,9 +47,12 @@ User: arn:aws:iam::815660521604:user/tarunagarwal is not authorized to perform: 
          "http://localhost:3000",
          "http://localhost:3001",
          "http://127.0.0.1:3000",
-         "https://*.netlify.app",
-         "https://*.amplifyapp.com",
-         "*"
+         "https://travelselbuy.com",
+         "https://www.travelselbuy.com",
+         "https://dev.travelselbuy.com",
+         "http://travelselbuy.com",
+         "http://www.travelselbuy.com",
+         "http://dev.travelselbuy.com"
        ],
        "ExposeHeaders": [
          "ETag",
