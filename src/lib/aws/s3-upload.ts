@@ -8,7 +8,33 @@
 import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
-const s3 = new S3Client({ region: process.env.DEPLOYMENT_REGION || process.env.REGION || 'us-east-1' });
+// Use explicit credentials from environment variables if provided
+// Otherwise, use default provider chain (execution role in Lambda/Amplify)
+const region = process.env.AWS_REGION || process.env.DEPLOYMENT_REGION || process.env.REGION || 'us-east-1';
+
+const clientConfig: any = {
+  region,
+};
+
+// Always use credentials if provided in environment variables
+// This works for both local development and production (when credentials are explicitly set)
+if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
+  clientConfig.credentials = {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    ...(process.env.AWS_SESSION_TOKEN && { sessionToken: process.env.AWS_SESSION_TOKEN }),
+  };
+  console.log('[S3 Client] Using credentials from environment variables');
+} else {
+  // In production (Lambda/Amplify), the SDK will use the execution role
+  // In local dev without credentials, it will try the default credential chain
+  const isLocalDev = typeof window === 'undefined' && !process.env.AWS_EXECUTION_ENV && !process.env.AWS_LAMBDA_FUNCTION_NAME;
+  if (isLocalDev) {
+    console.warn('[S3 Client] ⚠️  No AWS credentials found. Please set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY in .env.local for local development');
+  }
+}
+
+const s3 = new S3Client(clientConfig);
 const BUCKET_NAME = process.env.S3_BUCKET_NAME!;
 const CLOUDFRONT_DOMAIN = process.env.CLOUDFRONT_DOMAIN;
 

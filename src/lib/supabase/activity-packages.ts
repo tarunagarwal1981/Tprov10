@@ -672,7 +672,7 @@ export async function uploadActivityPackageImage(
     // Upload file to S3 using AWS file upload service
     const { uploadFile } = await import('@/lib/aws/file-upload');
     const uploadResult = await uploadFile({
-      bucket: 'activity-package-images',
+      bucket: 'activity-packages-images',
       folder: packageId,
       file,
       userId,
@@ -706,7 +706,7 @@ export async function uploadActivityPackageImage(
     if (imageError) {
       // Clean up uploaded file if database insert fails
       const { deleteFile } = await import('@/lib/aws/file-upload');
-      await deleteFile('activity-package-images', uploadResult.data.path);
+      await deleteFile('activity-packages-images', uploadResult.data.path);
       throw imageError;
     }
 
@@ -740,7 +740,7 @@ export async function deleteActivityPackageImage(
 
     // Delete from S3 storage
     const { deleteFile } = await import('@/lib/aws/file-upload');
-    const deleteResult = await deleteFile('activity-package-images', image.storage_path);
+    const deleteResult = await deleteFile('activity-packages-images', image.storage_path);
 
     if (deleteResult.error) {
       return { data: null, error: deleteResult.error };

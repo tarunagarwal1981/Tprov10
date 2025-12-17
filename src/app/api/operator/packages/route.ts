@@ -77,9 +77,23 @@ export async function GET(request: NextRequest) {
               return null;
             }
             
-            const hasS3Path = img.storage_path && img.storage_path.startsWith('activity-packages-images/');
+            // Check for both path formats (with and without 's') to handle legacy data
+            const hasS3Path = img.storage_path && (
+              img.storage_path.startsWith('activity-packages-images/') || 
+              img.storage_path.startsWith('activity-package-images/')
+            );
             const isDirectS3Url = img.public_url && img.public_url.includes('.s3.') && img.public_url.includes('amazonaws.com');
             const isAlreadyPresigned = img.public_url && (img.public_url.includes('cloudfront') || img.public_url.includes('?X-Amz'));
+            
+            // Normalize storage_path: convert old format (without 's') to new format (with 's')
+            let normalizedStoragePath = img.storage_path;
+            if (normalizedStoragePath?.startsWith('activity-package-images/')) {
+              normalizedStoragePath = normalizedStoragePath.replace('activity-package-images/', 'activity-packages-images/');
+              console.log('🔄 [Packages API] Normalized storage path:', {
+                original: img.storage_path?.substring(0, 60),
+                normalized: normalizedStoragePath.substring(0, 60),
+              });
+            }
             
             console.log('🔍 [Packages API] Image analysis:', {
               file_name: img.file_name,
@@ -88,24 +102,41 @@ export async function GET(request: NextRequest) {
               isAlreadyPresigned,
               has_public_url: !!img.public_url,
               storage_path_preview: img.storage_path?.substring(0, 60),
+              normalized_path_preview: normalizedStoragePath?.substring(0, 60),
             });
             
             // Generate presigned URL if: has S3 path AND (no public_url OR direct S3 URL OR not already presigned)
             if (hasS3Path && (!img.public_url || isDirectS3Url || !isAlreadyPresigned)) {
-              console.log('📤 [Packages API] Generating presigned URL for:', img.storage_path?.substring(0, 60));
+              console.log('📤 [Packages API] Generating presigned URL for:', normalizedStoragePath?.substring(0, 60));
               try {
-                const presignedUrl = await getPresignedDownloadUrl(img.storage_path, 3600);
+                // Try normalized path first (with 's')
+                const presignedUrl = await getPresignedDownloadUrl(normalizedStoragePath, 3600);
                 console.log('✅ [Packages API] Presigned URL generated:', {
                   file_name: img.file_name,
                   url_preview: presignedUrl.substring(0, 100) + '...',
                 });
                 return { ...img, public_url: presignedUrl };
               } catch (error: any) {
-                console.error('❌ [Packages API] Failed to generate presigned URL:', {
-                  file_name: img.file_name,
-                  storage_path: img.storage_path,
-                  error: error.message,
-                });
+                // If normalized path fails and original was different, try original path
+                if (normalizedStoragePath !== img.storage_path && img.storage_path) {
+                  console.log('🔄 [Packages API] Trying original path as fallback:', img.storage_path?.substring(0, 60));
+                  try {
+                    const fallbackUrl = await getPresignedDownloadUrl(img.storage_path, 3600);
+                    console.log('✅ [Packages API] Presigned URL generated with fallback path');
+                    return { ...img, public_url: fallbackUrl };
+                  } catch (fallbackError: any) {
+                    console.error('❌ [Packages API] Both paths failed:', {
+                      normalized_error: error.message,
+                      original_error: fallbackError.message,
+                    });
+                  }
+                } else {
+                  console.error('❌ [Packages API] Failed to generate presigned URL:', {
+                    file_name: img.file_name,
+                    storage_path: img.storage_path,
+                    error: error.message,
+                  });
+                }
                 return { ...img, public_url: img.public_url || img.storage_path };
               }
             } else {

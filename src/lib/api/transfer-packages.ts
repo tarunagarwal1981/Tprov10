@@ -1,11 +1,15 @@
 /**
  * Transfer Packages API Service
- * Wrapper for API routes - no Supabase dependencies
+ * Wrapper for API routes backed by AWS RDS (via Lambda)
  */
 
 import type { TransferPackageFormData } from '@/lib/types/transfer-package';
-import { formDataToDatabase, databaseToFormData } from '@/lib/supabase/transfer-packages';
-import type { TransferPackageWithRelations, CreateTransferPackageData } from '@/lib/supabase/transfer-packages';
+import {
+  formDataToDatabase,
+  databaseToFormData,
+  type TransferPackageWithRelationsDB as TransferPackageWithRelations,
+  type CreateTransferPackageDataDB as CreateTransferPackageData,
+} from '@/lib/transfer-packages-mapper';
 
 export interface SupabaseError {
   message: string;
@@ -61,7 +65,7 @@ export async function createTransferPackage(
 }
 
 /**
- * Get a transfer package by ID
+ * Get a transfer package by ID (via Lambda-backed API route)
  */
 export async function getTransferPackage(
   id: string

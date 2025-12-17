@@ -21,6 +21,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Insert main package
+    // NOTE: published_at is intentionally omitted on create; it will be null by default
+    // and can be set explicitly on publish/update flows.
     const packageResult = await query<{ id: string }>(
       `INSERT INTO transfer_packages (
         operator_id, title, short_description, full_description, status,
@@ -33,7 +35,7 @@ export async function POST(request: NextRequest) {
         base_price, currency, cancellation_policy_type, cancellation_refund_percentage,
         cancellation_deadline_hours, no_show_policy, terms_and_conditions,
         available_days, advance_booking_hours, maximum_advance_booking_days,
-        instant_confirmation, special_instructions, featured, published_at
+        instant_confirmation, special_instructions, featured
       ) VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16,
         $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30,
@@ -81,7 +83,6 @@ export async function POST(request: NextRequest) {
         packageData.instant_confirmation || false,
         packageData.special_instructions || null,
         packageData.featured || false,
-        packageData.published_at || null,
       ]
     );
 

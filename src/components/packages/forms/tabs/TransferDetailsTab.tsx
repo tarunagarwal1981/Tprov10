@@ -43,7 +43,6 @@ import {
   TransferPackageFormData,
   TransferType,
   DistanceUnit,
-  TransferStop,
   VehicleDetail,
   VehicleType,
   VEHICLE_TYPES,
@@ -198,159 +197,6 @@ const LocationAutocomplete: React.FC<{
         </div>
       )}
     </div>
-  );
-};
-
-// Stop card component
-const StopCard: React.FC<{
-  stop: TransferStop;
-  onUpdate: (stop: TransferStop) => void;
-  onRemove: (id: string) => void;
-  isEditing: boolean;
-  onEdit: (id: string) => void;
-  onCancelEdit: () => void;
-}> = ({ stop, onUpdate, onRemove, isEditing, onEdit, onCancelEdit }) => {
-  const [editData, setEditData] = useState(stop);
-
-  const handleSave = useCallback(() => {
-    onUpdate(editData);
-    onCancelEdit();
-  }, [editData, onUpdate, onCancelEdit]);
-
-  const handleCancel = useCallback(() => {
-    setEditData(stop);
-    onCancelEdit();
-  }, [stop, onCancelEdit]);
-
-  if (isEditing) {
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -20 }}
-        className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900"
-      >
-        <div className="space-y-4">
-          <div>
-            <label className="text-sm font-medium">Stop Location</label>
-            <Input
-              value={editData.location.name}
-              onChange={(e) => setEditData({
-                ...editData,
-                location: { ...editData.location, name: e.target.value }
-              })}
-              placeholder="Enter stop location"
-              className="package-text-fix"
-            />
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium">Duration (Hours)</label>
-              <Input
-                type="number"
-                min="0"
-                max="24"
-                value={editData.duration.hours}
-                onChange={(e) => setEditData({
-                  ...editData,
-                  duration: { ...editData.duration, hours: parseInt(e.target.value) || 0 }
-                })}
-                className="package-text-fix"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium">Duration (Minutes)</label>
-              <Input
-                type="number"
-                min="0"
-                max="59"
-                value={editData.duration.minutes}
-                onChange={(e) => setEditData({
-                  ...editData,
-                  duration: { ...editData.duration, minutes: parseInt(e.target.value) || 0 }
-                })}
-                className="package-text-fix"
-              />
-            </div>
-          </div>
-          
-          <div>
-            <label className="text-sm font-medium">Description (Optional)</label>
-            <Input
-              value={editData.description || ''}
-              onChange={(e) => setEditData({ ...editData, description: e.target.value })}
-              placeholder="e.g., Shopping stop, Restaurant visit"
-              className="package-text-fix"
-            />
-          </div>
-          
-          <div className="flex gap-2">
-            <Button onClick={handleSave} size="sm" className="package-button-fix">
-              Save
-            </Button>
-            <Button onClick={handleCancel} size="sm" variant="outline" className="package-button-fix">
-              Cancel
-            </Button>
-          </div>
-        </div>
-      </motion.div>
-    );
-  }
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900"
-    >
-      <div className="flex items-start justify-between">
-        <div className="flex items-start gap-3 flex-1">
-          <FaGripVertical className="h-4 w-4 text-gray-400 cursor-move mt-1" />
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-1">
-              <FaMapMarkerAlt className="h-4 w-4 text-blue-600" />
-              <h4 className="font-medium">{stop.location.name}</h4>
-              <Badge variant="outline" className="text-xs">
-                Stop {stop.order}
-              </Badge>
-            </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-              {stop.location.address}
-            </p>
-            <div className="flex items-center gap-4 text-sm text-gray-500">
-              <div className="flex items-center gap-1">
-                <FaClock className="h-3 w-3" />
-                <span>{stop.duration.hours}h {stop.duration.minutes}m</span>
-              </div>
-              {stop.description && (
-                <span className="text-gray-600">{stop.description}</span>
-              )}
-            </div>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => onEdit(stop.id)}
-            className="package-button-fix"
-          >
-            <FaEdit className="h-3 w-3" />
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => onRemove(stop.id)}
-            className="package-button-fix text-red-600 hover:text-red-700"
-          >
-            <FaTrash className="h-3 w-3" />
-          </Button>
-        </div>
-      </div>
-    </motion.div>
   );
 };
 
@@ -514,11 +360,6 @@ const VehicleDetailRow: React.FC<{
 
 export const TransferDetailsTab: React.FC = () => {
   const { control, watch, setValue } = useFormContext<TransferPackageFormData>();
-  const watchedTransferData = watch('transferDetails');
-  const watchedBasicData = watch('basicInformation');
-  const [editingStop, setEditingStop] = useState<string | null>(null);
-  const [distanceUnit, setDistanceUnit] = useState<DistanceUnit>('KM');
-
   const watchedData = watch('transferDetails');
 
   // Initialize with one empty vehicle row if none exist
@@ -536,39 +377,6 @@ export const TransferDetailsTab: React.FC = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Run only on mount - intentionally empty deps
-
-  const handleAddStop = useCallback(() => {
-    const newStop: TransferStop = {
-      id: Date.now().toString(),
-      location: {
-        name: '',
-        address: '',
-        coordinates: { latitude: 0, longitude: 0 },
-        city: '',
-        country: '',
-      },
-      duration: { hours: 1, minutes: 0 },
-      order: (watchedData.multiStopDetails?.stops?.length || 0) + 1,
-      description: '',
-    };
-
-    const currentStops = watchedData.multiStopDetails?.stops || [];
-    setValue('transferDetails.multiStopDetails.stops', [...currentStops, newStop]);
-  }, [watchedData.multiStopDetails?.stops, setValue]);
-
-  const handleUpdateStop = useCallback((updatedStop: TransferStop) => {
-    const currentStops = watchedData.multiStopDetails?.stops || [];
-    const updatedStops = currentStops.map(stop =>
-      stop.id === updatedStop.id ? updatedStop : stop
-    );
-    setValue('transferDetails.multiStopDetails.stops', updatedStops);
-  }, [watchedData.multiStopDetails?.stops, setValue]);
-
-  const handleRemoveStop = useCallback((id: string) => {
-    const currentStops = watchedData.multiStopDetails?.stops || [];
-    const updatedStops = currentStops.filter(stop => stop.id !== id);
-    setValue('transferDetails.multiStopDetails.stops', updatedStops);
-  }, [watchedData.multiStopDetails?.stops, setValue]);
 
   return (
     <div className="space-y-2 package-scroll-fix">
@@ -911,89 +719,6 @@ export const TransferDetailsTab: React.FC = () => {
                   />
                 </div>
               </div> */}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {watchedData.transferType === 'MULTI_STOP' && (
-        <Card className="package-selector-glass package-shadow-fix">
-          <CardHeader className="pb-1 pt-2 px-3">
-            <CardTitle className="text-sm">Multi-Stop Transfer Details</CardTitle>
-          </CardHeader>
-          <CardContent className="pb-2 px-3">
-            <div className="space-y-3">
-              {/* Pickup and Dropoff */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <FormField
-                  control={control}
-                  name="transferDetails.multiStopDetails.pickupLocation"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <LocationAutocomplete
-                          value={field.value}
-                          onChange={field.onChange}
-                          placeholder="Enter pickup location"
-                          label="Pickup Location"
-                          icon={<FaMapMarkerAlt className="h-4 w-4 text-green-600" />}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={control}
-                  name="transferDetails.multiStopDetails.dropoffLocation"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <LocationAutocomplete
-                          value={field.value}
-                          onChange={field.onChange}
-                          placeholder="Enter final dropoff location"
-                          label="Final Dropoff Location"
-                          icon={<FaMapMarkerAlt className="h-4 w-4 text-red-600" />}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              {/* Stops Management */}
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="font-medium">Intermediate Stops</h4>
-                  <Button
-                    onClick={handleAddStop}
-                    size="sm"
-                    className="package-button-fix"
-                  >
-                    <FaPlus className="h-4 w-4 mr-2" />
-                    Add Stop
-                  </Button>
-                </div>
-
-                <div className="space-y-3">
-                  <AnimatePresence>
-                    {(watchedData.multiStopDetails?.stops || []).map((stop) => (
-                      <StopCard
-                        key={stop.id}
-                        stop={stop}
-                        onUpdate={handleUpdateStop}
-                        onRemove={handleRemoveStop}
-                        isEditing={editingStop === stop.id}
-                        onEdit={setEditingStop}
-                        onCancelEdit={() => setEditingStop(null)}
-                      />
-                    ))}
-                  </AnimatePresence>
-                </div>
-              </div>
             </div>
           </CardContent>
         </Card>

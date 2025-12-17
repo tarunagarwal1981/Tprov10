@@ -40,27 +40,25 @@ export async function GET(
       query<any>(`SELECT * FROM transfer_point_to_point_pricing WHERE package_id::text = $1 ORDER BY display_order`, [id]),
     ]);
 
-    // Fetch vehicle images for all vehicles
-    const vehicleIds = (vehiclesResult.rows || []).map((v: any) => v.id);
+    // Fetch vehicle images for all vehicles.
+    // We avoid array parameters / ANY() to keep the Lambda query layer simple.
     const vehicleImagesMap: { [key: string]: any[] } = {};
-    
-    if (vehicleIds.length > 0) {
-      const vehicleImagesResult = await query<any>(
-        `SELECT * FROM transfer_vehicle_images WHERE vehicle_id::text = ANY($1::text[]) ORDER BY display_order`,
-        [vehicleIds]
+    const vehiclesRaw = vehiclesResult.rows || [];
+
+    for (const vehicle of vehiclesRaw) {
+      const vehicleId = vehicle.id;
+      if (!vehicleId) continue;
+
+      const imagesForVehicle = await query<any>(
+        `SELECT * FROM transfer_vehicle_images WHERE vehicle_id::text = $1 ORDER BY display_order`,
+        [vehicleId]
       );
-      
-      // Group images by vehicle_id
-      (vehicleImagesResult.rows || []).forEach((img: any) => {
-        if (!vehicleImagesMap[img.vehicle_id]) {
-          vehicleImagesMap[img.vehicle_id] = [];
-        }
-        vehicleImagesMap[img.vehicle_id]!.push(img);
-      });
+
+      vehicleImagesMap[vehicleId] = imagesForVehicle.rows || [];
     }
 
     // Attach vehicle images to vehicles
-    const vehiclesWithImages = (vehiclesResult.rows || []).map((vehicle: any) => ({
+    const vehiclesWithImages = vehiclesRaw.map((vehicle: any) => ({
       ...vehicle,
       vehicle_images: vehicleImagesMap[vehicle.id] || [],
     }));

@@ -89,6 +89,13 @@ export default function CreateTransferPackagePage() {
         
         console.log('✅ Package saved with all relations:', packageResult);
         toast.success("Transfer package draft saved successfully!");
+
+        // After first save, redirect to edit mode for this package
+        // so subsequent saves update instead of creating new records.
+        const newId = packageResult?.id;
+        if (newId) {
+          router.push(`/operator/packages/create/transfer?id=${newId}`);
+        }
       }
     } catch (error: any) {
       console.error("Save failed:", error);

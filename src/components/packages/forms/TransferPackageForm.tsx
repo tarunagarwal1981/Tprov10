@@ -1,21 +1,15 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import React, { useState, useMemo } from "react";
 import { useForm, FormProvider } from "react-hook-form";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   FaInfoCircle,
   FaRoute,
-  FaCar,
-  FaUserTie,
-  FaDollarSign,
-  FaCalendarAlt,
   FaEye,
   FaSave,
   FaRocket,
-  FaCheckCircle,
   FaExclamationTriangle,
-  FaSpinner,
 } from "react-icons/fa";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -26,17 +20,11 @@ import {
   TransferPackageFormProps,
   TabInfo,
   FormValidation,
-  AutoSaveState,
   DEFAULT_TRANSFER_FORM_DATA,
 } from "@/lib/types/transfer-package";
 
-// Import tab components
-import { BasicInformationTab } from "./tabs/BasicInformationTab";
+// Import tab components that are actually used
 import { TransferDetailsTab } from "./tabs/TransferDetailsTab";
-import { VehicleOptionsTab } from "./tabs/VehicleOptionsTab";
-import { DriverServiceTab } from "./tabs/DriverServiceTab";
-import { PricingPoliciesTab } from "./tabs/PricingPoliciesTab";
-import { AvailabilityBookingTab } from "./tabs/AvailabilityBookingTab";
 import { ReviewPublishTab } from "./tabs/ReviewPublishTab";
 
 // Auto-save is intentionally DISABLED to prevent creating duplicate packages
@@ -88,41 +76,6 @@ const useFormValidation = (data: TransferPackageFormData): FormValidation => {
       });
     }
 
-    // Vehicle Options validation - REMOVED (tab removed)
-    // if (data.vehicleOptions.vehicles.length === 0) {
-    //   errors.push({
-    //     tab: 'vehicle-options',
-    //     field: 'vehicles',
-    //     message: 'At least one vehicle configuration is required',
-    //     severity: 'error',
-    //   });
-    // }
-
-    // Validate that vehicles have base prices - REMOVED (tab removed)
-    // const vehiclesWithoutPrice = data.vehicleOptions.vehicles.filter(v => !v.basePrice || v.basePrice <= 0);
-    // if (vehiclesWithoutPrice.length > 0) {
-    //   errors.push({
-    //     tab: 'vehicle-options',
-    //     field: 'basePrice',
-    //     message: `${vehiclesWithoutPrice.length} vehicle(s) missing base price`,
-    //     severity: 'error',
-    //   });
-    // }
-
-    // Availability validation - COMMENTED OUT (tab removed)
-    // if (data.availabilityBooking.availableDays.length === 0) {
-    //   errors.push({
-    //     tab: 'availability-booking',
-    //     field: 'availableDays',
-    //     message: 'At least one available day is required',
-    //     severity: 'error',
-    //   });
-    // }
-
-    // Pricing validation - NOT REQUIRED
-    // Pricing (hourly and point-to-point) is optional
-    // No validation needed for pricing policies, cancellation, etc.
-
     // Warnings
     if (data.basicInformation.imageGallery.length === 0) {
       warnings.push({
@@ -142,15 +95,6 @@ const useFormValidation = (data: TransferPackageFormData): FormValidation => {
         message: 'Adding pricing options will help customers understand your rates',
       });
     }
-
-    // Vehicle warning - REMOVED (tab removed)
-    // if (data.vehicleOptions.vehicles.length < 2) {
-    //   warnings.push({
-    //     tab: 'vehicle-options',
-    //     field: 'vehicles',
-    //     message: 'Adding multiple vehicle options will give customers more choice',
-    //   });
-    // }
 
     return {
       isValid: errors.length === 0,
