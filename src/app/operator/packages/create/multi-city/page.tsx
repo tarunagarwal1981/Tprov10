@@ -75,7 +75,7 @@ export default function MultiCityPackagePage() {
           }),
           inclusions: (pkg.inclusions || []).map((inc: any) => ({
             id: inc.id,
-            // Supabase schema uses inclusion_category enum, RDS uses category text
+            // RDS uses category text field
             category: inc.category,
             text: inc.text ?? inc.description,
           })),
