@@ -901,7 +901,6 @@ const TimeSlotEditor: React.FC<{
                     size="sm"
                     onClick={() => removeTransfer(idx)}
                     className="h-6 text-xs"
-                    disabled={isFirstOrLastDay}
                   >
                     Remove
                   </Button>
