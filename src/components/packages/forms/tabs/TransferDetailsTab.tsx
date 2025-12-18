@@ -289,44 +289,46 @@ const VehicleDetailRow: React.FC<{
           <Label className="text-xs font-medium mb-1 block">
             Max Capacity *
           </Label>
-          <div className="flex items-center gap-1">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                const currentValue = localVehicle.maxCapacity || 1;
-                if (currentValue > 1) {
-                  handleFieldChange('maxCapacity', currentValue - 1);
-                }
-              }}
-              className="package-button-fix h-9 w-9 p-0"
-            >
-              -
-            </Button>
-            <Input
-              type="number"
-              min="1"
-              max="50"
-              value={localVehicle.maxCapacity}
-              onChange={(e) => handleFieldChange('maxCapacity', parseInt(e.target.value) || 1)}
-              className="package-text-fix text-center w-16 h-9 text-sm"
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                const currentValue = localVehicle.maxCapacity || 1;
-                if (currentValue < 50) {
-                  handleFieldChange('maxCapacity', currentValue + 1);
-                }
-              }}
-              className="package-button-fix h-9 w-9 p-0"
-            >
-              +
-            </Button>
-            <span className="text-xs text-gray-600 dark:text-gray-400 ml-1 whitespace-nowrap">
+          <div className="flex items-center gap-2">
+            <div className="flex items-center rounded-md overflow-hidden border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const currentValue = localVehicle.maxCapacity || 1;
+                  if (currentValue > 1) {
+                    handleFieldChange('maxCapacity', currentValue - 1);
+                  }
+                }}
+                className="package-button-fix h-9 w-8 px-0 border-0 border-r border-gray-200 dark:border-gray-700 rounded-none"
+              >
+                -
+              </Button>
+              <Input
+                type="number"
+                min="1"
+                max="50"
+                value={localVehicle.maxCapacity}
+                onChange={(e) => handleFieldChange('maxCapacity', parseInt(e.target.value) || 1)}
+                className="package-text-fix text-center w-16 h-9 text-sm border-0 rounded-none shadow-none focus-visible:ring-0"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const currentValue = localVehicle.maxCapacity || 1;
+                  if (currentValue < 50) {
+                    handleFieldChange('maxCapacity', currentValue + 1);
+                  }
+                }}
+                className="package-button-fix h-9 w-8 px-0 border-0 border-l border-gray-200 dark:border-gray-700 rounded-none"
+              >
+                +
+              </Button>
+            </div>
+            <span className="text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
               <FaUsers className="h-3 w-3 inline mr-1" />
               pax
             </span>
