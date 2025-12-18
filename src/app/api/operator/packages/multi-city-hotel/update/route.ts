@@ -235,15 +235,48 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Helper function to migrate old format to new format
+    const migrateTimeSlots = (timeSlots: any) => {
+      if (!timeSlots) {
+        return {
+          morning: { time: '08:00', title: '', activityDescription: '', transfer: '' },
+          afternoon: { time: '12:30', title: '', activityDescription: '', transfer: '' },
+          evening: { time: '17:00', title: '', activityDescription: '', transfer: '' },
+        };
+      }
+      
+      const slots = ['morning', 'afternoon', 'evening'];
+      const defaultTimes = { morning: '08:00', afternoon: '12:30', evening: '17:00' };
+      
+      const migrated: any = {};
+      slots.forEach(slot => {
+        const oldSlot = timeSlots[slot] || {};
+        // If old format (has activities/transfers arrays)
+        if (oldSlot.activities || oldSlot.transfers) {
+          migrated[slot] = {
+            time: oldSlot.time || defaultTimes[slot],
+            title: '',
+            activityDescription: Array.isArray(oldSlot.activities) ? oldSlot.activities.join('. ') : '',
+            transfer: Array.isArray(oldSlot.transfers) ? oldSlot.transfers.join('. ') : '',
+          };
+        } else {
+          // New format or default
+          migrated[slot] = {
+            time: oldSlot.time || defaultTimes[slot],
+            title: oldSlot.title || '',
+            activityDescription: oldSlot.activityDescription || '',
+            transfer: oldSlot.transfer || '',
+          };
+        }
+      });
+      return migrated;
+    };
+
     // Re-insert day plans
     if (data.days && data.days.length > 0) {
       for (const [dayIndex, day] of data.days.entries()) {
         const cityId = day.cityId ? cityIdMap[day.cityId] || null : null;
-        const timeSlots = day.timeSlots || {
-          morning: { time: '08:00', activities: [], transfers: [] },
-          afternoon: { time: '12:30', activities: [], transfers: [] },
-          evening: { time: '17:00', activities: [], transfers: [] },
-        };
+        const timeSlots = migrateTimeSlots(day.timeSlots);
 
         await query(
           `INSERT INTO multi_city_hotel_package_day_plans (

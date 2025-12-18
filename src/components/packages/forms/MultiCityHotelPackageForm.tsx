@@ -34,8 +34,9 @@ type Flight = {
 
 type TimeSlot = {
   time: string; // HH:MM format
-  activities: string[];
-  transfers: string[];
+  title: string; // Title for this time slot
+  activityDescription: string; // Description of activities
+  transfer: string; // Transfer information
 };
 
 type DayPlan = {
@@ -463,9 +464,9 @@ const BasicInformationTab: React.FC = () => {
           hasFlights: false,
           flights: [],
           timeSlots: {
-            morning: { time: "08:00", activities: [], transfers: [] },
-            afternoon: { time: "12:30", activities: [], transfers: [] },
-            evening: { time: "17:00", activities: [], transfers: [] },
+            morning: { time: "08:00", title: "", activityDescription: "", transfer: "" },
+            afternoon: { time: "12:30", title: "", activityDescription: "", transfer: "" },
+            evening: { time: "17:00", title: "", activityDescription: "", transfer: "" },
           },
         });
         
@@ -675,45 +676,18 @@ const TimeSlotEditor: React.FC<{
   days: DayPlan[];
   setValue: any;
 }> = ({ dayIndex, slotName, slot, days, setValue }) => {
-  const [activityText, setActivityText] = useState("");
-  const [transferText, setTransferText] = useState("");
-
   const updateTimeSlot = (updates: Partial<TimeSlot>) => {
     const d = [...days];
     if (!d[dayIndex]) return;
     if (!d[dayIndex]!.timeSlots) {
       d[dayIndex]!.timeSlots = {
-        morning: { time: "", activities: [], transfers: [] },
-        afternoon: { time: "", activities: [], transfers: [] },
-        evening: { time: "", activities: [], transfers: [] },
+        morning: { time: "08:00", title: "", activityDescription: "", transfer: "" },
+        afternoon: { time: "12:30", title: "", activityDescription: "", transfer: "" },
+        evening: { time: "17:00", title: "", activityDescription: "", transfer: "" },
       };
     }
     d[dayIndex]!.timeSlots![slotName] = { ...d[dayIndex]!.timeSlots![slotName], ...updates };
     setValue("days", d);
-  };
-
-  const addActivity = () => {
-    if (activityText.trim()) {
-      updateTimeSlot({ activities: [...slot.activities, activityText.trim()] });
-      setActivityText("");
-    }
-  };
-
-  const removeActivity = (index: number) => {
-    const newActivities = slot.activities.filter((_, i) => i !== index);
-    updateTimeSlot({ activities: newActivities });
-  };
-
-  const addTransfer = () => {
-    if (transferText.trim()) {
-      updateTimeSlot({ transfers: [...slot.transfers, transferText.trim()] });
-      setTransferText("");
-    }
-  };
-
-  const removeTransfer = (index: number) => {
-    const newTransfers = slot.transfers.filter((_, i) => i !== index);
-    updateTimeSlot({ transfers: newTransfers });
   };
 
   const slotLabels = {
@@ -737,7 +711,7 @@ const TimeSlotEditor: React.FC<{
 
   return (
     <div className={`p-4 border rounded-lg ${slotConfig.bgColor}`}>
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <span className="text-sm font-semibold text-gray-900">{slotConfig.label}</span>
           <span className="text-xs text-gray-600">{formatTimeForDisplay(displayTime)}</span>
@@ -751,108 +725,38 @@ const TimeSlotEditor: React.FC<{
         />
       </div>
 
-      {/* Activities Section */}
+      {/* Title Field */}
       <div className="mb-3">
-        <div className="flex gap-2 mb-2">
-          <Input
-            placeholder="Add activity..."
-            value={activityText}
-            onChange={(e) => setActivityText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                addActivity();
-              }
-            }}
-            className="package-text-fix text-sm flex-1"
-          />
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={addActivity}
-            disabled={!activityText.trim()}
-            className="text-xs h-7"
-          >
-            <FaPlus className="w-3 h-3 mr-1" />
-            Activity
-          </Button>
-        </div>
-        <div className="space-y-2">
-          {slot.activities.length === 0 && slot.transfers.length === 0 ? (
-            <p className="text-xs text-gray-500 italic">No items scheduled</p>
-          ) : (
-            <>
-              {slot.activities.map((activity, idx) => (
-                <div key={idx} className="flex items-center justify-between p-2 bg-white rounded border">
-                  <div>
-                    <p className="text-xs font-medium text-gray-900">Activity: {activity}</p>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeActivity(idx)}
-                    className="h-6 text-xs"
-                  >
-                    Remove
-                  </Button>
-                </div>
-              ))}
-            </>
-          )}
-        </div>
+        <label className="text-xs font-medium mb-1 block text-gray-700">Title</label>
+        <Input
+          placeholder="e.g., Morning Exploration, Afternoon Tour"
+          value={slot.title || ""}
+          onChange={(e) => updateTimeSlot({ title: e.target.value })}
+          className="package-text-fix text-sm"
+        />
       </div>
 
-      {/* Transfers Section */}
+      {/* Activity Description Field */}
+      <div className="mb-3">
+        <label className="text-xs font-medium mb-1 block text-gray-700">Activity Description</label>
+        <Textarea
+          placeholder="Describe the activities for this time slot..."
+          value={slot.activityDescription || ""}
+          onChange={(e) => updateTimeSlot({ activityDescription: e.target.value })}
+          className="package-text-fix text-sm min-h-[80px]"
+          rows={3}
+        />
+      </div>
+
+      {/* Transfer Field */}
       <div>
-        <div className="flex gap-2 mb-2">
-          <Input
-            placeholder="Add transfer..."
-            value={transferText}
-            onChange={(e) => setTransferText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                addTransfer();
-              }
-            }}
-            className="package-text-fix text-sm flex-1"
-          />
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={addTransfer}
-            disabled={!transferText.trim()}
-            className="text-xs h-7"
-          >
-            <FaPlus className="w-3 h-3 mr-1" />
-            Transfer
-          </Button>
-        </div>
-        <div className="space-y-2">
-          {slot.transfers.length > 0 && (
-            <>
-              {slot.transfers.map((transfer, idx) => (
-                <div key={idx} className="flex items-center justify-between p-2 bg-white rounded border">
-                  <div>
-                    <p className="text-xs font-medium text-gray-900">Transfer: {transfer}</p>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeTransfer(idx)}
-                    className="h-6 text-xs"
-                  >
-                    Remove
-                  </Button>
-                </div>
-              ))}
-            </>
-          )}
-        </div>
+        <label className="text-xs font-medium mb-1 block text-gray-700">Transfer</label>
+        <Input
+          placeholder="e.g., Hotel pickup at 8:00 AM, Transfer to restaurant"
+          value={slot.transfer || ""}
+          onChange={(e) => updateTimeSlot({ transfer: e.target.value })}
+          className="package-text-fix text-sm"
+        />
       </div>
     </div>
   );
@@ -883,26 +787,61 @@ const ItineraryTab: React.FC = () => {
     d.forEach((day, idx) => {
       if (!day.timeSlots) {
         d[idx]!.timeSlots = {
-          morning: { time: "08:00", activities: [], transfers: [] },
-          afternoon: { time: "12:30", activities: [], transfers: [] },
-          evening: { time: "17:00", activities: [], transfers: [] },
+          morning: { time: "08:00", title: "", activityDescription: "", transfer: "" },
+          afternoon: { time: "12:30", title: "", activityDescription: "", transfer: "" },
+          evening: { time: "17:00", title: "", activityDescription: "", transfer: "" },
         };
         updated = true;
       } else {
-        // Ensure default times are set if empty
+        // Migrate old format to new format if needed
         const timeSlots = d[idx]!.timeSlots!;
-        if (!timeSlots.morning.time) {
-          timeSlots.morning.time = "08:00";
-          updated = true;
-        }
-        if (!timeSlots.afternoon.time) {
-          timeSlots.afternoon.time = "12:30";
-          updated = true;
-        }
-        if (!timeSlots.evening.time) {
-          timeSlots.evening.time = "17:00";
-          updated = true;
-        }
+        const slots = ['morning', 'afternoon', 'evening'] as const;
+        const defaultTimes = { morning: '08:00', afternoon: '12:30', evening: '17:00' };
+        
+        slots.forEach(slotName => {
+          const slot = timeSlots[slotName];
+          if (slot) {
+            // Check if old format (has activities/transfers arrays)
+            if ('activities' in slot || 'transfers' in slot) {
+              const oldSlot = slot as any;
+              d[idx]!.timeSlots![slotName] = {
+                time: oldSlot.time || defaultTimes[slotName],
+                title: '',
+                activityDescription: Array.isArray(oldSlot.activities) ? oldSlot.activities.join('. ') : '',
+                transfer: Array.isArray(oldSlot.transfers) ? oldSlot.transfers.join('. ') : '',
+              };
+              updated = true;
+            } else {
+              // Ensure default times are set if empty
+              if (!slot.time) {
+                d[idx]!.timeSlots![slotName] = {
+                  ...slot,
+                  time: defaultTimes[slotName],
+                };
+                updated = true;
+              }
+              // Ensure all required fields exist
+              if (!('title' in slot) || !('activityDescription' in slot) || !('transfer' in slot)) {
+                d[idx]!.timeSlots![slotName] = {
+                  time: slot.time || defaultTimes[slotName],
+                  title: 'title' in slot ? slot.title : '',
+                  activityDescription: 'activityDescription' in slot ? slot.activityDescription : '',
+                  transfer: 'transfer' in slot ? slot.transfer : '',
+                };
+                updated = true;
+              }
+            }
+          } else {
+            // Slot doesn't exist, create it
+            d[idx]!.timeSlots![slotName] = {
+              time: defaultTimes[slotName],
+              title: '',
+              activityDescription: '',
+              transfer: '',
+            };
+            updated = true;
+          }
+        });
       }
     });
     if (updated) {

@@ -63,11 +63,43 @@ export default function MultiCityHotelPackagePage() {
           })),
           connections: [],
           days: (pkg.day_plans || []).map((d: any) => {
-            const timeSlots = d.time_slots || {
-              morning: { time: "08:00", activities: [], transfers: [] },
-              afternoon: { time: "12:30", activities: [], transfers: [] },
-              evening: { time: "17:00", activities: [], transfers: [] },
+            // Helper function to migrate old format to new format when loading
+            const migrateTimeSlotsForLoad = (timeSlots: any) => {
+              if (!timeSlots) {
+                return {
+                  morning: { time: "08:00", title: "", activityDescription: "", transfer: "" },
+                  afternoon: { time: "12:30", title: "", activityDescription: "", transfer: "" },
+                  evening: { time: "17:00", title: "", activityDescription: "", transfer: "" },
+                };
+              }
+              
+              const slots = ['morning', 'afternoon', 'evening'];
+              const defaultTimes = { morning: '08:00', afternoon: '12:30', evening: '17:00' };
+              
+              const migrated: any = {};
+              slots.forEach(slot => {
+                const oldSlot = timeSlots[slot] || {};
+                if (oldSlot.activities || oldSlot.transfers) {
+                  // Old format - migrate
+                  migrated[slot] = {
+                    time: oldSlot.time || defaultTimes[slot],
+                    title: '',
+                    activityDescription: Array.isArray(oldSlot.activities) ? oldSlot.activities.join('. ') : '',
+                    transfer: Array.isArray(oldSlot.transfers) ? oldSlot.transfers.join('. ') : '',
+                  };
+                } else {
+                  // New format
+                  migrated[slot] = {
+                    time: oldSlot.time || defaultTimes[slot],
+                    title: oldSlot.title || '',
+                    activityDescription: oldSlot.activityDescription || '',
+                    transfer: oldSlot.transfer || '',
+                  };
+                }
+              });
+              return migrated;
             };
+
             return {
               cityId: d.city_id || "",
               cityName: d.city_name || "",
@@ -76,7 +108,7 @@ export default function MultiCityHotelPackagePage() {
               photoUrl: d.photo_url || "",
               hasFlights: d.has_flights || false,
               flights: [],
-              timeSlots,
+              timeSlots: migrateTimeSlotsForLoad(d.time_slots),
             };
           }),
           inclusions: (pkg.inclusions || []).map((inc: any) => ({
