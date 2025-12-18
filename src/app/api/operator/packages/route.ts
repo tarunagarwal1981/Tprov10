@@ -298,16 +298,84 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    // Combine transfer packages with images
+    // Fetch pricing for transfer packages
+    let transferHourlyPricing: any[] = [];
+    let transferPointToPointPricing: any[] = [];
+    let transferVehicles: any[] = [];
+    
+    if (transferPackageIds.length > 0) {
+      try {
+        // Fetch hourly pricing
+        const hourlyPricingResult = await query<any>(
+          `SELECT package_id, rate_usd, hours
+           FROM transfer_hourly_pricing
+           WHERE package_id::text = ANY($1::text[])
+           ORDER BY display_order`,
+          [transferPackageIds]
+        );
+        transferHourlyPricing = hourlyPricingResult.rows || [];
+      } catch (error: any) {
+        if (error.message?.includes('does not exist') || error.code === '42P01') {
+          console.warn('transfer_hourly_pricing table not found, skipping pricing data');
+        } else {
+          console.warn('Error fetching hourly pricing (non-fatal):', error.message);
+        }
+      }
+
+      try {
+        // Fetch point-to-point pricing
+        const p2pPricingResult = await query<any>(
+          `SELECT package_id, cost_usd, from_location, to_location
+           FROM transfer_point_to_point_pricing
+           WHERE package_id::text = ANY($1::text[])
+           ORDER BY display_order`,
+          [transferPackageIds]
+        );
+        transferPointToPointPricing = p2pPricingResult.rows || [];
+      } catch (error: any) {
+        if (error.message?.includes('does not exist') || error.code === '42P01') {
+          console.warn('transfer_point_to_point_pricing table not found, skipping pricing data');
+        } else {
+          console.warn('Error fetching point-to-point pricing (non-fatal):', error.message);
+        }
+      }
+
+      try {
+        // Fetch vehicles
+        const vehiclesResult = await query<any>(
+          `SELECT package_id, id, name, vehicle_type, passenger_capacity
+           FROM transfer_package_vehicles
+           WHERE package_id::text = ANY($1::text[])
+           ORDER BY display_order`,
+          [transferPackageIds]
+        );
+        transferVehicles = vehiclesResult.rows || [];
+      } catch (error: any) {
+        if (error.message?.includes('does not exist') || error.code === '42P01') {
+          console.warn('transfer_package_vehicles table not found, skipping vehicle data');
+        } else {
+          console.warn('Error fetching vehicles (non-fatal):', error.message);
+        }
+      }
+    }
+
+    // Combine transfer packages with images, pricing, and vehicles
     const transferPackages = (transferPackagesResult.rows || []).map((pkg: any) => {
       const pkgImages = transferImages.filter((img: any) => img.package_id === pkg.id);
       const coverImage = pkgImages.find((img: any) => img.is_cover);
       const imageUrl = coverImage?.public_url || pkgImages[0]?.public_url || '';
+      
+      const pkgHourlyPricing = transferHourlyPricing.filter((p: any) => p.package_id === pkg.id);
+      const pkgPointToPointPricing = transferPointToPointPricing.filter((p: any) => p.package_id === pkg.id);
+      const pkgVehicles = transferVehicles.filter((v: any) => v.package_id === pkg.id);
 
       return {
         ...pkg,
         imageUrl,
         images: pkgImages,
+        hourly_pricing: pkgHourlyPricing,
+        point_to_point_pricing: pkgPointToPointPricing,
+        vehicles: pkgVehicles,
       };
     });
 

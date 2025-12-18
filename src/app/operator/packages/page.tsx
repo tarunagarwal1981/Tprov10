@@ -144,7 +144,7 @@ export default function PackagesPage() {
 					};
 				});
 
-				// Transform transfer packages (simplified - may need more fields from the API)
+				// Transform transfer packages with pricing and vehicle data
 				const transferPackagesWithCardData: TransferPackageCardData[] = (Array.isArray(transferData) ? transferData : []).map((pkg: any) => ({
 					id: pkg.id,
 					title: pkg.title || '',
@@ -157,9 +157,22 @@ export default function PackagesPage() {
 						public_url: img.public_url || null,
 						alt_text: img.alt_text || null,
 					})),
-					vehicles: [], // Will be populated if needed from a separate API call
-					hourly_pricing: [],
-					point_to_point_pricing: [],
+					vehicles: (pkg.vehicles || []).map((v: any) => ({
+						id: v.id || '',
+						name: v.name || '',
+						vehicle_type: v.vehicle_type || '',
+						passenger_capacity: v.passenger_capacity || 0,
+						vehicle_images: [], // Vehicle images can be fetched separately if needed
+					})),
+					hourly_pricing: (pkg.hourly_pricing || []).map((p: any) => ({
+						rate_usd: Number(p.rate_usd) || 0,
+						hours: Number(p.hours) || 0,
+					})),
+					point_to_point_pricing: (pkg.point_to_point_pricing || []).map((p: any) => ({
+						cost_usd: Number(p.cost_usd) || 0,
+						from_location: p.from_location || '',
+						to_location: p.to_location || '',
+					})),
 				}));
 
 				// Store activity packages and transfer packages separately
