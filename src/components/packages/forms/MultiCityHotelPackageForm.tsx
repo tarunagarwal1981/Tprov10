@@ -730,8 +730,7 @@ const TimeSlotEditor: React.FC<{
   slot: TimeSlot;
   days: DayPlan[];
   setValue: any;
-  isFirstOrLastDay: boolean;
-}> = ({ dayIndex, slotName, slot, days, setValue, isFirstOrLastDay }) => {
+}> = ({ dayIndex, slotName, slot, days, setValue }) => {
   const [activityText, setActivityText] = useState("");
   const [transferText, setTransferText] = useState("");
 
@@ -822,14 +821,13 @@ const TimeSlotEditor: React.FC<{
               }
             }}
             className="package-text-fix text-sm flex-1"
-            disabled={isFirstOrLastDay}
           />
           <Button
             type="button"
             size="sm"
             variant="outline"
             onClick={addActivity}
-            disabled={isFirstOrLastDay || !activityText.trim()}
+            disabled={!activityText.trim()}
             className="text-xs h-7"
           >
             <FaPlus className="w-3 h-3 mr-1" />
@@ -852,7 +850,6 @@ const TimeSlotEditor: React.FC<{
                     size="sm"
                     onClick={() => removeActivity(idx)}
                     className="h-6 text-xs"
-                    disabled={isFirstOrLastDay}
                   >
                     Remove
                   </Button>
@@ -877,14 +874,13 @@ const TimeSlotEditor: React.FC<{
               }
             }}
             className="package-text-fix text-sm flex-1"
-            disabled={isFirstOrLastDay}
           />
           <Button
             type="button"
             size="sm"
             variant="outline"
             onClick={addTransfer}
-            disabled={isFirstOrLastDay || !transferText.trim()}
+            disabled={!transferText.trim()}
             className="text-xs h-7"
           >
             <FaPlus className="w-3 h-3 mr-1" />
@@ -1068,7 +1064,6 @@ const ItineraryTab: React.FC = () => {
                         slot={day.timeSlots.morning}
                         days={days}
                         setValue={setValue}
-                        isFirstOrLastDay={dayIndex === 0 || dayIndex === days.length - 1}
                       />
                       <TimeSlotEditor
                         dayIndex={dayIndex}
@@ -1076,7 +1071,6 @@ const ItineraryTab: React.FC = () => {
                         slot={day.timeSlots.afternoon}
                         days={days}
                         setValue={setValue}
-                        isFirstOrLastDay={dayIndex === 0 || dayIndex === days.length - 1}
                       />
                       <TimeSlotEditor
                         dayIndex={dayIndex}
@@ -1084,7 +1078,6 @@ const ItineraryTab: React.FC = () => {
                         slot={day.timeSlots.evening}
                         days={days}
                         setValue={setValue}
-                        isFirstOrLastDay={dayIndex === 0 || dayIndex === days.length - 1}
                       />
                     </>
                   )}
