@@ -67,7 +67,9 @@ type CityStop = {
   name: string;
   country?: string;
   nights: number;
+  /** @deprecated This field is no longer used in the UI. Kept for backward compatibility. */
   highlights: string[];
+  /** @deprecated This field is no longer used in the UI. Kept for backward compatibility. */
   activitiesIncluded: string[];
   expanded?: boolean;
   hotels: HotelOption[];
@@ -646,18 +648,6 @@ const BasicInformationTab: React.FC = () => {
                   {/* Add Hotel Form - Simple Component */}
                   <HotelFormRow cityIndex={idx} field={field} setValue={setValue} />
                 </div>
-
-                {/* Highlights Section */}
-                <div>
-                  <label className="text-sm font-medium mb-1 block">Highlights</label>
-                  <HighlightsEditor fieldIndex={idx} />
-                </div>
-
-                {/* Activities Included Section */}
-                <div>
-                  <label className="text-sm font-medium mb-1 block">Activities Included</label>
-                  <ActivitiesIncludedEditor fieldIndex={idx} />
-                </div>
               </div>
             ))}
           </div>
@@ -676,52 +666,6 @@ const BasicInformationTab: React.FC = () => {
     </div>
   );
 };
-
-
-const HighlightsEditor: React.FC<{ fieldIndex: number }> = ({ fieldIndex }) => {
-  const { control } = useFormContext<MultiCityPackageFormData>();
-  const { fields, append, remove } = useFieldArray({ control: control as any, name: `cities.${fieldIndex}.highlights` as any });
-  const [value, setValue] = useState("");
-  return (
-    <div className="space-y-2">
-      <div className="flex gap-2">
-        <Input value={value} onChange={(e) => setValue(e.target.value)} placeholder="e.g., Eiffel Tower" />
-        <Button type="button" onClick={() => { if (value.trim()) { append(value.trim() as any); setValue(""); } }}>Add</Button>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {fields.map((f, i) => (
-          <Badge key={f.id} variant="secondary" className="flex items-center gap-2">
-            <span>{(f as unknown as string) || "Item"}</span>
-            <button type="button" onClick={() => remove(i)} aria-label="remove" className="text-xs">×</button>
-          </Badge>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-const ACTIVITIES_LIBRARY = ["City Tour", "Museum Visit", "Cooking Class", "Wine Tasting", "Boat Cruise", "Hiking", "Cycling", "Food Tour"];
-
-const ActivitiesIncludedEditor: React.FC<{ fieldIndex: number }> = ({ fieldIndex }) => {
-  const { control, watch, setValue } = useFormContext<MultiCityPackageFormData>();
-  const { fields } = useFieldArray({ control: control as any, name: `cities.${fieldIndex}.activitiesIncluded` as any });
-  const selected = (watch(`cities.${fieldIndex}.activitiesIncluded`) as string[]) || [];
-  const toggle = (name: string) => {
-    const set = new Set(selected);
-    if (set.has(name)) set.delete(name); else set.add(name);
-    setValue(`cities.${fieldIndex}.activitiesIncluded`, Array.from(set));
-  };
-  return (
-    <div className="flex flex-wrap gap-2">
-      {ACTIVITIES_LIBRARY.map(act => (
-        <Button key={act} type="button" variant={selected.includes(act) ? "default" : "outline"} onClick={() => toggle(act)} className="h-8 px-3 text-xs">
-          {act}
-        </Button>
-      ))}
-    </div>
-  );
-};
-
 
 // Time Slot Editor Component
 const TimeSlotEditor: React.FC<{ 
