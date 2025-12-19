@@ -297,29 +297,49 @@ export async function POST(request: NextRequest) {
       console.log(`[Update-Hotel] Inserting ${data.days.length} day plans`);
       console.log(`[Update-Hotel] cityIdMap:`, cityIdMap);
       for (const [dayIndex, day] of data.days.entries()) {
+        console.log(`[Update-Hotel] Day ${dayIndex + 1} data:`, {
+          cityId: day.cityId,
+          cityName: day.cityName,
+          title: day.title,
+          description: day.description,
+          timeSlots: day.timeSlots,
+        });
         const cityId = day.cityId ? cityIdMap[day.cityId] || null : null;
         if (day.cityId && !cityId) {
           console.warn(`[Update-Hotel] Day ${dayIndex + 1} has cityId ${day.cityId} but not found in cityIdMap`);
         }
         const timeSlots = migrateTimeSlots(day.timeSlots);
+        console.log(`[Update-Hotel] Day ${dayIndex + 1} migrated timeSlots:`, timeSlots);
 
-        await query(
-          `INSERT INTO multi_city_hotel_package_day_plans (
-            package_id, city_id, day_number, city_name, title, description, photo_url, has_flights, time_slots
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-          [
-            packageId,
-            cityId,
-            dayIndex + 1,
-            day.cityName || null,
-            day.title || null,
-            day.description || null,
-            day.photoUrl || null,
-            false,
-            JSON.stringify(timeSlots),
-          ]
-        );
-        console.log(`[Update-Hotel] Inserted day ${dayIndex + 1} (cityId: ${day.cityId} -> dbCityId: ${cityId})`);
+        try {
+          const insertResult = await query(
+            `INSERT INTO multi_city_hotel_package_day_plans (
+              package_id, city_id, day_number, city_name, title, description, photo_url, has_flights, time_slots
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            RETURNING id, title, description, time_slots`,
+            [
+              packageId,
+              cityId,
+              dayIndex + 1,
+              day.cityName || null,
+              day.title || null,
+              day.description || null,
+              day.photoUrl || null,
+              false,
+              JSON.stringify(timeSlots),
+            ]
+          );
+          const inserted = insertResult.rows?.[0];
+          console.log(`[Update-Hotel] ✅ Inserted day ${dayIndex + 1}:`, {
+            id: inserted?.id,
+            title: inserted?.title,
+            description: inserted?.description?.substring(0, 50),
+            timeSlotsSaved: !!inserted?.time_slots,
+          });
+        } catch (error: any) {
+          console.error(`[Update-Hotel] ❌ Failed to insert day ${dayIndex + 1}:`, error.message);
+          throw error;
+        }
       }
     } else {
       console.warn('[Update-Hotel] No days provided in data.days');
@@ -374,13 +394,48 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Verify the data was saved correctly
+    console.log('[Update-Hotel] Verifying saved data...');
+    try {
+      const verifyDayPlans = await query<any>(
+        `SELECT id, title, description, time_slots 
+         FROM multi_city_hotel_package_day_plans 
+         WHERE package_id::text = $1 
+         ORDER BY day_number ASC 
+         LIMIT 5`,
+        [packageId]
+      );
+      console.log('[Update-Hotel] Verified day plans:', verifyDayPlans.rows?.map((d: any) => ({
+        title: d.title,
+        hasDescription: !!d.description,
+        hasTimeSlots: !!d.time_slots,
+        timeSlotsSample: d.time_slots ? Object.keys(d.time_slots) : null,
+      })));
+
+      const verifyPricing = await query<any>(
+        `SELECT pp.pricing_type, 
+                COUNT(DISTINCT pr.id)::int as sic_rows,
+                COUNT(DISTINCT ppr.id)::int as private_rows
+         FROM multi_city_hotel_pricing_packages pp
+         LEFT JOIN multi_city_hotel_pricing_rows pr ON pr.pricing_package_id = pp.id
+         LEFT JOIN multi_city_hotel_private_package_rows ppr ON ppr.pricing_package_id = pp.id
+         WHERE pp.package_id::text = $1
+         GROUP BY pp.pricing_type`,
+        [packageId]
+      );
+      console.log('[Update-Hotel] Verified pricing:', verifyPricing.rows);
+    } catch (verifyError: any) {
+      console.warn('[Update-Hotel] Verification query failed (non-fatal):', verifyError.message);
+    }
+
     return NextResponse.json({
       success: true,
       packageId,
       message: isDraft ? 'Package draft updated successfully' : 'Package updated and published successfully',
     });
   } catch (error: any) {
-    console.error('Error updating multi-city hotel package:', error);
+    console.error('[Update-Hotel] ❌ Error updating multi-city hotel package:', error);
+    console.error('[Update-Hotel] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     return NextResponse.json(
       { error: 'Failed to update package', details: error.message ?? 'Unknown error' },
       { status: 500 }

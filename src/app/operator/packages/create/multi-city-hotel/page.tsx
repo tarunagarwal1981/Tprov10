@@ -204,6 +204,13 @@ export default function MultiCityHotelPackagePage() {
       });
       console.log("[MultiCityHotel] Cities data:", data.cities);
       console.log("[MultiCityHotel] Days data:", data.days);
+      if (data.days && data.days.length > 0 && data.days[0]) {
+        console.log("[MultiCityHotel] First day sample:", {
+          title: data.days[0].title,
+          description: data.days[0].description,
+          timeSlots: data.days[0].timeSlots,
+        });
+      }
       console.log("[MultiCityHotel] Pricing data:", data.pricing);
 
       if (!user?.id) {
