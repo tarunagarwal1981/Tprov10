@@ -218,37 +218,51 @@ export async function POST(request: NextRequest) {
       if (data.pricing?.pricingType === 'SIC' && data.pricing?.pricingRows) {
         console.log(`[Update] Inserting ${data.pricing.pricingRows.length} SIC pricing rows`);
         for (const [index, row] of data.pricing.pricingRows.entries()) {
-          await query(
-            `INSERT INTO multi_city_pricing_rows (
-              pricing_package_id, number_of_adults, number_of_children, total_price, display_order
-            ) VALUES ($1, $2, $3, $4, $5)`,
-            [
-              pricingPackageId,
-              row.numberOfAdults,
-              row.numberOfChildren,
-              row.totalPrice,
-              index + 1,
-            ]
-          );
+          try {
+            const result = await query(
+              `INSERT INTO multi_city_pricing_rows (
+                pricing_package_id, number_of_adults, number_of_children, total_price, display_order
+              ) VALUES ($1, $2, $3, $4, $5)
+              RETURNING id, number_of_adults, number_of_children, total_price`,
+              [
+                pricingPackageId,
+                row.numberOfAdults,
+                row.numberOfChildren,
+                row.totalPrice,
+                index + 1,
+              ]
+            );
+            console.log(`[Update] ✅ Inserted SIC row ${index + 1}:`, result.rows?.[0]);
+          } catch (error: any) {
+            console.error(`[Update] ❌ Failed to insert SIC row ${index + 1}:`, error.message);
+            throw error;
+          }
         }
       } else if (data.pricing?.pricingType === 'PRIVATE_PACKAGE' && data.pricing?.privatePackageRows) {
         console.log(`[Update] Inserting ${data.pricing.privatePackageRows.length} private package pricing rows`);
         for (const [index, row] of data.pricing.privatePackageRows.entries()) {
-          await query(
-            `INSERT INTO multi_city_private_package_rows (
-              pricing_package_id, number_of_adults, number_of_children, car_type,
-              vehicle_capacity, total_price, display_order
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-            [
-              pricingPackageId,
-              row.numberOfAdults,
-              row.numberOfChildren,
-              row.carType,
-              row.vehicleCapacity,
-              row.totalPrice,
-              index + 1,
-            ]
-          );
+          try {
+            const result = await query(
+              `INSERT INTO multi_city_private_package_rows (
+                pricing_package_id, number_of_adults, number_of_children, car_type,
+                vehicle_capacity, total_price, display_order
+              ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+              RETURNING id, number_of_adults, number_of_children, total_price`,
+              [
+                pricingPackageId,
+                row.numberOfAdults,
+                row.numberOfChildren,
+                row.carType,
+                row.vehicleCapacity,
+                row.totalPrice,
+                index + 1,
+              ]
+            );
+            console.log(`[Update] ✅ Inserted Private row ${index + 1}:`, result.rows?.[0]);
+          } catch (error: any) {
+            console.error(`[Update] ❌ Failed to insert Private row ${index + 1}:`, error.message);
+            throw error;
+          }
         }
       } else {
         console.warn(`[Update] Pricing type ${data.pricing?.pricingType} but no matching rows provided`);
@@ -314,24 +328,36 @@ export async function POST(request: NextRequest) {
         const timeSlots = migrateTimeSlots(day.timeSlots);
         console.log(`[Update] Day ${dayIndex + 1} migrated timeSlots:`, timeSlots);
 
-        await query(
-          `INSERT INTO multi_city_package_day_plans (
-            package_id, city_id, day_number, city_name, title, description,
-            photo_url, has_flights, time_slots
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-          [
-            packageId,
-            dbCityId,
-            dayIndex + 1,
-            day.cityName || null,
-            day.title || null,
-            day.description || null,
-            day.photoUrl || null,
-            false,
-            JSON.stringify(timeSlots),
-          ]
-        );
-        console.log(`[Update] Inserted day ${dayIndex + 1}: title="${day.title}", description="${day.description?.substring(0, 50)}..."`);
+        try {
+          const insertResult = await query(
+            `INSERT INTO multi_city_package_day_plans (
+              package_id, city_id, day_number, city_name, title, description,
+              photo_url, has_flights, time_slots
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            RETURNING id, title, description, time_slots`,
+            [
+              packageId,
+              dbCityId,
+              dayIndex + 1,
+              day.cityName || null,
+              day.title || null,
+              day.description || null,
+              day.photoUrl || null,
+              false,
+              JSON.stringify(timeSlots),
+            ]
+          );
+          const inserted = insertResult.rows?.[0];
+          console.log(`[Update] ✅ Inserted day ${dayIndex + 1}:`, {
+            id: inserted?.id,
+            title: inserted?.title,
+            description: inserted?.description?.substring(0, 50),
+            timeSlotsSaved: !!inserted?.time_slots,
+          });
+        } catch (error: any) {
+          console.error(`[Update] ❌ Failed to insert day ${dayIndex + 1}:`, error.message);
+          throw error;
+        }
       }
     } else {
       console.warn('[Update] No days provided in data.days');
@@ -373,13 +399,48 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Verify the data was saved correctly
+    console.log('[Update] Verifying saved data...');
+    try {
+      const verifyDayPlans = await query<any>(
+        `SELECT id, title, description, time_slots 
+         FROM multi_city_package_day_plans 
+         WHERE package_id::text = $1 
+         ORDER BY day_number ASC 
+         LIMIT 5`,
+        [packageId]
+      );
+      console.log('[Update] Verified day plans:', verifyDayPlans.rows?.map((d: any) => ({
+        title: d.title,
+        hasDescription: !!d.description,
+        hasTimeSlots: !!d.time_slots,
+        timeSlotsSample: d.time_slots ? Object.keys(d.time_slots) : null,
+      })));
+
+      const verifyPricing = await query<any>(
+        `SELECT pp.pricing_type, 
+                COUNT(DISTINCT pr.id)::int as sic_rows,
+                COUNT(DISTINCT ppr.id)::int as private_rows
+         FROM multi_city_pricing_packages pp
+         LEFT JOIN multi_city_pricing_rows pr ON pr.pricing_package_id = pp.id
+         LEFT JOIN multi_city_private_package_rows ppr ON ppr.pricing_package_id = pp.id
+         WHERE pp.package_id::text = $1
+         GROUP BY pp.pricing_type`,
+        [packageId]
+      );
+      console.log('[Update] Verified pricing:', verifyPricing.rows);
+    } catch (verifyError: any) {
+      console.warn('[Update] Verification query failed (non-fatal):', verifyError.message);
+    }
+
     return NextResponse.json({
       success: true,
       packageId,
       message: isDraft ? 'Package draft updated successfully' : 'Package updated and published successfully',
     });
   } catch (error: any) {
-    console.error('Error updating multi-city package:', error);
+    console.error('[Update] ❌ Error updating multi-city package:', error);
+    console.error('[Update] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     return NextResponse.json(
       { error: 'Failed to update package', details: error.message ?? 'Unknown error' },
       { status: 500 }
