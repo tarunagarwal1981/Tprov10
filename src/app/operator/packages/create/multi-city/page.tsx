@@ -67,8 +67,8 @@ export default function MultiCityPackagePage() {
                 };
               }
               
-              const slots = ['morning', 'afternoon', 'evening'];
-              const defaultTimes = { morning: '08:00', afternoon: '12:30', evening: '17:00' };
+              const slots: ('morning' | 'afternoon' | 'evening')[] = ['morning', 'afternoon', 'evening'];
+              const defaultTimes: { morning: string; afternoon: string; evening: string } = { morning: '08:00', afternoon: '12:30', evening: '17:00' };
               
               const migrated: any = {};
               slots.forEach(slot => {

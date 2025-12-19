@@ -636,11 +636,12 @@ const ItineraryTab: React.FC = () => {
               }
               // Ensure all required fields exist
               if (!('title' in slot) || !('activityDescription' in slot) || !('transfer' in slot)) {
+                const slotWithDefaults = slot as any;
                 d[idx]!.timeSlots![slotName] = {
-                  time: slot.time || defaultTimes[slotName],
-                  title: 'title' in slot ? slot.title : '',
-                  activityDescription: 'activityDescription' in slot ? slot.activityDescription : '',
-                  transfer: 'transfer' in slot ? slot.transfer : '',
+                  time: slotWithDefaults.time || defaultTimes[slotName],
+                  title: 'title' in slotWithDefaults ? slotWithDefaults.title : '',
+                  activityDescription: 'activityDescription' in slotWithDefaults ? slotWithDefaults.activityDescription : '',
+                  transfer: 'transfer' in slotWithDefaults ? slotWithDefaults.transfer : '',
                 };
                 updated = true;
               }

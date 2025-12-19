@@ -799,11 +799,11 @@ const ItineraryTab: React.FC = () => {
         const defaultTimes = { morning: '08:00', afternoon: '12:30', evening: '17:00' };
         
         slots.forEach(slotName => {
-          const slot = timeSlots[slotName];
+          const slot = timeSlots[slotName] as any;
           if (slot) {
             // Check if old format (has activities/transfers arrays)
             if ('activities' in slot || 'transfers' in slot) {
-              const oldSlot = slot as any;
+              const oldSlot = slot;
               d[idx]!.timeSlots![slotName] = {
                 time: oldSlot.time || defaultTimes[slotName],
                 title: '',
@@ -822,11 +822,12 @@ const ItineraryTab: React.FC = () => {
               }
               // Ensure all required fields exist
               if (!('title' in slot) || !('activityDescription' in slot) || !('transfer' in slot)) {
+                const slotWithDefaults = slot as any;
                 d[idx]!.timeSlots![slotName] = {
-                  time: slot.time || defaultTimes[slotName],
-                  title: 'title' in slot ? slot.title : '',
-                  activityDescription: 'activityDescription' in slot ? slot.activityDescription : '',
-                  transfer: 'transfer' in slot ? slot.transfer : '',
+                  time: slotWithDefaults.time || defaultTimes[slotName],
+                  title: 'title' in slotWithDefaults ? slotWithDefaults.title : '',
+                  activityDescription: 'activityDescription' in slotWithDefaults ? slotWithDefaults.activityDescription : '',
+                  transfer: 'transfer' in slotWithDefaults ? slotWithDefaults.transfer : '',
                 };
                 updated = true;
               }
