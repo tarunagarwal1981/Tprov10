@@ -387,7 +387,7 @@ export default function Hero() {
           transition={{ duration: 0.6, delay: 1 }}
         >
           <CTAButton
-            href="/phone-login"
+            href="/login"
             label="Get Started Free"
             icon={FiArrowRight}
             variant="primary"

@@ -119,7 +119,7 @@ export function Hero() {
               className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center sm:justify-center lg:justify-start"
             >
               <Link
-                href="/phone-login"
+                href="/login"
                 className="inline-flex items-center justify-center px-8 py-4 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold text-lg shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300"
               >
                 I&apos;m a Tour Operator
@@ -129,7 +129,7 @@ export function Hero() {
               </Link>
               
               <Link
-                href="/phone-login"
+                href="/login"
                 className="inline-flex items-center justify-center px-8 py-4 rounded-xl bg-white text-slate-900 font-semibold text-lg border-2 border-slate-200 hover:border-blue-600 hover:bg-blue-50 shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
               >
                 I&apos;m a Travel Agent

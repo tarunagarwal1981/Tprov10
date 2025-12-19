@@ -216,7 +216,7 @@ export default function MarketingHeader() {
             <Link href="/login" className={styles.loginButton}>
               Login
             </Link>
-            <Link href="/phone-login" className={styles.getStartedButton}>
+            <Link href="/login" className={styles.getStartedButton}>
               <span className={styles.buttonText}>Get Started</span>
               <FiStar className={styles.buttonIcon} />
               <div
@@ -432,7 +432,7 @@ export default function MarketingHeader() {
                   Login
                 </Link>
                 <Link
-                  href="/phone-login"
+                  href="/login"
                   className={styles.mobileGetStartedButton}
                   onClick={closeMobileMenu}
                 >

@@ -215,7 +215,7 @@ export function Pricing() {
                     ))}
                   </div>
 
-                  <Link href={plan.cta === 'Contact Sales' ? '/contact' : '/phone-login'} className="w-full">
+                  <Link href={plan.cta === 'Contact Sales' ? '/contact' : '/login'} className="w-full">
                     <Button
                       variant={plan.ctaVariant}
                       size="lg"
