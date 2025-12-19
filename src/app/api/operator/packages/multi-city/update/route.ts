@@ -12,6 +12,18 @@ export async function POST(request: NextRequest) {
   try {
     const data = await request.json();
     const { operatorId, packageId, isDraft = false } = data;
+    
+    console.log('[Update] Received data:', {
+      hasCities: !!data.cities,
+      citiesCount: data.cities?.length || 0,
+      hasDays: !!data.days,
+      daysCount: data.days?.length || 0,
+      pricingType: data.pricing?.pricingType,
+      hasPricingRows: !!data.pricing?.pricingRows,
+      pricingRowsCount: data.pricing?.pricingRows?.length || 0,
+      hasPrivateRows: !!data.pricing?.privatePackageRows,
+      privateRowsCount: data.pricing?.privatePackageRows?.length || 0,
+    });
 
     if (!operatorId || !packageId) {
       return NextResponse.json(
@@ -199,6 +211,10 @@ export async function POST(request: NextRequest) {
     const pricingPackageId = pricingResult?.rows?.[0]?.id as string | undefined;
 
     if (pricingPackageId) {
+      console.log(`[Update] Pricing type: ${data.pricing?.pricingType}`);
+      console.log(`[Update] Has SIC rows: ${data.pricing?.pricingRows?.length || 0}`);
+      console.log(`[Update] Has Private rows: ${data.pricing?.privatePackageRows?.length || 0}`);
+      
       if (data.pricing?.pricingType === 'SIC' && data.pricing?.pricingRows) {
         console.log(`[Update] Inserting ${data.pricing.pricingRows.length} SIC pricing rows`);
         for (const [index, row] of data.pricing.pricingRows.entries()) {
@@ -235,7 +251,8 @@ export async function POST(request: NextRequest) {
           );
         }
       } else {
-        console.warn(`[Update] Pricing type ${data.pricing?.pricingType} but no rows provided`);
+        console.warn(`[Update] Pricing type ${data.pricing?.pricingType} but no matching rows provided`);
+        console.warn(`[Update] Available: SIC rows=${data.pricing?.pricingRows?.length || 0}, Private rows=${data.pricing?.privatePackageRows?.length || 0}`);
       }
     } else {
       console.warn('[Update] No pricing package ID created');
@@ -283,11 +300,19 @@ export async function POST(request: NextRequest) {
       console.log(`[Update] Inserting ${data.days.length} day plans`);
       console.log(`[Update] cityIdMap:`, cityIdMap);
       for (const [dayIndex, day] of data.days.entries()) {
+        console.log(`[Update] Day ${dayIndex + 1} data:`, {
+          cityId: day.cityId,
+          cityName: day.cityName,
+          title: day.title,
+          description: day.description,
+          timeSlots: day.timeSlots,
+        });
         const dbCityId = day.cityId ? cityIdMap[day.cityId] || null : null;
         if (day.cityId && !dbCityId) {
           console.warn(`[Update] Day ${dayIndex + 1} has cityId ${day.cityId} but not found in cityIdMap`);
         }
         const timeSlots = migrateTimeSlots(day.timeSlots);
+        console.log(`[Update] Day ${dayIndex + 1} migrated timeSlots:`, timeSlots);
 
         await query(
           `INSERT INTO multi_city_package_day_plans (
@@ -306,7 +331,7 @@ export async function POST(request: NextRequest) {
             JSON.stringify(timeSlots),
           ]
         );
-        console.log(`[Update] Inserted day ${dayIndex + 1} (cityId: ${day.cityId} -> dbCityId: ${dbCityId})`);
+        console.log(`[Update] Inserted day ${dayIndex + 1}: title="${day.title}", description="${day.description?.substring(0, 50)}..."`);
       }
     } else {
       console.warn('[Update] No days provided in data.days');

@@ -199,6 +199,13 @@ export default function MultiCityPackagePage() {
       });
       console.log("[MultiCity] Cities data:", data.cities);
       console.log("[MultiCity] Days data:", data.days);
+      if (data.days && data.days.length > 0 && data.days[0]) {
+        console.log("[MultiCity] First day sample:", {
+          title: data.days[0].title,
+          description: data.days[0].description,
+          timeSlots: data.days[0].timeSlots,
+        });
+      }
       console.log("[MultiCity] Pricing data:", data.pricing);
 
       if (!user?.id) {
