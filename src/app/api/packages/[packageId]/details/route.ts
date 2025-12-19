@@ -116,40 +116,38 @@ export async function GET(
       }
     }
 
-    // If no day plans, fetch cities as fallback
+    // Always fetch cities (needed for form editing)
     let cities: any[] = [];
     let hotels: any[] = [];
     const hotelsByCity: Record<string, any[]> = {};
 
-    if (dayPlans.length === 0) {
-      const citiesResult = await query<any>(
-        `SELECT * 
-         FROM ${citiesTable} 
-         WHERE package_id::text = $1 
-         ORDER BY ${isHotelPackage ? 'display_order' : 'city_order'} ASC`,
-        [packageId]
+    const citiesResult = await query<any>(
+      `SELECT * 
+       FROM ${citiesTable} 
+       WHERE package_id::text = $1 
+       ORDER BY ${isHotelPackage ? 'display_order' : 'city_order'} ASC`,
+      [packageId]
+    );
+    cities = citiesResult.rows || [];
+
+    // Fetch hotels if hotel package
+    if (isHotelPackage && hotelsTable && cities.length > 0) {
+      const cityIds = cities.map((c: any) => c.id);
+      const hotelsResult = await query<any>(
+        `SELECT * FROM ${hotelsTable} 
+         WHERE city_id::text = ANY($1::text[]) 
+         ORDER BY display_order ASC`,
+        [cityIds]
       );
-      cities = citiesResult.rows || [];
+      hotels = hotelsResult.rows || [];
 
-      // Fetch hotels if hotel package
-      if (isHotelPackage && hotelsTable && cities.length > 0) {
-        const cityIds = cities.map((c: any) => c.id);
-        const hotelsResult = await query<any>(
-          `SELECT * FROM ${hotelsTable} 
-           WHERE city_id::text = ANY($1::text[]) 
-           ORDER BY display_order ASC`,
-          [cityIds]
-        );
-        hotels = hotelsResult.rows || [];
-
-        // Group hotels by city
-        hotels.forEach((hotel: any) => {
-          if (!hotelsByCity[hotel.city_id]) {
-            hotelsByCity[hotel.city_id] = [];
-          }
-          hotelsByCity[hotel.city_id]?.push(hotel);
-        });
-      }
+      // Group hotels by city
+      hotels.forEach((hotel: any) => {
+        if (!hotelsByCity[hotel.city_id]) {
+          hotelsByCity[hotel.city_id] = [];
+        }
+        hotelsByCity[hotel.city_id]?.push(hotel);
+      });
     }
 
     // Fetch inclusions, exclusions, cancellation tiers

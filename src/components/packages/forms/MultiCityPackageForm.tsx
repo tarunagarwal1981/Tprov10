@@ -1401,10 +1401,23 @@ export const MultiCityPackageForm: React.FC<{
   className?: string;
 }> = ({ initialData, onSave, onPublish, onPreview, className }) => {
   const form = useForm<MultiCityPackageFormData>({ defaultValues: { ...DEFAULT_DATA, ...initialData } });
-  const { handleSubmit, watch } = form;
+  const { handleSubmit, watch, reset } = form;
   const formData = watch();
   const [activeTab, setActiveTab] = useState("basic");
   const validation = useFormValidation(formData);
+
+  // Reset form when initialData changes (for editing existing packages)
+  React.useEffect(() => {
+    if (initialData) {
+      const mergedData = { ...DEFAULT_DATA, ...initialData };
+      reset(mergedData);
+      console.log("[MultiCityForm] Form reset with initialData:", {
+        cities: mergedData.cities?.length || 0,
+        days: mergedData.days?.length || 0,
+        pricingType: mergedData.pricing?.pricingType,
+      });
+    }
+  }, [initialData, reset]);
   // Auto-save disabled
   // const autoSave = useAutoSave(formData, onSave);
 

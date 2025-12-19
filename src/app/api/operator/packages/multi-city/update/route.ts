@@ -141,7 +141,12 @@ export async function POST(request: NextRequest) {
 
     // Re-insert cities
     if (data.cities && data.cities.length > 0) {
+      console.log(`[Update] Inserting ${data.cities.length} cities`);
       for (const [index, city] of data.cities.entries()) {
+        if (!city.name || !city.nights) {
+          console.warn(`[Update] Skipping invalid city at index ${index}:`, city);
+          continue;
+        }
         const cityResult = await query<{ id: string }>(
           `INSERT INTO multi_city_package_cities (
             package_id, name, country, nights, highlights, activities_included, city_order
@@ -160,14 +165,18 @@ export async function POST(request: NextRequest) {
 
         if (cityResult.rows && cityResult.rows[0]) {
           cityIdMap[city.id] = cityResult.rows[0].id;
+          console.log(`[Update] Mapped city ${city.id} -> ${cityResult.rows[0].id} (${city.name})`);
         }
       }
+    } else {
+      console.warn('[Update] No cities provided in data.cities');
     }
 
     // Re-insert pricing configuration
     const pricingType = (data.pricing?.pricingType || 'SIC').toUpperCase();
     let pricingResult;
     if (data.pricing) {
+      console.log(`[Update] Inserting pricing package (type: ${pricingType})`);
       pricingResult = await query<{ id: string }>(
         `INSERT INTO multi_city_pricing_packages (
           package_id, package_name, pricing_type, has_child_age_restriction,
@@ -183,12 +192,15 @@ export async function POST(request: NextRequest) {
           data.pricing?.hasChildAgeRestriction ? data.pricing.childMaxAge : null,
         ]
       );
+    } else {
+      console.warn('[Update] No pricing data provided');
     }
 
     const pricingPackageId = pricingResult?.rows?.[0]?.id as string | undefined;
 
     if (pricingPackageId) {
       if (data.pricing?.pricingType === 'SIC' && data.pricing?.pricingRows) {
+        console.log(`[Update] Inserting ${data.pricing.pricingRows.length} SIC pricing rows`);
         for (const [index, row] of data.pricing.pricingRows.entries()) {
           await query(
             `INSERT INTO multi_city_pricing_rows (
@@ -203,9 +215,8 @@ export async function POST(request: NextRequest) {
             ]
           );
         }
-      }
-
-      if (data.pricing?.pricingType === 'PRIVATE_PACKAGE' && data.pricing?.privatePackageRows) {
+      } else if (data.pricing?.pricingType === 'PRIVATE_PACKAGE' && data.pricing?.privatePackageRows) {
+        console.log(`[Update] Inserting ${data.pricing.privatePackageRows.length} private package pricing rows`);
         for (const [index, row] of data.pricing.privatePackageRows.entries()) {
           await query(
             `INSERT INTO multi_city_private_package_rows (
@@ -223,7 +234,11 @@ export async function POST(request: NextRequest) {
             ]
           );
         }
+      } else {
+        console.warn(`[Update] Pricing type ${data.pricing?.pricingType} but no rows provided`);
       }
+    } else {
+      console.warn('[Update] No pricing package ID created');
     }
 
     // Helper function to migrate old format to new format
@@ -265,8 +280,13 @@ export async function POST(request: NextRequest) {
 
     // Re-insert day plans
     if (data.days && data.days.length > 0) {
+      console.log(`[Update] Inserting ${data.days.length} day plans`);
+      console.log(`[Update] cityIdMap:`, cityIdMap);
       for (const [dayIndex, day] of data.days.entries()) {
         const dbCityId = day.cityId ? cityIdMap[day.cityId] || null : null;
+        if (day.cityId && !dbCityId) {
+          console.warn(`[Update] Day ${dayIndex + 1} has cityId ${day.cityId} but not found in cityIdMap`);
+        }
         const timeSlots = migrateTimeSlots(day.timeSlots);
 
         await query(
@@ -286,7 +306,10 @@ export async function POST(request: NextRequest) {
             JSON.stringify(timeSlots),
           ]
         );
+        console.log(`[Update] Inserted day ${dayIndex + 1} (cityId: ${day.cityId} -> dbCityId: ${dbCityId})`);
       }
+    } else {
+      console.warn('[Update] No days provided in data.days');
     }
 
     // Re-insert inclusions

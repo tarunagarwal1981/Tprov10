@@ -134,7 +134,12 @@ export async function POST(request: NextRequest) {
 
     // Re-insert cities and hotels
     if (data.cities && data.cities.length > 0) {
+      console.log(`[Update-Hotel] Inserting ${data.cities.length} cities`);
       for (const [index, city] of data.cities.entries()) {
+        if (!city.name || !city.nights) {
+          console.warn(`[Update-Hotel] Skipping invalid city at index ${index}:`, city);
+          continue;
+        }
         const cityResult = await query<{ id: string }>(
           `INSERT INTO multi_city_hotel_package_cities (
             package_id, name, country, nights, highlights, activities_included, display_order
@@ -154,6 +159,7 @@ export async function POST(request: NextRequest) {
         if (cityResult.rows && cityResult.rows[0]) {
           const insertedCityId = cityResult.rows[0].id;
           cityIdMap[city.id] = insertedCityId;
+          console.log(`[Update-Hotel] Mapped city ${city.id} -> ${insertedCityId} (${city.name})`);
 
           if (city.hotels && city.hotels.length > 0) {
             for (const [hotelIndex, hotel] of city.hotels.entries()) {
@@ -180,6 +186,7 @@ export async function POST(request: NextRequest) {
     // Re-insert pricing configuration
     let pricingPackageId: string | undefined;
     if (data.pricing) {
+      console.log(`[Update-Hotel] Inserting pricing package (type: ${data.pricing.pricingType})`);
       const pricingResult = await query<{ id: string }>(
         `INSERT INTO multi_city_hotel_pricing_packages (
           package_id, pricing_type, has_child_age_restriction, child_min_age, child_max_age
@@ -195,10 +202,13 @@ export async function POST(request: NextRequest) {
       );
 
       pricingPackageId = pricingResult.rows?.[0]?.id;
+    } else {
+      console.warn('[Update-Hotel] No pricing data provided');
     }
 
     if (pricingPackageId) {
       if (data.pricing?.pricingType === 'SIC' && data.pricing.pricingRows) {
+        console.log(`[Update-Hotel] Inserting ${data.pricing.pricingRows.length} SIC pricing rows`);
         for (const [index, row] of data.pricing.pricingRows.entries()) {
           await query(
             `INSERT INTO multi_city_hotel_pricing_rows (
@@ -213,9 +223,8 @@ export async function POST(request: NextRequest) {
             ]
           );
         }
-      }
-
-      if (data.pricing?.pricingType === 'PRIVATE_PACKAGE' && data.pricing.privatePackageRows) {
+      } else if (data.pricing?.pricingType === 'PRIVATE_PACKAGE' && data.pricing.privatePackageRows) {
+        console.log(`[Update-Hotel] Inserting ${data.pricing.privatePackageRows.length} private package pricing rows`);
         for (const [index, row] of data.pricing.privatePackageRows.entries()) {
           await query(
             `INSERT INTO multi_city_hotel_private_package_rows (
@@ -232,7 +241,11 @@ export async function POST(request: NextRequest) {
             ]
           );
         }
+      } else {
+        console.warn(`[Update-Hotel] Pricing type ${data.pricing?.pricingType} but no rows provided`);
       }
+    } else {
+      console.warn('[Update-Hotel] No pricing package ID created');
     }
 
     // Helper function to migrate old format to new format
@@ -274,8 +287,13 @@ export async function POST(request: NextRequest) {
 
     // Re-insert day plans
     if (data.days && data.days.length > 0) {
+      console.log(`[Update-Hotel] Inserting ${data.days.length} day plans`);
+      console.log(`[Update-Hotel] cityIdMap:`, cityIdMap);
       for (const [dayIndex, day] of data.days.entries()) {
         const cityId = day.cityId ? cityIdMap[day.cityId] || null : null;
+        if (day.cityId && !cityId) {
+          console.warn(`[Update-Hotel] Day ${dayIndex + 1} has cityId ${day.cityId} but not found in cityIdMap`);
+        }
         const timeSlots = migrateTimeSlots(day.timeSlots);
 
         await query(
@@ -294,7 +312,10 @@ export async function POST(request: NextRequest) {
             JSON.stringify(timeSlots),
           ]
         );
+        console.log(`[Update-Hotel] Inserted day ${dayIndex + 1} (cityId: ${day.cityId} -> dbCityId: ${cityId})`);
       }
+    } else {
+      console.warn('[Update-Hotel] No days provided in data.days');
     }
 
     // Re-insert inclusions

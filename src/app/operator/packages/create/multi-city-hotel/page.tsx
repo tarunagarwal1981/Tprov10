@@ -62,55 +62,68 @@ export default function MultiCityHotelPackagePage() {
             })),
           })),
           connections: [],
-          days: (pkg.day_plans || []).map((d: any) => {
-            // Helper function to migrate old format to new format when loading
-            const migrateTimeSlotsForLoad = (timeSlots: any) => {
-              if (!timeSlots) {
-                return {
-                  morning: { time: "08:00", title: "", activityDescription: "", transfer: "" },
-                  afternoon: { time: "12:30", title: "", activityDescription: "", transfer: "" },
-                  evening: { time: "17:00", title: "", activityDescription: "", transfer: "" },
-                };
+          days: (() => {
+            // Create a map from database city_id to form city.id for proper linking
+            const cityIdMap: Record<string, string> = {};
+            (pkg.cities || []).forEach((c: any) => {
+              if (c.id) {
+                cityIdMap[c.id] = c.id; // Map database city_id to form city.id (same value)
               }
-              
-              const slots: ('morning' | 'afternoon' | 'evening')[] = ['morning', 'afternoon', 'evening'];
-              const defaultTimes: { morning: string; afternoon: string; evening: string } = { morning: '08:00', afternoon: '12:30', evening: '17:00' };
-              
-              const migrated: any = {};
-              slots.forEach(slot => {
-                const oldSlot = timeSlots[slot] || {};
-                if (oldSlot.activities || oldSlot.transfers) {
-                  // Old format - migrate
-                  migrated[slot] = {
-                    time: oldSlot.time || defaultTimes[slot],
-                    title: '',
-                    activityDescription: Array.isArray(oldSlot.activities) ? oldSlot.activities.join('. ') : '',
-                    transfer: Array.isArray(oldSlot.transfers) ? oldSlot.transfers.join('. ') : '',
-                  };
-                } else {
-                  // New format
-                  migrated[slot] = {
-                    time: oldSlot.time || defaultTimes[slot],
-                    title: oldSlot.title || '',
-                    activityDescription: oldSlot.activityDescription || '',
-                    transfer: oldSlot.transfer || '',
+            });
+
+            return (pkg.day_plans || []).map((d: any) => {
+              // Helper function to migrate old format to new format when loading
+              const migrateTimeSlotsForLoad = (timeSlots: any) => {
+                if (!timeSlots) {
+                  return {
+                    morning: { time: "08:00", title: "", activityDescription: "", transfer: "" },
+                    afternoon: { time: "12:30", title: "", activityDescription: "", transfer: "" },
+                    evening: { time: "17:00", title: "", activityDescription: "", transfer: "" },
                   };
                 }
-              });
-              return migrated;
-            };
+                
+                const slots: ('morning' | 'afternoon' | 'evening')[] = ['morning', 'afternoon', 'evening'];
+                const defaultTimes: { morning: string; afternoon: string; evening: string } = { morning: '08:00', afternoon: '12:30', evening: '17:00' };
+                
+                const migrated: any = {};
+                slots.forEach(slot => {
+                  const oldSlot = timeSlots[slot] || {};
+                  if (oldSlot.activities || oldSlot.transfers) {
+                    // Old format - migrate
+                    migrated[slot] = {
+                      time: oldSlot.time || defaultTimes[slot],
+                      title: '',
+                      activityDescription: Array.isArray(oldSlot.activities) ? oldSlot.activities.join('. ') : '',
+                      transfer: Array.isArray(oldSlot.transfers) ? oldSlot.transfers.join('. ') : '',
+                    };
+                  } else {
+                    // New format
+                    migrated[slot] = {
+                      time: oldSlot.time || defaultTimes[slot],
+                      title: oldSlot.title || '',
+                      activityDescription: oldSlot.activityDescription || '',
+                      transfer: oldSlot.transfer || '',
+                    };
+                  }
+                });
+                return migrated;
+              };
 
-            return {
-              cityId: d.city_id || "",
-              cityName: d.city_name || "",
-              title: d.title || "",
-              description: d.description || "",
-              photoUrl: d.photo_url || "",
-              hasFlights: d.has_flights || false,
-              flights: [],
-              timeSlots: migrateTimeSlotsForLoad(d.time_slots),
-            };
-          }),
+              // Map database city_id to form city.id
+              const formCityId = d.city_id ? (cityIdMap[d.city_id] || d.city_id) : "";
+
+              return {
+                cityId: formCityId,
+                cityName: d.city_name || "",
+                title: d.title || "",
+                description: d.description || "",
+                photoUrl: d.photo_url || "",
+                hasFlights: d.has_flights || false,
+                flights: [],
+                timeSlots: migrateTimeSlotsForLoad(d.time_slots),
+              };
+            });
+          })(),
           inclusions: (pkg.inclusions || []).map((inc: any) => ({
             id: inc.id,
             category: inc.category,
@@ -159,6 +172,12 @@ export default function MultiCityHotelPackagePage() {
           },
         };
 
+        console.log("[MultiCityHotel] Loaded package data:", {
+          cities: mapped.cities?.length || 0,
+          days: mapped.days?.length || 0,
+          pricingType: mapped.pricing?.pricingType,
+          pricingRows: mapped.pricing?.pricingRows?.length || 0,
+        });
         setInitialData(mapped);
         setCurrentPackageId(pkg.id);
         toast.success(isViewMode ? "Multi-city hotel package loaded" : "Multi-city hotel package loaded for editing");
@@ -176,7 +195,16 @@ export default function MultiCityHotelPackagePage() {
 
   const handleSave = async (data: MultiCityPackageFormData) => {
     try {
-      console.log("[MultiCityHotel] Save draft:", data);
+      console.log("[MultiCityHotel] Save draft:", {
+        cities: data.cities?.length || 0,
+        days: data.days?.length || 0,
+        pricingType: data.pricing?.pricingType,
+        pricingRows: data.pricing?.pricingRows?.length || 0,
+        privatePackageRows: data.pricing?.privatePackageRows?.length || 0,
+      });
+      console.log("[MultiCityHotel] Cities data:", data.cities);
+      console.log("[MultiCityHotel] Days data:", data.days);
+      console.log("[MultiCityHotel] Pricing data:", data.pricing);
 
       if (!user?.id) {
         throw new Error("User not authenticated");
@@ -187,15 +215,23 @@ export default function MultiCityHotelPackagePage() {
         ? "/api/operator/packages/multi-city-hotel/update"
         : "/api/operator/packages/multi-city-hotel/create";
 
+      const payload = {
+        ...data,
+        operatorId: user.id,
+        packageId: currentPackageId,
+        isDraft: true,
+      };
+
+      console.log("[MultiCityHotel] Sending payload to", endpoint, ":", {
+        cities: payload.cities?.length || 0,
+        days: payload.days?.length || 0,
+        pricingType: payload.pricing?.pricingType,
+      });
+
       const response = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          operatorId: user.id,
-          packageId: currentPackageId,
-          isDraft: true,
-          ...data,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
