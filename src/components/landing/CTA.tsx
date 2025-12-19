@@ -66,7 +66,7 @@ export function CTA() {
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">
-            <Link href="/auth/register">
+            <Link href="/phone-login">
               <Button
                 size="lg"
                 className="w-full sm:w-auto h-16 px-10 bg-white hover:bg-slate-50 text-blue-600 font-semibold shadow-2xl hover:shadow-3xl hover:-translate-y-1 transition-all duration-300 text-lg group"

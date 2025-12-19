@@ -127,7 +127,7 @@ export function HowItWorks() {
                 Join thousands of travel professionals who are already growing their business with TravelSelBuy
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Link href="/register">
+                <Link href="/phone-login">
                   <Button
                     size="lg"
                     className="px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300"

@@ -326,7 +326,7 @@ export default function CTASection() {
           transition={{ duration: 0.6, delay: 0.8 }}
         >
           <MagneticButton
-            href="/auth/register"
+            href="/phone-login"
             variant="primary"
             icon={FiArrowRight}
           >

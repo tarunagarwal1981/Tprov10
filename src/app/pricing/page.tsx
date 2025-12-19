@@ -124,7 +124,7 @@ export default function PricingPage() {
                       {plan.description}
                     </p>
                   </div>
-                  <Link href={plan.cta === 'Contact Sales' ? '/contact' : '/register'}>
+                  <Link href={plan.cta === 'Contact Sales' ? '/contact' : '/phone-login'}>
                     <button
                       className={`w-full py-3 px-6 rounded-lg font-semibold mb-6 transition-colors ${
                         plan.popular

@@ -151,7 +151,7 @@ export default function ForTravelAgentsPage() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <a
-                href="/auth/register?role=travel_agent"
+                href="/phone-login"
                 className="inline-block bg-gradient-to-r from-orange-500 to-yellow-500 text-white font-semibold px-8 py-4 rounded-full hover:shadow-lg transition-all"
               >
                 Start Free Trial
@@ -278,7 +278,7 @@ export default function ForTravelAgentsPage() {
               Join 10,000+ travel agents who&apos;ve already made the switch
             </p>
             <a
-              href="/auth/register?role=travel_agent"
+              href="/phone-login"
               className="inline-flex items-center gap-2 bg-gradient-to-r from-orange-500 to-yellow-500 text-white font-semibold px-8 py-4 rounded-full hover:shadow-lg transition-all hover:scale-105"
             >
               Get Started Free

@@ -159,7 +159,7 @@ export default function ForTourOperatorsPage() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <a
-                href="/auth/register?role=tour_operator"
+                href="/phone-login"
                 className="inline-block bg-gradient-to-r from-orange-500 to-yellow-500 text-white font-semibold px-8 py-4 rounded-full hover:shadow-lg transition-all"
               >
                 List Your Packages Free
@@ -346,7 +346,7 @@ export default function ForTourOperatorsPage() {
               Join 500+ tour operators already growing their business with TravelSelBuy
             </p>
             <a
-              href="/auth/register?role=tour_operator"
+              href="/phone-login"
               className="inline-flex items-center gap-2 bg-gradient-to-r from-orange-500 to-yellow-500 text-white font-semibold px-8 py-4 rounded-full hover:shadow-lg transition-all hover:scale-105"
             >
               List Your First Package Free

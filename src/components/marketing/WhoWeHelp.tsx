@@ -37,7 +37,7 @@ const audiences = [
       'Competitive commissions'
     ],
     ctaText: 'Join as Agent',
-    ctaLink: '/auth/register?role=travel_agent',
+    ctaLink: '/phone-login',
   },
   {
     id: 'tour-operators',
@@ -52,7 +52,7 @@ const audiences = [
       'Analytics dashboard'
     ],
     ctaText: 'Join as Operator',
-    ctaLink: '/auth/register?role=tour_operator',
+    ctaLink: '/phone-login',
   },
   {
     id: 'freelancers',
@@ -67,7 +67,7 @@ const audiences = [
       'No setup fees'
     ],
     ctaText: 'Start Freelancing',
-    ctaLink: '/auth/register?role=freelancer',
+    ctaLink: '/phone-login',
   },
 ];
 
@@ -220,7 +220,7 @@ export default function WhoWeHelp() {
           animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
           transition={{ duration: 0.6, delay: 0.8 }}
         >
-          <Link href="/auth/register" className={styles.mainCTA}>
+          <Link href="/phone-login" className={styles.mainCTA}>
             Join the Network
             <FiArrowRight className={styles.mainCTAIcon} />
           </Link>
