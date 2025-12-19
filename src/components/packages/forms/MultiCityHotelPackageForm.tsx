@@ -1294,7 +1294,8 @@ const PricingDatesTab: React.FC = () => {
       </Card>
 
       {/* SIC Pricing: Tabular Format */}
-      {pricing.pricingType === "SIC" && (
+      {/* Show SIC pricing if it's selected OR if there are existing SIC rows */}
+      {(pricing.pricingType === "SIC" || pricing.pricingRows.length > 0) && (
       <Card className="package-selector-glass package-shadow-fix">
         <CardHeader>
             <CardTitle>SIC Pricing</CardTitle>
@@ -1421,7 +1422,8 @@ const PricingDatesTab: React.FC = () => {
       )}
 
       {/* Private Package Pricing: Tabular Format */}
-      {pricing.pricingType === "PRIVATE_PACKAGE" && (
+      {/* Show Private Package pricing if it's selected OR if there are existing private package rows */}
+      {(pricing.pricingType === "PRIVATE_PACKAGE" || pricing.privatePackageRows.length > 0) && (
         <Card className="package-selector-glass package-shadow-fix">
           <CardHeader>
             <CardTitle>Private Package Pricing</CardTitle>

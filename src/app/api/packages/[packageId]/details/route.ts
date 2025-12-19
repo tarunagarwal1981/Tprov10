@@ -62,24 +62,26 @@ export async function GET(
     let sicRows: any[] = [];
     let privateRows: any[] = [];
 
+    // Load both SIC and private package rows if pricing package exists
+    // This allows both pricing types to be available simultaneously
     if (pricingPkg) {
-      if (pricingPkg.pricing_type === 'SIC') {
-        const sicResult = await query<any>(
-          `SELECT * FROM ${sicRowsTable} 
-           WHERE pricing_package_id::text = $1 
-           ORDER BY display_order ASC`,
-          [pricingPkg.id]
-        );
-        sicRows = sicResult.rows || [];
-      } else if (pricingPkg.pricing_type === 'PRIVATE_PACKAGE') {
-        const privateResult = await query<any>(
-          `SELECT * FROM ${privateRowsTable} 
-           WHERE pricing_package_id::text = $1 
-           ORDER BY display_order ASC`,
-          [pricingPkg.id]
-        );
-        privateRows = privateResult.rows || [];
-      }
+      // Always try to load SIC rows
+      const sicResult = await query<any>(
+        `SELECT * FROM ${sicRowsTable} 
+         WHERE pricing_package_id::text = $1 
+         ORDER BY display_order ASC`,
+        [pricingPkg.id]
+      );
+      sicRows = sicResult.rows || [];
+
+      // Always try to load private package rows
+      const privateResult = await query<any>(
+        `SELECT * FROM ${privateRowsTable} 
+         WHERE pricing_package_id::text = $1 
+         ORDER BY display_order ASC`,
+        [pricingPkg.id]
+      );
+      privateRows = privateResult.rows || [];
     }
 
     // Fetch day plans (with backward compatibility for time_slots)
