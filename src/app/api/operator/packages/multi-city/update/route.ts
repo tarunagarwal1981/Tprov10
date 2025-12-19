@@ -215,7 +215,8 @@ export async function POST(request: NextRequest) {
       console.log(`[Update] Has SIC rows: ${data.pricing?.pricingRows?.length || 0}`);
       console.log(`[Update] Has Private rows: ${data.pricing?.privatePackageRows?.length || 0}`);
       
-      if (data.pricing?.pricingType === 'SIC' && data.pricing?.pricingRows) {
+      // Save SIC rows if they exist (regardless of selected pricing type)
+      if (data.pricing?.pricingRows && data.pricing.pricingRows.length > 0) {
         console.log(`[Update] Inserting ${data.pricing.pricingRows.length} SIC pricing rows`);
         for (const [index, row] of data.pricing.pricingRows.entries()) {
           try {
@@ -238,7 +239,10 @@ export async function POST(request: NextRequest) {
             throw error;
           }
         }
-      } else if (data.pricing?.pricingType === 'PRIVATE_PACKAGE' && data.pricing?.privatePackageRows) {
+      }
+      
+      // Save Private Package rows if they exist (regardless of selected pricing type)
+      if (data.pricing?.privatePackageRows && data.pricing.privatePackageRows.length > 0) {
         console.log(`[Update] Inserting ${data.pricing.privatePackageRows.length} private package pricing rows`);
         for (const [index, row] of data.pricing.privatePackageRows.entries()) {
           try {
@@ -264,9 +268,11 @@ export async function POST(request: NextRequest) {
             throw error;
           }
         }
-      } else {
-        console.warn(`[Update] Pricing type ${data.pricing?.pricingType} but no matching rows provided`);
-        console.warn(`[Update] Available: SIC rows=${data.pricing?.pricingRows?.length || 0}, Private rows=${data.pricing?.privatePackageRows?.length || 0}`);
+      }
+      
+      if ((!data.pricing?.pricingRows || data.pricing.pricingRows.length === 0) && 
+          (!data.pricing?.privatePackageRows || data.pricing.privatePackageRows.length === 0)) {
+        console.warn(`[Update] No pricing rows provided (SIC or Private)`);
       }
     } else {
       console.warn('[Update] No pricing package ID created');

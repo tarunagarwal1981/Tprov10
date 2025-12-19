@@ -135,8 +135,8 @@ export async function POST(request: NextRequest) {
 
     const pricingPackageId = pricingResult.rows[0].id;
 
-    // Insert SIC pricing rows
-    if (data.pricing?.pricingType === 'SIC' && data.pricing?.pricingRows && pricingPackageId) {
+    // Insert SIC pricing rows if they exist (regardless of selected pricing type)
+    if (data.pricing?.pricingRows && data.pricing.pricingRows.length > 0 && pricingPackageId) {
       for (const [index, row] of data.pricing.pricingRows.entries()) {
         await query(
           `INSERT INTO multi_city_pricing_rows (
@@ -153,8 +153,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Insert private package rows
-    if (data.pricing?.pricingType === 'PRIVATE_PACKAGE' && data.pricing?.privatePackageRows && pricingPackageId) {
+    // Insert private package rows if they exist (regardless of selected pricing type)
+    if (data.pricing?.privatePackageRows && data.pricing.privatePackageRows.length > 0 && pricingPackageId) {
       for (const [index, row] of data.pricing.privatePackageRows.entries()) {
         await query(
           `INSERT INTO multi_city_private_package_rows (

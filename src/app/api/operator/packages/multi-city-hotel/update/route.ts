@@ -207,7 +207,8 @@ export async function POST(request: NextRequest) {
     }
 
     if (pricingPackageId) {
-      if (data.pricing?.pricingType === 'SIC' && data.pricing.pricingRows) {
+      // Save SIC rows if they exist (regardless of selected pricing type)
+      if (data.pricing?.pricingRows && data.pricing.pricingRows.length > 0) {
         console.log(`[Update-Hotel] Inserting ${data.pricing.pricingRows.length} SIC pricing rows`);
         for (const [index, row] of data.pricing.pricingRows.entries()) {
           await query(
@@ -223,7 +224,10 @@ export async function POST(request: NextRequest) {
             ]
           );
         }
-      } else if (data.pricing?.pricingType === 'PRIVATE_PACKAGE' && data.pricing.privatePackageRows) {
+      }
+      
+      // Save Private Package rows if they exist (regardless of selected pricing type)
+      if (data.pricing?.privatePackageRows && data.pricing.privatePackageRows.length > 0) {
         console.log(`[Update-Hotel] Inserting ${data.pricing.privatePackageRows.length} private package pricing rows`);
         for (const [index, row] of data.pricing.privatePackageRows.entries()) {
           await query(
@@ -241,8 +245,11 @@ export async function POST(request: NextRequest) {
             ]
           );
         }
-      } else {
-        console.warn(`[Update-Hotel] Pricing type ${data.pricing?.pricingType} but no rows provided`);
+      }
+      
+      if ((!data.pricing?.pricingRows || data.pricing.pricingRows.length === 0) && 
+          (!data.pricing?.privatePackageRows || data.pricing.privatePackageRows.length === 0)) {
+        console.warn(`[Update-Hotel] No pricing rows provided (SIC or Private)`);
       }
     } else {
       console.warn('[Update-Hotel] No pricing package ID created');
