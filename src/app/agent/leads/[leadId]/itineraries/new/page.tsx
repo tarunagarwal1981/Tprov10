@@ -1,17 +1,20 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { FiArrowLeft } from 'react-icons/fi';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { FiArrowLeft, FiClock, FiPlus, FiX, FiMapPin } from 'react-icons/fi';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { useAuth } from '@/context/CognitoAuthContext';
 import { useToast } from '@/hooks/useToast';
-import { QueryModal } from '@/components/agent/QueryModal';
-import { ExactMatchNotFoundDialog } from '@/components/agent/ExactMatchNotFoundDialog';
-import { PackagesTable, type PackageTableRow } from '@/components/agent/PackagesTable';
-import { LeadQuerySidebar } from '@/components/agent/LeadQuerySidebar';
-import { findExactMatches, findSimilarPackages } from '@/lib/utils/packageMatching';
+import { ActivitySelectorModal } from '@/components/itinerary/ActivitySelectorModal';
+import { TransferSelectorModal } from '@/components/itinerary/TransferSelectorModal';
 import type { ItineraryQuery } from '@/lib/services/queryService';
+import type { TimeSlot } from '@/lib/utils/timeSlots';
+import type { ActivityPackage } from '@/lib/services/smartItineraryFilter';
+import type { TransferPackage } from '@/lib/services/smartItineraryFilter';
 
 interface LeadDetails {
   id: string;
@@ -25,671 +28,669 @@ interface LeadDetails {
   travelersCount?: number;
 }
 
-interface PackageWithCities {
-  id: string;
-  title: string;
-  destination_region: string | null;
-  operator_id: string;
-  base_price: number | null;
-  adult_price: number | null;
-  currency: string;
-  total_nights: number;
-  total_cities: number;
-  featured_image_url?: string;
-  cities?: Array<{ name: string; nights: number; country?: string | null }>;
+interface ItineraryDay {
+  id?: string;
+  day_number: number;
+  date: string | null;
+  city_name: string;
+  title?: string;
+  notes?: string;
+  time_slots?: {
+    morning: { time: string; activities: string[]; transfers: string[] };
+    afternoon: { time: string; activities: string[]; transfers: string[] };
+    evening: { time: string; activities: string[]; transfers: string[] };
+  };
 }
 
-interface OperatorInfo {
+interface Itinerary {
   id: string;
   name: string;
-  email?: string;
+  status: string;
+  adults_count: number;
+  children_count: number;
+  infants_count: number;
+  start_date: string | null;
+  end_date: string | null;
+  query_id: string | null;
 }
 
 export default function CreateItineraryPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useAuth();
   const toast = useToast();
 
   const leadId = params.leadId as string;
+  const queryId = searchParams.get('queryId');
+  const itineraryId = searchParams.get('itineraryId');
 
   // State
   const [lead, setLead] = useState<LeadDetails | null>(null);
   const [query, setQuery] = useState<ItineraryQuery | null>(null);
-  const [queryModalOpen, setQueryModalOpen] = useState(false);
-  const [queryLoading, setQueryLoading] = useState(false);
+  const [itinerary, setItinerary] = useState<Itinerary | null>(null);
+  const [days, setDays] = useState<ItineraryDay[]>([]);
   const [loading, setLoading] = useState(true);
-  const [packages, setPackages] = useState<PackageTableRow[]>([]);
-  const [operators, setOperators] = useState<Record<string, OperatorInfo>>({});
-  const [showSimilarDialog, setShowSimilarDialog] = useState(false);
-  const [showingSimilar, setShowingSimilar] = useState(false);
+  const [saving, setSaving] = useState(false);
+  
+  // Activities and Transfers Repository
+  const [allActivities, setAllActivities] = useState<ActivityPackage[]>([]);
+  const [allTransfers, setAllTransfers] = useState<TransferPackage[]>([]);
+  const [loadingRepository, setLoadingRepository] = useState(true);
 
-  // Fetch lead and query data on mount
+  // Modal states
+  const [activityModalOpen, setActivityModalOpen] = useState(false);
+  const [transferModalOpen, setTransferModalOpen] = useState(false);
+  const [selectedDayIndex, setSelectedDayIndex] = useState<number | null>(null);
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlot | null>(null);
+
+  // Fetch data on mount
   useEffect(() => {
-    const fetchData = async () => {
-      if (!leadId || !user?.id) return;
+    if (leadId && user?.id) {
+      fetchData();
+      fetchRepository();
+    }
+  }, [leadId, user?.id, queryId, itineraryId]);
 
-      try {
-        // Fetch query data (optional - if not exists, query form will be shown)
-        const queryResponse = await fetch(`/api/queries/${leadId}`);
-        let queryData = null;
-        
-        if (queryResponse.ok) {
-          const result = await queryResponse.json();
-          queryData = result.query;
-        }
-        
-        // If no query exists, redirect back to lead detail page where query form will appear
-        if (!queryData || !queryData.destinations || queryData.destinations.length === 0) {
-          router.push(`/agent/leads/${leadId}`);
-          return;
-        }
-
-        setQuery(queryData);
-
-        // Fetch lead details from AWS API route
-        const leadResponse = await fetch(`/api/leads/${leadId}?agentId=${user.id}`);
-        
-        if (!leadResponse.ok) {
-          if (leadResponse.status === 404) {
-            throw new Error('Lead not found or you do not have access to it');
-          }
-          throw new Error('Failed to fetch lead details');
-        }
-
-        const { lead: leadDataRaw } = await leadResponse.json();
-
-        if (!leadDataRaw) {
-          throw new Error('Lead not found or you do not have access to it');
-        }
-
-        // Map to LeadDetails format
-        const leadData: LeadDetails = {
-          id: leadDataRaw.id,
-          destination: leadDataRaw.destination,
-          budgetMin: leadDataRaw.budgetMin ?? undefined,
-          budgetMax: leadDataRaw.budgetMax ?? undefined,
-          durationDays: leadDataRaw.durationDays ?? undefined,
-          travelersCount: leadDataRaw.travelersCount ?? undefined,
-        };
-
-        setLead(leadData);
-      } catch (err) {
-        console.error('Error fetching data:', err);
-        toast.error('Failed to load data');
-        router.push(`/agent/leads/${leadId}`);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [leadId, user?.id, router, toast]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const fetchData = async () => {
     if (!user?.id) return;
     
     setLoading(true);
     try {
-      // Fetch lead details
+      // Fetch lead
       const leadResponse = await fetch(`/api/leads/${leadId}?agentId=${user.id}`);
       if (leadResponse.ok) {
         const { lead: leadData } = await leadResponse.json();
-        if (leadData) {
-          setLead({
-            id: leadData.id,
-            destination: leadData.destination,
-            customerName: leadData.customerName,
-            customerEmail: leadData.customerEmail,
-            customerPhone: leadData.customerPhone,
-            budgetMin: leadData.budgetMin,
-            budgetMax: leadData.budgetMax,
-            durationDays: leadData.durationDays,
-            travelersCount: leadData.travelersCount,
-          });
-        }
+        setLead(leadData);
       }
 
       // Fetch query
-      const queryResponse = await fetch(`/api/queries/${leadId}`);
+      let fetchedQuery: ItineraryQuery | null = null;
+      const queryResponse = await fetch(`/api/queries/${queryId || leadId}`);
       if (queryResponse.ok) {
         const { query: queryData } = await queryResponse.json();
+        fetchedQuery = queryData;
         setQuery(queryData);
-        
-        // If query exists, fetch packages
-        if (queryData && queryData.destinations && queryData.destinations.length > 0) {
-          await fetchAndMatchPackages(queryData);
-        } else {
-          // No query exists, show query modal
-          setQueryModalOpen(true);
+      }
+
+      // Fetch itinerary if ID provided
+      if (itineraryId) {
+        const itineraryResponse = await fetch(`/api/itineraries/${itineraryId}?agentId=${user.id}`);
+        if (itineraryResponse.ok) {
+          const { itinerary: itineraryData } = await itineraryResponse.json();
+          setItinerary(itineraryData);
+
+          // Fetch days
+          const daysResponse = await fetch(`/api/itineraries/${itineraryId}/days`);
+          if (daysResponse.ok) {
+            const { days: daysData } = await daysResponse.json();
+            setDays(daysData);
+          } else {
+            // No days exist, generate from query
+            if (fetchedQuery) {
+              await generateDaysFromQuery(fetchedQuery, itineraryId);
+            }
+          }
         }
-      } else {
-        // No query exists, show query modal
-        setQueryModalOpen(true);
       }
     } catch (err) {
-      console.error('Error fetching initial data:', err);
+      console.error('Error fetching data:', err);
       toast.error('Failed to load data');
     } finally {
       setLoading(false);
     }
   };
 
-  const formatDate = (date: Date) => date.toISOString().split('T')[0];
+  const fetchRepository = async () => {
+    setLoadingRepository(true);
+    try {
+      // Fetch all activities
+      const activitiesResponse = await fetch('/api/packages/search?type=activity&limit=1000');
+      if (activitiesResponse.ok) {
+        const { packages: activities } = await activitiesResponse.json();
+        setAllActivities(activities || []);
+      }
 
-  const fetchAndMatchPackages = async (queryData: ItineraryQuery) => {
+      // Fetch all transfers
+      const transfersResponse = await fetch('/api/packages/search?type=transfer&limit=1000');
+      if (transfersResponse.ok) {
+        const { packages: transfers } = await transfersResponse.json();
+        setAllTransfers(transfers || []);
+      }
+    } catch (err) {
+      console.error('Error fetching repository:', err);
+      toast.error('Failed to load activities and transfers');
+    } finally {
+      setLoadingRepository(false);
+    }
+  };
+
+  const generateDaysFromQuery = async (queryData: ItineraryQuery, itId: string) => {
     if (!queryData.destinations || queryData.destinations.length === 0) {
       return;
     }
 
-    setLoading(true);
-    try {
-      // Fetch operators only if not already loaded
-      if (Object.keys(operators).length === 0) {
-        const operatorsResponse = await fetch('/api/operators');
-        if (operatorsResponse.ok) {
-          const { operators: operatorsData } = await operatorsResponse.json();
-          const operatorsMap: Record<string, OperatorInfo> = {};
-          operatorsData.forEach((op: any) => {
-            operatorsMap[op.id] = {
-              id: op.id,
-              name: op.name || 'Unknown Operator',
-              email: op.email,
-            };
-          });
-          setOperators(operatorsMap);
+    const startDate = queryData.leaving_on ? new Date(queryData.leaving_on) : new Date();
+    const newDays: ItineraryDay[] = [];
+    let globalDayNumber = 1;
+    const currentDate = new Date(startDate);
+
+    queryData.destinations.forEach((destination, cityIndex) => {
+      const cityName = destination.city;
+      const nights = destination.nights || 1;
+      const isLastCity = cityIndex === queryData.destinations.length - 1;
+      const isFirstCity = cityIndex === 0;
+
+      // Calculate days to create (same logic as MultiCityHotelPackageForm)
+      const daysToCreate = isFirstCity && queryData.destinations.length === 1 
+        ? nights + 1 
+        : isFirstCity 
+        ? nights + 1 
+        : nights;
+
+      for (let i = 0; i < daysToCreate; i++) {
+        const isArrivalDay = isFirstCity && i === 0;
+        const isDepartureDay = i === daysToCreate - 1;
+        const cityNightNumber = isFirstCity ? (i + 1) : (i + 2);
+
+        let dayTitle = '';
+        if (isArrivalDay) {
+          dayTitle = `Arrival - ${cityName}`;
+        } else if (isDepartureDay && !isLastCity) {
+          dayTitle = `Departure ${cityName} / Arrival ${queryData.destinations[cityIndex + 1]?.city || ''}`;
+        } else if (isDepartureDay && isLastCity) {
+          dayTitle = `Departure - ${cityName}`;
+        } else {
+          dayTitle = `Day ${globalDayNumber} - ${cityName} (Night ${cityNightNumber})`;
         }
+
+        const dayDate = new Date(currentDate);
+        dayDate.setDate(currentDate.getDate() + (isFirstCity ? i : i + (cityIndex > 0 ? 1 : 0)));
+
+        newDays.push({
+          day_number: globalDayNumber,
+          date: dayDate.toISOString().split('T')[0] || null,
+          city_name: cityName,
+          title: dayTitle,
+          time_slots: {
+            morning: { time: '08:00', activities: [], transfers: [] },
+            afternoon: { time: '12:30', activities: [], transfers: [] },
+            evening: { time: '17:00', activities: [], transfers: [] },
+          },
+        });
+
+        globalDayNumber++;
       }
 
-      // Extract cities for API call
-      const cities = queryData.destinations.map(d => d.city);
-      const citiesParam = cities.join(',');
-
-      // Fetch all packages (both types)
-      const [multiCityResponse, multiCityHotelResponse] = await Promise.all([
-        fetch(`/api/packages/multi-city?cities=${encodeURIComponent(citiesParam)}`),
-        fetch(`/api/packages/multi-city-hotel?cities=${encodeURIComponent(citiesParam)}`),
-      ]);
-
-      const allPackages: PackageWithCities[] = [];
-
-      if (multiCityResponse.ok) {
-        const { packages: multiCityPackages } = await multiCityResponse.json();
-        allPackages.push(...multiCityPackages.map((pkg: any) => ({
-          ...pkg,
-          type: 'multi_city' as const,
-        })));
-      }
-
-      if (multiCityHotelResponse.ok) {
-        const { packages: multiCityHotelPackages } = await multiCityHotelResponse.json();
-        allPackages.push(...multiCityHotelPackages.map((pkg: any) => ({
-          ...pkg,
-          type: 'multi_city_hotel' as const,
-        })));
-      }
-
-      // Find exact matches
-      const exactMatches = findExactMatches(queryData.destinations, allPackages);
-
-      if (exactMatches.length > 0) {
-        // Convert to table format
-        const tableRows: PackageTableRow[] = exactMatches.map((pkg) => ({
-          id: pkg.id,
-          title: pkg.title,
-          cities: pkg.cities || [],
-          totalNights: pkg.total_nights || 0,
-          price: pkg.base_price || pkg.adult_price || null,
-          currency: pkg.currency || 'USD',
-          operatorName: operators[pkg.operator_id]?.name,
-          featuredImageUrl: pkg.featured_image_url,
-          type: (pkg as any).type || 'multi_city',
-        }));
-        setPackages(tableRows);
-        setShowingSimilar(false);
+      if (!isLastCity) {
+        currentDate.setDate(currentDate.getDate() + nights + 1);
       } else {
-        // No exact matches, show dialog
-        setShowSimilarDialog(true);
+        currentDate.setDate(currentDate.getDate() + nights);
       }
-    } catch (err) {
-      console.error('Error fetching packages:', err);
-      toast.error('Failed to load packages');
-    } finally {
-      setLoading(false);
-    }
-  };
+    });
 
-  const handleShowSimilar = async () => {
-    if (!query) return;
-
-    setShowSimilarDialog(false);
-    setLoading(true);
-
-    try {
-      // Fetch operators only if not already loaded
-      if (Object.keys(operators).length === 0) {
-        const operatorsResponse = await fetch('/api/operators');
-        if (operatorsResponse.ok) {
-          const { operators: operatorsData } = await operatorsResponse.json();
-          const operatorsMap: Record<string, OperatorInfo> = {};
-          operatorsData.forEach((op: any) => {
-            operatorsMap[op.id] = {
-              id: op.id,
-              name: op.name || 'Unknown Operator',
-              email: op.email,
-            };
-          });
-          setOperators(operatorsMap);
-        }
-      }
-
-      // Fetch all packages again
-      const cities = query.destinations.map(d => d.city);
-      const citiesParam = cities.join(',');
-
-      const [multiCityResponse, multiCityHotelResponse] = await Promise.all([
-        fetch(`/api/packages/multi-city?cities=${encodeURIComponent(citiesParam)}`),
-        fetch(`/api/packages/multi-city-hotel?cities=${encodeURIComponent(citiesParam)}`),
-      ]);
-
-      const allPackages: PackageWithCities[] = [];
-
-      if (multiCityResponse.ok) {
-        const { packages: multiCityPackages } = await multiCityResponse.json();
-        allPackages.push(...multiCityPackages.map((pkg: any) => ({
-          ...pkg,
-          type: 'multi_city' as const,
-        })));
-      }
-
-      if (multiCityHotelResponse.ok) {
-        const { packages: multiCityHotelPackages } = await multiCityHotelResponse.json();
-        allPackages.push(...multiCityHotelPackages.map((pkg: any) => ({
-          ...pkg,
-          type: 'multi_city_hotel' as const,
-        })));
-      }
-
-      // Find similar packages
-      const similarPackages = findSimilarPackages(query.destinations, allPackages);
-
-      // Convert to table format
-      const tableRows: PackageTableRow[] = similarPackages.map((pkg) => ({
-        id: pkg.id,
-        title: pkg.title,
-        cities: pkg.cities || [],
-        totalNights: pkg.total_nights || 0,
-        price: pkg.base_price || pkg.adult_price || null,
-        currency: pkg.currency || 'USD',
-        operatorName: operators[pkg.operator_id]?.name,
-        featuredImageUrl: pkg.featured_image_url,
-        type: (pkg as any).type || 'multi_city',
-      }));
-
-      setPackages(tableRows);
-      setShowingSimilar(true);
-    } catch (err) {
-      console.error('Error fetching similar packages:', err);
-      toast.error('Failed to load similar packages');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDontShowSimilar = () => {
-    setShowSimilarDialog(false);
-    router.push(`/agent/leads/${leadId}`);
-  };
-
-  const handleQuerySave = async (data: {
-    destinations: Array<{ city: string; nights: number }>;
-    leaving_from: string;
-    nationality: string;
-    leaving_on: string;
-    travelers: { rooms: number; adults: number; children: number; infants: number };
-    star_rating?: number;
-    add_transfers: boolean;
-  }) => {
-    if (!user?.id || !leadId) return;
-
-    setQueryLoading(true);
-    try {
-      const response = await fetch(`/api/queries/${leadId}`, {
+    // Create days via API
+    if (newDays.length > 0 && itId) {
+      const daysResponse = await fetch(`/api/itineraries/${itId}/days/bulk-create`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ days: newDays }),
+      });
+
+      if (daysResponse.ok) {
+        const { days: createdDays } = await daysResponse.json();
+        setDays(createdDays);
+        toast.success(`Generated ${createdDays.length} days from query`);
+      } else {
+        const error = await daysResponse.json();
+        toast.error(error.error || 'Failed to create days');
+      }
+    }
+  };
+
+  const handleAddActivity = (dayIndex: number, timeSlot: TimeSlot) => {
+    setSelectedDayIndex(dayIndex);
+    setSelectedTimeSlot(timeSlot);
+    setActivityModalOpen(true);
+  };
+
+  const handleAddTransfer = (dayIndex: number, timeSlot: TimeSlot) => {
+    setSelectedDayIndex(dayIndex);
+    setSelectedTimeSlot(timeSlot);
+    setTransferModalOpen(true);
+  };
+
+  const handleActivitySelect = async (activity: ActivityPackage, selectedPricingId?: string) => {
+    if (selectedDayIndex === null || !selectedTimeSlot || !itinerary) return;
+
+    const day = days[selectedDayIndex];
+    if (!day) return;
+
+    // Update day's time slot with activity
+    const updatedDays = [...days];
+    const existingDay = updatedDays[selectedDayIndex];
+    if (!existingDay) return;
+    
+    const updatedDay: ItineraryDay = {
+      ...existingDay,
+      time_slots: existingDay.time_slots || {
+        morning: { time: '08:00', activities: [], transfers: [] },
+        afternoon: { time: '12:30', activities: [], transfers: [] },
+        evening: { time: '17:00', activities: [], transfers: [] },
+      },
+    };
+
+    const timeSlots = updatedDay.time_slots!;
+    const currentActivities = timeSlots[selectedTimeSlot].activities || [];
+    if (!currentActivities.includes(activity.id)) {
+      timeSlots[selectedTimeSlot].activities = [...currentActivities, activity.id];
+    }
+
+    updatedDays[selectedDayIndex] = updatedDay;
+    setDays(updatedDays);
+
+    // Update day via API
+    if (updatedDay.id) {
+      await updateDay(updatedDay.id, updatedDay);
+    }
+
+    setActivityModalOpen(false);
+    setSelectedDayIndex(null);
+    setSelectedTimeSlot(null);
+    toast.success('Activity added successfully');
+  };
+
+  const handleTransferSelect = async (transfer: TransferPackage) => {
+    if (selectedDayIndex === null || !selectedTimeSlot || !itinerary) return;
+
+    const day = days[selectedDayIndex];
+    if (!day) return;
+
+    // Update day's time slot with transfer
+    const updatedDays = [...days];
+    const existingDay = updatedDays[selectedDayIndex];
+    if (!existingDay) return;
+    
+    const updatedDay: ItineraryDay = {
+      ...existingDay,
+      time_slots: existingDay.time_slots || {
+        morning: { time: '08:00', activities: [], transfers: [] },
+        afternoon: { time: '12:30', activities: [], transfers: [] },
+        evening: { time: '17:00', activities: [], transfers: [] },
+      },
+    };
+
+    const timeSlots = updatedDay.time_slots!;
+    const currentTransfers = timeSlots[selectedTimeSlot].transfers || [];
+    if (!currentTransfers.includes(transfer.id)) {
+      timeSlots[selectedTimeSlot].transfers = [...currentTransfers, transfer.id];
+    }
+
+    updatedDays[selectedDayIndex] = updatedDay;
+    setDays(updatedDays);
+
+    // Update day via API
+    if (updatedDay.id) {
+      await updateDay(updatedDay.id, updatedDay);
+    }
+
+    setTransferModalOpen(false);
+    setSelectedDayIndex(null);
+    setSelectedTimeSlot(null);
+    toast.success('Transfer added successfully');
+  };
+
+  const updateDay = async (dayId: string, day: ItineraryDay) => {
+    if (!itinerary) return;
+
+    try {
+      const response = await fetch(`/api/itineraries/${itinerary.id}/days/${dayId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          agent_id: user.id,
-          destinations: data.destinations,
-          leaving_from: data.leaving_from,
-          nationality: data.nationality,
-          leaving_on: data.leaving_on,
-          travelers: data.travelers,
-          star_rating: data.star_rating,
-          add_transfers: data.add_transfers,
+          cityName: day.city_name,
+          date: day.date,
+          notes: day.notes,
+          timeSlots: day.time_slots,
         }),
       });
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.details || 'Failed to save query');
+        throw new Error(error.error || 'Failed to update day');
       }
-
-      const { query: savedQuery } = await response.json();
-      setQuery(savedQuery);
-      toast.success('Query saved successfully!');
-      setQueryModalOpen(false);
-
-      // Fetch and match packages after query is saved
-      await fetchAndMatchPackages(savedQuery);
     } catch (err) {
-      console.error('Error saving query:', err);
-      toast.error('Failed to save query. Please try again.');
-      throw err;
-    } finally {
-      setQueryLoading(false);
+      console.error('Error updating day:', err);
+      toast.error('Failed to update day');
     }
   };
 
-  const handlePackageSelect = async (packageId: string, packageType: 'multi_city' | 'multi_city_hotel') => {
-    if (!user?.id || !query) {
-      toast.error('Query information is missing. Please save the query first.');
-      return;
-    }
-
-    // Validate query has destinations
-    if (!query.destinations || !Array.isArray(query.destinations) || query.destinations.length === 0) {
-      toast.error('Query destinations are missing. Please update the query with destinations.');
-      console.error('Query destinations missing:', { query });
-      return;
-    }
-
-    try {
-      // Ensure the lead exists
-      const ensureResponse = await fetch('/api/leads/ensure', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ leadId, agentId: user.id }),
-      });
-
-      if (!ensureResponse.ok) {
-        const error = await ensureResponse.json();
-        toast.error(error.error || 'Failed to ensure lead exists');
-        return;
+  const getFilteredActivities = (cityName: string, timeSlot: TimeSlot): ActivityPackage[] => {
+    return allActivities.filter(activity => {
+      // Filter by city
+      if (activity.destination_city?.toLowerCase() !== cityName.toLowerCase()) {
+        return false;
       }
 
-      const { leadId: actualLeadId } = await ensureResponse.json();
-
-      // Calculate end date based on destinations and nights
-      const totalNights = query.destinations.reduce((sum: number, dest: any) => sum + (dest.nights || 0), 0);
-      const startDate = query.leaving_on ? new Date(query.leaving_on) : new Date();
-      const endDate = new Date(startDate);
-      endDate.setDate(endDate.getDate() + totalNights);
-
-      // Create itinerary first
-      const createItineraryResponse = await fetch('/api/itineraries/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          leadId: actualLeadId,
-          agentId: user.id,
-          name: 'Itinerary #1',
-          adultsCount: query.travelers?.adults || 2,
-          childrenCount: query.travelers?.children || 0,
-          infantsCount: query.travelers?.infants || 0,
-          startDate: query.leaving_on ? formatDate(startDate) : formatDate(startDate),
-          endDate: formatDate(endDate),
-          notes: null,
-          leadBudgetMin: lead?.budgetMin || null,
-          leadBudgetMax: lead?.budgetMax || null,
-          status: 'draft',
-        }),
-      });
-
-      if (!createItineraryResponse.ok) {
-        const error = await createItineraryResponse.json();
-        throw new Error(error.error || 'Failed to create itinerary');
-      }
-
-      const { itinerary: newItinerary } = await createItineraryResponse.json();
-      const itineraryId = newItinerary.id;
-
-      // Generate days based on query destinations
-      const daysToInsert: any[] = [];
-      const currentDate = new Date(startDate);
-      let dayNumber = 1;
-
-      console.log('Generating days from query:', { 
-        destinations: query.destinations, 
-        destinationsLength: query.destinations?.length,
-        startDate: startDate.toISOString()
-      });
-
-      for (const destination of query.destinations) {
-        if (!destination || !destination.city) {
-          console.warn('Skipping invalid destination:', destination);
-          continue;
-        }
-
-        const cityName = destination.city;
-        const nights = destination.nights || 1;
-
-        for (let night = 0; night < nights; night++) {
-          const dayDate = new Date(currentDate);
-          dayDate.setDate(currentDate.getDate() + night);
-
-          daysToInsert.push({
-            dayNumber: dayNumber,
-            date: formatDate(dayDate),
-            cityName: cityName,
-            displayOrder: dayNumber,
-            timeSlots: {
-              morning: { time: '', activities: [], transfers: [] },
-              afternoon: { time: '', activities: [], transfers: [] },
-              evening: { time: '', activities: [], transfers: [] }
-            },
-            notes: null,
-          });
-
-          dayNumber++;
-        }
-
-        currentDate.setDate(currentDate.getDate() + nights);
-      }
-
-      console.log('Generated days to insert:', { count: daysToInsert.length, days: daysToInsert });
-
-      // Insert all days
-      if (daysToInsert.length === 0) {
-        console.error('No days to insert! Query destinations:', query.destinations);
-        toast.error('Failed to generate itinerary days. Please check your query destinations.');
-        throw new Error('No days generated from query destinations');
-      }
-
-        const daysResponse = await fetch(`/api/itineraries/${itineraryId}/days/bulk-create`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ days: daysToInsert }),
-        });
-
-        if (!daysResponse.ok) {
-          const error = await daysResponse.json();
-        console.error('Failed to create itinerary days:', error);
-          throw new Error(error.error || 'Failed to create itinerary days');
-        }
-
-      // Fetch package details
-      const packageResponse = await fetch(`/api/packages/${packageId}?type=${packageType}`);
-      
-      if (!packageResponse.ok) {
-        const error = await packageResponse.json();
-        toast.error(error.error || 'Failed to load package details');
-        return;
-      }
-
-      const { package: pkgData } = await packageResponse.json();
-
-      // Create itinerary_item
-      const createItemResponse = await fetch(`/api/itineraries/${itineraryId}/items/create`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          dayId: null,
-          packageType: packageType,
-          packageId: packageId,
-          operatorId: pkgData.operator_id,
-          packageTitle: pkgData.title,
-          packageImageUrl: pkgData.image_url || null,
-          configuration: {
-            pricingType: 'SIC',
-            selectedPricingRowId: null,
-            selectedVehicle: null,
-            quantity: 1,
-            selectedHotels: [],
-            activities: [],
-            transfers: [],
-          },
-          unitPrice: pkgData.base_price || 0,
-          quantity: 1,
-          displayOrder: 0,
-          notes: null,
-        }),
-      });
-
-      if (!createItemResponse.ok) {
-        const error = await createItemResponse.json();
-        console.error('Error creating itinerary item:', error);
-        toast.error(error.error || 'Failed to create itinerary item');
-        return;
-      }
-
-      const responseData = await createItemResponse.json();
-      console.log('Item creation response:', responseData);
-      console.log('Item object:', responseData.item);
-      console.log('Item ID:', responseData.item?.id);
-      
-      const newItem = responseData.item;
-      
-      if (!newItem) {
-        console.error('Item is missing from response:', responseData);
-        toast.error('Failed to create itinerary item: Item not found in response');
-        return;
-      }
-      
-      if (!newItem.id) {
-        console.error('Item ID is missing:', { newItem, responseData });
-        toast.error('Failed to create itinerary item: Item ID is missing');
-        return;
-      }
-
-      toast.success('Itinerary created successfully!');
-      // Navigate to configure page
-      router.push(`/agent/itineraries/${itineraryId}/configure/${newItem.id}`);
-    } catch (err) {
-      console.error('Error creating itinerary:', err);
-      toast.error('Failed to create itinerary');
-    }
+      // Filter by time slot (check if activity's time slots overlap with requested slot)
+      // This will be enhanced in backend, for now return all matching city
+      return true;
+    });
   };
 
-  if (loading && !query) {
+  const getFilteredTransfers = (cityName: string): TransferPackage[] => {
+    return allTransfers.filter(transfer => {
+      // Filter by city (check pickup or dropoff location)
+      const pickupCity = (transfer as any).pickup_location_city?.toLowerCase();
+      const dropoffCity = (transfer as any).dropoff_location_city?.toLowerCase();
+      const cityLower = cityName.toLowerCase();
+      
+      return pickupCity === cityLower || dropoffCity === cityLower;
+    });
+  };
+
+  if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading lead data...</p>
-          </div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading itinerary builder...</p>
         </div>
+      </div>
     );
   }
 
-  if (!lead) {
+  if (!query || !itinerary) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="text-center">
-            <p className="text-gray-600 mb-4">Lead not found</p>
-            <Button onClick={() => router.push('/agent/leads')}>
-              <FiArrowLeft className="w-4 h-4 mr-2" />
-              Back to Leads
-            </Button>
-          </div>
+        <div className="text-center">
+          <p className="text-gray-600 mb-4">Query or itinerary not found</p>
+          <Button onClick={() => router.push(`/agent/leads/${leadId}`)}>
+            <FiArrowLeft className="w-4 h-4 mr-2" />
+            Back to Lead Details
+          </Button>
         </div>
+      </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/30">
       <div className="p-4 lg:p-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="mb-6">
-        <Button
-          variant="ghost"
-          onClick={() => router.push(`/agent/leads/${leadId}`)}
-          className="mb-4"
-        >
-                <FiArrowLeft className="w-4 h-4 mr-2" />
-          Back to Lead Details
-              </Button>
-        <h1 className="text-2xl font-bold text-gray-900">Create Itinerary</h1>
-        <p className="text-gray-600 mt-2">
-          {showingSimilar 
-            ? 'Similar packages (exact matches not available)' 
-            : packages.length > 0 
-              ? `Found ${packages.length} matching package${packages.length > 1 ? 's' : ''}`
-              : query 
-                ? 'Select a package matching your query'
-                : 'Create a query to find matching packages'}
-        </p>
-              </div>
+        {/* Header */}
+        <div className="mb-6">
+          <Button
+            variant="ghost"
+            onClick={() => router.push(`/agent/leads/${leadId}`)}
+            className="mb-4"
+          >
+            <FiArrowLeft className="w-4 h-4 mr-2" />
+            Back to Lead Details
+          </Button>
+          <h1 className="text-2xl font-bold text-gray-900">Create Itinerary</h1>
+          <p className="text-gray-600 mt-2">
+            Build day-wise itinerary for {lead?.customerName || 'customer'}
+          </p>
+        </div>
 
-      {/* Main Content with Sidebar */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Left Sidebar - Lead & Query Details */}
-        <div className="lg:col-span-1">
-          {lead && (
-            <LeadQuerySidebar
-              lead={lead}
-              query={query}
-              onEditQuery={() => setQueryModalOpen(true)}
-                  />
-          )}
+        {/* Days Timeline */}
+        {days.length > 0 && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FiClock className="w-5 h-5" />
+                Itinerary Overview
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-2 overflow-x-auto pb-2">
+                {days.map((day, i) => (
+                  <React.Fragment key={i}>
+                    <div className="flex flex-col items-center min-w-[80px]">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white flex items-center justify-center font-semibold text-sm">
+                        {day.day_number}
+                      </div>
+                      <div className="text-xs text-gray-600 mt-1 text-center max-w-[80px] truncate">
+                        {day.city_name}
+                      </div>
+                    </div>
+                    {i < days.length - 1 && <div className="w-16 h-0.5 bg-gray-300 mb-4" />}
+                  </React.Fragment>
+                ))}
               </div>
+            </CardContent>
+          </Card>
+        )}
 
-        {/* Right Side - Packages Table */}
-        <div className="lg:col-span-3">
-          <PackagesTable
-            packages={packages}
-            onSelectPackage={handlePackageSelect}
-            loading={loading}
-            rowsPerPage={20}
-                  />
-                </div>
-              </div>
+        {/* Day Cards */}
+        <div className="space-y-6">
+          {days.map((day, dayIndex) => {
+            const timeSlots: TimeSlot[] = ['morning', 'afternoon', 'evening'];
+            const slotConfig = {
+              morning: { label: '🌅 Morning', bgColor: 'bg-orange-50', defaultTime: '08:00' },
+              afternoon: { label: '☀️ Afternoon', bgColor: 'bg-yellow-50', defaultTime: '12:30' },
+              evening: { label: '🌙 Evening', bgColor: 'bg-purple-50', defaultTime: '17:00' },
+            };
 
-      {/* Query Modal */}
-      <QueryModal
-        isOpen={queryModalOpen}
-        onClose={() => {
-          // If no query exists, redirect back
-          if (!query) {
-            router.push(`/agent/leads/${leadId}`);
-          } else {
-            setQueryModalOpen(false);
-          }
-        }}
-        onSave={handleQuerySave}
-        initialData={query}
-        leadId={leadId}
-        loading={queryLoading}
-      />
+            return (
+              <Card key={dayIndex} className="shadow-lg">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-3">
+                    <Badge variant="secondary" className="text-base px-3 py-1">
+                      Day {day.day_number}
+                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <FiMapPin className="w-4 h-4 text-gray-500" />
+                      <span className="text-lg font-semibold">{day.city_name}</span>
+                    </div>
+                    {day.title && (
+                      <span className="text-sm font-normal text-gray-600">- {day.title}</span>
+                    )}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Time Slots */}
+                  <div className="space-y-4">
+                    {timeSlots.map((timeSlot) => {
+                      const slot = day.time_slots?.[timeSlot] || {
+                        time: slotConfig[timeSlot].defaultTime,
+                        activities: [],
+                        transfers: [],
+                      };
+                      const config = slotConfig[timeSlot];
 
-      {/* Exact Match Not Found Dialog */}
-      <ExactMatchNotFoundDialog
-        isOpen={showSimilarDialog}
-        onYes={handleShowSimilar}
-        onNo={handleDontShowSimilar}
-      />
-              </div>
+                      return (
+                        <div key={timeSlot} className={`p-4 border rounded-lg ${config.bgColor}`}>
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="font-semibold text-gray-900">{config.label}</h4>
+                            <Input
+                              type="time"
+                              value={slot.time}
+                              onChange={(e) => {
+                                const updatedDays = [...days];
+                                const existingDay = updatedDays[dayIndex];
+                                if (!existingDay) return;
+                                
+                                const updatedDay: ItineraryDay = {
+                                  ...existingDay,
+                                  time_slots: existingDay.time_slots || {
+                                    morning: { time: '08:00', activities: [], transfers: [] },
+                                    afternoon: { time: '12:30', activities: [], transfers: [] },
+                                    evening: { time: '17:00', activities: [], transfers: [] },
+                                  },
+                                };
+                                updatedDay.time_slots![timeSlot].time = e.target.value;
+                                updatedDays[dayIndex] = updatedDay;
+                                setDays(updatedDays);
+                                if (updatedDay.id) {
+                                  updateDay(updatedDay.id, updatedDay);
+                                }
+                              }}
+                              className="w-32"
+                            />
+                          </div>
+
+                          {/* Activities */}
+                          <div className="mb-3">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm font-medium text-gray-700">Activities</span>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleAddActivity(dayIndex, timeSlot)}
+                              >
+                                <FiPlus className="w-4 h-4 mr-1" />
+                                Add Activity
+                              </Button>
+                            </div>
+                            {slot.activities.length > 0 ? (
+                              <div className="space-y-2">
+                                {slot.activities.map((activityId) => {
+                                  const activity = allActivities.find(a => a.id === activityId);
+                                  return activity ? (
+                                    <div
+                                      key={activityId}
+                                      className="flex items-center justify-between p-2 bg-white rounded border"
+                                    >
+                                      <span className="text-sm">{activity.title}</span>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => {
+                                          const updatedDays = [...days];
+                                          const existingDay = updatedDays[dayIndex];
+                                          if (!existingDay) return;
+                                          
+                                          const updatedDay: ItineraryDay = {
+                                            ...existingDay,
+                                            time_slots: existingDay.time_slots || {
+                                              morning: { time: '08:00', activities: [], transfers: [] },
+                                              afternoon: { time: '12:30', activities: [], transfers: [] },
+                                              evening: { time: '17:00', activities: [], transfers: [] },
+                                            },
+                                          };
+                                          updatedDay.time_slots![timeSlot].activities = 
+                                            updatedDay.time_slots![timeSlot].activities.filter(id => id !== activityId);
+                                          updatedDays[dayIndex] = updatedDay;
+                                          setDays(updatedDays);
+                                          if (updatedDay.id) {
+                                            updateDay(updatedDay.id, updatedDay);
+                                          }
+                                        }}
+                                      >
+                                        <FiX className="w-4 h-4" />
+                                      </Button>
+                                    </div>
+                                  ) : null;
+                                })}
+                              </div>
+                            ) : (
+                              <p className="text-sm text-gray-500 italic">No activities added</p>
+                            )}
+                          </div>
+
+                          {/* Transfers */}
+                          <div>
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm font-medium text-gray-700">Transfers</span>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleAddTransfer(dayIndex, timeSlot)}
+                              >
+                                <FiPlus className="w-4 h-4 mr-1" />
+                                Add Transfer
+                              </Button>
+                            </div>
+                            {slot.transfers.length > 0 ? (
+                              <div className="space-y-2">
+                                {slot.transfers.map((transferId) => {
+                                  const transfer = allTransfers.find(t => t.id === transferId);
+                                  return transfer ? (
+                                    <div
+                                      key={transferId}
+                                      className="flex items-center justify-between p-2 bg-white rounded border"
+                                    >
+                                      <span className="text-sm">{transfer.title}</span>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => {
+                                          const updatedDays = [...days];
+                                          const existingDay = updatedDays[dayIndex];
+                                          if (!existingDay) return;
+                                          
+                                          const updatedDay: ItineraryDay = {
+                                            ...existingDay,
+                                            time_slots: existingDay.time_slots || {
+                                              morning: { time: '08:00', activities: [], transfers: [] },
+                                              afternoon: { time: '12:30', activities: [], transfers: [] },
+                                              evening: { time: '17:00', activities: [], transfers: [] },
+                                            },
+                                          };
+                                          updatedDay.time_slots![timeSlot].transfers = 
+                                            updatedDay.time_slots![timeSlot].transfers.filter(id => id !== transferId);
+                                          updatedDays[dayIndex] = updatedDay;
+                                          setDays(updatedDays);
+                                          if (updatedDay.id) {
+                                            updateDay(updatedDay.id, updatedDay);
+                                          }
+                                        }}
+                                      >
+                                        <FiX className="w-4 h-4" />
+                                      </Button>
+                                    </div>
+                                  ) : null;
+                                })}
+                              </div>
+                            ) : (
+                              <p className="text-sm text-gray-500 italic">No transfers added</p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+
+        {/* Activity Selector Modal */}
+        {selectedDayIndex !== null && selectedTimeSlot && days[selectedDayIndex] && (
+          <ActivitySelectorModal
+            isOpen={activityModalOpen}
+            onClose={() => {
+              setActivityModalOpen(false);
+              setSelectedDayIndex(null);
+              setSelectedTimeSlot(null);
+            }}
+            cityName={days[selectedDayIndex].city_name}
+            timeSlot={selectedTimeSlot}
+            arrivalTime={null}
+            enableSuggestions={false}
+            adultsCount={itinerary?.adults_count || 2}
+            childrenCount={itinerary?.children_count || 0}
+            onSelect={handleActivitySelect}
+          />
+        )}
+
+        {/* Transfer Selector Modal */}
+        {selectedDayIndex !== null && selectedTimeSlot && days[selectedDayIndex] && (
+          <TransferSelectorModal
+            isOpen={transferModalOpen}
+            onClose={() => {
+              setTransferModalOpen(false);
+              setSelectedDayIndex(null);
+              setSelectedTimeSlot(null);
+            }}
+            fromCity={days[selectedDayIndex].city_name}
+            toCity={days[selectedDayIndex].city_name}
+            onSelect={handleTransferSelect}
+          />
+        )}
       </div>
+    </div>
   );
 }
