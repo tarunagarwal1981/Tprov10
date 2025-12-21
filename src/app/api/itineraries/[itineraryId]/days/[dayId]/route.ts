@@ -114,7 +114,7 @@ export async function PATCH(
     updateValues.push(itineraryId, dayId);
 
     // Try to return all enhanced fields, fallback to basic if they don't exist
-    const returnFields = [
+    let returnFields = [
       'id', 'itinerary_id', 'day_number', 'date', 'city_name', 'display_order', 
       'notes', 'title', 'time_slots',
       'arrival_flight_id', 'arrival_time', 'departure_flight_id', 'departure_time',
@@ -146,7 +146,8 @@ export async function PATCH(
         // Rebuild values array without time_slots value
         let valueIndex = 0;
         for (let i = 0; i < updateFields.length; i++) {
-          if (!updateFields[i].includes('time_slots')) {
+          const field = updateFields[i];
+          if (field && !field.includes('time_slots')) {
             valuesWithoutTimeSlots.push(updateValues[valueIndex]);
           }
           valueIndex++;
