@@ -32,9 +32,9 @@ interface ItineraryItem {
   package_type: 'activity' | 'transfer' | 'multi_city' | 'multi_city_hotel' | 'fixed_departure';
   package_id: string;
   package_title: string;
-  unit_price: number;
+  unit_price: number | null;
   quantity: number;
-  total_price: number;
+  total_price: number | null;
   configuration: any;
 }
 
@@ -119,7 +119,13 @@ export function DayByDayItineraryView({
       const response = await fetch(`/api/itineraries/${itineraryId}/items`);
       if (response.ok) {
         const { items: itemsData } = await response.json();
-        setItems(itemsData || []);
+        // Ensure all items have total_price set (default to 0 if null/undefined)
+        const normalizedItems = (itemsData || []).map((item: ItineraryItem) => ({
+          ...item,
+          total_price: item.total_price ?? item.unit_price ?? 0,
+          unit_price: item.unit_price ?? 0,
+        }));
+        setItems(normalizedItems);
       }
     } catch (err) {
       console.error('Error fetching items:', err);
@@ -257,6 +263,14 @@ export function DayByDayItineraryView({
 
       const { item: newItem } = await itemResponse.json();
 
+      // Add the new item to items state immediately with normalized total_price
+      const normalizedNewItem: ItineraryItem = {
+        ...newItem,
+        total_price: newItem.total_price ?? newItem.unit_price ?? calculatedPrice,
+        unit_price: newItem.unit_price ?? calculatedPrice,
+      };
+      setItems(prev => [...prev, normalizedNewItem]);
+
       // Update day's time slot
       const updatedDays = [...days];
       const existingDay = updatedDays[selectedDayIndex];
@@ -278,10 +292,12 @@ export function DayByDayItineraryView({
       updatedDays[selectedDayIndex] = updatedDay;
       setDays(updatedDays);
 
-      // Update day in database
-      await updateDay(updatedDay.id, updatedDay);
+      // Update day in database (don't wait, do it in background)
+      updateDay(updatedDay.id, updatedDay).catch(err => {
+        console.error('[DayByDayItineraryView] Error updating day:', err);
+      });
 
-      // Refresh items to get updated pricing
+      // Refresh items to get the latest from database (this will normalize all items)
       await fetchItems();
 
       setActivityModalOpen(false);
@@ -330,6 +346,19 @@ export function DayByDayItineraryView({
       }
 
       const { item: newItem } = await itemResponse.json();
+      
+      // Ensure the new item has total_price
+      if (!newItem.total_price && newItem.unit_price) {
+        newItem.total_price = newItem.unit_price * (newItem.quantity || 1);
+      }
+
+      // Add the new item to items state immediately with normalized total_price
+      const normalizedNewItem: ItineraryItem = {
+        ...newItem,
+        total_price: newItem.total_price ?? newItem.unit_price ?? calculatedPrice,
+        unit_price: newItem.unit_price ?? calculatedPrice,
+      };
+      setItems(prev => [...prev, normalizedNewItem]);
 
       // Update day's time slot
       const updatedDays = [...days];
@@ -352,10 +381,12 @@ export function DayByDayItineraryView({
       updatedDays[selectedDayIndex] = updatedDay;
       setDays(updatedDays);
 
-      // Update day in database
-      await updateDay(updatedDay.id, updatedDay);
+      // Update day in database (don't wait, do it in background)
+      updateDay(updatedDay.id, updatedDay).catch(err => {
+        console.error('[DayByDayItineraryView] Error updating day:', err);
+      });
 
-      // Refresh items to get updated pricing
+      // Refresh items to get the latest from database (this will normalize all items)
       await fetchItems();
 
       setTransferModalOpen(false);
@@ -396,15 +427,27 @@ export function DayByDayItineraryView({
         },
       };
 
-      const response = await fetch(`/api/itineraries/${itineraryId}/days/${dayId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      // Validate JSON before sending
+      let requestBody;
+      try {
+        requestBody = JSON.stringify({
           cityName: day.city_name,
           date: day.date,
           notes: day.notes,
           timeSlots: validatedTimeSlots,
-        }),
+        });
+        // Test that it's valid JSON
+        JSON.parse(requestBody);
+      } catch (jsonError) {
+        console.error('[DayByDayItineraryView] Invalid JSON structure:', jsonError);
+        console.error('[DayByDayItineraryView] validatedTimeSlots:', validatedTimeSlots);
+        return;
+      }
+
+      const response = await fetch(`/api/itineraries/${itineraryId}/days/${dayId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: requestBody,
       });
 
       if (!response.ok) {
@@ -416,9 +459,13 @@ export function DayByDayItineraryView({
           error = { error: errorText || 'Failed to update day' };
         }
         console.error('[DayByDayItineraryView] Error updating day time_slots:', error);
+        console.error('[DayByDayItineraryView] Response status:', response.status);
+        console.error('[DayByDayItineraryView] Request body sent:', requestBody);
         // Don't throw - just log, so the UI doesn't break
         return;
       }
+      
+      console.log('[DayByDayItineraryView] Day updated successfully');
     } catch (err) {
       console.error('[DayByDayItineraryView] Error updating day:', err);
       // Don't throw - just log, so the UI doesn't break
@@ -581,12 +628,22 @@ export function DayByDayItineraryView({
                   // Get items for this time slot
                   const slotActivityIds = slot.activities || [];
                   const slotTransferIds = slot.transfers || [];
-                  const slotActivities = items.filter(item => 
-                    item.package_type === 'activity' && slotActivityIds.includes(item.id)
-                  );
-                  const slotTransfers = items.filter(item => 
-                    item.package_type === 'transfer' && slotTransferIds.includes(item.id)
-                  );
+                  const slotActivities = items
+                    .filter(item => 
+                      item.package_type === 'activity' && slotActivityIds.includes(item.id)
+                    )
+                    .map(item => ({
+                      ...item,
+                      total_price: item.total_price ?? item.unit_price ?? 0,
+                    }));
+                  const slotTransfers = items
+                    .filter(item => 
+                      item.package_type === 'transfer' && slotTransferIds.includes(item.id)
+                    )
+                    .map(item => ({
+                      ...item,
+                      total_price: item.total_price ?? item.unit_price ?? 0,
+                    }));
 
                   return (
                     <div key={timeSlot} className={`p-4 border rounded-lg ${config.bgColor}`}>

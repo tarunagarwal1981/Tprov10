@@ -75,17 +75,30 @@ export async function PATCH(
       if (updates[key] !== undefined) {
         if (key === 'timeSlots') {
           // time_slots needs JSON stringification and casting to JSONB
-          updateFields.push(`${dbColumn} = $${paramIndex}::jsonb`);
-          // Ensure it's a valid JSON object
-          const timeSlotsValue = typeof updates[key] === 'string' 
-            ? updates[key] 
-            : JSON.stringify(updates[key]);
-          updateValues.push(timeSlotsValue);
+          try {
+            // Ensure it's a valid JSON object
+            let timeSlotsValue: string;
+            if (typeof updates[key] === 'string') {
+              // Validate it's valid JSON
+              JSON.parse(updates[key]);
+              timeSlotsValue = updates[key];
+            } else {
+              timeSlotsValue = JSON.stringify(updates[key]);
+            }
+            updateFields.push(`${dbColumn} = $${paramIndex}::jsonb`);
+            updateValues.push(timeSlotsValue);
+            paramIndex++;
+          } catch (jsonError) {
+            console.error('[Update Day] Invalid timeSlots JSON:', jsonError);
+            console.error('[Update Day] timeSlots value:', updates[key]);
+            // Skip time_slots if invalid JSON
+            continue;
+          }
         } else {
           updateFields.push(`${dbColumn} = $${paramIndex}`);
           updateValues.push(updates[key]);
+          paramIndex++;
         }
-        paramIndex++;
       }
     }
 
