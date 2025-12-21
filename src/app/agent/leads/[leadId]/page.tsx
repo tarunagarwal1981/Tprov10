@@ -79,7 +79,15 @@ export default function LeadDetailPage() {
   // Fetch lead and query data
   useEffect(() => {
     if (leadId && user?.id) {
+      console.log('[LeadDetailPage] useEffect triggered, fetching lead data');
       fetchLeadData();
+    } else if (!user) {
+      console.log('[LeadDetailPage] User not loaded yet, waiting...');
+    } else if (!user?.id) {
+      console.log('[LeadDetailPage] User not authenticated');
+      setLoading(false);
+    } else {
+      console.log('[LeadDetailPage] Waiting for leadId:', { leadId, userId: user?.id });
     }
   }, [leadId, user?.id]);
 
@@ -88,56 +96,108 @@ export default function LeadDetailPage() {
     
     setLoading(true);
     try {
-      // Fetch lead details from AWS API route
-      const response = await fetch(`/api/leads/${leadId}?agentId=${user.id}`);
+      console.log('[LeadDetailPage] Fetching lead data for leadId:', leadId);
       
-      if (!response.ok) {
-        if (response.status === 404) {
-          console.error('[LeadDetailPage] Lead not found - 404 response');
+      // Fetch lead details from AWS API route with timeout
+      const leadController = new AbortController();
+      const leadTimeout = setTimeout(() => leadController.abort(), 10000); // 10 second timeout
+      
+      try {
+        const response = await fetch(`/api/leads/${leadId}?agentId=${user.id}`, {
+          signal: leadController.signal,
+        });
+        clearTimeout(leadTimeout);
+        
+        if (!response.ok) {
+          if (response.status === 404) {
+            console.error('[LeadDetailPage] Lead not found - 404 response');
+            setLead(null);
+            setLoading(false);
+            return; // Don't navigate away, just show error state
+          }
+          const errorText = await response.text();
+          console.error('[LeadDetailPage] Failed to fetch lead:', response.status, errorText);
+          throw new Error(`Failed to fetch lead details: ${response.status}`);
+        }
+
+        const { lead: leadData } = await response.json();
+
+        if (!leadData) {
+          console.error('[LeadDetailPage] Lead data is null');
           setLead(null);
           setLoading(false);
           return; // Don't navigate away, just show error state
         }
-        throw new Error('Failed to fetch lead details');
-      }
 
-      const { lead: leadData } = await response.json();
+        console.log('[LeadDetailPage] Lead data fetched successfully');
+        setLead(leadData);
 
-      if (!leadData) {
-        console.error('[LeadDetailPage] Lead data is null');
-        setLead(null);
-        setLoading(false);
-        return; // Don't navigate away, just show error state
-      }
-
-      setLead(leadData);
-
-      // Fetch itineraries
-      const itinerariesResponse = await fetch(`/api/itineraries/leads/${leadId}`);
-      if (itinerariesResponse.ok) {
-        const { itineraries: itinerariesData } = await itinerariesResponse.json();
-        setItineraries(itinerariesData);
+        // Fetch itineraries with timeout
+        const itinerariesController = new AbortController();
+        const itinerariesTimeout = setTimeout(() => itinerariesController.abort(), 10000);
         
-        // Fetch queries for each itinerary
-        const queriesMap: Record<string, ItineraryQuery> = {};
-        for (const itinerary of itinerariesData) {
-          if (itinerary.query_id) {
-            try {
-              const queryResponse = await fetch(`/api/queries/by-id/${itinerary.query_id}`);
-              if (queryResponse.ok) {
-                const { query: queryData } = await queryResponse.json();
-                queriesMap[itinerary.id] = queryData;
+        try {
+          const itinerariesResponse = await fetch(`/api/itineraries/leads/${leadId}`, {
+            signal: itinerariesController.signal,
+          });
+          clearTimeout(itinerariesTimeout);
+          
+          if (itinerariesResponse.ok) {
+            const { itineraries: itinerariesData } = await itinerariesResponse.json();
+            console.log('[LeadDetailPage] Fetched itineraries:', itinerariesData.length);
+            setItineraries(itinerariesData || []);
+            
+            // Fetch queries for each itinerary (with timeout per query)
+            const queriesMap: Record<string, ItineraryQuery> = {};
+            const queryPromises = itinerariesData.map(async (itinerary: Itinerary) => {
+              if (itinerary.query_id) {
+                try {
+                  const queryController = new AbortController();
+                  const queryTimeout = setTimeout(() => queryController.abort(), 5000);
+                  const queryResponse = await fetch(`/api/queries/by-id/${itinerary.query_id}`, {
+                    signal: queryController.signal,
+                  });
+                  clearTimeout(queryTimeout);
+                  
+                  if (queryResponse.ok) {
+                    const { query: queryData } = await queryResponse.json();
+                    queriesMap[itinerary.id] = queryData;
+                  }
+                } catch (err) {
+                  console.error(`Error fetching query for itinerary ${itinerary.id}:`, err);
+                }
               }
-            } catch (err) {
-              console.error(`Error fetching query for itinerary ${itinerary.id}:`, err);
-            }
+            });
+            
+            await Promise.all(queryPromises);
+            console.log('[LeadDetailPage] Fetched queries:', Object.keys(queriesMap).length);
+            setQueries(queriesMap);
+          } else {
+            console.warn('[LeadDetailPage] Failed to fetch itineraries:', itinerariesResponse.status);
+            setItineraries([]);
           }
+        } catch (err) {
+          clearTimeout(itinerariesTimeout);
+          if (err instanceof Error && err.name === 'AbortError') {
+            console.error('[LeadDetailPage] Timeout fetching itineraries');
+            toast.error('Timeout loading itineraries. Please refresh the page.');
+          } else {
+            console.error('[LeadDetailPage] Error fetching itineraries:', err);
+          }
+          setItineraries([]);
         }
-        setQueries(queriesMap);
+      } catch (err) {
+        clearTimeout(leadTimeout);
+        if (err instanceof Error && err.name === 'AbortError') {
+          console.error('[LeadDetailPage] Timeout fetching lead data');
+          toast.error('Timeout loading lead details. Please refresh the page.');
+        } else {
+          throw err;
+        }
       }
     } catch (err) {
-      console.error('Error fetching lead data:', err);
-      toast.error('Failed to load lead data');
+      console.error('[LeadDetailPage] Error fetching lead data:', err);
+      toast.error('Failed to load lead data. Please try refreshing the page.');
     } finally {
       setLoading(false);
     }
@@ -325,6 +385,7 @@ export default function LeadDetailPage() {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading lead details...</p>
+          <p className="text-sm text-gray-400 mt-2">If this takes too long, please refresh the page</p>
         </div>
       </div>
     );
