@@ -86,7 +86,12 @@ export function DayByDayItineraryView({
 
   // Calculate total price when items change and notify parent
   useEffect(() => {
-    const total = items.reduce((sum, item) => sum + (Number(item.total_price) || 0), 0);
+    // Ensure all items have total_price before calculating
+    const normalizedItems = items.map(item => ({
+      ...item,
+      total_price: item.total_price ?? item.unit_price ?? 0,
+    }));
+    const total = normalizedItems.reduce((sum, item) => sum + (Number(item.total_price) || 0), 0);
     setTotalPrice(total);
     
     // Notify parent component of price update (database trigger will update total_price automatically)
@@ -593,7 +598,12 @@ export function DayByDayItineraryView({
       {/* Day Cards */}
       <div className="space-y-6">
         {days.map((day, dayIndex) => {
-          const dayItems = items.filter(item => item.day_id === day.id);
+          const dayItems = items
+            .filter(item => item.day_id === day.id)
+            .map(item => ({
+              ...item,
+              total_price: item.total_price ?? item.unit_price ?? 0,
+            }));
           const dayTotal = dayItems.reduce((sum, item) => sum + (Number(item.total_price) || 0), 0);
 
           return (
@@ -625,24 +635,28 @@ export function DayByDayItineraryView({
                   };
                   const config = slotConfig[timeSlot];
 
-                  // Get items for this time slot
+                  // Get items for this time slot - ensure all items are normalized
                   const slotActivityIds = slot.activities || [];
                   const slotTransferIds = slot.transfers || [];
                   const slotActivities = items
-                    .filter(item => 
-                      item.package_type === 'activity' && slotActivityIds.includes(item.id)
-                    )
+                    .filter(item => {
+                      if (!item || !item.id) return false;
+                      return item.package_type === 'activity' && slotActivityIds.includes(item.id);
+                    })
                     .map(item => ({
                       ...item,
-                      total_price: item.total_price ?? item.unit_price ?? 0,
+                      total_price: Number(item.total_price) || Number(item.unit_price) || 0,
+                      unit_price: Number(item.unit_price) || 0,
                     }));
                   const slotTransfers = items
-                    .filter(item => 
-                      item.package_type === 'transfer' && slotTransferIds.includes(item.id)
-                    )
+                    .filter(item => {
+                      if (!item || !item.id) return false;
+                      return item.package_type === 'transfer' && slotTransferIds.includes(item.id);
+                    })
                     .map(item => ({
                       ...item,
-                      total_price: item.total_price ?? item.unit_price ?? 0,
+                      total_price: Number(item.total_price) || Number(item.unit_price) || 0,
+                      unit_price: Number(item.unit_price) || 0,
                     }));
 
                   return (
@@ -693,17 +707,19 @@ export function DayByDayItineraryView({
                         </div>
                         {slotActivities.length > 0 ? (
                           <div className="space-y-2">
-                            {slotActivities.map((item) => (
-                              <div
-                                key={item.id}
-                                className="flex items-center justify-between p-2 bg-white rounded border"
-                              >
-                                <div className="flex-1">
-                                  <span className="text-sm font-medium">{item.package_title}</span>
-                                  <span className="text-sm text-green-600 ml-2">
-                                    ${(item.total_price || 0).toFixed(2)}
-                                  </span>
-                                </div>
+                            {slotActivities.map((item) => {
+                              const itemPrice = Number(item.total_price) || Number(item.unit_price) || 0;
+                              return (
+                                <div
+                                  key={item.id}
+                                  className="flex items-center justify-between p-2 bg-white rounded border"
+                                >
+                                  <div className="flex-1">
+                                    <span className="text-sm font-medium">{item.package_title || 'Untitled'}</span>
+                                    <span className="text-sm text-green-600 ml-2">
+                                      ${itemPrice.toFixed(2)}
+                                    </span>
+                                  </div>
                                 <Button
                                   size="sm"
                                   variant="ghost"
@@ -712,7 +728,8 @@ export function DayByDayItineraryView({
                                   <FiX className="w-4 h-4" />
                                 </Button>
                               </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         ) : (
                           <p className="text-sm text-gray-500 italic">No activities added</p>
@@ -734,17 +751,19 @@ export function DayByDayItineraryView({
                         </div>
                         {slotTransfers.length > 0 ? (
                           <div className="space-y-2">
-                            {slotTransfers.map((item) => (
-                              <div
-                                key={item.id}
-                                className="flex items-center justify-between p-2 bg-white rounded border"
-                              >
-                                <div className="flex-1">
-                                  <span className="text-sm font-medium">{item.package_title}</span>
-                                  <span className="text-sm text-green-600 ml-2">
-                                    ${(item.total_price || 0).toFixed(2)}
-                                  </span>
-                                </div>
+                            {slotTransfers.map((item) => {
+                              const itemPrice = Number(item.total_price) || Number(item.unit_price) || 0;
+                              return (
+                                <div
+                                  key={item.id}
+                                  className="flex items-center justify-between p-2 bg-white rounded border"
+                                >
+                                  <div className="flex-1">
+                                    <span className="text-sm font-medium">{item.package_title || 'Untitled'}</span>
+                                    <span className="text-sm text-green-600 ml-2">
+                                      ${itemPrice.toFixed(2)}
+                                    </span>
+                                  </div>
                                 <Button
                                   size="sm"
                                   variant="ghost"
@@ -753,7 +772,8 @@ export function DayByDayItineraryView({
                                   <FiX className="w-4 h-4" />
                                 </Button>
                               </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         ) : (
                           <p className="text-sm text-gray-500 italic">No transfers added</p>

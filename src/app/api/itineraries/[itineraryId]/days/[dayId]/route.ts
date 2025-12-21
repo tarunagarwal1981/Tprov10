@@ -123,6 +123,7 @@ export async function PATCH(
       'arrival_description', 'created_at', 'updated_at'
     ].join(', ');
 
+    // Build the update query
     const updateQuery = `
       UPDATE itinerary_days 
       SET ${updateFields.join(', ')}
@@ -130,7 +131,50 @@ export async function PATCH(
       RETURNING ${returnFields}
     `;
 
-    const updateResult = await query<any>(updateQuery, updateValues);
+    let updateResult;
+    try {
+      updateResult = await query<any>(updateQuery, updateValues);
+    } catch (dbError: any) {
+      // If error is about time_slots column, retry without it
+      const hasTimeSlots = updateFields.some(f => f.includes('time_slots'));
+      if (hasTimeSlots && (dbError?.message?.includes('time_slots') || dbError?.code === '42703' || dbError?.message?.includes('column') || dbError?.message?.includes('does not exist'))) {
+        console.warn('[Update Day] time_slots column error, retrying without it:', dbError.message);
+        // Remove time_slots from update
+        const fieldsWithoutTimeSlots = updateFields.filter(f => !f.includes('time_slots'));
+        const valuesWithoutTimeSlots: any[] = [];
+        
+        // Rebuild values array without time_slots value
+        let valueIndex = 0;
+        for (let i = 0; i < updateFields.length; i++) {
+          if (!updateFields[i].includes('time_slots')) {
+            valuesWithoutTimeSlots.push(updateValues[valueIndex]);
+          }
+          valueIndex++;
+        }
+        // Add itineraryId and dayId (they're at the end)
+        valuesWithoutTimeSlots.push(updateValues[updateValues.length - 2], updateValues[updateValues.length - 1]);
+        
+        // Recalculate paramIndex for WHERE clause (number of fields + updated_at)
+        const newParamIndex = fieldsWithoutTimeSlots.length;
+        
+        const basicReturnFields = [
+          'id', 'itinerary_id', 'day_number', 'date', 'city_name', 'display_order', 
+          'notes', 'created_at', 'updated_at'
+        ].join(', ');
+        
+        const retryQuery = `
+          UPDATE itinerary_days 
+          SET ${fieldsWithoutTimeSlots.join(', ')}
+          WHERE itinerary_id::text = $${newParamIndex} AND id::text = $${newParamIndex + 1}
+          RETURNING ${basicReturnFields}
+        `;
+        
+        updateResult = await query<any>(retryQuery, valuesWithoutTimeSlots);
+        returnFields = basicReturnFields;
+      } else {
+        throw dbError;
+      }
+    }
 
     if (!updateResult.rows || updateResult.rows.length === 0) {
       return NextResponse.json(
@@ -141,27 +185,34 @@ export async function PATCH(
 
     // Fetch time_slots if column exists (with fallback)
     const day = updateResult.rows[0];
-    try {
-      const timeSlotsResult = await query<any>(
-        `SELECT time_slots FROM itinerary_days WHERE id::text = $1`,
-        [dayId]
-      );
-      if (timeSlotsResult.rows[0]?.time_slots) {
-        day.time_slots = timeSlotsResult.rows[0].time_slots;
-      } else {
+    
+    // If time_slots is in the returned fields, use it; otherwise fetch separately or provide default
+    if (day.time_slots) {
+      // Already returned, use it
+    } else {
+      // Try to fetch it separately
+      try {
+        const timeSlotsResult = await query<any>(
+          `SELECT time_slots FROM itinerary_days WHERE id::text = $1`,
+          [dayId]
+        );
+        if (timeSlotsResult.rows[0]?.time_slots) {
+          day.time_slots = timeSlotsResult.rows[0].time_slots;
+        } else {
+          day.time_slots = {
+            morning: { time: '', activities: [], transfers: [] },
+            afternoon: { time: '', activities: [], transfers: [] },
+            evening: { time: '', activities: [], transfers: [] },
+          };
+        }
+      } catch (error) {
+        // Column doesn't exist, provide default
         day.time_slots = {
           morning: { time: '', activities: [], transfers: [] },
           afternoon: { time: '', activities: [], transfers: [] },
           evening: { time: '', activities: [], transfers: [] },
         };
       }
-    } catch (error) {
-      // Column doesn't exist, provide default
-      day.time_slots = {
-        morning: { time: '', activities: [], transfers: [] },
-        afternoon: { time: '', activities: [], transfers: [] },
-        evening: { time: '', activities: [], transfers: [] },
-      };
     }
 
     return NextResponse.json({ day });
