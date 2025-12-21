@@ -86,7 +86,7 @@ export function DayByDayItineraryView({
 
   // Calculate total price when items change and notify parent
   useEffect(() => {
-    const total = items.reduce((sum, item) => sum + (item.total_price || 0), 0);
+    const total = items.reduce((sum, item) => sum + (Number(item.total_price) || 0), 0);
     setTotalPrice(total);
     
     // Notify parent component of price update (database trigger will update total_price automatically)
@@ -370,6 +370,32 @@ export function DayByDayItineraryView({
 
   const updateDay = async (dayId: string, day: ItineraryDay) => {
     try {
+      // Ensure time_slots is properly formatted before sending
+      const timeSlotsToSend = day.time_slots || {
+        morning: { time: '08:00', activities: [], transfers: [] },
+        afternoon: { time: '12:30', activities: [], transfers: [] },
+        evening: { time: '17:00', activities: [], transfers: [] },
+      };
+
+      // Validate time_slots structure
+      const validatedTimeSlots = {
+        morning: {
+          time: timeSlotsToSend.morning?.time || '08:00',
+          activities: Array.isArray(timeSlotsToSend.morning?.activities) ? timeSlotsToSend.morning.activities : [],
+          transfers: Array.isArray(timeSlotsToSend.morning?.transfers) ? timeSlotsToSend.morning.transfers : [],
+        },
+        afternoon: {
+          time: timeSlotsToSend.afternoon?.time || '12:30',
+          activities: Array.isArray(timeSlotsToSend.afternoon?.activities) ? timeSlotsToSend.afternoon.activities : [],
+          transfers: Array.isArray(timeSlotsToSend.afternoon?.transfers) ? timeSlotsToSend.afternoon.transfers : [],
+        },
+        evening: {
+          time: timeSlotsToSend.evening?.time || '17:00',
+          activities: Array.isArray(timeSlotsToSend.evening?.activities) ? timeSlotsToSend.evening.activities : [],
+          transfers: Array.isArray(timeSlotsToSend.evening?.transfers) ? timeSlotsToSend.evening.transfers : [],
+        },
+      };
+
       const response = await fetch(`/api/itineraries/${itineraryId}/days/${dayId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -377,16 +403,25 @@ export function DayByDayItineraryView({
           cityName: day.city_name,
           date: day.date,
           notes: day.notes,
-          timeSlots: day.time_slots,
+          timeSlots: validatedTimeSlots,
         }),
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to update day');
+        const errorText = await response.text();
+        let error;
+        try {
+          error = JSON.parse(errorText);
+        } catch {
+          error = { error: errorText || 'Failed to update day' };
+        }
+        console.error('[DayByDayItineraryView] Error updating day time_slots:', error);
+        // Don't throw - just log, so the UI doesn't break
+        return;
       }
     } catch (err) {
-      console.error('Error updating day:', err);
+      console.error('[DayByDayItineraryView] Error updating day:', err);
+      // Don't throw - just log, so the UI doesn't break
     }
   };
 
@@ -512,7 +547,7 @@ export function DayByDayItineraryView({
       <div className="space-y-6">
         {days.map((day, dayIndex) => {
           const dayItems = items.filter(item => item.day_id === day.id);
-          const dayTotal = dayItems.reduce((sum, item) => sum + (item.total_price || 0), 0);
+          const dayTotal = dayItems.reduce((sum, item) => sum + (Number(item.total_price) || 0), 0);
 
           return (
             <Card key={day.id} className="shadow-lg">
@@ -609,7 +644,7 @@ export function DayByDayItineraryView({
                                 <div className="flex-1">
                                   <span className="text-sm font-medium">{item.package_title}</span>
                                   <span className="text-sm text-green-600 ml-2">
-                                    ${item.total_price.toFixed(2)}
+                                    ${(item.total_price || 0).toFixed(2)}
                                   </span>
                                 </div>
                                 <Button
@@ -650,7 +685,7 @@ export function DayByDayItineraryView({
                                 <div className="flex-1">
                                   <span className="text-sm font-medium">{item.package_title}</span>
                                   <span className="text-sm text-green-600 ml-2">
-                                    ${item.total_price.toFixed(2)}
+                                    ${(item.total_price || 0).toFixed(2)}
                                   </span>
                                 </div>
                                 <Button

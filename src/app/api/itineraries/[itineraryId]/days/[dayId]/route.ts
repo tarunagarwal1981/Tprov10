@@ -19,8 +19,20 @@ export async function PATCH(
   { params }: { params: Promise<{ itineraryId: string; dayId: string }> }
 ) {
   const { itineraryId, dayId } = await params;
+  let updates: any = null;
+  
+  // Parse request body first (can only be read once)
   try {
-    const updates = await request.json();
+    updates = await request.json();
+  } catch (parseError) {
+    console.error('[Update Day] JSON parse error:', parseError);
+    return NextResponse.json(
+      { error: 'Invalid JSON in request body' },
+      { status: 400 }
+    );
+  }
+
+  try {
 
     if (!updates || Object.keys(updates).length === 0) {
       return NextResponse.json(
@@ -62,9 +74,13 @@ export async function PATCH(
     for (const [key, dbColumn] of Object.entries(fieldMappings)) {
       if (updates[key] !== undefined) {
         if (key === 'timeSlots') {
-          // time_slots needs JSON stringification
-          updateFields.push(`${dbColumn} = $${paramIndex}`);
-          updateValues.push(JSON.stringify(updates[key]));
+          // time_slots needs JSON stringification and casting to JSONB
+          updateFields.push(`${dbColumn} = $${paramIndex}::jsonb`);
+          // Ensure it's a valid JSON object
+          const timeSlotsValue = typeof updates[key] === 'string' 
+            ? updates[key] 
+            : JSON.stringify(updates[key]);
+          updateValues.push(timeSlotsValue);
         } else {
           updateFields.push(`${dbColumn} = $${paramIndex}`);
           updateValues.push(updates[key]);
@@ -137,12 +153,15 @@ export async function PATCH(
 
     return NextResponse.json({ day });
   } catch (error: any) {
+    console.error('[Update Day] Error:', error);
+    console.error('[Update Day] Error message:', error?.message);
+    console.error('[Update Day] Error code:', error?.code);
+    
     // If error is about time_slots column, retry without it
-    if (error?.message?.includes('time_slots') || error?.code === '42703') {
-      console.warn('time_slots column not found, retrying update without it');
-      // Remove time_slots from updates and retry
-      const body = await request.json();
-      const { timeSlots, ...otherUpdates } = body;
+    if (updates && (error?.message?.includes('time_slots') || error?.code === '42703' || error?.message?.includes('column') || error?.message?.includes('does not exist'))) {
+      console.warn('[Update Day] time_slots column not found, retrying update without it');
+      // Remove time_slots from updates and retry (updates already parsed above)
+      const { timeSlots, ...otherUpdates } = updates;
       if (Object.keys(otherUpdates).length > 0) {
         const updateFields: string[] = [];
         const updateValues: any[] = [];
