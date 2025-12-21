@@ -240,32 +240,56 @@ export default function LeadDetailPage() {
           throw new Error(errorData.details || errorData.error || 'Failed to create itinerary');
         }
 
-        const { itinerary } = await itineraryResponse.json();
-        console.log('[LeadDetailPage] Itinerary created successfully:', itinerary);
+        const { itinerary: createdItinerary } = await itineraryResponse.json();
+        console.log('[LeadDetailPage] Itinerary created successfully:', createdItinerary);
         
-        // Note: query_id is already set during creation, no need to PATCH
+        // Fetch full itinerary details (API only returns ID)
+        const fullItineraryResponse = await fetch(`/api/itineraries/${createdItinerary.id}?agentId=${user.id}`);
+        let fullItinerary = createdItinerary;
+        if (fullItineraryResponse.ok) {
+          const { itinerary: fetchedItinerary } = await fullItineraryResponse.json();
+          fullItinerary = fetchedItinerary;
+          console.log('[LeadDetailPage] Full itinerary fetched, query_id:', fullItinerary.query_id);
+        }
+        
+        // Ensure query_id is set (should be set during creation, but double-check)
+        if (!fullItinerary.query_id && savedQuery.id) {
+          console.log('[LeadDetailPage] Query ID missing from itinerary, updating...');
+          await fetch(`/api/itineraries/${fullItinerary.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ queryId: savedQuery.id }),
+          });
+          fullItinerary.query_id = savedQuery.id;
+        }
 
-        // Refresh itineraries
+        // Refresh itineraries to get the latest data
         const itinerariesResponse = await fetch(`/api/itineraries/leads/${leadId}`);
         if (itinerariesResponse.ok) {
           const { itineraries: itinerariesData } = await itinerariesResponse.json();
           setItineraries(itinerariesData);
-          setQueries(prev => ({ ...prev, [itinerary.id]: savedQuery }));
+          // Immediately add query to queries map so it's available for rendering
+          setQueries(prev => ({ ...prev, [fullItinerary.id]: savedQuery }));
+          console.log('[LeadDetailPage] Itineraries and queries updated');
         }
 
         toast.success('Query and itinerary created successfully!');
         
-        // Refresh the page data to show the new itinerary
-        await fetchLeadData();
-        
-        // For "Create Itinerary", expand it to show day-by-day view inline
+        // For "Create Itinerary", expand it to show day-by-day view inline (NO NAVIGATION)
         if (queryAction === 'create') {
-          setExpandedItineraryId(itinerary.id);
+          console.log('[LeadDetailPage] Setting expanded itinerary ID:', fullItinerary.id);
+          // Set expanded state immediately so the view renders
+          setExpandedItineraryId(fullItinerary.id);
+          // Refresh the page data in background to ensure everything is up to date
+          fetchLeadData().catch(err => console.error('Error refreshing lead data:', err));
         } else if (queryAction === 'insert') {
           // For "Insert Itinerary", navigate to insert page
           setTimeout(() => {
-            router.push(`/agent/leads/${leadId}/insert?queryId=${savedQuery.id}&itineraryId=${itinerary.id}`);
+            router.push(`/agent/leads/${leadId}/insert?queryId=${savedQuery.id}&itineraryId=${fullItinerary.id}`);
           }, 100);
+        } else {
+          // For editing existing itinerary, just refresh
+          await fetchLeadData();
         }
       }
       
@@ -505,10 +529,11 @@ export default function LeadDetailPage() {
                   </Card>
 
                   {/* Day-by-Day Itinerary View (inline, only for Create Itinerary) */}
-                  {isCreateItinerary && isExpanded && itineraryQuery && (
+                  {isCreateItinerary && isExpanded && itinerary.query_id && (
                     <Card className="border-2 border-blue-200">
                       <CardContent className="p-6">
                         <DayByDayItineraryView
+                          key={`itinerary-${itinerary.id}`}
                           itineraryId={itinerary.id}
                           queryId={itinerary.query_id}
                           adultsCount={itinerary.adults_count}
@@ -533,6 +558,14 @@ export default function LeadDetailPage() {
                             await fetchLeadData();
                           }}
                         />
+                      </CardContent>
+                    </Card>
+                  )}
+                  {/* Show message if Create Itinerary is expanded but query_id is missing */}
+                  {isCreateItinerary && isExpanded && !itinerary.query_id && (
+                    <Card className="border-2 border-yellow-200">
+                      <CardContent className="p-6 text-center">
+                        <p className="text-gray-600">Query is being linked to itinerary. Please wait...</p>
                       </CardContent>
                     </Card>
                   )}
