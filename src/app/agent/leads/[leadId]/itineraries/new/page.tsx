@@ -124,8 +124,15 @@ export default function CreateItineraryPage() {
           const daysResponse = await fetch(`/api/itineraries/${itineraryId}/days`);
           if (daysResponse.ok) {
             const { days: daysData } = await daysResponse.json();
-            setDays(daysData);
-          } else {
+            if (daysData && daysData.length > 0) {
+              setDays(daysData);
+            } else {
+              // No days exist, generate from query
+              if (fetchedQuery) {
+                await generateDaysFromQuery(fetchedQuery, itineraryId);
+              }
+            }
+        } else {
             // No days exist, generate from query
             if (fetchedQuery) {
               await generateDaysFromQuery(fetchedQuery, itineraryId);
@@ -170,81 +177,29 @@ export default function CreateItineraryPage() {
       return;
     }
 
-    const startDate = queryData.leaving_on ? new Date(queryData.leaving_on) : new Date();
-    const newDays: ItineraryDay[] = [];
-    let globalDayNumber = 1;
-    const currentDate = new Date(startDate);
-
-    queryData.destinations.forEach((destination, cityIndex) => {
-      const cityName = destination.city;
-      const nights = destination.nights || 1;
-      const isLastCity = cityIndex === queryData.destinations.length - 1;
-      const isFirstCity = cityIndex === 0;
-
-      // Calculate days to create (same logic as MultiCityHotelPackageForm)
-      const daysToCreate = isFirstCity && queryData.destinations.length === 1 
-        ? nights + 1 
-        : isFirstCity 
-        ? nights + 1 
-        : nights;
-
-      for (let i = 0; i < daysToCreate; i++) {
-        const isArrivalDay = isFirstCity && i === 0;
-        const isDepartureDay = i === daysToCreate - 1;
-        const cityNightNumber = isFirstCity ? (i + 1) : (i + 2);
-
-        let dayTitle = '';
-        if (isArrivalDay) {
-          dayTitle = `Arrival - ${cityName}`;
-        } else if (isDepartureDay && !isLastCity) {
-          dayTitle = `Departure ${cityName} / Arrival ${queryData.destinations[cityIndex + 1]?.city || ''}`;
-        } else if (isDepartureDay && isLastCity) {
-          dayTitle = `Departure - ${cityName}`;
-        } else {
-          dayTitle = `Day ${globalDayNumber} - ${cityName} (Night ${cityNightNumber})`;
-        }
-
-        const dayDate = new Date(currentDate);
-        dayDate.setDate(currentDate.getDate() + (isFirstCity ? i : i + (cityIndex > 0 ? 1 : 0)));
-
-        newDays.push({
-          day_number: globalDayNumber,
-          date: dayDate.toISOString().split('T')[0] || null,
-          city_name: cityName,
-          title: dayTitle,
-          time_slots: {
-            morning: { time: '08:00', activities: [], transfers: [] },
-            afternoon: { time: '12:30', activities: [], transfers: [] },
-            evening: { time: '17:00', activities: [], transfers: [] },
-          },
-        });
-
-        globalDayNumber++;
-      }
-
-      if (!isLastCity) {
-        currentDate.setDate(currentDate.getDate() + nights + 1);
-      } else {
-        currentDate.setDate(currentDate.getDate() + nights);
-      }
-    });
-
-    // Create days via API
-    if (newDays.length > 0 && itId) {
-      const daysResponse = await fetch(`/api/itineraries/${itId}/days/bulk-create`, {
+    // Use the new generate-from-query endpoint
+    try {
+      const response = await fetch(`/api/itineraries/${itId}/days/generate-from-query`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ days: newDays }),
+        body: JSON.stringify({
+          queryId: queryData.id,
+          destinations: queryData.destinations,
+          leavingOn: queryData.leaving_on,
+        }),
       });
 
-      if (daysResponse.ok) {
-        const { days: createdDays } = await daysResponse.json();
+      if (response.ok) {
+        const { days: createdDays } = await response.json();
         setDays(createdDays);
         toast.success(`Generated ${createdDays.length} days from query`);
       } else {
-        const error = await daysResponse.json();
-        toast.error(error.error || 'Failed to create days');
+        const error = await response.json();
+        toast.error(error.error || 'Failed to generate days');
       }
+    } catch (err) {
+      console.error('Error generating days:', err);
+      toast.error('Failed to generate days from query');
     }
   };
 
@@ -392,46 +347,46 @@ export default function CreateItineraryPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading itinerary builder...</p>
         </div>
-      </div>
+        </div>
     );
   }
 
   if (!query || !itinerary) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center">
+          <div className="text-center">
           <p className="text-gray-600 mb-4">Query or itinerary not found</p>
           <Button onClick={() => router.push(`/agent/leads/${leadId}`)}>
-            <FiArrowLeft className="w-4 h-4 mr-2" />
+              <FiArrowLeft className="w-4 h-4 mr-2" />
             Back to Lead Details
-          </Button>
+            </Button>
+          </div>
         </div>
-      </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/30">
       <div className="p-4 lg:p-6 max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-6">
-          <Button
-            variant="ghost"
-            onClick={() => router.push(`/agent/leads/${leadId}`)}
-            className="mb-4"
-          >
-            <FiArrowLeft className="w-4 h-4 mr-2" />
-            Back to Lead Details
-          </Button>
-          <h1 className="text-2xl font-bold text-gray-900">Create Itinerary</h1>
-          <p className="text-gray-600 mt-2">
+      {/* Header */}
+      <div className="mb-6">
+        <Button
+          variant="ghost"
+          onClick={() => router.push(`/agent/leads/${leadId}`)}
+          className="mb-4"
+        >
+                <FiArrowLeft className="w-4 h-4 mr-2" />
+          Back to Lead Details
+              </Button>
+        <h1 className="text-2xl font-bold text-gray-900">Create Itinerary</h1>
+        <p className="text-gray-600 mt-2">
             Build day-wise itinerary for {lead?.customerName || 'customer'}
-          </p>
-        </div>
+        </p>
+              </div>
 
         {/* Days Timeline */}
         {days.length > 0 && (
@@ -527,8 +482,8 @@ export default function CreateItineraryPage() {
                                 }
                               }}
                               className="w-32"
-                            />
-                          </div>
+                  />
+                </div>
 
                           {/* Activities */}
                           <div className="mb-3">
@@ -587,7 +542,7 @@ export default function CreateItineraryPage() {
                             ) : (
                               <p className="text-sm text-gray-500 italic">No activities added</p>
                             )}
-                          </div>
+              </div>
 
                           {/* Transfers */}
                           <div>
@@ -691,6 +646,6 @@ export default function CreateItineraryPage() {
           />
         )}
       </div>
-    </div>
+      </div>
   );
 }

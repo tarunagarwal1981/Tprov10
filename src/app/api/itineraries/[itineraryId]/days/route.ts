@@ -21,10 +21,13 @@ export async function GET(
     let hasTimeSlots = true;
 
     try {
-      // First attempt: try selecting with time_slots
+      // First attempt: try selecting with all enhanced fields
       result = await query<any>(
-        `SELECT id, itinerary_id, day_number, date, city_name, display_order, notes, 
-                created_at, updated_at, time_slots
+        `SELECT id, itinerary_id, day_number, date, city_name, display_order, notes, title,
+                created_at, updated_at, time_slots,
+                arrival_flight_id, arrival_time, departure_flight_id, departure_time,
+                hotel_id, hotel_name, hotel_star_rating, room_type, meal_plan,
+                lunch_included, lunch_details, dinner_included, dinner_details, arrival_description
          FROM itinerary_days 
          WHERE itinerary_id::text = $1 
          ORDER BY day_number ASC`,
@@ -37,7 +40,7 @@ export async function GET(
         hasTimeSlots = false;
         
         result = await query<any>(
-          `SELECT id, itinerary_id, day_number, date, city_name, display_order, notes, 
+          `SELECT id, itinerary_id, day_number, date, city_name, display_order, notes, title,
                   created_at, updated_at
            FROM itinerary_days 
            WHERE itinerary_id::text = $1 

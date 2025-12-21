@@ -7,7 +7,12 @@ export const runtime = 'nodejs';
 /**
  * PATCH /api/itineraries/[itineraryId]/days/[dayId]
  * Update an itinerary day
- * Body: { cityName?, date?, displayOrder?, timeSlots?, notes? }
+ * Body: { 
+ *   cityName?, date?, displayOrder?, timeSlots?, notes?, title?,
+ *   arrivalFlightId?, arrivalTime?, departureFlightId?, departureTime?,
+ *   hotelId?, hotelName?, hotelStarRating?, roomType?, mealPlan?,
+ *   lunchIncluded?, lunchDetails?, dinnerIncluded?, dinnerDetails?, arrivalDescription?
+ * }
  */
 export async function PATCH(
   request: NextRequest,
@@ -29,42 +34,43 @@ export async function PATCH(
     const updateValues: any[] = [];
     let paramIndex = 1;
 
-    // Handle time_slots with backward compatibility
-    if (updates.timeSlots !== undefined) {
-      // Try to update with time_slots first, fallback without if column doesn't exist
-      try {
-        updateFields.push(`time_slots = $${paramIndex}`);
-        updateValues.push(JSON.stringify(updates.timeSlots));
+    // Handle all fields with backward compatibility
+    const fieldMappings: Record<string, string> = {
+      cityName: 'city_name',
+      date: 'date',
+      displayOrder: 'display_order',
+      timeSlots: 'time_slots',
+      notes: 'notes',
+      title: 'title',
+      arrivalFlightId: 'arrival_flight_id',
+      arrivalTime: 'arrival_time',
+      departureFlightId: 'departure_flight_id',
+      departureTime: 'departure_time',
+      hotelId: 'hotel_id',
+      hotelName: 'hotel_name',
+      hotelStarRating: 'hotel_star_rating',
+      roomType: 'room_type',
+      mealPlan: 'meal_plan',
+      lunchIncluded: 'lunch_included',
+      lunchDetails: 'lunch_details',
+      dinnerIncluded: 'dinner_included',
+      dinnerDetails: 'dinner_details',
+      arrivalDescription: 'arrival_description',
+    };
+
+    // Process each field
+    for (const [key, dbColumn] of Object.entries(fieldMappings)) {
+      if (updates[key] !== undefined) {
+        if (key === 'timeSlots') {
+          // time_slots needs JSON stringification
+          updateFields.push(`${dbColumn} = $${paramIndex}`);
+          updateValues.push(JSON.stringify(updates[key]));
+        } else {
+          updateFields.push(`${dbColumn} = $${paramIndex}`);
+          updateValues.push(updates[key]);
+        }
         paramIndex++;
-      } catch (error) {
-        // If time_slots column doesn't exist, skip it
-        console.warn('time_slots column not found, skipping update');
       }
-    }
-
-    // Handle other fields
-    if (updates.cityName !== undefined) {
-      updateFields.push(`city_name = $${paramIndex}`);
-      updateValues.push(updates.cityName);
-      paramIndex++;
-    }
-
-    if (updates.date !== undefined) {
-      updateFields.push(`date = $${paramIndex}`);
-      updateValues.push(updates.date);
-      paramIndex++;
-    }
-
-    if (updates.displayOrder !== undefined) {
-      updateFields.push(`display_order = $${paramIndex}`);
-      updateValues.push(updates.displayOrder);
-      paramIndex++;
-    }
-
-    if (updates.notes !== undefined) {
-      updateFields.push(`notes = $${paramIndex}`);
-      updateValues.push(updates.notes);
-      paramIndex++;
     }
 
     if (updateFields.length === 0) {
@@ -78,11 +84,21 @@ export async function PATCH(
     updateFields.push('updated_at = NOW()');
     updateValues.push(itineraryId, dayId);
 
+    // Try to return all enhanced fields, fallback to basic if they don't exist
+    const returnFields = [
+      'id', 'itinerary_id', 'day_number', 'date', 'city_name', 'display_order', 
+      'notes', 'title', 'time_slots',
+      'arrival_flight_id', 'arrival_time', 'departure_flight_id', 'departure_time',
+      'hotel_id', 'hotel_name', 'hotel_star_rating', 'room_type', 'meal_plan',
+      'lunch_included', 'lunch_details', 'dinner_included', 'dinner_details', 
+      'arrival_description', 'created_at', 'updated_at'
+    ].join(', ');
+
     const updateQuery = `
       UPDATE itinerary_days 
       SET ${updateFields.join(', ')}
       WHERE itinerary_id::text = $${paramIndex} AND id::text = $${paramIndex + 1}
-      RETURNING id, itinerary_id, day_number, date, city_name, display_order, notes, created_at, updated_at
+      RETURNING ${returnFields}
     `;
 
     const updateResult = await query<any>(updateQuery, updateValues);
