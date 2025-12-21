@@ -24,6 +24,7 @@ export interface Itinerary {
   lead_budget_min: number | null;
   lead_budget_max: number | null;
   notes: string | null;
+  query_id: string | null;
   created_at: string;
   updated_at: string;
   sent_at: string | null;

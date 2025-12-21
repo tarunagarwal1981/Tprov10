@@ -259,15 +259,22 @@ export function DayByDayItineraryView({
 
       // Update day's time slot
       const updatedDays = [...days];
-      const updatedDay = { ...updatedDays[selectedDayIndex] };
-      if (!updatedDay.time_slots) {
-        updatedDay.time_slots = {
+      const existingDay = updatedDays[selectedDayIndex];
+      if (!existingDay || !existingDay.id) {
+        throw new Error('Day not found or missing ID');
+      }
+      const updatedDay: ItineraryDay = {
+        ...existingDay,
+        id: existingDay.id,
+        day_number: existingDay.day_number,
+        city_name: existingDay.city_name,
+        time_slots: existingDay.time_slots || {
           morning: { time: '08:00', activities: [], transfers: [] },
           afternoon: { time: '12:30', activities: [], transfers: [] },
           evening: { time: '17:00', activities: [], transfers: [] },
-        };
-      }
-      updatedDay.time_slots[selectedTimeSlot].activities.push(newItem.id);
+        },
+      };
+      updatedDay.time_slots![selectedTimeSlot].activities.push(newItem.id);
       updatedDays[selectedDayIndex] = updatedDay;
       setDays(updatedDays);
 
@@ -326,15 +333,22 @@ export function DayByDayItineraryView({
 
       // Update day's time slot
       const updatedDays = [...days];
-      const updatedDay = { ...updatedDays[selectedDayIndex] };
-      if (!updatedDay.time_slots) {
-        updatedDay.time_slots = {
+      const existingDay = updatedDays[selectedDayIndex];
+      if (!existingDay || !existingDay.id) {
+        throw new Error('Day not found or missing ID');
+      }
+      const updatedDay: ItineraryDay = {
+        ...existingDay,
+        id: existingDay.id,
+        day_number: existingDay.day_number,
+        city_name: existingDay.city_name,
+        time_slots: existingDay.time_slots || {
           morning: { time: '08:00', activities: [], transfers: [] },
           afternoon: { time: '12:30', activities: [], transfers: [] },
           evening: { time: '17:00', activities: [], transfers: [] },
-        };
-      }
-      updatedDay.time_slots[selectedTimeSlot].transfers.push(newItem.id);
+        },
+      };
+      updatedDay.time_slots![selectedTimeSlot].transfers.push(newItem.id);
       updatedDays[selectedDayIndex] = updatedDay;
       setDays(updatedDays);
 
@@ -389,17 +403,29 @@ export function DayByDayItineraryView({
 
       // Update day's time slot
       const updatedDays = [...days];
-      const updatedDay = { ...updatedDays[dayIndex] };
-      if (updatedDay.time_slots) {
-        if (type === 'activity') {
-          updatedDay.time_slots[timeSlot].activities = updatedDay.time_slots[timeSlot].activities.filter(id => id !== itemId);
-        } else {
-          updatedDay.time_slots[timeSlot].transfers = updatedDay.time_slots[timeSlot].transfers.filter(id => id !== itemId);
-        }
-        updatedDays[dayIndex] = updatedDay;
-        setDays(updatedDays);
-        await updateDay(updatedDay.id, updatedDay);
+      const existingDay = updatedDays[dayIndex];
+      if (!existingDay || !existingDay.id) {
+        throw new Error('Day not found or missing ID');
       }
+      const updatedDay: ItineraryDay = {
+        ...existingDay,
+        id: existingDay.id,
+        day_number: existingDay.day_number,
+        city_name: existingDay.city_name,
+        time_slots: existingDay.time_slots || {
+          morning: { time: '08:00', activities: [], transfers: [] },
+          afternoon: { time: '12:30', activities: [], transfers: [] },
+          evening: { time: '17:00', activities: [], transfers: [] },
+        },
+      };
+      if (type === 'activity') {
+        updatedDay.time_slots![timeSlot].activities = updatedDay.time_slots![timeSlot].activities.filter(id => id !== itemId);
+      } else {
+        updatedDay.time_slots![timeSlot].transfers = updatedDay.time_slots![timeSlot].transfers.filter(id => id !== itemId);
+      }
+      updatedDays[dayIndex] = updatedDay;
+      setDays(updatedDays);
+      await updateDay(updatedDay.id, updatedDay);
 
       // Refresh items
       await fetchItems();
@@ -536,15 +562,22 @@ export function DayByDayItineraryView({
                           value={slot.time}
                           onChange={(e) => {
                             const updatedDays = [...days];
-                            const updatedDay = { ...updatedDays[dayIndex] };
-                            if (!updatedDay.time_slots) {
-                              updatedDay.time_slots = {
+                            const existingDay = updatedDays[dayIndex];
+                            if (!existingDay || !existingDay.id) {
+                              return;
+                            }
+                            const updatedDay: ItineraryDay = {
+                              ...existingDay,
+                              id: existingDay.id,
+                              day_number: existingDay.day_number,
+                              city_name: existingDay.city_name,
+                              time_slots: existingDay.time_slots || {
                                 morning: { time: '08:00', activities: [], transfers: [] },
                                 afternoon: { time: '12:30', activities: [], transfers: [] },
                                 evening: { time: '17:00', activities: [], transfers: [] },
-                              };
-                            }
-                            updatedDay.time_slots[timeSlot].time = e.target.value;
+                              },
+                            };
+                            updatedDay.time_slots![timeSlot].time = e.target.value;
                             updatedDays[dayIndex] = updatedDay;
                             setDays(updatedDays);
                             updateDay(updatedDay.id, updatedDay);
