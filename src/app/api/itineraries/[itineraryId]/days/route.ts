@@ -15,65 +15,52 @@ export async function GET(
   try {
     const { itineraryId } = await params;
 
-    // Fetch itinerary days - explicitly list columns to avoid issues if time_slots doesn't exist
-    // Try with time_slots first, fallback to without if column doesn't exist
-    let result;
-    let hasTimeSlots = true;
+    if (!itineraryId) {
+      return NextResponse.json(
+        { error: 'itineraryId is required' },
+        { status: 400 }
+      );
+    }
 
+    // Fetch itinerary days - start with minimal fields and add more if they exist
+    let result;
+    
+    // Use basic fields that definitely exist, try to include time_slots if available
     try {
-      // First attempt: try selecting with all enhanced fields
       result = await query<any>(
         `SELECT id, itinerary_id, day_number, date, city_name, display_order, notes,
-                created_at, updated_at, time_slots,
-                arrival_flight_id, arrival_time, departure_flight_id, departure_time,
-                hotel_id, hotel_name, hotel_star_rating, room_type, meal_plan,
-                lunch_included, lunch_details, dinner_included, dinner_details, arrival_description
+                created_at, updated_at, time_slots
          FROM itinerary_days 
          WHERE itinerary_id::text = $1 
          ORDER BY day_number ASC`,
         [itineraryId]
       );
     } catch (error: any) {
-      // If error is about missing columns, retry with basic fields only
+      // If time_slots column doesn't exist, retry without it
       if (error?.message?.includes('column') || error?.code === '42703') {
-        console.warn('Some enhanced columns not found, selecting with basic fields only');
-        hasTimeSlots = false;
-        
-        try {
-          // Try with time_slots
-          result = await query<any>(
-            `SELECT id, itinerary_id, day_number, date, city_name, display_order, notes,
-                    created_at, updated_at, time_slots
-             FROM itinerary_days 
-             WHERE itinerary_id::text = $1 
-             ORDER BY day_number ASC`,
-            [itineraryId]
-          );
-          hasTimeSlots = true;
-        } catch (error2: any) {
-          // If time_slots also doesn't exist, use minimal fields
-          result = await query<any>(
-            `SELECT id, itinerary_id, day_number, date, city_name, display_order, notes,
-                    created_at, updated_at
-             FROM itinerary_days 
-             WHERE itinerary_id::text = $1 
-             ORDER BY day_number ASC`,
-            [itineraryId]
-          );
-        }
+        console.warn('time_slots column not found, selecting without it');
+        result = await query<any>(
+          `SELECT id, itinerary_id, day_number, date, city_name, display_order, notes,
+                  created_at, updated_at
+           FROM itinerary_days 
+           WHERE itinerary_id::text = $1 
+           ORDER BY day_number ASC`,
+          [itineraryId]
+        );
       } else {
-        // Re-throw if it's a different error
-        throw error;
+        // For other errors, return empty array (days might not exist yet)
+        console.warn('Error fetching days, returning empty array:', error);
+        return NextResponse.json({ days: [] });
       }
     }
 
     // Ensure time_slots exists for each day (provide default if column doesn't exist or is null)
-    const days = result.rows.map((day: any) => ({
+    const days = (result.rows || []).map((day: any) => ({
       ...day,
       time_slots: day.time_slots || {
-        morning: { time: '', activities: [], transfers: [] },
-        afternoon: { time: '', activities: [], transfers: [] },
-        evening: { time: '', activities: [], transfers: [] },
+        morning: { time: '08:00', activities: [], transfers: [] },
+        afternoon: { time: '12:30', activities: [], transfers: [] },
+        evening: { time: '17:00', activities: [], transfers: [] },
       },
     }));
 

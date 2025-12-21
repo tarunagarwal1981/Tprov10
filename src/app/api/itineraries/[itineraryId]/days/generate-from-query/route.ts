@@ -15,8 +15,15 @@ export async function POST(
 ) {
   try {
     const { itineraryId } = await params;
-    const body = await request.json();
     
+    if (!itineraryId) {
+      return NextResponse.json(
+        { error: 'itineraryId is required' },
+        { status: 400 }
+      );
+    }
+
+    const body = await request.json();
     const { queryId, destinations, leavingOn } = body;
 
     // Fetch query if queryId provided

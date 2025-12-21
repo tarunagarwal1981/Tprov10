@@ -132,8 +132,21 @@ export default function CreateItineraryPage() {
                 await generateDaysFromQuery(fetchedQuery, itineraryId);
               }
             }
-        } else {
-            // No days exist, generate from query
+          } else {
+            // If error fetching days, log it and try to generate
+            const errorData = await daysResponse.json().catch(() => ({}));
+            console.warn('[CreateItineraryPage] Error fetching days:', {
+              status: daysResponse.status,
+              error: errorData,
+              itineraryId,
+            });
+            
+            // If it's not a 404 (not found is expected), show error
+            if (daysResponse.status !== 404) {
+              toast.error(errorData.error || 'Failed to fetch days');
+            }
+            
+            // Try to generate days from query if available
             if (fetchedQuery) {
               await generateDaysFromQuery(fetchedQuery, itineraryId);
             }

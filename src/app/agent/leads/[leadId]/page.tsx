@@ -28,6 +28,7 @@ import { queryService, type ItineraryQuery } from '@/lib/services/queryService';
 import { itineraryService, type Itinerary } from '@/lib/services/itineraryService';
 import { MarketplaceService } from '@/lib/services/marketplaceService';
 import { QueryModal } from '@/components/agent/QueryModal';
+import { DayByDayItineraryView } from '@/components/agent/DayByDayItineraryView';
 // Removed Supabase import - now using AWS API routes
 
 interface LeadDetails {
@@ -59,6 +60,7 @@ export default function LeadDetailPage() {
   const [queryLoading, setQueryLoading] = useState(false);
   const [queryAction, setQueryAction] = useState<'create' | 'insert' | null>(null); // Track which card was clicked
   const [editingQueryForItinerary, setEditingQueryForItinerary] = useState<string | null>(null); // Track which itinerary's query is being edited
+  const [expandedItineraryId, setExpandedItineraryId] = useState<string | null>(null); // Track which itinerary is expanded to show days
   const sidebarInitialized = React.useRef(false);
 
   // Collapse sidebar by default on this page (only once on initial mount)
@@ -256,19 +258,14 @@ export default function LeadDetailPage() {
         // Refresh the page data to show the new itinerary
         await fetchLeadData();
         
-        // Only navigate if lead data is available
-        if (lead) {
-          // Navigate based on action (after a short delay to ensure state is updated)
+        // For "Create Itinerary", expand it to show day-by-day view inline
+        if (queryAction === 'create') {
+          setExpandedItineraryId(itinerary.id);
+        } else if (queryAction === 'insert') {
+          // For "Insert Itinerary", navigate to insert page
           setTimeout(() => {
-            if (queryAction === 'insert') {
-              router.push(`/agent/leads/${leadId}/insert?queryId=${savedQuery.id}&itineraryId=${itinerary.id}`);
-            } else if (queryAction === 'create') {
-              router.push(`/agent/leads/${leadId}/itineraries/new?queryId=${savedQuery.id}&itineraryId=${itinerary.id}`);
-            }
+            router.push(`/agent/leads/${leadId}/insert?queryId=${savedQuery.id}&itineraryId=${itinerary.id}`);
           }, 100);
-        } else {
-          console.warn('[LeadDetailPage] Cannot navigate - lead data not available');
-          // Stay on the page and let user manually navigate if needed
         }
       }
       
@@ -407,91 +404,139 @@ export default function LeadDetailPage() {
             {itineraries.map((itinerary) => {
               const itineraryQuery = queries[itinerary.id];
               const isInsertItinerary = itinerary.name.toLowerCase().includes('insert');
+              const isCreateItinerary = itinerary.name.toLowerCase().includes('create');
+              const isExpanded = expandedItineraryId === itinerary.id;
               
               return (
-                <Card key={itinerary.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <CardTitle className="text-lg font-semibold line-clamp-1">
-                      {itinerary.name}
-                    </CardTitle>
-                    <Badge variant="secondary">{itinerary.status}</Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    {/* Query Details for this itinerary */}
-                    {itineraryQuery ? (
-                      <div className="bg-gray-50 p-3 rounded-md space-y-2 text-sm">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="font-medium text-gray-700">Query Details</span>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setEditingQueryForItinerary(itinerary.id);
-                              setQueryModalOpen(true);
-                            }}
-                          >
-                            <FiEdit2 className="w-3 h-3 mr-1" />
-                            Edit Query
-                          </Button>
+                <div key={itinerary.id} className="space-y-4">
+                  <Card className="hover:shadow-lg transition-shadow">
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <CardTitle className="text-lg font-semibold line-clamp-1">
+                          {itinerary.name}
+                        </CardTitle>
+                        <Badge variant="secondary">{itinerary.status}</Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {/* Query Details for this itinerary */}
+                      {itineraryQuery ? (
+                        <div className="bg-gray-50 p-3 rounded-md space-y-2 text-sm">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="font-medium text-gray-700">Query Details</span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingQueryForItinerary(itinerary.id);
+                                setQueryModalOpen(true);
+                              }}
+                            >
+                              <FiEdit2 className="w-3 h-3 mr-1" />
+                              Edit Query
+                            </Button>
+                          </div>
+                          {itineraryQuery.destinations.length > 0 && (
+                            <div>
+                              <span className="font-medium text-gray-600">Destinations: </span>
+                              <span className="text-gray-500">{formatDestinations(itineraryQuery.destinations)}</span>
+                            </div>
+                          )}
+                          {itineraryQuery.travelers && (
+                            <div>
+                              <span className="font-medium text-gray-600">Travelers: </span>
+                              <span className="text-gray-500">{formatTravelers(itineraryQuery.travelers)}</span>
+                            </div>
+                          )}
                         </div>
-                        {itineraryQuery.destinations.length > 0 && (
-                          <div>
-                            <span className="font-medium text-gray-600">Destinations: </span>
-                            <span className="text-gray-500">{formatDestinations(itineraryQuery.destinations)}</span>
-                          </div>
-                        )}
-                        {itineraryQuery.travelers && (
-                          <div>
-                            <span className="font-medium text-gray-600">Travelers: </span>
-                            <span className="text-gray-500">{formatTravelers(itineraryQuery.travelers)}</span>
-                          </div>
+                      ) : (
+                        <div className="bg-yellow-50 p-3 rounded-md text-sm text-yellow-700">
+                          No query data. Click &quot;Edit Query&quot; to add query details.
+                        </div>
+                      )}
+                      
+                      <div className="flex items-center gap-4 text-sm text-gray-600">
+                        <span>{itinerary.adults_count} Adults</span>
+                        {itinerary.children_count > 0 && (
+                          <span>{itinerary.children_count} Children</span>
                         )}
                       </div>
-                    ) : (
-                      <div className="bg-yellow-50 p-3 rounded-md text-sm text-yellow-700">
-                        No query data. Click &quot;Edit Query&quot; to add query details.
+                      <div className="flex items-center justify-between pt-2 border-t">
+                        <span className="text-sm text-gray-600">Total Price</span>
+                        <span className="text-xl font-bold text-green-600">
+                          ${itinerary.total_price.toFixed(2)}
+                        </span>
                       </div>
-                    )}
-                    
-                  <div className="flex items-center gap-4 text-sm text-gray-600">
-                    <span>{itinerary.adults_count} Adults</span>
-                    {itinerary.children_count > 0 && (
-                      <span>{itinerary.children_count} Children</span>
-                    )}
-                  </div>
-                  <div className="flex items-center justify-between pt-2 border-t">
-                    <span className="text-sm text-gray-600">Total Price</span>
-                    <span className="text-xl font-bold text-green-600">
-                      ${itinerary.total_price.toFixed(2)}
-                    </span>
-                  </div>
-                    <div className="flex gap-2 pt-2 border-t">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => router.push(`/agent/itineraries/${itinerary.id}/builder`)}
-                      className="flex-1"
-                    >
-                      <FiEye className="w-4 h-4 mr-1" />
-                      View
-                    </Button>
-                      {isInsertItinerary && (
+                      <div className="flex gap-2 pt-2 border-t">
                         <Button
-                          variant="outline"
+                          variant="ghost"
                           size="sm"
-                          onClick={() => router.push(`/agent/leads/${leadId}/insert?itineraryId=${itinerary.id}&queryId=${itineraryQuery?.id || ''}`)}
+                          onClick={() => router.push(`/agent/itineraries/${itinerary.id}/builder`)}
                           className="flex-1"
                         >
-                          <FiPackage className="w-4 h-4 mr-1" />
-                          Insert Packages
+                          <FiEye className="w-4 h-4 mr-1" />
+                          View
                         </Button>
-                      )}
-                  </div>
-                </CardContent>
-              </Card>
+                        {isInsertItinerary && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => router.push(`/agent/leads/${leadId}/insert?itineraryId=${itinerary.id}&queryId=${itineraryQuery?.id || ''}`)}
+                            className="flex-1"
+                          >
+                            <FiPackage className="w-4 h-4 mr-1" />
+                            Insert Packages
+                          </Button>
+                        )}
+                        {isCreateItinerary && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setExpandedItineraryId(isExpanded ? null : itinerary.id)}
+                            className="flex-1"
+                          >
+                            <FiEye className="w-4 h-4 mr-1" />
+                            {isExpanded ? 'Collapse' : 'View Days'}
+                          </Button>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Day-by-Day Itinerary View (inline, only for Create Itinerary) */}
+                  {isCreateItinerary && isExpanded && itineraryQuery && (
+                    <Card className="border-2 border-blue-200">
+                      <CardContent className="p-6">
+                        <DayByDayItineraryView
+                          itineraryId={itinerary.id}
+                          queryId={itinerary.query_id}
+                          adultsCount={itinerary.adults_count}
+                          childrenCount={itinerary.children_count}
+                          infantsCount={itinerary.infants_count}
+                          onDaysGenerated={async () => {
+                            // Refresh itinerary to get updated total price
+                            await fetchLeadData();
+                          }}
+                          onPriceUpdated={async (totalPrice) => {
+                            // Update itinerary total price in database
+                            try {
+                              await fetch(`/api/itineraries/${itinerary.id}`, {
+                                method: 'PATCH',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ totalPrice }),
+                              });
+                            } catch (err) {
+                              console.error('Error updating itinerary price:', err);
+                            }
+                            // Refresh itinerary data to show updated total price
+                            await fetchLeadData();
+                          }}
+                        />
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
               );
             })}
 
