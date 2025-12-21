@@ -23,7 +23,7 @@ export async function GET(
     try {
       // First attempt: try selecting with all enhanced fields
       result = await query<any>(
-        `SELECT id, itinerary_id, day_number, date, city_name, display_order, notes, title,
+        `SELECT id, itinerary_id, day_number, date, city_name, display_order, notes,
                 created_at, updated_at, time_slots,
                 arrival_flight_id, arrival_time, departure_flight_id, departure_time,
                 hotel_id, hotel_name, hotel_star_rating, room_type, meal_plan,
@@ -34,19 +34,33 @@ export async function GET(
         [itineraryId]
       );
     } catch (error: any) {
-      // If error is about time_slots column not existing, retry without it
-      if (error?.message?.includes('time_slots') || error?.code === '42703') {
-        console.warn('time_slots column not found, selecting without it');
+      // If error is about missing columns, retry with basic fields only
+      if (error?.message?.includes('column') || error?.code === '42703') {
+        console.warn('Some enhanced columns not found, selecting with basic fields only');
         hasTimeSlots = false;
         
-        result = await query<any>(
-          `SELECT id, itinerary_id, day_number, date, city_name, display_order, notes, title,
-                  created_at, updated_at
-           FROM itinerary_days 
-           WHERE itinerary_id::text = $1 
-           ORDER BY day_number ASC`,
-          [itineraryId]
-        );
+        try {
+          // Try with time_slots
+          result = await query<any>(
+            `SELECT id, itinerary_id, day_number, date, city_name, display_order, notes,
+                    created_at, updated_at, time_slots
+             FROM itinerary_days 
+             WHERE itinerary_id::text = $1 
+             ORDER BY day_number ASC`,
+            [itineraryId]
+          );
+          hasTimeSlots = true;
+        } catch (error2: any) {
+          // If time_slots also doesn't exist, use minimal fields
+          result = await query<any>(
+            `SELECT id, itinerary_id, day_number, date, city_name, display_order, notes,
+                    created_at, updated_at
+             FROM itinerary_days 
+             WHERE itinerary_id::text = $1 
+             ORDER BY day_number ASC`,
+            [itineraryId]
+          );
+        }
       } else {
         // Re-throw if it's a different error
         throw error;

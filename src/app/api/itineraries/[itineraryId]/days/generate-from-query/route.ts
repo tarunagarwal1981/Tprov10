@@ -114,10 +114,10 @@ export async function POST(
       );
     }
 
-    // Build INSERT query with all supported fields
+    // Build INSERT query with all supported fields (excluding title as it doesn't exist in schema)
     const fieldNames = [
       'itinerary_id', 'day_number', 'date', 'city_name', 'display_order', 
-      'time_slots', 'notes', 'title',
+      'time_slots', 'notes',
       'arrival_flight_id', 'arrival_time', 'departure_flight_id', 'departure_time',
       'hotel_id', 'hotel_name', 'hotel_star_rating', 'room_type', 'meal_plan',
       'lunch_included', 'lunch_details', 'dinner_included', 'dinner_details', 'arrival_description'
@@ -142,7 +142,6 @@ export async function POST(
         evening: { time: '17:00', activities: [], transfers: [] }
       }),
       day.notes || null,
-      day.title || null,
       day.arrivalFlightId || null,
       day.arrivalTime || null,
       day.departureFlightId || null,
@@ -166,7 +165,7 @@ export async function POST(
         INSERT INTO itinerary_days (
           ${fieldNames.join(', ')}
         ) VALUES ${values}
-        RETURNING id, itinerary_id, day_number, date, city_name, display_order, notes, title, time_slots
+        RETURNING id, itinerary_id, day_number, date, city_name, display_order, notes, time_slots
       `;
 
       insertResult = await query<any>(insertQuery, paramsArray);
