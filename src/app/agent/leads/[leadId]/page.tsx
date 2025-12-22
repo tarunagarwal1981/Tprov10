@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
@@ -62,6 +62,8 @@ export default function LeadDetailPage() {
   const [editingQueryForItinerary, setEditingQueryForItinerary] = useState<string | null>(null); // Track which itinerary's query is being edited
   const [expandedItineraryId, setExpandedItineraryId] = useState<string | null>(null); // Track which itinerary is expanded to show days
   const sidebarInitialized = React.useRef(false);
+  const priceUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isFetchingRef = useRef(false);
 
   // Collapse sidebar by default on this page (only once on initial mount)
   useEffect(() => {
@@ -76,24 +78,10 @@ export default function LeadDetailPage() {
     }
   }, []);
 
-  // Fetch lead and query data
-  useEffect(() => {
-    if (leadId && user?.id) {
-      console.log('[LeadDetailPage] useEffect triggered, fetching lead data');
-      fetchLeadData();
-    } else if (!user) {
-      console.log('[LeadDetailPage] User not loaded yet, waiting...');
-    } else if (!user?.id) {
-      console.log('[LeadDetailPage] User not authenticated');
-      setLoading(false);
-    } else {
-      console.log('[LeadDetailPage] Waiting for leadId:', { leadId, userId: user?.id });
-    }
-  }, [leadId, user?.id]);
-
-  const fetchLeadData = async () => {
-    if (!user?.id) return;
+  const fetchLeadData = useCallback(async () => {
+    if (!user?.id || isFetchingRef.current) return;
     
+    isFetchingRef.current = true;
     setLoading(true);
     try {
       console.log('[LeadDetailPage] Fetching lead data for leadId:', leadId);
@@ -200,8 +188,68 @@ export default function LeadDetailPage() {
       toast.error('Failed to load lead data. Please try refreshing the page.');
     } finally {
       setLoading(false);
+      isFetchingRef.current = false;
     }
-  };
+  }, [leadId, user?.id, toast]);
+
+  // Memoized callbacks for DayByDayItineraryView to prevent infinite loops
+  const handleDaysGenerated = useCallback(async () => {
+    if (!isFetchingRef.current) {
+      isFetchingRef.current = true;
+      try {
+        await fetchLeadData();
+      } finally {
+        isFetchingRef.current = false;
+      }
+    }
+  }, [fetchLeadData]);
+
+  const createHandlePriceUpdated = useCallback((itineraryId: string) => {
+    return async (totalPrice: number) => {
+      // Debounce price updates to prevent infinite loops
+      if (priceUpdateTimeoutRef.current) {
+        clearTimeout(priceUpdateTimeoutRef.current);
+      }
+      
+      priceUpdateTimeoutRef.current = setTimeout(async () => {
+        // Update itinerary total price in database
+        try {
+          await fetch(`/api/itineraries/${itineraryId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ totalPrice }),
+          });
+        } catch (err) {
+          console.error('Error updating itinerary price:', err);
+        }
+        
+        // Only refresh if not already fetching
+        if (!isFetchingRef.current) {
+          isFetchingRef.current = true;
+          try {
+            await fetchLeadData();
+          } finally {
+            isFetchingRef.current = false;
+          }
+        }
+      }, 1000); // Debounce by 1 second
+    };
+  }, [fetchLeadData]);
+
+  // Fetch lead and query data
+  useEffect(() => {
+    if (leadId && user?.id) {
+      console.log('[LeadDetailPage] useEffect triggered, fetching lead data');
+      fetchLeadData();
+    } else if (!user) {
+      console.log('[LeadDetailPage] User not loaded yet, waiting...');
+    } else if (!user?.id) {
+      console.log('[LeadDetailPage] User not authenticated');
+      setLoading(false);
+    } else {
+      console.log('[LeadDetailPage] Waiting for leadId:', { leadId, userId: user?.id });
+    }
+  }, [leadId, user, fetchLeadData]);
 
   // Handle query save - creates a new query and optionally creates/links an itinerary
   const handleQuerySave = async (data: {
@@ -341,7 +389,12 @@ export default function LeadDetailPage() {
           // Set expanded state immediately so the view renders
           setExpandedItineraryId(fullItinerary.id);
           // Refresh the page data in background to ensure everything is up to date
-          fetchLeadData().catch(err => console.error('Error refreshing lead data:', err));
+          if (!isFetchingRef.current) {
+            isFetchingRef.current = true;
+            fetchLeadData().finally(() => {
+              isFetchingRef.current = false;
+            }).catch(err => console.error('Error refreshing lead data:', err));
+          }
         } else if (queryAction === 'insert') {
           // For "Insert Itinerary", navigate to insert page
           setTimeout(() => {
@@ -600,24 +653,8 @@ export default function LeadDetailPage() {
                           adultsCount={itinerary.adults_count}
                           childrenCount={itinerary.children_count}
                           infantsCount={itinerary.infants_count}
-                          onDaysGenerated={async () => {
-                            // Refresh itinerary to get updated total price
-                            await fetchLeadData();
-                          }}
-                          onPriceUpdated={async (totalPrice) => {
-                            // Update itinerary total price in database
-                            try {
-                              await fetch(`/api/itineraries/${itinerary.id}`, {
-                                method: 'PATCH',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ totalPrice }),
-                              });
-                            } catch (err) {
-                              console.error('Error updating itinerary price:', err);
-                            }
-                            // Refresh itinerary data to show updated total price
-                            await fetchLeadData();
-                          }}
+                          onDaysGenerated={handleDaysGenerated}
+                          onPriceUpdated={createHandlePriceUpdated(itinerary.id)}
                         />
                       </CardContent>
                     </Card>
