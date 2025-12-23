@@ -78,6 +78,7 @@ export function DayByDayItineraryView({
   // Use ref to store onPriceUpdated callback to prevent infinite loops
   // The callback may change on parent re-renders, but we only want to call it when items change
   const onPriceUpdatedRef = useRef(onPriceUpdated);
+  const previousTotalRef = useRef<number>(0);
   useEffect(() => {
     onPriceUpdatedRef.current = onPriceUpdated;
   }, [onPriceUpdated]);
@@ -101,12 +102,16 @@ export function DayByDayItineraryView({
       total_price: item.total_price ?? item.unit_price ?? 0,
     }));
     const total = normalizedItems.reduce((sum, item) => sum + (Number(item.total_price) || 0), 0);
-    setTotalPrice(total);
     
-    // Notify parent component of price update (database trigger will update total_price automatically)
-    // Use ref to avoid dependency on callback that may change frequently
-    onPriceUpdatedRef.current?.(total);
-  }, [items]); // Removed onPriceUpdated from dependencies - using ref instead
+    // Only update and notify if price actually changed to prevent unnecessary updates and loops
+    if (total !== previousTotalRef.current) {
+      previousTotalRef.current = total;
+      setTotalPrice(total);
+      // Notify parent component of price update (database trigger will update total_price automatically)
+      // Use ref to avoid dependency on callback that may change frequently
+      onPriceUpdatedRef.current?.(total);
+    }
+  }, [items]); // Only depend on items - use ref to track previous total
 
   // Auto-generate days if query exists and no days
   useEffect(() => {

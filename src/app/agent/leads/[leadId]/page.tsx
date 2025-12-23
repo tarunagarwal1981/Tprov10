@@ -235,6 +235,8 @@ export default function LeadDetailPage() {
       
       priceUpdateTimeoutRef.current = setTimeout(async () => {
         // Update itinerary total price in database
+        // Note: Database trigger will automatically update total_price, so we don't need to refetch
+        // Removing fetchLeadData() call to prevent infinite loops
         try {
           await fetch(`/api/itineraries/${itineraryId}`, {
             method: 'PATCH',
@@ -244,26 +246,11 @@ export default function LeadDetailPage() {
         } catch (err) {
           console.error('Error updating itinerary price:', err);
         }
-        
-        // Only refresh if not already fetching
-        const currentKey = `${leadId}-${user?.id}`;
-        if (!isFetchingRef.current && currentKey) {
-          lastFetchKeyRef.current = null; // Reset to allow fresh fetch
-          isFetchingRef.current = true;
-          try {
-            await fetchLeadData();
-            if (lastFetchKeyRef.current === null || lastFetchKeyRef.current === currentKey) {
-              lastFetchKeyRef.current = currentKey;
-            }
-          } finally {
-            if (lastFetchKeyRef.current === null || lastFetchKeyRef.current === currentKey) {
-              isFetchingRef.current = false;
-            }
-          }
-        }
+        // Removed fetchLeadData() call - database trigger handles price update automatically
+        // This prevents infinite loops while still keeping the database in sync
       }, 1000); // Debounce by 1 second
     };
-  }, [fetchLeadData, leadId, user?.id]);
+  }, [leadId, user?.id]); // Removed fetchLeadData from dependencies - we no longer call it in this callback
 
   // Fetch lead and query data - only on mount or when leadId/user?.id actually changes
   useEffect(() => {
