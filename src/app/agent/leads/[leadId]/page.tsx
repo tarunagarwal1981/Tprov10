@@ -120,8 +120,7 @@ export default function LeadDetailPage() {
         }
 
         console.log('[LeadDetailPage] Lead data fetched successfully');
-        setLead(leadData);
-
+        
         // Fetch itineraries with timeout
         const itinerariesController = new AbortController();
         const itinerariesTimeout = setTimeout(() => itinerariesController.abort(), 10000);
@@ -135,7 +134,6 @@ export default function LeadDetailPage() {
           if (itinerariesResponse.ok) {
             const { itineraries: itinerariesData } = await itinerariesResponse.json();
             console.log('[LeadDetailPage] Fetched itineraries:', itinerariesData.length);
-            setItineraries(itinerariesData || []);
             
             // Fetch queries for each itinerary (with timeout per query)
             const queriesMap: Record<string, ItineraryQuery> = {};
@@ -161,10 +159,17 @@ export default function LeadDetailPage() {
             
             await Promise.all(queryPromises);
             console.log('[LeadDetailPage] Fetched queries:', Object.keys(queriesMap).length);
+            
+            // Batch all state updates together to minimize re-renders
+            // Use React's automatic batching (React 18+) by doing all updates in the same synchronous block
+            setLead(leadData);
+            setItineraries(itinerariesData || []);
             setQueries(queriesMap);
           } else {
             console.warn('[LeadDetailPage] Failed to fetch itineraries:', itinerariesResponse.status);
+            setLead(leadData);
             setItineraries([]);
+            setQueries({});
           }
         } catch (err) {
           clearTimeout(itinerariesTimeout);
@@ -174,7 +179,9 @@ export default function LeadDetailPage() {
           } else {
             console.error('[LeadDetailPage] Error fetching itineraries:', err);
           }
+          setLead(leadData);
           setItineraries([]);
+          setQueries({});
         }
       } catch (err) {
         clearTimeout(leadTimeout);
@@ -201,15 +208,22 @@ export default function LeadDetailPage() {
 
   // Memoized callbacks for DayByDayItineraryView to prevent infinite loops
   const handleDaysGenerated = useCallback(async () => {
-    if (!isFetchingRef.current) {
+    const currentKey = `${leadId}-${user?.id}`;
+    if (!isFetchingRef.current && currentKey) {
+      lastFetchKeyRef.current = null; // Reset to allow fresh fetch
       isFetchingRef.current = true;
       try {
         await fetchLeadData();
+        if (lastFetchKeyRef.current === null || lastFetchKeyRef.current === currentKey) {
+          lastFetchKeyRef.current = currentKey;
+        }
       } finally {
-        isFetchingRef.current = false;
+        if (lastFetchKeyRef.current === null || lastFetchKeyRef.current === currentKey) {
+          isFetchingRef.current = false;
+        }
       }
     }
-  }, [fetchLeadData]);
+  }, [fetchLeadData, leadId, user?.id]);
 
   const createHandlePriceUpdated = useCallback((itineraryId: string) => {
     return async (totalPrice: number) => {
@@ -231,41 +245,53 @@ export default function LeadDetailPage() {
         }
         
         // Only refresh if not already fetching
-        if (!isFetchingRef.current) {
+        const currentKey = `${leadId}-${user?.id}`;
+        if (!isFetchingRef.current && currentKey) {
+          lastFetchKeyRef.current = null; // Reset to allow fresh fetch
           isFetchingRef.current = true;
           try {
             await fetchLeadData();
+            if (lastFetchKeyRef.current === null || lastFetchKeyRef.current === currentKey) {
+              lastFetchKeyRef.current = currentKey;
+            }
           } finally {
-            isFetchingRef.current = false;
+            if (lastFetchKeyRef.current === null || lastFetchKeyRef.current === currentKey) {
+              isFetchingRef.current = false;
+            }
           }
         }
       }, 1000); // Debounce by 1 second
     };
-  }, [fetchLeadData]);
+  }, [fetchLeadData, leadId, user?.id]);
 
   // Fetch lead and query data - only on mount or when leadId/user?.id actually changes
   useEffect(() => {
-    // Update the ref on every render to ensure it's current
-    fetchLeadDataRef.current = fetchLeadData;
-    
     // Only fetch if we have both leadId and user.id
     if (leadId && user?.id) {
       // Use a ref to track the last fetched leadId/userId to prevent duplicate fetches
       const currentKey = `${leadId}-${user.id}`;
       
-      // Only fetch if this is a new combination (leadId or userId changed)
+      // Only fetch if this is a new combination (leadId or userId changed) AND we're not already fetching
       if (lastFetchKeyRef.current !== currentKey && !isFetchingRef.current) {
         console.log('[LeadDetailPage] useEffect triggered, fetching lead data', { currentKey, lastKey: lastFetchKeyRef.current });
+        
+        // Set both flags atomically to prevent race conditions
         lastFetchKeyRef.current = currentKey;
         isFetchingRef.current = true;
         
         // Call fetchLeadData directly (it's already memoized with useCallback)
         // Note: fetchLeadData no longer checks isFetchingRef internally
         fetchLeadData().finally(() => {
-          isFetchingRef.current = false;
+          // Only reset isFetchingRef if we're still on the same key (prevent race conditions)
+          if (lastFetchKeyRef.current === currentKey) {
+            isFetchingRef.current = false;
+          }
         }).catch(err => {
           console.error('[LeadDetailPage] Error in fetchLeadData:', err);
-          isFetchingRef.current = false;
+          // Only reset isFetchingRef if we're still on the same key
+          if (lastFetchKeyRef.current === currentKey) {
+            isFetchingRef.current = false;
+          }
         });
       }
       // Silently skip if same key or already fetching - this is expected behavior
@@ -418,12 +444,23 @@ export default function LeadDetailPage() {
           // Set expanded state immediately so the view renders
           setExpandedItineraryId(fullItinerary.id);
           // Refresh the page data in background to ensure everything is up to date
-          // Use the guarded fetch function
+          // Reset the lastFetchKeyRef to force a fresh fetch
+          const currentKey = `${leadId}-${user.id}`;
           if (!isFetchingRef.current) {
+            lastFetchKeyRef.current = null; // Reset to allow fresh fetch
             isFetchingRef.current = true;
             fetchLeadData().finally(() => {
-              isFetchingRef.current = false;
-            }).catch(err => console.error('Error refreshing lead data:', err));
+              if (lastFetchKeyRef.current === null || lastFetchKeyRef.current === currentKey) {
+                lastFetchKeyRef.current = currentKey;
+                isFetchingRef.current = false;
+              }
+            }).catch(err => {
+              console.error('Error refreshing lead data:', err);
+              if (lastFetchKeyRef.current === null || lastFetchKeyRef.current === currentKey) {
+                lastFetchKeyRef.current = currentKey;
+                isFetchingRef.current = false;
+              }
+            });
           }
         } else if (queryAction === 'insert') {
           // For "Insert Itinerary", navigate to insert page
@@ -432,12 +469,19 @@ export default function LeadDetailPage() {
           }, 100);
         } else {
           // For editing existing itinerary, just refresh
+          const currentKey = `${leadId}-${user.id}`;
           if (!isFetchingRef.current) {
+            lastFetchKeyRef.current = null; // Reset to allow fresh fetch
             isFetchingRef.current = true;
             try {
               await fetchLeadData();
+              if (lastFetchKeyRef.current === null || lastFetchKeyRef.current === currentKey) {
+                lastFetchKeyRef.current = currentKey;
+              }
             } finally {
-              isFetchingRef.current = false;
+              if (lastFetchKeyRef.current === null || lastFetchKeyRef.current === currentKey) {
+                isFetchingRef.current = false;
+              }
             }
           }
         }
