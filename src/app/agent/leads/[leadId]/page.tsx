@@ -194,6 +194,11 @@ export default function LeadDetailPage() {
     }
   }, [leadId, user?.id, toast]);
 
+  // Store the latest fetchLeadData in a ref for callbacks that shouldn't trigger re-renders
+  useEffect(() => {
+    fetchLeadDataRef.current = fetchLeadData;
+  }, [fetchLeadData]);
+
   // Memoized callbacks for DayByDayItineraryView to prevent infinite loops
   const handleDaysGenerated = useCallback(async () => {
     if (!isFetchingRef.current) {
