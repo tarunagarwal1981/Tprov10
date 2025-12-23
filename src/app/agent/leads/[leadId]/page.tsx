@@ -199,7 +199,8 @@ export default function LeadDetailPage() {
       setLoading(false);
       // Don't reset isFetchingRef here - let the caller manage it
     }
-  }, [leadId, user?.id, toast]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [leadId, user?.id]); // Removed toast from dependencies - toast functions are stable
 
   // Store the latest fetchLeadData in a ref for callbacks that shouldn't trigger re-renders
   useEffect(() => {

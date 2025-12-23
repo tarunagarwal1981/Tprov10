@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { FiClock, FiPlus, FiX, FiMapPin, FiDollarSign, FiEdit2 } from 'react-icons/fi';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -75,6 +75,13 @@ export function DayByDayItineraryView({
   const [selectedDayIndex, setSelectedDayIndex] = useState<number | null>(null);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlot | null>(null);
 
+  // Use ref to store onPriceUpdated callback to prevent infinite loops
+  // The callback may change on parent re-renders, but we only want to call it when items change
+  const onPriceUpdatedRef = useRef(onPriceUpdated);
+  useEffect(() => {
+    onPriceUpdatedRef.current = onPriceUpdated;
+  }, [onPriceUpdated]);
+
   // Fetch data
   useEffect(() => {
     if (itineraryId) {
@@ -85,6 +92,7 @@ export function DayByDayItineraryView({
   }, [itineraryId]);
 
   // Calculate total price when items change and notify parent
+  // Only depend on items, not onPriceUpdated, to prevent infinite loops
   useEffect(() => {
     // Ensure all items have total_price before calculating
     const normalizedItems = items.map(item => ({
@@ -95,8 +103,9 @@ export function DayByDayItineraryView({
     setTotalPrice(total);
     
     // Notify parent component of price update (database trigger will update total_price automatically)
-    onPriceUpdated?.(total);
-  }, [items, onPriceUpdated]);
+    // Use ref to avoid dependency on callback that may change frequently
+    onPriceUpdatedRef.current?.(total);
+  }, [items]); // Removed onPriceUpdated from dependencies - using ref instead
 
   // Auto-generate days if query exists and no days
   useEffect(() => {
