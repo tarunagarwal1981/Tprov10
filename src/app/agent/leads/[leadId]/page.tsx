@@ -81,9 +81,9 @@ export default function LeadDetailPage() {
   }, []);
 
   const fetchLeadData = useCallback(async () => {
-    if (!user?.id || isFetchingRef.current) return;
+    if (!user?.id) return;
+    // Don't check or set isFetchingRef here - let the caller manage it
     
-    isFetchingRef.current = true;
     setLoading(true);
     try {
       console.log('[LeadDetailPage] Fetching lead data for leadId:', leadId);
@@ -190,13 +190,9 @@ export default function LeadDetailPage() {
       toast.error('Failed to load lead data. Please try refreshing the page.');
     } finally {
       setLoading(false);
-      isFetchingRef.current = false;
+      // Don't reset isFetchingRef here - let the caller manage it
     }
   }, [leadId, user?.id, toast]);
-
-  // Store the latest fetchLeadData in a ref so we can use it in useEffect without dependencies
-  // This MUST run before the main useEffect that uses it
-  fetchLeadDataRef.current = fetchLeadData;
 
   // Memoized callbacks for DayByDayItineraryView to prevent infinite loops
   const handleDaysGenerated = useCallback(async () => {
@@ -242,22 +238,25 @@ export default function LeadDetailPage() {
     };
   }, []); // No dependencies - uses ref
 
-  // Store the latest fetchLeadData in a ref (runs on every render to keep it current)
-  fetchLeadDataRef.current = fetchLeadData;
-
   // Fetch lead and query data - only on mount or when leadId/user?.id actually changes
   useEffect(() => {
+    // Update the ref on every render to ensure it's current
+    fetchLeadDataRef.current = fetchLeadData;
+    
     // Only fetch if we have both leadId and user.id
     if (leadId && user?.id) {
       // Use a ref to track the last fetched leadId/userId to prevent duplicate fetches
       const currentKey = `${leadId}-${user.id}`;
       
       // Only fetch if this is a new combination (leadId or userId changed)
-      if (lastFetchKeyRef.current !== currentKey && !isFetchingRef.current && fetchLeadDataRef.current) {
+      if (lastFetchKeyRef.current !== currentKey && !isFetchingRef.current) {
         console.log('[LeadDetailPage] useEffect triggered, fetching lead data', { currentKey, lastKey: lastFetchKeyRef.current });
         lastFetchKeyRef.current = currentKey;
         isFetchingRef.current = true;
-        fetchLeadDataRef.current().finally(() => {
+        
+        // Call fetchLeadData directly (it's already memoized with useCallback)
+        // Note: fetchLeadData no longer checks isFetchingRef internally
+        fetchLeadData().finally(() => {
           isFetchingRef.current = false;
         }).catch(err => {
           console.error('[LeadDetailPage] Error in fetchLeadData:', err);
@@ -274,8 +273,7 @@ export default function LeadDetailPage() {
     } else {
       console.log('[LeadDetailPage] Waiting for leadId:', { leadId, userId: user?.id });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [leadId, user?.id]); // Only depend on leadId and user?.id - fetchLeadData is accessed via ref
+  }, [leadId, user?.id, fetchLeadData]); // Include fetchLeadData but use lastFetchKeyRef to prevent loops
 
   // Handle query save - creates a new query and optionally creates/links an itinerary
   const handleQuerySave = async (data: {
