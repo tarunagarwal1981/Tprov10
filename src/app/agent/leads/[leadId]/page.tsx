@@ -196,15 +196,15 @@ export default function LeadDetailPage() {
 
   // Memoized callbacks for DayByDayItineraryView to prevent infinite loops
   const handleDaysGenerated = useCallback(async () => {
-    if (!isFetchingRef.current && fetchLeadDataRef.current) {
+    if (!isFetchingRef.current) {
       isFetchingRef.current = true;
       try {
-        await fetchLeadDataRef.current();
+        await fetchLeadData();
       } finally {
         isFetchingRef.current = false;
       }
     }
-  }, []); // No dependencies - uses ref
+  }, [fetchLeadData]);
 
   const createHandlePriceUpdated = useCallback((itineraryId: string) => {
     return async (totalPrice: number) => {
@@ -226,17 +226,17 @@ export default function LeadDetailPage() {
         }
         
         // Only refresh if not already fetching
-        if (!isFetchingRef.current && fetchLeadDataRef.current) {
+        if (!isFetchingRef.current) {
           isFetchingRef.current = true;
           try {
-            await fetchLeadDataRef.current();
+            await fetchLeadData();
           } finally {
             isFetchingRef.current = false;
           }
         }
       }, 1000); // Debounce by 1 second
     };
-  }, []); // No dependencies - uses ref
+  }, [fetchLeadData]);
 
   // Fetch lead and query data - only on mount or when leadId/user?.id actually changes
   useEffect(() => {
@@ -262,9 +262,8 @@ export default function LeadDetailPage() {
           console.error('[LeadDetailPage] Error in fetchLeadData:', err);
           isFetchingRef.current = false;
         });
-      } else {
-        console.log('[LeadDetailPage] Skipping fetch - same key or already fetching', { currentKey, lastKey: lastFetchKeyRef.current, isFetching: isFetchingRef.current });
       }
+      // Silently skip if same key or already fetching - this is expected behavior
     } else if (!user) {
       console.log('[LeadDetailPage] User not loaded yet, waiting...');
     } else if (!user?.id) {
@@ -273,7 +272,8 @@ export default function LeadDetailPage() {
     } else {
       console.log('[LeadDetailPage] Waiting for leadId:', { leadId, userId: user?.id });
     }
-  }, [leadId, user?.id, fetchLeadData]); // Include fetchLeadData but use lastFetchKeyRef to prevent loops
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [leadId, user?.id]); // Only depend on leadId and user?.id - fetchLeadData is stable due to useCallback
 
   // Handle query save - creates a new query and optionally creates/links an itinerary
   const handleQuerySave = async (data: {
@@ -413,9 +413,10 @@ export default function LeadDetailPage() {
           // Set expanded state immediately so the view renders
           setExpandedItineraryId(fullItinerary.id);
           // Refresh the page data in background to ensure everything is up to date
-          if (!isFetchingRef.current && fetchLeadDataRef.current) {
+          // Use the guarded fetch function
+          if (!isFetchingRef.current) {
             isFetchingRef.current = true;
-            fetchLeadDataRef.current().finally(() => {
+            fetchLeadData().finally(() => {
               isFetchingRef.current = false;
             }).catch(err => console.error('Error refreshing lead data:', err));
           }
@@ -426,10 +427,10 @@ export default function LeadDetailPage() {
           }, 100);
         } else {
           // For editing existing itinerary, just refresh
-          if (!isFetchingRef.current && fetchLeadDataRef.current) {
+          if (!isFetchingRef.current) {
             isFetchingRef.current = true;
             try {
-              await fetchLeadDataRef.current();
+              await fetchLeadData();
             } finally {
               isFetchingRef.current = false;
             }
