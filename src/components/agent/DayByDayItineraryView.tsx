@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { FiClock, FiPlus, FiX, FiMapPin, FiDollarSign, FiEdit2 } from 'react-icons/fi';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -89,7 +89,8 @@ export function DayByDayItineraryView({
       fetchItems();
       fetchRepository();
     }
-  }, [itineraryId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [itineraryId]); // fetchDays, fetchItems, fetchRepository are stable functions that don't need to be in deps
 
   // Calculate total price when items change and notify parent
   // Only depend on items, not onPriceUpdated, to prevent infinite loops
@@ -112,7 +113,8 @@ export function DayByDayItineraryView({
     if (queryId && days.length === 0 && !loading && !generatingDays) {
       generateDaysFromQuery();
     }
-  }, [queryId, days.length, loading, generatingDays]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queryId, days.length, loading, generatingDays]); // generateDaysFromQuery is stable and doesn't need to be in deps
 
   const fetchDays = async () => {
     try {

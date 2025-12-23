@@ -29,7 +29,8 @@ function getAllowedOrigin(origin: string | null): string {
   if (origin && isAllowedOrigin(origin)) {
     return origin;
   }
-  return allowedOrigins[0];
+  // Fallback to first allowed origin, or localhost if array is empty (should never happen)
+  return allowedOrigins[0] || 'http://localhost:3000';
 }
 
 /**

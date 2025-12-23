@@ -55,7 +55,8 @@ function getAllowedOrigin(origin: string | null): string {
     return origin;
   }
   // Default to first allowed origin (localhost for development)
-  return allowedOrigins[0];
+  // Fallback to localhost if array is empty (should never happen)
+  return allowedOrigins[0] || 'http://localhost:3000';
 }
 
 export function middleware(request: NextRequest) {
