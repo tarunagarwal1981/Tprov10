@@ -53,7 +53,7 @@ export async function PATCH(
       displayOrder: 'display_order',
       timeSlots: 'time_slots',
       notes: 'notes',
-      title: 'title',
+      // title: 'title', // Note: title column doesn't exist in itinerary_days table
       arrivalFlightId: 'arrival_flight_id',
       arrivalTime: 'arrival_time',
       departureFlightId: 'departure_flight_id',
@@ -114,9 +114,10 @@ export async function PATCH(
     updateValues.push(itineraryId, dayId);
 
     // Try to return all enhanced fields, fallback to basic if they don't exist
+    // Note: 'title' column doesn't exist in itinerary_days table, removed from returnFields
     let returnFields = [
       'id', 'itinerary_id', 'day_number', 'date', 'city_name', 'display_order', 
-      'notes', 'title', 'time_slots',
+      'notes', 'time_slots',
       'arrival_flight_id', 'arrival_time', 'departure_flight_id', 'departure_time',
       'hotel_id', 'hotel_name', 'hotel_star_rating', 'room_type', 'meal_plan',
       'lunch_included', 'lunch_details', 'dinner_included', 'dinner_details', 
@@ -137,25 +138,30 @@ export async function PATCH(
     } catch (dbError: any) {
       // If error is about time_slots column, retry without it
       const hasTimeSlots = updateFields.some(f => f.includes('time_slots'));
-      if (hasTimeSlots && (dbError?.message?.includes('time_slots') || dbError?.code === '42703' || dbError?.message?.includes('column') || dbError?.message?.includes('does not exist'))) {
+      if (hasTimeSlots && (dbError?.message?.includes('time_slots') || dbError?.code === '42703' || dbError?.message?.includes('column') || dbError?.message?.includes('does not exist') || dbError?.code === '42P18')) {
         console.warn('[Update Day] time_slots column error, retrying without it:', dbError.message);
         // Remove time_slots from update
         const fieldsWithoutTimeSlots = updateFields.filter(f => !f.includes('time_slots'));
         const valuesWithoutTimeSlots: any[] = [];
         
         // Rebuild values array without time_slots value
+        // Match each field with its corresponding value
         let valueIndex = 0;
         for (let i = 0; i < updateFields.length; i++) {
           const field = updateFields[i];
           if (field && !field.includes('time_slots')) {
             valuesWithoutTimeSlots.push(updateValues[valueIndex]);
+            valueIndex++;
+          } else if (field && field.includes('time_slots')) {
+            // Skip this value (it's the time_slots value)
+            valueIndex++;
           }
-          valueIndex++;
         }
-        // Add itineraryId and dayId (they're at the end)
+        // Add itineraryId and dayId (they're at the end, after updated_at which doesn't have a value)
         valuesWithoutTimeSlots.push(updateValues[updateValues.length - 2], updateValues[updateValues.length - 1]);
         
-        // Recalculate paramIndex for WHERE clause (number of fields + updated_at)
+        // Recalculate paramIndex for WHERE clause (number of SET fields, excluding updated_at)
+        // updated_at doesn't count as a parameter, so newParamIndex = fieldsWithoutTimeSlots.length
         const newParamIndex = fieldsWithoutTimeSlots.length;
         
         const basicReturnFields = [
