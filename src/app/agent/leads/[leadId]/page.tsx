@@ -380,16 +380,54 @@ export default function LeadDetailPage() {
         
         // For "Create Itinerary", navigate to day-by-day itinerary page
         if (queryAction === 'create') {
-          console.log('[LeadDetailPage] Navigating to day-by-day itinerary page:', fullItinerary.id);
-          // Navigate to the existing day-by-day itinerary page
-          setTimeout(() => {
-            router.push(`/agent/leads/${leadId}/itineraries/new?queryId=${savedQuery.id}&itineraryId=${fullItinerary.id}`);
-          }, 100);
+          const navUrl = `/agent/leads/${leadId}/itineraries/new?queryId=${savedQuery.id}&itineraryId=${fullItinerary.id}`;
+          console.log('[LeadDetailPage] Navigating to day-by-day itinerary page:', {
+            itineraryId: fullItinerary.id,
+            queryId: savedQuery.id,
+            leadId,
+            url: navUrl
+          });
+          
+          // Navigate immediately (no setTimeout to avoid state update interference)
+          try {
+            router.push(navUrl);
+            console.log('[LeadDetailPage] router.push called successfully');
+          } catch (err) {
+            console.error('[LeadDetailPage] router.push failed, using window.location:', err);
+            // Fallback to window.location if router.push fails
+            window.location.href = navUrl;
+          }
+          
+          // Close modal and reset state after navigation is initiated
+          setQueryModalOpen(false);
+          setQueryAction(null);
+          
+          // Return early to prevent further execution
+          return;
         } else if (queryAction === 'insert') {
           // For "Insert Itinerary", navigate to insert page
-          setTimeout(() => {
-            router.push(`/agent/leads/${leadId}/insert?queryId=${savedQuery.id}&itineraryId=${fullItinerary.id}`);
-          }, 100);
+          const navUrl = `/agent/leads/${leadId}/insert?queryId=${savedQuery.id}&itineraryId=${fullItinerary.id}`;
+          console.log('[LeadDetailPage] Navigating to insert itinerary page:', {
+            itineraryId: fullItinerary.id,
+            queryId: savedQuery.id,
+            leadId,
+            url: navUrl
+          });
+          
+          try {
+            router.push(navUrl);
+            console.log('[LeadDetailPage] router.push called successfully for insert');
+          } catch (err) {
+            console.error('[LeadDetailPage] router.push failed for insert, using window.location:', err);
+            window.location.href = navUrl;
+          }
+          
+          // Close modal and reset state after navigation is initiated
+          setQueryModalOpen(false);
+          setQueryAction(null);
+          
+          // Return early to prevent further execution
+          return;
         } else {
           // For editing existing itinerary, just refresh
           const currentKey = `${leadId}-${user.id}`;
@@ -424,6 +462,47 @@ export default function LeadDetailPage() {
   // Format destinations display
   const formatDestinations = (destinations: Array<{ city: string; nights: number }>) => {
     return destinations.map(d => `${d.city} (${d.nights} ${d.nights === 1 ? 'night' : 'nights'})`).join(' → ');
+  };
+
+  // Handle itinerary deletion
+  const handleDeleteItinerary = async (itineraryId: string, itineraryName: string) => {
+    // Confirmation dialog
+    if (!confirm(`Are you sure you want to delete "${itineraryName}"?\n\nThis action cannot be undone and will delete all days and items in this itinerary.`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/itineraries/${itineraryId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to delete itinerary');
+      }
+
+      toast.success('Itinerary deleted successfully');
+      
+      // Refresh the lead data to update the list
+      const currentKey = `${leadId}-${user?.id}`;
+      if (!isFetchingRef.current && currentKey) {
+        lastFetchKeyRef.current = null; // Reset to allow fresh fetch
+        isFetchingRef.current = true;
+        try {
+          await fetchLeadData();
+          if (lastFetchKeyRef.current === null || lastFetchKeyRef.current === currentKey) {
+            lastFetchKeyRef.current = currentKey;
+          }
+        } finally {
+          if (lastFetchKeyRef.current === null || lastFetchKeyRef.current === currentKey) {
+            isFetchingRef.current = false;
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Error deleting itinerary:', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to delete itinerary');
+    }
   };
 
   // Format travelers display
@@ -648,6 +727,18 @@ export default function LeadDetailPage() {
                             View Days
                           </Button>
                         )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation(); // Prevent card click
+                            handleDeleteItinerary(itinerary.id, itinerary.name);
+                          }}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50 flex-shrink-0"
+                          title="Delete itinerary"
+                        >
+                          <FiTrash2 className="w-4 h-4" />
+                        </Button>
                       </div>
                     </CardContent>
                   </Card>

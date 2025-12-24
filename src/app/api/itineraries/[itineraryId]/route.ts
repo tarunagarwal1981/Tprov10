@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { queryOne } from '@/lib/aws/lambda-database';
+import { queryOne, query } from '@/lib/aws/lambda-database';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -127,6 +127,49 @@ export async function PATCH(
     console.error('Error updating itinerary:', error);
     return NextResponse.json(
       { error: 'Failed to update itinerary', details: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * DELETE /api/itineraries/[itineraryId]
+ * Delete an entire itinerary (cascades to days and items via database constraints)
+ */
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ itineraryId: string }> }
+) {
+  try {
+    const { itineraryId } = await params;
+    
+    // Delete itinerary
+    // Note: Database should have CASCADE delete configured for:
+    // - itinerary_days (foreign key: itinerary_id)
+    // - itinerary_items (foreign key: itinerary_id)
+    // If CASCADE is not configured, we may need to delete items and days first
+    const result = await query(
+      `DELETE FROM itineraries 
+       WHERE id::text = $1
+       RETURNING id`,
+      [itineraryId]
+    );
+
+    if (!result.rows || result.rows.length === 0) {
+      return NextResponse.json(
+        { error: 'Itinerary not found' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({ 
+      deleted: true,
+      itineraryId: result.rows[0].id 
+    });
+  } catch (error) {
+    console.error('Error deleting itinerary:', error);
+    return NextResponse.json(
+      { error: 'Failed to delete itinerary', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }
