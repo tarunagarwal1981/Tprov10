@@ -15,15 +15,20 @@ export async function GET(
   try {
     const { itineraryId } = await params;
 
-    // Fetch itinerary days - explicitly list columns to avoid issues if time_slots doesn't exist
-    // Try with time_slots first, fallback to without if column doesn't exist
-    let result;
-    let hasTimeSlots = true;
+    if (!itineraryId) {
+      return NextResponse.json(
+        { error: 'itineraryId is required' },
+        { status: 400 }
+      );
+    }
 
+    // Fetch itinerary days - start with minimal fields and add more if they exist
+    let result;
+    
+    // Use basic fields that definitely exist, try to include time_slots if available
     try {
-      // First attempt: try selecting with time_slots
       result = await query<any>(
-        `SELECT id, itinerary_id, day_number, date, city_name, display_order, notes, 
+        `SELECT id, itinerary_id, day_number, date, city_name, display_order, notes,
                 created_at, updated_at, time_slots
          FROM itinerary_days 
          WHERE itinerary_id::text = $1 
@@ -31,13 +36,11 @@ export async function GET(
         [itineraryId]
       );
     } catch (error: any) {
-      // If error is about time_slots column not existing, retry without it
-      if (error?.message?.includes('time_slots') || error?.code === '42703') {
+      // If time_slots column doesn't exist, retry without it
+      if (error?.message?.includes('column') || error?.code === '42703') {
         console.warn('time_slots column not found, selecting without it');
-        hasTimeSlots = false;
-        
         result = await query<any>(
-          `SELECT id, itinerary_id, day_number, date, city_name, display_order, notes, 
+          `SELECT id, itinerary_id, day_number, date, city_name, display_order, notes,
                   created_at, updated_at
            FROM itinerary_days 
            WHERE itinerary_id::text = $1 
@@ -45,18 +48,19 @@ export async function GET(
           [itineraryId]
         );
       } else {
-        // Re-throw if it's a different error
-        throw error;
+        // For other errors, return empty array (days might not exist yet)
+        console.warn('Error fetching days, returning empty array:', error);
+        return NextResponse.json({ days: [] });
       }
     }
 
     // Ensure time_slots exists for each day (provide default if column doesn't exist or is null)
-    const days = result.rows.map((day: any) => ({
+    const days = (result.rows || []).map((day: any) => ({
       ...day,
       time_slots: day.time_slots || {
-        morning: { time: '', activities: [], transfers: [] },
-        afternoon: { time: '', activities: [], transfers: [] },
-        evening: { time: '', activities: [], transfers: [] },
+        morning: { time: '08:00', activities: [], transfers: [] },
+        afternoon: { time: '12:30', activities: [], transfers: [] },
+        evening: { time: '17:00', activities: [], transfers: [] },
       },
     }));
 

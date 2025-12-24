@@ -11,9 +11,11 @@ import {
   updateTransferPackage,
   deleteTransferPackage,
   listTransferPackages,
+} from '@/lib/api/transfer-packages';
+import {
   formDataToDatabase,
-  type TransferPackageWithRelations,
-} from '@/lib/supabase/transfer-packages';
+  type TransferPackageWithRelationsDB as TransferPackageWithRelations,
+} from '@/lib/transfer-packages-mapper';
 import type { TransferPackageFormData } from '@/lib/types/transfer-package';
 import { useAuth } from '@/context/CognitoAuthContext';
 

@@ -92,25 +92,78 @@ export async function createActivityPackage(
   data: CreateActivityPackageData,
   userId: string
 ): Promise<{ data: ActivityPackageWithRelations | null; error: SupabaseError | null }> {
-  const supabase = createSupabaseBrowserClient();
-  
   return withErrorHandling(async () => {
     // First, upload any base64 images to storage
     const finalImages: ActivityPackageImageInsert[] = [];
     
     if (data.images && data.images.length > 0) {
+      console.log('📸 [createActivityPackage] Processing images', {
+        totalImages: data.images.length,
+        images: data.images.map(img => ({
+          file_name: img.file_name,
+          storage_path_preview: img.storage_path?.substring(0, 50) + '...',
+          public_url_preview: img.public_url?.substring(0, 50) + '...',
+          is_base64: img.storage_path?.startsWith('data:'),
+          has_public_url: !!img.public_url,
+        }))
+      });
+      
       // Separate base64 images from already uploaded images
+      // Base64 images: storage_path starts with 'data:'
+      // Already uploaded: have public_url OR storage_path is a URL/path (not base64)
       const base64Images = data.images.filter(img => img.storage_path?.startsWith('data:'));
-      const alreadyUploadedImages = data.images.filter(img => !img.storage_path?.startsWith('data:'));
+      const alreadyUploadedImages = data.images.filter(img => {
+        const isNotBase64 = !img.storage_path?.startsWith('data:');
+        const hasPublicUrl = !!img.public_url;
+        const isUrlOrPath = img.storage_path && (
+          img.storage_path.startsWith('http://') || 
+          img.storage_path.startsWith('https://') || 
+          img.storage_path.startsWith('/') ||
+          img.storage_path.includes('s3') ||
+          img.storage_path.includes('amazonaws')
+        );
+        return isNotBase64 && (hasPublicUrl || isUrlOrPath);
+      });
+      
+      console.log('🔍 [createActivityPackage] Image separation', {
+        base64Count: base64Images.length,
+        alreadyUploadedCount: alreadyUploadedImages.length,
+      });
       
       if (base64Images.length > 0) {
-        // Convert base64 to files and upload
-        const files = base64Images.map(img => {
-          const fileName = img.file_name || `image_${Date.now()}.jpg`;
-          return base64ToFile(img.storage_path!, fileName);
-        });
-        
-        const uploadResults = await uploadImageFiles(files, userId, 'activity-packages-images');
+        // Convert base64 to files and upload via API route (server-side)
+        const uploadResults = await Promise.all(
+          base64Images.map(async (img) => {
+            const fileName = img.file_name || `image_${Date.now()}.jpg`;
+            const file = base64ToFile(img.storage_path!, fileName);
+            
+            // Create form data for API upload
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('folder', `activity-packages-images/${userId}`);
+            formData.append('fileName', fileName);
+            
+            // Upload via API route (server-side has AWS credentials)
+            const uploadResponse = await fetch('/api/upload', {
+              method: 'POST',
+              body: formData,
+            });
+            
+            if (!uploadResponse.ok) {
+              const errorData = await uploadResponse.json();
+              throw new Error(errorData.error || 'Upload failed');
+            }
+            
+            const uploadData = await uploadResponse.json();
+            return {
+              data: {
+                path: uploadData.data.path,
+                publicUrl: uploadData.data.publicUrl,
+              },
+              error: null,
+            };
+          })
+        );
         
         // Create image records with proper storage paths
         const newImageRecords = uploadResults.map((result, index) => {
@@ -177,62 +230,29 @@ export async function createActivityPackage(
 }
 
 /**
- * Get activity package by ID with all relations
+ * Get activity package by ID with all relations from RDS
  */
 export async function getActivityPackage(
   id: string
 ): Promise<{ data: ActivityPackageWithRelations | null; error: SupabaseError | null }> {
-  const supabase = createSupabaseBrowserClient();
-  
   return withErrorHandling(async () => {
-    // Get the main package
-    const { data: packageData, error: packageError } = await supabase
-      .from('activity_packages')
-      .select('*')
-      .eq('id', id)
-      .single();
+    // Use API route for RDS database operations
+    const response = await fetch(`/api/operator/packages/activity/${id}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    });
 
-    if (packageError) {
-      throw packageError;
+    if (!response.ok) {
+      if (response.status === 404) {
+        return { data: null, error: null };
+      }
+      const errorData = await response.json();
+      const errorMessage = errorData.error || 'Failed to fetch package';
+      throw new Error(errorMessage);
     }
 
-    if (!packageData) {
-      return { data: null, error: null };
-    }
-
-    // Get related data
-    const [imagesResult, timeSlotsResult, variantsResult, faqsResult] = await Promise.all([
-      supabase
-        .from('activity_package_images')
-        .select('*')
-        .eq('package_id', id)
-        .order('display_order'),
-      supabase
-        .from('activity_package_time_slots')
-        .select('*')
-        .eq('package_id', id)
-        .order('start_time'),
-      supabase
-        .from('activity_package_variants')
-        .select('*')
-        .eq('package_id', id)
-        .order('display_order'),
-      supabase
-        .from('activity_package_faqs')
-        .select('*')
-        .eq('package_id', id)
-        .order('display_order'),
-    ]);
-
-    const result: ActivityPackageWithRelations = {
-      ...packageData,
-      images: imagesResult.data || [],
-      time_slots: timeSlotsResult.data || [],
-      variants: variantsResult.data || [],
-      faqs: faqsResult.data || [],
-    };
-
-    return { data: result, error: null };
+    const apiResult = await response.json();
+    return { data: apiResult.data || null, error: null };
   });
 }
 
@@ -241,27 +261,45 @@ export async function getActivityPackage(
  */
 export async function updateActivityPackage(
   id: string,
-  data: UpdateActivityPackageData
+  data: UpdateActivityPackageData,
+  userId?: string // Optional userId parameter - if not provided, will try to fetch it
 ): Promise<{ data: ActivityPackageWithRelations | null; error: SupabaseError | null }> {
-  const supabase = createSupabaseBrowserClient();
-  
   console.log('🔄 [updateActivityPackage] Starting update', {
     packageId: id,
     hasImages: !!data.images,
-    imageCount: data.images?.length || 0
+    imageCount: data.images?.length || 0,
+    userIdProvided: !!userId
   });
   
   return withErrorHandling(async () => {
-    // Get the operator ID from the package (using API route)
-    let userId = '';
-    try {
-      const getResponse = await fetch(`/api/operator/packages/activity/${id}`);
-      if (getResponse.ok) {
-        const existing = await getResponse.json();
-        userId = existing.data?.operator_id || '';
+    // Get the operator ID - prefer provided userId, then package data, then fetch from API
+    let operatorId = userId || '';
+    
+    if (!operatorId && data.package?.operator_id) {
+      operatorId = data.package.operator_id;
+      console.log('👤 [updateActivityPackage] Using userId from package data');
+    }
+    
+    if (!operatorId) {
+      // Try to fetch from API as last resort
+      try {
+        const getResponse = await fetch(`/api/operator/packages/activity/${id}`);
+        if (getResponse.ok) {
+          const existing = await getResponse.json();
+          operatorId = existing.data?.operator_id || '';
+          console.log('👤 [updateActivityPackage] Fetched userId from API:', operatorId ? 'Found' : 'Missing');
+        } else {
+          console.warn('⚠️ [updateActivityPackage] Failed to fetch package for userId');
+        }
+      } catch (e) {
+        console.warn('⚠️ [updateActivityPackage] Could not fetch operator_id for image uploads:', e);
       }
-    } catch (e) {
-      console.warn('Could not fetch operator_id for image uploads:', e);
+    }
+
+    if (!operatorId) {
+      console.error('❌ [updateActivityPackage] No userId available - image uploads will fail!');
+    } else {
+      console.log('✅ [updateActivityPackage] Using userId:', operatorId.substring(0, 8) + '...');
     }
 
     // Process images first - upload any base64 images to storage
@@ -273,32 +311,103 @@ export async function updateActivityPackage(
         images: data.images.map(img => ({
           file_name: img.file_name,
           storage_path_preview: img.storage_path?.substring(0, 50) + '...',
+          public_url_preview: img.public_url?.substring(0, 50) + '...',
           is_base64: img.storage_path?.startsWith('data:'),
+          has_public_url: !!img.public_url,
           is_cover: img.is_cover
         }))
       });
       
       // Separate base64 images from already uploaded images
+      // Base64 images: storage_path starts with 'data:'
+      // Already uploaded: have public_url OR storage_path is a URL/path (not base64)
       const base64Images = data.images.filter(img => img.storage_path?.startsWith('data:'));
-      const alreadyUploadedImages = data.images.filter(img => !img.storage_path?.startsWith('data:'));
+      const alreadyUploadedImages = data.images.filter(img => {
+        // Not base64 AND (has public_url OR storage_path is a valid URL/path)
+        const isNotBase64 = !img.storage_path?.startsWith('data:');
+        const hasPublicUrl = !!img.public_url;
+        const isUrlOrPath = img.storage_path && (
+          img.storage_path.startsWith('http://') || 
+          img.storage_path.startsWith('https://') || 
+          img.storage_path.startsWith('/') ||
+          img.storage_path.includes('s3') ||
+          img.storage_path.includes('amazonaws')
+        );
+        return isNotBase64 && (hasPublicUrl || isUrlOrPath);
+      });
       
       console.log('🔍 [updateActivityPackage] Image separation', {
         base64Count: base64Images.length,
-        alreadyUploadedCount: alreadyUploadedImages.length
+        alreadyUploadedCount: alreadyUploadedImages.length,
+        base64Files: base64Images.map(img => img.file_name),
+        uploadedFiles: alreadyUploadedImages.map(img => img.file_name)
       });
       
       if (base64Images.length > 0) {
+        if (!operatorId) {
+          console.error('❌ [updateActivityPackage] Cannot upload images - userId is missing!');
+          throw new Error('User ID is required for image uploads');
+        }
+        
         console.log('📤 [updateActivityPackage] Uploading base64 images to storage', {
-          count: base64Images.length
+          count: base64Images.length,
+          userId: operatorId.substring(0, 8) + '...'
         });
         
-        // Convert base64 to files and upload
-        const files = base64Images.map(img => {
-          const fileName = img.file_name || `image_${Date.now()}.jpg`;
-          return base64ToFile(img.storage_path!, fileName);
-        });
+        // Convert base64 to files and upload via API route (server-side)
+        const uploadResults = await Promise.all(
+          base64Images.map(async (img) => {
+            const fileName = img.file_name || `image_${Date.now()}.jpg`;
+            const file = base64ToFile(img.storage_path!, fileName);
+            
+            // Create form data for API upload
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('folder', `activity-packages-images/${operatorId}/${id}`);
+            formData.append('fileName', fileName);
+            
+            // Upload via API route (server-side has AWS credentials)
+            const uploadResponse = await fetch('/api/upload', {
+              method: 'POST',
+              body: formData,
+            });
+            
+            if (!uploadResponse.ok) {
+              const errorData = await uploadResponse.json();
+              throw new Error(errorData.error || 'Upload failed');
+            }
+            
+            const uploadData = await uploadResponse.json();
+            return {
+              data: {
+                path: uploadData.data.path,
+                publicUrl: uploadData.data.publicUrl,
+              },
+              error: null,
+            };
+          })
+        );
         
-        const uploadResults = await uploadImageFiles(files, userId, 'activity-packages-images');
+        // Check for upload errors
+        const failedUploads = uploadResults.filter(r => r.error || !r.data);
+        if (failedUploads.length > 0) {
+          console.error('❌ [updateActivityPackage] Some image uploads failed:', failedUploads);
+          const firstError = failedUploads[0];
+          let errorMessage = 'Unknown error';
+          if (firstError) {
+            if (firstError.error) {
+              if (typeof firstError.error === 'string') {
+                errorMessage = firstError.error;
+              } else if (firstError.error && typeof firstError.error === 'object') {
+                const errorObj = firstError.error as any;
+                errorMessage = errorObj?.message || String(errorObj) || 'Unknown error';
+              }
+            } else if (!firstError.data) {
+              errorMessage = 'Upload failed - no data returned';
+            }
+          }
+          throw new Error(`Failed to upload ${failedUploads.length} image(s): ${errorMessage}`);
+        }
         
         console.log('✅ [updateActivityPackage] Upload complete', {
           uploadCount: uploadResults.length,
@@ -383,15 +492,24 @@ export async function updateActivityPackage(
 export async function deleteActivityPackage(
   id: string
 ): Promise<{ data: boolean; error: SupabaseError | null }> {
-  const supabase = createSupabaseBrowserClient();
-  
   const result = await withErrorHandling(async () => {
-    const { error } = await supabase
-      .from('activity_packages')
-      .delete()
-      .eq('id', id);
+    // Use API route for RDS database operations
+    const response = await fetch('/api/operator/packages/delete', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        packageId: id,
+        packageType: 'Activity',
+      }),
+    });
 
-    return { data: true, error };
+    if (!response.ok) {
+      const errorData = await response.json();
+      const errorMessage = errorData.error || 'Failed to delete package';
+      throw new Error(errorMessage);
+    }
+
+    return { data: true, error: null };
   });
 
   return {
@@ -568,7 +686,7 @@ export async function uploadActivityPackageImage(
     // Upload file to S3 using AWS file upload service
     const { uploadFile } = await import('@/lib/aws/file-upload');
     const uploadResult = await uploadFile({
-      bucket: 'activity-package-images',
+      bucket: 'activity-packages-images',
       folder: packageId,
       file,
       userId,
@@ -602,7 +720,7 @@ export async function uploadActivityPackageImage(
     if (imageError) {
       // Clean up uploaded file if database insert fails
       const { deleteFile } = await import('@/lib/aws/file-upload');
-      await deleteFile('activity-package-images', uploadResult.data.path);
+      await deleteFile('activity-packages-images', uploadResult.data.path);
       throw imageError;
     }
 
@@ -636,7 +754,7 @@ export async function deleteActivityPackageImage(
 
     // Delete from S3 storage
     const { deleteFile } = await import('@/lib/aws/file-upload');
-    const deleteResult = await deleteFile('activity-package-images', image.storage_path);
+    const deleteResult = await deleteFile('activity-packages-images', image.storage_path);
 
     if (deleteResult.error) {
       return { data: null, error: deleteResult.error };
@@ -712,9 +830,10 @@ export function formDataToDatabase(
     destination_coordinates: `${formData.basicInformation.destination?.coordinates?.longitude || 0},${formData.basicInformation.destination?.coordinates?.latitude || 0}`,
     duration_hours: formData.basicInformation.duration?.hours || 2,
     duration_minutes: formData.basicInformation.duration?.minutes || 0,
-    // difficulty_level: formData.basicInformation.difficultyLevel || 'EASY',
-    // languages_supported: formData.basicInformation.languagesSupported || ['EN'],
-    // tags: formData.basicInformation.tags || [],
+    // These fields are not used in UI - set to defaults
+    difficulty_level: 'EASY', // Not editable in UI
+    languages_supported: ['EN'], // Not editable in UI
+    tags: [], // Not editable in UI
     meeting_point_name: formData.activityDetails?.meetingPoint?.name || '',
     meeting_point_address: formData.activityDetails?.meetingPoint?.address || '',
     meeting_point_coordinates: `${formData.activityDetails?.meetingPoint?.coordinates?.longitude || 0},${formData.activityDetails?.meetingPoint?.coordinates?.latitude || 0}`,
@@ -724,33 +843,37 @@ export function formDataToDatabase(
     whats_not_included: formData.activityDetails?.whatsNotIncluded || [],
     what_to_bring: formData.activityDetails?.whatToBring || [],
     important_information: formData.activityDetails?.importantInformation || null,
-    minimum_age: formData.policiesRestrictions?.ageRestrictions?.minimumAge || 0,
-    maximum_age: formData.policiesRestrictions?.ageRestrictions?.maximumAge || null,
-    child_policy: formData.policiesRestrictions?.ageRestrictions?.childPolicy || null,
-    infant_policy: formData.policiesRestrictions?.ageRestrictions?.infantPolicy || null,
-    age_verification_required: formData.policiesRestrictions?.ageRestrictions?.ageVerificationRequired || false,
-    wheelchair_accessible: formData.policiesRestrictions?.accessibility?.wheelchairAccessible || false,
-    accessibility_facilities: formData.policiesRestrictions?.accessibility?.facilities || [],
-    special_assistance: formData.policiesRestrictions?.accessibility?.specialAssistance || null,
-    cancellation_policy_type: formData.policiesRestrictions?.cancellationPolicy?.type || 'MODERATE',
-    cancellation_policy_custom: formData.policiesRestrictions?.cancellationPolicy?.customPolicy || null,
-    cancellation_refund_percentage: formData.policiesRestrictions?.cancellationPolicy?.refundPercentage || 80,
-    cancellation_deadline_hours: formData.policiesRestrictions?.cancellationPolicy?.cancellationDeadline || 24,
-    weather_policy: formData.policiesRestrictions?.weatherPolicy || null,
-    health_safety_requirements: (formData.policiesRestrictions?.healthSafety?.requirements || []) as any,
-    health_safety_additional_info: formData.policiesRestrictions?.healthSafety?.additionalInfo || null,
-    base_price: formData.pricing?.basePrice || 0,
-    currency: formData.pricing?.currency || 'USD',
-    price_type: formData.pricing?.priceType || 'PERSON',
-    child_price_type: formData.pricing?.childPrice?.type || null,
-    child_price_value: formData.pricing?.childPrice?.value || null,
-    infant_price: formData.pricing?.infantPrice || null,
-    group_discounts: (formData.pricing?.groupDiscounts || []) as any,
-    seasonal_pricing: (formData.pricing?.seasonalPricing || []) as any,
-    dynamic_pricing_enabled: formData.pricing?.dynamicPricing?.enabled || false,
-    dynamic_pricing_base_multiplier: formData.pricing?.dynamicPricing?.baseMultiplier || 1.0,
-    dynamic_pricing_demand_multiplier: formData.pricing?.dynamicPricing?.demandMultiplier || 1.0,
-    dynamic_pricing_season_multiplier: formData.pricing?.dynamicPricing?.seasonMultiplier || 1.0,
+    // Policies fields are not used in UI - set to defaults
+    minimum_age: 0, // Not editable in UI
+    maximum_age: null, // Not editable in UI
+    child_policy: null, // Not editable in UI
+    infant_policy: null, // Not editable in UI
+    age_verification_required: false, // Not editable in UI
+    wheelchair_accessible: false, // Not editable in UI
+    accessibility_facilities: [], // Not editable in UI
+    special_assistance: null, // Not editable in UI
+    cancellation_policy_type: 'MODERATE', // Not editable in UI
+    cancellation_policy_custom: null, // Not editable in UI
+    cancellation_refund_percentage: 80, // Not editable in UI
+    cancellation_deadline_hours: 24, // Not editable in UI
+    weather_policy: null, // Not editable in UI
+    health_safety_requirements: [] as any, // Not editable in UI
+    health_safety_additional_info: null, // Not editable in UI
+    // Old pricing fields are not used in UI - pricing is handled through pricingOptions
+    // Set to defaults
+    base_price: 0, // Not editable in UI - pricing uses pricingOptions instead
+    currency: formData.pricing?.currency || 'USD', // Only currency is used
+    price_type: 'PERSON', // Not editable in UI
+    child_price_type: null, // Not editable in UI
+    child_price_value: null, // Not editable in UI
+    infant_price: null, // Not editable in UI
+    group_discounts: [] as any, // Not editable in UI
+    seasonal_pricing: [] as any, // Not editable in UI
+    dynamic_pricing_enabled: false, // Not editable in UI
+    // Dynamic pricing multipliers are INTEGER in DB (multiply by 100 for precision)
+    dynamic_pricing_base_multiplier: 100, // Default 1.0 = 100, not editable in UI
+    dynamic_pricing_demand_multiplier: 100, // Default 1.0 = 100, not editable in UI
+    dynamic_pricing_season_multiplier: 100, // Default 1.0 = 100, not editable in UI
   };
 
   console.log('📦 [formDataToDatabase] Processing images', {
@@ -772,18 +895,23 @@ export function formDataToDatabase(
     ...(formData.basicInformation?.imageGallery || []),
     ...(formData.activityDetails?.meetingPoint?.images || []),
     ...(formData.packageVariants?.variants?.flatMap(v => v.images || []) || []),
-  ].map((img, index) => ({
-    package_id: '', // Will be set by the service
-    file_name: img.fileName || '',
-    file_size: img.fileSize || 0,
-    mime_type: img.mimeType || 'image/jpeg',
-    storage_path: img.url || '', // Keep the full URL (base64 or file path)
-    public_url: img.url?.startsWith('data:') ? '' : img.url || '', // Only set public_url for non-base64
-    alt_text: img.fileName || '',
-    is_cover: img.isCover || false,
-    is_featured: img.isCover || false,
-    display_order: index,
-  }));
+  ].map((img, index) => {
+    const isBase64 = img.url?.startsWith('data:');
+    const isUrl = img.url && !isBase64 && (img.url.startsWith('http://') || img.url.startsWith('https://') || img.url.startsWith('/'));
+    
+    return {
+      package_id: '', // Will be set by the service
+      file_name: img.fileName || '',
+      file_size: img.fileSize || 0,
+      mime_type: img.mimeType || 'image/jpeg',
+      storage_path: img.url || '', // Keep the full URL (base64, http/https URL, or S3 path)
+      public_url: isBase64 ? '' : (img.url || ''), // Only set public_url for non-base64 (URLs or S3 paths)
+      alt_text: img.fileName || '',
+      is_cover: img.isCover || false,
+      is_featured: img.isCover || false,
+      display_order: index,
+    };
+  });
 
   console.log('✅ [formDataToDatabase] Images transformed', {
     totalImages: images.length,
@@ -858,29 +986,85 @@ export function databaseToFormData(
         hours: dbData.duration_hours,
         minutes: dbData.duration_minutes,
       },
-      // difficultyLevel: dbData.difficulty_level,
-      // languagesSupported: dbData.languages_supported,
-      // tags: dbData.tags,
-      featuredImage: dbData.images.find(img => img.is_cover) ? {
-        id: dbData.images.find(img => img.is_cover)!.id,
-        url: dbData.images.find(img => img.is_cover)!.public_url,
-        fileName: dbData.images.find(img => img.is_cover)!.file_name,
-        fileSize: dbData.images.find(img => img.is_cover)!.file_size,
-        mimeType: dbData.images.find(img => img.is_cover)!.mime_type,
-        isCover: true,
-        order: dbData.images.find(img => img.is_cover)!.display_order,
-        uploadedAt: new Date(dbData.images.find(img => img.is_cover)!.uploaded_at),
-      } : null,
-      imageGallery: dbData.images.map(img => ({
-        id: img.id,
-        url: img.public_url,
-        fileName: img.file_name,
-        fileSize: img.file_size,
-        mimeType: img.mime_type,
-        isCover: img.is_cover,
-        order: img.display_order,
-        uploadedAt: new Date(img.uploaded_at),
-      })),
+      // Note: difficultyLevel, languagesSupported, and tags are not used in UI
+      // They exist in DB but are ignored when loading form data
+      featuredImage: (() => {
+        const coverImage = dbData.images.find(img => img.is_cover);
+        if (!coverImage) {
+          console.log('⚠️ [databaseToFormData] No cover image found');
+          return null;
+        }
+        if (!coverImage.public_url) {
+          console.log('⚠️ [databaseToFormData] Cover image missing public_url:', {
+            file_name: coverImage.file_name,
+            storage_path: coverImage.storage_path?.substring(0, 60),
+            id: coverImage.id,
+          });
+          return null;
+        }
+        console.log('🖼️ [databaseToFormData] Featured image:', {
+          file_name: coverImage.file_name,
+          url: coverImage.public_url, // Full URL
+          url_length: coverImage.public_url.length,
+          url_preview: coverImage.public_url.length > 150 ? coverImage.public_url.substring(0, 150) + '...' : coverImage.public_url,
+          is_presigned: coverImage.public_url.includes('?X-Amz'),
+          has_query_params: coverImage.public_url.includes('?'),
+          storage_path: coverImage.storage_path?.substring(0, 60),
+        });
+        return {
+          id: coverImage.id,
+          url: coverImage.public_url,
+          fileName: coverImage.file_name,
+          fileSize: coverImage.file_size,
+          mimeType: coverImage.mime_type,
+          isCover: true,
+          order: coverImage.display_order,
+          uploadedAt: new Date(coverImage.uploaded_at),
+        };
+      })(),
+      imageGallery: dbData.images
+        .filter(img => {
+          // Skip images with base64 in storage_path (corrupted data)
+          const isBase64Storage = img.storage_path && img.storage_path.startsWith('data:');
+          if (isBase64Storage) {
+            console.warn('⚠️ [databaseToFormData] Skipping image with base64 in storage_path:', {
+              id: img.id,
+              file_name: img.file_name,
+              storage_path_preview: img.storage_path?.substring(0, 60),
+            });
+            return false;
+          }
+          const hasUrl = !!img.public_url && !img.public_url.startsWith('data:');
+          if (!hasUrl) {
+            console.log('⚠️ [databaseToFormData] Image missing valid public_url:', {
+              file_name: img.file_name,
+              public_url: img.public_url?.substring(0, 60),
+              storage_path: img.storage_path?.substring(0, 60),
+            });
+          }
+          return hasUrl;
+        })
+        .map(img => {
+          console.log('🖼️ [databaseToFormData] Gallery image:', {
+            file_name: img.file_name,
+            url: img.public_url, // Full URL
+            url_length: img.public_url?.length || 0,
+            url_preview: img.public_url ? (img.public_url.length > 150 ? img.public_url.substring(0, 150) + '...' : img.public_url) : 'MISSING',
+            is_presigned: img.public_url?.includes('?X-Amz'),
+            has_query_params: img.public_url?.includes('?'),
+            storage_path: img.storage_path?.substring(0, 60),
+          });
+          return {
+            id: img.id,
+            url: img.public_url!,
+            fileName: img.file_name,
+            fileSize: img.file_size,
+            mimeType: img.mime_type,
+            isCover: img.is_cover,
+            order: img.display_order,
+            uploadedAt: new Date(img.uploaded_at),
+          };
+        }),
     },
     // ... other sections would be mapped similarly
     activityDetails: {
@@ -920,31 +1104,8 @@ export function databaseToFormData(
         order: variant.display_order,
       })),
     },
-    policiesRestrictions: {
-      ageRestrictions: {
-        minimumAge: dbData.minimum_age,
-        maximumAge: dbData.maximum_age || undefined,
-        childPolicy: dbData.child_policy || '',
-        infantPolicy: dbData.infant_policy || '',
-        ageVerificationRequired: dbData.age_verification_required,
-      },
-      accessibility: {
-        wheelchairAccessible: dbData.wheelchair_accessible,
-        facilities: dbData.accessibility_facilities,
-        specialAssistance: dbData.special_assistance || '',
-      },
-      cancellationPolicy: {
-        type: dbData.cancellation_policy_type,
-        customPolicy: dbData.cancellation_policy_custom || '',
-        refundPercentage: dbData.cancellation_refund_percentage,
-        cancellationDeadline: dbData.cancellation_deadline_hours,
-      },
-      weatherPolicy: dbData.weather_policy || '',
-      healthSafety: {
-        requirements: dbData.health_safety_requirements as any,
-        additionalInfo: dbData.health_safety_additional_info || '',
-      },
-    },
+    // Policies are not used in UI - tab is commented out
+    // policiesRestrictions: undefined,
     faq: {
       faqs: dbData.faqs.map(faq => ({
         id: faq.id,
@@ -955,22 +1116,11 @@ export function databaseToFormData(
       })),
     },
     pricing: {
-      basePrice: dbData.base_price,
+      // Only currency is used in UI - all other pricing fields are ignored
+      // Pricing is managed through pricingOptions instead
       currency: dbData.currency,
-      priceType: dbData.price_type,
-      childPrice: dbData.child_price_type && dbData.child_price_value ? {
-        type: dbData.child_price_type,
-        value: dbData.child_price_value,
-      } : undefined,
-      infantPrice: dbData.infant_price || undefined,
-      groupDiscounts: dbData.group_discounts as any,
-      seasonalPricing: dbData.seasonal_pricing as any,
-      dynamicPricing: {
-        enabled: dbData.dynamic_pricing_enabled,
-        baseMultiplier: dbData.dynamic_pricing_base_multiplier,
-        demandMultiplier: dbData.dynamic_pricing_demand_multiplier,
-        seasonMultiplier: dbData.dynamic_pricing_season_multiplier,
-      },
+      // Note: basePrice, priceType, childPrice, infantPrice, groupDiscounts,
+      // seasonalPricing, and dynamicPricing exist in DB but are not used in UI
     },
   };
 }

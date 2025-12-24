@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/aws/lambda-database';
+import { getPresignedDownloadUrl } from '@/lib/aws/s3-upload';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -39,12 +40,126 @@ export async function GET(request: NextRequest) {
     if (activityPackageIds.length > 0) {
       try {
         const imagesResult = await query<any>(
-          `SELECT package_id, id, public_url, is_cover
+          `SELECT package_id, id, public_url, storage_path, is_cover
            FROM activity_package_images
            WHERE package_id::text = ANY($1::text[])`,
           [activityPackageIds]
         );
-        activityImages = imagesResult.rows || [];
+        // Generate presigned URLs for S3 images
+        console.log('🖼️ [Packages API] Processing activity images:', {
+          imageCount: imagesResult.rows?.length || 0,
+          images: (imagesResult.rows || []).map((img: any) => ({
+            id: img.id,
+            file_name: img.file_name,
+            has_storage_path: !!img.storage_path,
+            has_public_url: !!img.public_url,
+            storage_path_preview: img.storage_path?.substring(0, 60),
+            public_url_preview: img.public_url?.substring(0, 60),
+          }))
+        });
+
+        activityImages = await Promise.all(
+          (imagesResult.rows || []).map(async (img: any) => {
+            // Skip images with base64 data URLs in storage_path (corrupted data)
+            const isBase64Data = img.storage_path && img.storage_path.startsWith('data:');
+            if (isBase64Data) {
+              console.warn('⚠️ [Packages API] Skipping image with base64 in storage_path (corrupted data):', {
+                id: img.id,
+                file_name: img.file_name,
+                storage_path_preview: img.storage_path?.substring(0, 60),
+                has_public_url: !!img.public_url,
+              });
+              // If it has a public_url, use that; otherwise skip this image
+              if (img.public_url && !img.public_url.startsWith('data:')) {
+                return { ...img, public_url: img.public_url };
+              }
+              // Return null to filter out later
+              return null;
+            }
+            
+            // Check for both path formats (with and without 's') to handle legacy data
+            const hasS3Path = img.storage_path && (
+              img.storage_path.startsWith('activity-packages-images/') || 
+              img.storage_path.startsWith('activity-package-images/')
+            );
+            const isDirectS3Url = img.public_url && img.public_url.includes('.s3.') && img.public_url.includes('amazonaws.com');
+            const isAlreadyPresigned = img.public_url && (img.public_url.includes('cloudfront') || img.public_url.includes('?X-Amz'));
+            
+            // Normalize storage_path: convert old format (without 's') to new format (with 's')
+            let normalizedStoragePath = img.storage_path;
+            if (normalizedStoragePath?.startsWith('activity-package-images/')) {
+              normalizedStoragePath = normalizedStoragePath.replace('activity-package-images/', 'activity-packages-images/');
+              console.log('🔄 [Packages API] Normalized storage path:', {
+                original: img.storage_path?.substring(0, 60),
+                normalized: normalizedStoragePath.substring(0, 60),
+              });
+            }
+            
+            console.log('🔍 [Packages API] Image analysis:', {
+              file_name: img.file_name,
+              hasS3Path,
+              isDirectS3Url,
+              isAlreadyPresigned,
+              has_public_url: !!img.public_url,
+              storage_path_preview: img.storage_path?.substring(0, 60),
+              normalized_path_preview: normalizedStoragePath?.substring(0, 60),
+            });
+            
+            // Generate presigned URL if: has S3 path AND (no public_url OR direct S3 URL OR not already presigned)
+            if (hasS3Path && (!img.public_url || isDirectS3Url || !isAlreadyPresigned)) {
+              console.log('📤 [Packages API] Generating presigned URL for:', normalizedStoragePath?.substring(0, 60));
+              try {
+                // Try normalized path first (with 's')
+                const presignedUrl = await getPresignedDownloadUrl(normalizedStoragePath, 3600);
+                console.log('✅ [Packages API] Presigned URL generated:', {
+                  file_name: img.file_name,
+                  url_preview: presignedUrl.substring(0, 100) + '...',
+                });
+                return { ...img, public_url: presignedUrl };
+              } catch (error: any) {
+                // If normalized path fails and original was different, try original path
+                if (normalizedStoragePath !== img.storage_path && img.storage_path) {
+                  console.log('🔄 [Packages API] Trying original path as fallback:', img.storage_path?.substring(0, 60));
+                  try {
+                    const fallbackUrl = await getPresignedDownloadUrl(img.storage_path, 3600);
+                    console.log('✅ [Packages API] Presigned URL generated with fallback path');
+                    return { ...img, public_url: fallbackUrl };
+                  } catch (fallbackError: any) {
+                    console.error('❌ [Packages API] Both paths failed:', {
+                      normalized_error: error.message,
+                      original_error: fallbackError.message,
+                    });
+                  }
+                } else {
+                  console.error('❌ [Packages API] Failed to generate presigned URL:', {
+                    file_name: img.file_name,
+                    storage_path: img.storage_path,
+                    error: error.message,
+                  });
+                }
+                return { ...img, public_url: img.public_url || img.storage_path };
+              }
+            } else {
+              console.log('⏭️ [Packages API] Skipping presigned URL:', {
+                file_name: img.file_name,
+                reason: !hasS3Path ? 'No S3 path' : isAlreadyPresigned ? 'Already presigned' : 'Other',
+              });
+            }
+            return img;
+          })
+        );
+        
+        // Filter out null images (corrupted base64 data)
+        activityImages = activityImages.filter((img: any) => img !== null);
+
+        console.log('🎯 [Packages API] Final activity images:', {
+          imageCount: activityImages.length,
+          images: activityImages.map((img: any) => ({
+            file_name: img.file_name,
+            public_url_preview: img.public_url?.substring(0, 100) + '...',
+            is_presigned: img.public_url?.includes('?X-Amz'),
+          }))
+        });
       } catch (error: any) {
         // Table may not exist yet - that's okay, just skip images
         if (error.message?.includes('does not exist') || error.code === '42P01' || error.message?.includes('activity_package_images')) {
@@ -183,16 +298,84 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    // Combine transfer packages with images
+    // Fetch pricing for transfer packages
+    let transferHourlyPricing: any[] = [];
+    let transferPointToPointPricing: any[] = [];
+    let transferVehicles: any[] = [];
+    
+    if (transferPackageIds.length > 0) {
+      try {
+        // Fetch hourly pricing
+        const hourlyPricingResult = await query<any>(
+          `SELECT package_id, rate_usd, hours
+           FROM transfer_hourly_pricing
+           WHERE package_id::text = ANY($1::text[])
+           ORDER BY display_order`,
+          [transferPackageIds]
+        );
+        transferHourlyPricing = hourlyPricingResult.rows || [];
+      } catch (error: any) {
+        if (error.message?.includes('does not exist') || error.code === '42P01') {
+          console.warn('transfer_hourly_pricing table not found, skipping pricing data');
+        } else {
+          console.warn('Error fetching hourly pricing (non-fatal):', error.message);
+        }
+      }
+
+      try {
+        // Fetch point-to-point pricing
+        const p2pPricingResult = await query<any>(
+          `SELECT package_id, cost_usd, from_location, to_location
+           FROM transfer_point_to_point_pricing
+           WHERE package_id::text = ANY($1::text[])
+           ORDER BY display_order`,
+          [transferPackageIds]
+        );
+        transferPointToPointPricing = p2pPricingResult.rows || [];
+      } catch (error: any) {
+        if (error.message?.includes('does not exist') || error.code === '42P01') {
+          console.warn('transfer_point_to_point_pricing table not found, skipping pricing data');
+        } else {
+          console.warn('Error fetching point-to-point pricing (non-fatal):', error.message);
+        }
+      }
+
+      try {
+        // Fetch vehicles
+        const vehiclesResult = await query<any>(
+          `SELECT package_id, id, name, vehicle_type, passenger_capacity
+           FROM transfer_package_vehicles
+           WHERE package_id::text = ANY($1::text[])
+           ORDER BY display_order`,
+          [transferPackageIds]
+        );
+        transferVehicles = vehiclesResult.rows || [];
+      } catch (error: any) {
+        if (error.message?.includes('does not exist') || error.code === '42P01') {
+          console.warn('transfer_package_vehicles table not found, skipping vehicle data');
+        } else {
+          console.warn('Error fetching vehicles (non-fatal):', error.message);
+        }
+      }
+    }
+
+    // Combine transfer packages with images, pricing, and vehicles
     const transferPackages = (transferPackagesResult.rows || []).map((pkg: any) => {
       const pkgImages = transferImages.filter((img: any) => img.package_id === pkg.id);
       const coverImage = pkgImages.find((img: any) => img.is_cover);
       const imageUrl = coverImage?.public_url || pkgImages[0]?.public_url || '';
+      
+      const pkgHourlyPricing = transferHourlyPricing.filter((p: any) => p.package_id === pkg.id);
+      const pkgPointToPointPricing = transferPointToPointPricing.filter((p: any) => p.package_id === pkg.id);
+      const pkgVehicles = transferVehicles.filter((v: any) => v.package_id === pkg.id);
 
       return {
         ...pkg,
         imageUrl,
         images: pkgImages,
+        hourly_pricing: pkgHourlyPricing,
+        point_to_point_pricing: pkgPointToPointPricing,
+        vehicles: pkgVehicles,
       };
     });
 

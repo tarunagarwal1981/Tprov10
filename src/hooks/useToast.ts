@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 
 export interface Toast {
   id: string;
@@ -46,7 +46,9 @@ export function useToast() {
     return addToast(message, 'info', duration);
   }, [addToast]);
 
-  return {
+  // Memoize the return object to prevent unnecessary re-renders
+  // This ensures the object reference only changes when the actual dependencies change
+  return useMemo(() => ({
     toasts,
     addToast,
     removeToast,
@@ -54,7 +56,7 @@ export function useToast() {
     error,
     warning,
     info,
-  };
+  }), [toasts, addToast, removeToast, success, error, warning, info]);
 }
 
 

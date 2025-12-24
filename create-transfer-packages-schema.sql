@@ -242,6 +242,10 @@ CREATE INDEX IF NOT EXISTS idx_transfer_additional_services_package_id ON transf
 -- 7. PRICING RULES TABLE
 -- ========================================
 
+-- NOTE: As of 2025-12, pricing rules are not used by the current operator
+-- transfer package UI. The table is kept for backwards compatibility and
+-- potential future advanced pricing features, but should be treated as
+-- "reserved / deprecated" for new development.
 CREATE TABLE IF NOT EXISTS transfer_pricing_rules (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   vehicle_id UUID NOT NULL REFERENCES transfer_package_vehicles(id) ON DELETE CASCADE,
@@ -278,6 +282,10 @@ CREATE INDEX IF NOT EXISTS idx_transfer_pricing_rules_vehicle_id ON transfer_pri
 -- 8. TIME SLOTS TABLE
 -- ========================================
 
+-- NOTE: As of 2025-12, transfer_time_slots is not populated by the current
+-- transfer package form. Availability is captured only via high-level
+-- columns on transfer_packages. This table is kept for backwards
+-- compatibility and potential future use.
 CREATE TABLE IF NOT EXISTS transfer_time_slots (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   package_id UUID NOT NULL REFERENCES transfer_packages(id) ON DELETE CASCADE,
@@ -298,6 +306,10 @@ CREATE INDEX IF NOT EXISTS idx_transfer_time_slots_package_id ON transfer_time_s
 -- 9. BOOKING RESTRICTIONS TABLE
 -- ========================================
 
+-- NOTE: As of 2025-12, transfer_booking_restrictions is not populated by
+-- the current transfer package form. Booking restrictions are not exposed
+-- in the operator dashboard UI. This table is kept for backwards
+-- compatibility and potential future use.
 CREATE TABLE IF NOT EXISTS transfer_booking_restrictions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   package_id UUID NOT NULL REFERENCES transfer_packages(id) ON DELETE CASCADE,

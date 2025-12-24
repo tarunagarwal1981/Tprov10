@@ -123,11 +123,11 @@ const HourlyPricingCard: React.FC<HourlyPricingCardProps> = ({
             <div>
               <Label htmlFor="vehicleType">Vehicle Type</Label>
               <Select
-                value={editData.vehicleType}
+                value={editData.vehicleType || undefined}
                 onValueChange={(value: VehicleType) => setEditData({ ...editData, vehicleType: value })}
               >
                 <SelectTrigger className="package-text-fix">
-                  <SelectValue />
+                  <SelectValue placeholder="Select vehicle type" />
                 </SelectTrigger>
                 <SelectContent className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 z-50">
                   {VEHICLE_TYPES.map((type) => (
@@ -160,9 +160,12 @@ const HourlyPricingCard: React.FC<HourlyPricingCardProps> = ({
                 type="number"
                 min="1"
                 value={editData.maxPassengers}
-                onChange={(e) => setEditData({ ...editData, maxPassengers: parseInt(e.target.value) || 1 })}
+                disabled
                 className="package-text-fix"
               />
+              <p className="mt-1 text-xs text-gray-500">
+                Auto-filled from the selected vehicle&apos;s capacity.
+              </p>
             </div>
           </div>
 
@@ -374,11 +377,11 @@ const PointToPointPricingCard: React.FC<PointToPointPricingCardProps> = ({
             <div>
               <Label htmlFor="vehicleType">Vehicle Type</Label>
               <Select
-                value={editData.vehicleType}
+                value={editData.vehicleType || undefined}
                 onValueChange={(value: VehicleType) => setEditData({ ...editData, vehicleType: value })}
               >
                 <SelectTrigger className="package-text-fix">
-                  <SelectValue />
+                  <SelectValue placeholder="Select vehicle type" />
                 </SelectTrigger>
                 <SelectContent className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 z-50">
                   {VEHICLE_TYPES.map((type) => (
@@ -404,17 +407,20 @@ const PointToPointPricingCard: React.FC<PointToPointPricingCardProps> = ({
               />
             </div>
 
-            <div>
-              <Label htmlFor="maxPassengers">Max Passengers</Label>
-              <Input
-                id="maxPassengers"
-                type="number"
-                min="1"
-                value={editData.maxPassengers}
-                onChange={(e) => setEditData({ ...editData, maxPassengers: parseInt(e.target.value) || 1 })}
-                className="package-text-fix"
-              />
-            </div>
+          <div>
+            <Label htmlFor="maxPassengers">Max Passengers</Label>
+            <Input
+              id="maxPassengers"
+              type="number"
+              min="1"
+              value={editData.maxPassengers}
+              disabled
+              className="package-text-fix"
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              Auto-filled from the selected vehicle&apos;s capacity.
+            </p>
+          </div>
 
             <div>
               <Label htmlFor="costUSD">Total Cost (USD)</Label>
@@ -834,9 +840,12 @@ export const TransferPricingOptionsManager: React.FC<TransferPricingOptionsManag
                           type="number"
                           min="1"
                           value={newHourlyOption.maxPassengers}
-                          onChange={(e) => setNewHourlyOption({ ...newHourlyOption, maxPassengers: parseInt(e.target.value) || 1 })}
+                          disabled
                           className="package-text-fix"
                         />
+                        <p className="mt-1 text-xs text-gray-500">
+                          Auto-filled from the selected vehicle&apos;s capacity.
+                        </p>
                       </div>
                     </div>
                     <div className="flex gap-2 mt-4">
@@ -953,9 +962,12 @@ export const TransferPricingOptionsManager: React.FC<TransferPricingOptionsManag
                           type="number"
                           min="1"
                           value={newP2POption.maxPassengers}
-                          onChange={(e) => setNewP2POption({ ...newP2POption, maxPassengers: parseInt(e.target.value) || 1 })}
+                          disabled
                           className="package-text-fix"
                         />
+                        <p className="mt-1 text-xs text-gray-500">
+                          Auto-filled from the selected vehicle&apos;s capacity.
+                        </p>
                       </div>
                       <div>
                         <Label>Total Cost (USD) *</Label>

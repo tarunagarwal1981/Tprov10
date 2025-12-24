@@ -66,11 +66,38 @@ export const ActivityPackageCard: React.FC<ActivityPackageCardProps> = ({
   const allImages = React.useMemo(() => {
     const images: Array<{ url: string; alt: string }> = [];
     
+    console.log('🖼️ [Card] Processing images for package:', {
+      packageId: pkg.id,
+      title: pkg.title,
+      imagesCount: pkg.images?.length || 0,
+      hasImageString: !!pkg.image,
+      imageString: pkg.image?.substring(0, 100),
+      images: pkg.images?.map((img: any) => ({
+        id: img.id,
+        alt_text: img.alt_text,
+        public_url: img.public_url, // Full URL for debugging
+        public_url_length: img.public_url?.length || 0,
+        public_url_preview: img.public_url ? (img.public_url.length > 150 ? img.public_url.substring(0, 150) + '...' : img.public_url) : 'MISSING',
+        has_public_url: !!img.public_url,
+        storage_path: img.storage_path?.substring(0, 80),
+        is_cover: img.is_cover,
+      }))
+    });
+    
     // Add images from images array
     if (pkg.images && pkg.images.length > 0) {
       pkg.images
         .filter(img => img.public_url)
         .forEach(img => {
+          console.log('📸 [Card] Adding image:', {
+            alt_text: img.alt_text || 'unknown',
+            url: img.public_url, // Full URL for debugging
+            url_length: img.public_url?.length || 0,
+            url_preview: img.public_url ? (img.public_url.length > 300 ? img.public_url.substring(0, 300) + '...' : img.public_url) : 'MISSING',
+            is_presigned: img.public_url?.includes('?X-Amz'),
+            has_query_params: img.public_url?.includes('?'),
+            query_params_preview: img.public_url?.includes('?') ? img.public_url.split('?')[1]?.substring(0, 100) : 'none',
+          });
           images.push({
             url: img.public_url!,
             alt: img.alt_text || pkg.title,
@@ -80,11 +107,17 @@ export const ActivityPackageCard: React.FC<ActivityPackageCardProps> = ({
     
     // Fallback to image string
     if (images.length === 0 && pkg.image) {
+      console.log('📸 [Card] Using fallback image string:', pkg.image.substring(0, 80) + '...');
       images.push({
         url: pkg.image,
         alt: pkg.title,
       });
     }
+    
+    console.log('✅ [Card] Final images array:', {
+      count: images.length,
+      urls: images.map(img => img.url.substring(0, 80) + '...'),
+    });
     
     return images.slice(0, 5); // Limit to 5 images for performance
   }, [pkg.images, pkg.image, pkg.title]);
@@ -183,13 +216,72 @@ export const ActivityPackageCard: React.FC<ActivityPackageCardProps> = ({
                 transition={{ duration: 0.5 }}
                 className="absolute inset-0"
               >
-                <Image
-                  src={packageImages[currentImageIndex]!.url}
-                  alt={packageImages[currentImageIndex]!.alt}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                />
+                {packageImages[currentImageIndex]?.url ? (
+                  // Use regular img tag for presigned URLs to avoid Next.js Image optimization issues
+                  <img
+                    src={packageImages[currentImageIndex]!.url}
+                    alt={packageImages[currentImageIndex]!.alt}
+                    className="w-full h-full object-cover"
+                    style={{ position: 'absolute', inset: 0 }}
+                    onError={(e) => {
+                      const imgElement = e.target as HTMLImageElement;
+                      const fullUrl = packageImages[currentImageIndex]?.url || '';
+                      console.error('❌ [Card] Image load error:', {
+                        file_name: packageImages[currentImageIndex]?.alt,
+                        url: fullUrl,
+                        url_length: fullUrl.length,
+                        actual_src: imgElement?.src,
+                        src_matches: imgElement?.src === fullUrl,
+                        is_presigned: fullUrl.includes('?X-Amz'),
+                        has_query_params: fullUrl.includes('?'),
+                        query_params: fullUrl.includes('?') ? fullUrl.split('?')[1]?.substring(0, 200) : 'none',
+                        error_type: e.type,
+                        error_message: imgElement?.onerror ? 'Image load failed' : 'Unknown error',
+                        http_status: '403 Forbidden (likely S3 permissions/CORS issue)',
+                      });
+                      
+                      // Try to fetch the URL with CORS to see the actual error
+                      fetch(fullUrl, { 
+                        method: 'GET',
+                        mode: 'cors',
+                        credentials: 'omit'
+                      })
+                        .then((response) => {
+                          console.log('🔍 [Card] Fetch response:', {
+                            status: response.status,
+                            statusText: response.statusText,
+                            ok: response.ok,
+                            headers: Object.fromEntries(response.headers.entries()),
+                          });
+                          if (!response.ok) {
+                            return response.text().then(text => {
+                              console.error('❌ [Card] Fetch error response:', text.substring(0, 500));
+                              return null;
+                            });
+                          }
+                          return null;
+                        })
+                        .catch((fetchError) => {
+                          console.error('❌ [Card] Fetch request failed:', {
+                            error: fetchError.message,
+                            name: fetchError.name,
+                            stack: fetchError.stack,
+                          });
+                        });
+                    }}
+                    onLoad={() => {
+                      console.log('✅ [Card] Image loaded successfully:', {
+                        file_name: packageImages[currentImageIndex]?.alt,
+                        url_preview: packageImages[currentImageIndex]?.url?.substring(0, 100) + '...',
+                        is_presigned: packageImages[currentImageIndex]?.url?.includes('?X-Amz'),
+                      });
+                    }}
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                    <span className="text-gray-400 text-sm">No image</span>
+                  </div>
+                )}
               </motion.div>
             ) : (
               <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400">

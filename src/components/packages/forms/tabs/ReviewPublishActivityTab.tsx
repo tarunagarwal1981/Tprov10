@@ -167,27 +167,14 @@ export const ReviewPublishActivityTab: React.FC<ReviewPublishActivityTabProps> =
           hasErrors={hasSectionErrors("pricing")}
         >
           <div className="space-y-3">
-            <SummaryItem label="Base Price" value={`${formData.pricing?.currency || '$'}${(formData.pricing?.basePrice ?? 0).toFixed(2)}`} />
-            <SummaryItem label="Price Type" value={formData.pricing?.priceType === 'PERSON' ? 'Per Person' : 'Per Group'} />
-          </div>
-        </ReviewSection>
-        
-        <ReviewSection
-          title="Pricing Options"
-          icon={<FaDollarSign className="h-5 w-5 text-orange-600" />}
-          isComplete={isSectionComplete("pricing-options")}
-          hasErrors={hasSectionErrors("pricing-options")}
-        >
-          <div className="space-y-3">
+            <SummaryItem label="Currency" value={formData.pricing?.currency || 'USD'} />
             <SummaryItem 
-              label="Ticket Only Options" 
-              value={`${pricingOptions?.ticketOnlyOptions?.length || 0} options`}
-              isEmpty={(pricingOptions?.ticketOnlyOptions?.length || 0) === 0}
-            />
-            <SummaryItem 
-              label="Ticket with Transfer Options" 
-              value={`${pricingOptions?.ticketWithTransferOptions?.length || 0} options`}
-              isEmpty={(pricingOptions?.ticketWithTransferOptions?.length || 0) === 0}
+              label="Pricing Options" 
+              value={Array.isArray(formData.pricingOptions) 
+                ? `${formData.pricingOptions.length} option${formData.pricingOptions.length !== 1 ? 's' : ''}`
+                : '0 options'
+              }
+              isEmpty={!formData.pricingOptions || (Array.isArray(formData.pricingOptions) && formData.pricingOptions.length === 0)}
             />
           </div>
         </ReviewSection>

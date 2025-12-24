@@ -86,8 +86,8 @@ export async function POST(request: NextRequest) {
       if (pricingResult.rows && pricingResult.rows[0]) {
         const pricingPackageId = pricingResult.rows[0].id;
 
-        // Insert pricing rows for SIC pricing type
-        if (data.pricing.pricingType === 'SIC' && data.pricing.pricingRows && data.pricing.pricingRows.length > 0) {
+        // Insert SIC pricing rows if they exist (regardless of selected pricing type)
+        if (data.pricing.pricingRows && data.pricing.pricingRows.length > 0) {
           for (const [index, row] of data.pricing.pricingRows.entries()) {
             await query(
               `INSERT INTO multi_city_hotel_pricing_rows (
@@ -104,8 +104,8 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        // Insert private package rows for PRIVATE_PACKAGE pricing type
-        if (data.pricing.pricingType === 'PRIVATE_PACKAGE' && data.pricing.privatePackageRows && data.pricing.privatePackageRows.length > 0) {
+        // Insert private package rows if they exist (regardless of selected pricing type)
+        if (data.pricing.privatePackageRows && data.pricing.privatePackageRows.length > 0) {
           for (const [index, row] of data.pricing.privatePackageRows.entries()) {
             await query(
               `INSERT INTO multi_city_hotel_private_package_rows (
@@ -172,14 +172,47 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Helper function to migrate old format to new format
+    const migrateTimeSlots = (timeSlots: any) => {
+      if (!timeSlots) {
+        return {
+          morning: { time: '08:00', title: '', activityDescription: '', transfer: '' },
+          afternoon: { time: '12:30', title: '', activityDescription: '', transfer: '' },
+          evening: { time: '17:00', title: '', activityDescription: '', transfer: '' },
+        };
+      }
+      
+      const slots: ('morning' | 'afternoon' | 'evening')[] = ['morning', 'afternoon', 'evening'];
+      const defaultTimes: { morning: string; afternoon: string; evening: string } = { morning: '08:00', afternoon: '12:30', evening: '17:00' };
+      
+      const migrated: any = {};
+      slots.forEach(slot => {
+        const oldSlot = timeSlots[slot] || {};
+        // If old format (has activities/transfers arrays)
+        if (oldSlot.activities || oldSlot.transfers) {
+          migrated[slot] = {
+            time: oldSlot.time || defaultTimes[slot],
+            title: '',
+            activityDescription: Array.isArray(oldSlot.activities) ? oldSlot.activities.join('. ') : '',
+            transfer: Array.isArray(oldSlot.transfers) ? oldSlot.transfers.join('. ') : '',
+          };
+        } else {
+          // New format or default
+          migrated[slot] = {
+            time: oldSlot.time || defaultTimes[slot],
+            title: oldSlot.title || '',
+            activityDescription: oldSlot.activityDescription || '',
+            transfer: oldSlot.transfer || '',
+          };
+        }
+      });
+      return migrated;
+    };
+
     // Insert day plans
     if (data.days && data.days.length > 0) {
       for (const [dayIndex, day] of data.days.entries()) {
-        const timeSlots = day.timeSlots || {
-          morning: { time: "", activities: [], transfers: [] },
-          afternoon: { time: "", activities: [], transfers: [] },
-          evening: { time: "", activities: [], transfers: [] },
-        };
+        const timeSlots = migrateTimeSlots(day.timeSlots);
 
         // Map city ID if provided
         const cityId = day.cityId ? cityIdMap[day.cityId] : null;

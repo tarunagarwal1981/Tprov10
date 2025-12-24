@@ -234,7 +234,7 @@ export default function BenefitsPage() {
             {/* CTA Below Table */}
             <div className="text-center mt-12">
               <a
-                href="/auth/register"
+                href="/login"
                 className="inline-block bg-gradient-to-r from-orange-500 to-yellow-500 text-white font-semibold px-8 py-4 rounded-full hover:shadow-lg transition-all hover:-translate-y-1"
               >
                 Start Your Free Trial
@@ -256,7 +256,7 @@ export default function BenefitsPage() {
                 <div className="text-lg">Average Monthly Benefit</div>
               </div>
               <a
-                href="/auth/register"
+                href="/login"
                 className="inline-block bg-white text-blue-600 font-semibold px-8 py-4 rounded-full hover:shadow-lg transition-all hover:scale-105"
               >
                 See Your ROI in 30 Days

@@ -1,3 +1,15 @@
+/**
+ * @deprecated This tab is not used in the Activity Package form.
+ * The Policies tab is commented out in ActivityPackageForm.tsx.
+ * Policy fields are set to defaults in the database.
+ * 
+ * If you need to re-enable policies:
+ * 1. Uncomment the import in ActivityPackageForm.tsx
+ * 2. Uncomment the tab configuration
+ * 3. Remove @deprecated markers from PoliciesRestrictions types
+ * 4. Update formDataToDatabase() to use form data instead of defaults
+ */
+
 "use client";
 
 import React, { useState, useCallback } from "react";
@@ -202,7 +214,7 @@ export const PoliciesRestrictionsTab: React.FC = () => {
         isRequired: newRequirement.isRequired || false,
       };
 
-      const currentRequirements = watchedData.healthSafety.requirements || [];
+      const currentRequirements = watchedData?.healthSafety?.requirements || [];
       setValue('policiesRestrictions.healthSafety.requirements', [...currentRequirements, requirement]);
       
       setNewRequirement({
@@ -211,21 +223,21 @@ export const PoliciesRestrictionsTab: React.FC = () => {
         isRequired: true,
       });
     }
-  }, [newRequirement, watchedData.healthSafety.requirements, setValue]);
+  }, [newRequirement, watchedData?.healthSafety?.requirements, setValue]);
 
   const handleUpdateRequirement = useCallback((updatedRequirement: HealthSafetyRequirement) => {
-    const currentRequirements = watchedData.healthSafety.requirements || [];
+    const currentRequirements = watchedData?.healthSafety?.requirements || [];
     const updatedRequirements = currentRequirements.map(req =>
       req.id === updatedRequirement.id ? updatedRequirement : req
     );
     setValue('policiesRestrictions.healthSafety.requirements', updatedRequirements);
-  }, [watchedData.healthSafety.requirements, setValue]);
+  }, [watchedData?.healthSafety?.requirements, setValue]);
 
   const handleRemoveRequirement = useCallback((id: string) => {
-    const currentRequirements = watchedData.healthSafety.requirements || [];
+    const currentRequirements = watchedData?.healthSafety?.requirements || [];
     const updatedRequirements = currentRequirements.filter(req => req.id !== id);
     setValue('policiesRestrictions.healthSafety.requirements', updatedRequirements);
-  }, [watchedData.healthSafety.requirements, setValue]);
+  }, [watchedData?.healthSafety?.requirements, setValue]);
 
   return (
     <div className="space-y-6 package-scroll-fix">
@@ -478,7 +490,7 @@ export const PoliciesRestrictionsTab: React.FC = () => {
               )}
             />
 
-            {watchedData.cancellationPolicy.type === 'CUSTOM' && (
+            {watchedData?.cancellationPolicy?.type === 'CUSTOM' && (
               <FormField
                 control={control}
                 name="policiesRestrictions.cancellationPolicy.customPolicy"
@@ -642,7 +654,7 @@ export const PoliciesRestrictionsTab: React.FC = () => {
               <h4 className="font-medium mb-4">Health & Safety Requirements</h4>
               <div className="space-y-3">
                 <AnimatePresence>
-                  {(watchedData.healthSafety.requirements || []).map((requirement) => (
+                  {(watchedData?.healthSafety?.requirements || []).map((requirement) => (
                     <HealthSafetyRequirementCard
                       key={requirement.id}
                       requirement={requirement}

@@ -6,7 +6,7 @@ export const runtime = 'nodejs';
 
 /**
  * GET /api/packages/[packageId]/details?type=multi_city|multi_city_hotel
- * Get complete package details including pricing, day plans, cities, and hotels
+ * Get complete package details including pricing, day plans, cities, hotels, inclusions, exclusions and cancellation tiers
  */
 export async function GET(
   request: NextRequest,
@@ -19,7 +19,7 @@ export async function GET(
 
     if (!type || (type !== 'multi_city' && type !== 'multi_city_hotel')) {
       return NextResponse.json(
-        { error: 'type parameter is required and must be "multi_city" or "multi_city_hotel"' },
+        { error: 'type parameter is required and must be \"multi_city\" or \"multi_city_hotel\"' },
         { status: 400 }
       );
     }
@@ -33,6 +33,9 @@ export async function GET(
     const citiesTable = isHotelPackage ? 'multi_city_hotel_package_cities' : 'multi_city_package_cities';
     const hotelsTable = isHotelPackage ? 'multi_city_hotel_package_city_hotels' : null;
     const imagesTable = isHotelPackage ? 'multi_city_hotel_package_images' : 'multi_city_package_images';
+    const inclusionsTable = isHotelPackage ? 'multi_city_hotel_package_inclusions' : 'multi_city_package_inclusions';
+    const exclusionsTable = isHotelPackage ? 'multi_city_hotel_package_exclusions' : 'multi_city_package_exclusions';
+    const cancellationTable = isHotelPackage ? 'multi_city_hotel_package_cancellation_tiers' : 'multi_city_package_cancellation_tiers';
 
     // Fetch package details
     const packageData = await queryOne<any>(
@@ -59,24 +62,26 @@ export async function GET(
     let sicRows: any[] = [];
     let privateRows: any[] = [];
 
+    // Load both SIC and private package rows if pricing package exists
+    // This allows both pricing types to be available simultaneously
     if (pricingPkg) {
-      if (pricingPkg.pricing_type === 'SIC') {
-        const sicResult = await query<any>(
-          `SELECT * FROM ${sicRowsTable} 
-           WHERE pricing_package_id::text = $1 
-           ORDER BY display_order ASC`,
-          [pricingPkg.id]
-        );
-        sicRows = sicResult.rows || [];
-      } else if (pricingPkg.pricing_type === 'PRIVATE_PACKAGE') {
-        const privateResult = await query<any>(
-          `SELECT * FROM ${privateRowsTable} 
-           WHERE pricing_package_id::text = $1 
-           ORDER BY display_order ASC`,
-          [pricingPkg.id]
-        );
-        privateRows = privateResult.rows || [];
-      }
+      // Always try to load SIC rows
+      const sicResult = await query<any>(
+        `SELECT * FROM ${sicRowsTable} 
+         WHERE pricing_package_id::text = $1 
+         ORDER BY display_order ASC`,
+        [pricingPkg.id]
+      );
+      sicRows = sicResult.rows || [];
+
+      // Always try to load private package rows
+      const privateResult = await query<any>(
+        `SELECT * FROM ${privateRowsTable} 
+         WHERE pricing_package_id::text = $1 
+         ORDER BY display_order ASC`,
+        [pricingPkg.id]
+      );
+      privateRows = privateResult.rows || [];
     }
 
     // Fetch day plans (with backward compatibility for time_slots)
@@ -113,41 +118,65 @@ export async function GET(
       }
     }
 
-    // If no day plans, fetch cities as fallback
+    // Always fetch cities (needed for form editing)
     let cities: any[] = [];
     let hotels: any[] = [];
     const hotelsByCity: Record<string, any[]> = {};
 
-    if (dayPlans.length === 0) {
-      const citiesResult = await query<any>(
-        `SELECT id, name, nights, display_order 
-         FROM ${citiesTable} 
+    const citiesResult = await query<any>(
+      `SELECT * 
+       FROM ${citiesTable} 
+       WHERE package_id::text = $1 
+       ORDER BY ${isHotelPackage ? 'display_order' : 'city_order'} ASC`,
+      [packageId]
+    );
+    cities = citiesResult.rows || [];
+
+    // Fetch hotels if hotel package
+    if (isHotelPackage && hotelsTable && cities.length > 0) {
+      const cityIds = cities.map((c: any) => c.id);
+      const hotelsResult = await query<any>(
+        `SELECT * FROM ${hotelsTable} 
+         WHERE city_id::text = ANY($1::text[]) 
+         ORDER BY display_order ASC`,
+        [cityIds]
+      );
+      hotels = hotelsResult.rows || [];
+
+      // Group hotels by city
+      hotels.forEach((hotel: any) => {
+        if (!hotelsByCity[hotel.city_id]) {
+          hotelsByCity[hotel.city_id] = [];
+        }
+        hotelsByCity[hotel.city_id]?.push(hotel);
+      });
+    }
+
+    // Fetch inclusions, exclusions, cancellation tiers
+    const [inclusionsResult, exclusionsResult, cancellationResult] = await Promise.all([
+      query<any>(
+        `SELECT * FROM ${inclusionsTable} 
          WHERE package_id::text = $1 
          ORDER BY display_order ASC`,
         [packageId]
-      );
-      cities = citiesResult.rows || [];
+      ),
+      query<any>(
+        `SELECT * FROM ${exclusionsTable} 
+         WHERE package_id::text = $1 
+         ORDER BY display_order ASC`,
+        [packageId]
+      ),
+      query<any>(
+        `SELECT * FROM ${cancellationTable} 
+         WHERE package_id::text = $1 
+         ORDER BY days_before ASC`,
+        [packageId]
+      ),
+    ]);
 
-      // Fetch hotels if hotel package
-      if (isHotelPackage && hotelsTable && cities.length > 0) {
-        const cityIds = cities.map((c: any) => c.id);
-        const hotelsResult = await query<any>(
-          `SELECT * FROM ${hotelsTable} 
-           WHERE city_id::text = ANY($1::text[]) 
-           ORDER BY display_order ASC`,
-          [cityIds]
-        );
-        hotels = hotelsResult.rows || [];
-
-        // Group hotels by city
-        hotels.forEach((hotel: any) => {
-          if (!hotelsByCity[hotel.city_id]) {
-            hotelsByCity[hotel.city_id] = [];
-          }
-          hotelsByCity[hotel.city_id]?.push(hotel);
-        });
-      }
-    }
+    const inclusions = inclusionsResult.rows || [];
+    const exclusions = exclusionsResult.rows || [];
+    const cancellationTiers = cancellationResult.rows || [];
 
     // Fetch package images
     const imagesResult = await query<any>(
@@ -164,9 +193,12 @@ export async function GET(
         sic_pricing_rows: sicRows,
         private_package_rows: privateRows,
         day_plans: dayPlans,
-        cities: cities,
-        hotels: hotels,
+        cities,
+        hotels,
         hotels_by_city: hotelsByCity,
+        inclusions,
+        exclusions,
+        cancellation_tiers: cancellationTiers,
         images: imagesResult.rows || [],
         image_url: imagesResult.rows.find((img: any) => img.is_cover)?.public_url || null,
       },

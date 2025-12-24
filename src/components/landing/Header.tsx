@@ -71,7 +71,7 @@ export function Header() {
                 Login
               </Button>
             </Link>
-            <Link href="/register">
+            <Link href="/login">
               <Button size="sm" className="bg-gradient-to-r from-[#FF6B35] to-[#FF4B8C] hover:from-[#E05A2A] hover:to-[#E04080]">
                 Get Started
               </Button>
@@ -150,7 +150,7 @@ export function Header() {
                     Login
                   </Button>
                 </Link>
-                <Link href="/register">
+                <Link href="/login">
                   <Button className="w-full bg-gradient-to-r from-[#FF6B35] to-[#FF4B8C] hover:from-[#E05A2A] hover:to-[#E04080]">
                     Get Started
                   </Button>

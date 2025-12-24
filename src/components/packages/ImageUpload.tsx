@@ -459,7 +459,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
             {images.map((image, index) => (
               <ImageCard
-                key={image.id}
+                key={image.id || `image-${index}-${image.fileName || Date.now()}`}
                 image={image}
                 index={index}
                 isEditing={state.editingImage === image.id}
@@ -541,6 +541,25 @@ const ImageCard: React.FC<ImageCardProps> = ({
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
+  // Don't render if URL is empty
+  if (!image.url || image.url.trim() === '') {
+    console.log('⚠️ [ImageCard] Empty URL for image:', image.fileName);
+    return (
+      <div className="group relative overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+        <div className="aspect-square relative flex items-center justify-center bg-gray-100 dark:bg-gray-800">
+          <span className="text-gray-400 text-sm">No image</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Removed verbose logging - uncomment for debugging if needed
+  // console.log('🖼️ [ImageCard] Rendering image:', {
+  //   file_name: image.fileName,
+  //   url: image.url,
+  //   is_cover: image.isCover,
+  // });
+
   return (
     <div className="group relative overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
       <div className="aspect-square relative">
@@ -551,6 +570,20 @@ const ImageCard: React.FC<ImageCardProps> = ({
           sizes="(max-width: 768px) 50vw, 20vw"
           className="object-cover cursor-pointer"
           onClick={onPreview}
+          unoptimized={true}
+          onError={(e) => {
+            console.error('❌ [ImageCard] Image load error:', {
+              file_name: image.fileName,
+              url: image.url,
+              url_length: image.url.length,
+              is_presigned: image.url.includes('?X-Amz'),
+              error: e,
+              target: (e.target as HTMLImageElement)?.src,
+            });
+          }}
+          onLoad={() => {
+            console.log('✅ [ImageCard] Image loaded successfully:', image.fileName);
+          }}
         />
         
         {/* Cover Badge */}
@@ -648,13 +681,19 @@ const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
         className="relative max-w-4xl max-h-[90vh] p-4"
         onClick={(e) => e.stopPropagation()}
       >
-        <Image
-          src={imageUrl}
-          alt="Preview"
-          width={800}
-          height={600}
-          className="max-w-full max-h-full object-contain rounded-lg"
-        />
+        {imageUrl && imageUrl.trim() !== '' ? (
+          <Image
+            src={imageUrl}
+            alt="Preview"
+            width={800}
+            height={600}
+            className="max-w-full max-h-full object-contain rounded-lg"
+          />
+        ) : (
+          <div className="w-full h-96 flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg">
+            <span className="text-gray-400">No image available</span>
+          </div>
+        )}
         <Button
           variant="secondary"
           size="sm"

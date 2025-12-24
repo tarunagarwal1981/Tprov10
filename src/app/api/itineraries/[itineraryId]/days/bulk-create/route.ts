@@ -7,7 +7,12 @@ export const runtime = 'nodejs';
 /**
  * POST /api/itineraries/[itineraryId]/days/bulk-create
  * Create multiple days for an itinerary
- * Body: { days: Array<{ dayNumber, date, cityName, displayOrder, timeSlots?, notes? }> }
+ * Body: { days: Array<{ 
+ *   dayNumber, date, cityName, displayOrder, timeSlots?, notes?,
+ *   title?, arrivalFlightId?, arrivalTime?, departureFlightId?, departureTime?,
+ *   hotelId?, hotelName?, hotelStarRating?, roomType?, mealPlan?,
+ *   lunchIncluded?, lunchDetails?, dinnerIncluded?, dinnerDetails?, arrivalDescription?
+ * }> }
  */
 export async function POST(
   request: NextRequest,
@@ -40,67 +45,102 @@ export async function POST(
       );
     }
 
-    // Try to insert with time_slots first, fallback to without if column doesn't exist
+    // Build INSERT query with all supported fields
+    // Fields: itinerary_id, day_number, date, city_name, display_order, time_slots, notes, title,
+    //         arrival_flight_id, arrival_time, departure_flight_id, departure_time,
+    //         hotel_id, hotel_name, hotel_star_rating, room_type, meal_plan,
+    //         lunch_included, lunch_details, dinner_included, dinner_details, arrival_description
+    
+    const fieldNames = [
+      'itinerary_id', 'day_number', 'date', 'city_name', 'display_order', 
+      'time_slots', 'notes', 'title',
+      'arrival_flight_id', 'arrival_time', 'departure_flight_id', 'departure_time',
+      'hotel_id', 'hotel_name', 'hotel_star_rating', 'room_type', 'meal_plan',
+      'lunch_included', 'lunch_details', 'dinner_included', 'dinner_details', 'arrival_description'
+    ];
+    
+    const fieldCount = fieldNames.length;
+    const values = days.map((day: any, index: number) => {
+      const baseIndex = index * fieldCount;
+      const placeholders = fieldNames.map((_, i) => `$${baseIndex + i + 1}`).join(', ');
+      return `(${placeholders})`;
+    }).join(', ');
+
+    const paramsArray = days.flatMap((day: any) => [
+      itineraryId,
+      day.dayNumber,
+      day.date || null,
+      day.cityName || null,
+      day.displayOrder || day.dayNumber,
+      day.timeSlots ? JSON.stringify(day.timeSlots) : JSON.stringify({
+        morning: { time: '', activities: [], transfers: [] },
+        afternoon: { time: '', activities: [], transfers: [] },
+        evening: { time: '', activities: [], transfers: [] }
+      }),
+      day.notes || null,
+      day.title || null,
+      day.arrivalFlightId || null,
+      day.arrivalTime || null,
+      day.departureFlightId || null,
+      day.departureTime || null,
+      day.hotelId || null,
+      day.hotelName || null,
+      day.hotelStarRating || null,
+      day.roomType || null,
+      day.mealPlan || null,
+      day.lunchIncluded || false,
+      day.lunchDetails || null,
+      day.dinnerIncluded || false,
+      day.dinnerDetails || null,
+      day.arrivalDescription || null,
+    ]);
+
+    // Try with all fields first, fallback to basic fields if enhanced columns don't exist
     let insertResult;
-    let useTimeSlots = true;
-
-    // First attempt: try with time_slots column
     try {
-      const values = days.map((day: any, index: number) => {
-        const baseIndex = index * 6;
-        return `($${baseIndex + 1}, $${baseIndex + 2}, $${baseIndex + 3}, $${baseIndex + 4}, $${baseIndex + 5}, $${baseIndex + 6})`;
-      }).join(', ');
-
-      const paramsArray = days.flatMap((day: any) => [
-        itineraryId,
-        day.dayNumber,
-        day.date,
-        day.cityName || null,
-        day.displayOrder || day.dayNumber,
-        day.timeSlots ? JSON.stringify(day.timeSlots) : JSON.stringify({
-          morning: { time: '', activities: [], transfers: [] },
-          afternoon: { time: '', activities: [], transfers: [] },
-          evening: { time: '', activities: [], transfers: [] }
-        }),
-      ]);
-
       const insertQuery = `
         INSERT INTO itinerary_days (
-          itinerary_id, day_number, date, city_name, display_order, time_slots
+          ${fieldNames.join(', ')}
         ) VALUES ${values}
-        RETURNING id, itinerary_id, day_number, date, city_name, display_order
+        RETURNING id, itinerary_id, day_number, date, city_name, display_order, notes, title, time_slots
       `;
 
       insertResult = await query<any>(insertQuery, paramsArray);
     } catch (error: any) {
-      // If error is about time_slots column not existing, retry without it
-      if (error?.message?.includes('time_slots') || error?.code === '42703') {
-        console.warn('time_slots column not found, inserting without it');
-        useTimeSlots = false;
+      // If enhanced columns don't exist, fallback to basic fields only
+      if (error?.message?.includes('column') || error?.code === '42703') {
+        console.warn('Enhanced columns not found, using basic fields only');
         
-        const values = days.map((day: any, index: number) => {
-          const baseIndex = index * 5;
-          return `($${baseIndex + 1}, $${baseIndex + 2}, $${baseIndex + 3}, $${baseIndex + 4}, $${baseIndex + 5})`;
+        const basicFields = ['itinerary_id', 'day_number', 'date', 'city_name', 'display_order', 'time_slots'];
+        const basicFieldCount = basicFields.length;
+        const basicValues = days.map((day: any, index: number) => {
+          const baseIndex = index * basicFieldCount;
+          const placeholders = basicFields.map((_, i) => `$${baseIndex + i + 1}`).join(', ');
+          return `(${placeholders})`;
         }).join(', ');
 
-        const paramsArray = days.flatMap((day: any) => [
+        const basicParamsArray = days.flatMap((day: any) => [
           itineraryId,
           day.dayNumber,
-          day.date,
+          day.date || null,
           day.cityName || null,
           day.displayOrder || day.dayNumber,
+          day.timeSlots ? JSON.stringify(day.timeSlots) : JSON.stringify({
+            morning: { time: '', activities: [], transfers: [] },
+            afternoon: { time: '', activities: [], transfers: [] },
+            evening: { time: '', activities: [], transfers: [] }
+          }),
         ]);
 
-        const insertQuery = `
+        const basicInsertQuery = `
           INSERT INTO itinerary_days (
-            itinerary_id, day_number, date, city_name, display_order
-          ) VALUES ${values}
+            ${basicFields.join(', ')}
+          ) VALUES ${basicValues}
           RETURNING id, itinerary_id, day_number, date, city_name, display_order
         `;
 
-        insertResult = await query<any>(insertQuery, paramsArray);
+        insertResult = await query<any>(basicInsertQuery, basicParamsArray);
       } else {
-        // Re-throw if it's a different error
         throw error;
       }
     }

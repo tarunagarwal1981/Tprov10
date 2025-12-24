@@ -12,11 +12,20 @@ export default function CreateTransferPackagePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuth();
-  const packageId = searchParams.get('id');
+  const urlPackageId = searchParams.get('id');
   const isViewMode = searchParams.get('view') === 'true';
   
-  const [loading, setLoading] = useState(!!packageId);
+  // Use state to track packageId so it updates after redirect
+  const [packageId, setPackageId] = useState<string | null>(urlPackageId);
+  const [loading, setLoading] = useState(!!urlPackageId);
   const [initialData, setInitialData] = useState<TransferPackageFormData | undefined>(undefined);
+  
+  // Update packageId when URL changes
+  useEffect(() => {
+    if (urlPackageId !== packageId) {
+      setPackageId(urlPackageId);
+    }
+  }, [urlPackageId, packageId]);
   
   // Load existing package if ID is provided
   useEffect(() => {
@@ -66,10 +75,13 @@ export default function CreateTransferPackagePage() {
       // Set status to draft
       dbData.package.status = 'draft';
       
+      // Get current packageId from URL (read fresh each time to handle redirects)
+      const currentPackageId = searchParams.get('id');
+      
       // Check if we're editing an existing package or creating a new one
-      if (packageId) {
+      if (currentPackageId) {
         // Update existing package
-        const { data: packageResult, error: packageError } = await updateTransferPackage(packageId, dbData);
+        const { data: packageResult, error: packageError } = await updateTransferPackage(currentPackageId, dbData);
         
         if (packageError) {
           console.error('Package update error:', packageError);
@@ -89,6 +101,17 @@ export default function CreateTransferPackagePage() {
         
         console.log('✅ Package saved with all relations:', packageResult);
         toast.success("Transfer package draft saved successfully!");
+
+        // After first save, redirect to edit mode for this package
+        // so subsequent saves update instead of creating new records.
+        const newId = packageResult?.id;
+        if (newId) {
+          // Update state immediately so next save knows we're editing
+          setPackageId(newId);
+          // Use replace to avoid adding to history
+          // Use window.location to ensure a full page reload and proper state update
+          window.location.href = `/operator/packages/create/transfer?id=${newId}`;
+        }
       }
     } catch (error: any) {
       console.error("Save failed:", error);
@@ -114,10 +137,13 @@ export default function CreateTransferPackagePage() {
       let packageResult;
       let packageError;
       
+      // Get current packageId from URL (read fresh each time)
+      const currentPackageId = searchParams.get('id');
+      
       // Check if we're editing an existing package or creating a new one
-      if (packageId) {
+      if (currentPackageId) {
         // Update existing package
-        const result = await updateTransferPackage(packageId, dbData);
+        const result = await updateTransferPackage(currentPackageId, dbData);
         packageResult = result.data;
         packageError = result.error;
         

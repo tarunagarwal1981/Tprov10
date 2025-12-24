@@ -7,15 +7,32 @@ export const runtime = 'nodejs';
 /**
  * PATCH /api/itineraries/[itineraryId]/days/[dayId]
  * Update an itinerary day
- * Body: { cityName?, date?, displayOrder?, timeSlots?, notes? }
+ * Body: { 
+ *   cityName?, date?, displayOrder?, timeSlots?, notes?, title?,
+ *   arrivalFlightId?, arrivalTime?, departureFlightId?, departureTime?,
+ *   hotelId?, hotelName?, hotelStarRating?, roomType?, mealPlan?,
+ *   lunchIncluded?, lunchDetails?, dinnerIncluded?, dinnerDetails?, arrivalDescription?
+ * }
  */
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ itineraryId: string; dayId: string }> }
 ) {
   const { itineraryId, dayId } = await params;
+  let updates: any = null;
+  
+  // Parse request body first (can only be read once)
   try {
-    const updates = await request.json();
+    updates = await request.json();
+  } catch (parseError) {
+    console.error('[Update Day] JSON parse error:', parseError);
+    return NextResponse.json(
+      { error: 'Invalid JSON in request body' },
+      { status: 400 }
+    );
+  }
+
+  try {
 
     if (!updates || Object.keys(updates).length === 0) {
       return NextResponse.json(
@@ -29,42 +46,60 @@ export async function PATCH(
     const updateValues: any[] = [];
     let paramIndex = 1;
 
-    // Handle time_slots with backward compatibility
-    if (updates.timeSlots !== undefined) {
-      // Try to update with time_slots first, fallback without if column doesn't exist
-      try {
-        updateFields.push(`time_slots = $${paramIndex}`);
-        updateValues.push(JSON.stringify(updates.timeSlots));
-        paramIndex++;
-      } catch (error) {
-        // If time_slots column doesn't exist, skip it
-        console.warn('time_slots column not found, skipping update');
+    // Handle all fields with backward compatibility
+    const fieldMappings: Record<string, string> = {
+      cityName: 'city_name',
+      date: 'date',
+      displayOrder: 'display_order',
+      timeSlots: 'time_slots',
+      notes: 'notes',
+      // title: 'title', // Note: title column doesn't exist in itinerary_days table
+      arrivalFlightId: 'arrival_flight_id',
+      arrivalTime: 'arrival_time',
+      departureFlightId: 'departure_flight_id',
+      departureTime: 'departure_time',
+      hotelId: 'hotel_id',
+      hotelName: 'hotel_name',
+      hotelStarRating: 'hotel_star_rating',
+      roomType: 'room_type',
+      mealPlan: 'meal_plan',
+      lunchIncluded: 'lunch_included',
+      lunchDetails: 'lunch_details',
+      dinnerIncluded: 'dinner_included',
+      dinnerDetails: 'dinner_details',
+      arrivalDescription: 'arrival_description',
+    };
+
+    // Process each field
+    for (const [key, dbColumn] of Object.entries(fieldMappings)) {
+      if (updates[key] !== undefined) {
+        if (key === 'timeSlots') {
+          // time_slots needs JSON stringification and casting to JSONB
+          try {
+            // Ensure it's a valid JSON object
+            let timeSlotsValue: string;
+            if (typeof updates[key] === 'string') {
+              // Validate it's valid JSON
+              JSON.parse(updates[key]);
+              timeSlotsValue = updates[key];
+            } else {
+              timeSlotsValue = JSON.stringify(updates[key]);
+            }
+            updateFields.push(`${dbColumn} = $${paramIndex}::jsonb`);
+            updateValues.push(timeSlotsValue);
+            paramIndex++;
+          } catch (jsonError) {
+            console.error('[Update Day] Invalid timeSlots JSON:', jsonError);
+            console.error('[Update Day] timeSlots value:', updates[key]);
+            // Skip time_slots if invalid JSON
+            continue;
+          }
+        } else {
+          updateFields.push(`${dbColumn} = $${paramIndex}`);
+          updateValues.push(updates[key]);
+          paramIndex++;
+        }
       }
-    }
-
-    // Handle other fields
-    if (updates.cityName !== undefined) {
-      updateFields.push(`city_name = $${paramIndex}`);
-      updateValues.push(updates.cityName);
-      paramIndex++;
-    }
-
-    if (updates.date !== undefined) {
-      updateFields.push(`date = $${paramIndex}`);
-      updateValues.push(updates.date);
-      paramIndex++;
-    }
-
-    if (updates.displayOrder !== undefined) {
-      updateFields.push(`display_order = $${paramIndex}`);
-      updateValues.push(updates.displayOrder);
-      paramIndex++;
-    }
-
-    if (updates.notes !== undefined) {
-      updateFields.push(`notes = $${paramIndex}`);
-      updateValues.push(updates.notes);
-      paramIndex++;
     }
 
     if (updateFields.length === 0) {
@@ -78,14 +113,75 @@ export async function PATCH(
     updateFields.push('updated_at = NOW()');
     updateValues.push(itineraryId, dayId);
 
+    // Try to return all enhanced fields, fallback to basic if they don't exist
+    // Note: 'title' column doesn't exist in itinerary_days table, removed from returnFields
+    let returnFields = [
+      'id', 'itinerary_id', 'day_number', 'date', 'city_name', 'display_order', 
+      'notes', 'time_slots',
+      'arrival_flight_id', 'arrival_time', 'departure_flight_id', 'departure_time',
+      'hotel_id', 'hotel_name', 'hotel_star_rating', 'room_type', 'meal_plan',
+      'lunch_included', 'lunch_details', 'dinner_included', 'dinner_details', 
+      'arrival_description', 'created_at', 'updated_at'
+    ].join(', ');
+
+    // Build the update query
     const updateQuery = `
       UPDATE itinerary_days 
       SET ${updateFields.join(', ')}
       WHERE itinerary_id::text = $${paramIndex} AND id::text = $${paramIndex + 1}
-      RETURNING id, itinerary_id, day_number, date, city_name, display_order, notes, created_at, updated_at
+      RETURNING ${returnFields}
     `;
 
-    const updateResult = await query<any>(updateQuery, updateValues);
+    let updateResult;
+    try {
+      updateResult = await query<any>(updateQuery, updateValues);
+    } catch (dbError: any) {
+      // If error is about time_slots column, retry without it
+      const hasTimeSlots = updateFields.some(f => f.includes('time_slots'));
+      if (hasTimeSlots && (dbError?.message?.includes('time_slots') || dbError?.code === '42703' || dbError?.message?.includes('column') || dbError?.message?.includes('does not exist') || dbError?.code === '42P18')) {
+        console.warn('[Update Day] time_slots column error, retrying without it:', dbError.message);
+        // Remove time_slots from update
+        const fieldsWithoutTimeSlots = updateFields.filter(f => !f.includes('time_slots'));
+        const valuesWithoutTimeSlots: any[] = [];
+        
+        // Rebuild values array without time_slots value
+        // Match each field with its corresponding value
+        let valueIndex = 0;
+        for (let i = 0; i < updateFields.length; i++) {
+          const field = updateFields[i];
+          if (field && !field.includes('time_slots')) {
+            valuesWithoutTimeSlots.push(updateValues[valueIndex]);
+            valueIndex++;
+          } else if (field && field.includes('time_slots')) {
+            // Skip this value (it's the time_slots value)
+            valueIndex++;
+          }
+        }
+        // Add itineraryId and dayId (they're at the end, after updated_at which doesn't have a value)
+        valuesWithoutTimeSlots.push(updateValues[updateValues.length - 2], updateValues[updateValues.length - 1]);
+        
+        // Recalculate paramIndex for WHERE clause (number of SET fields, excluding updated_at)
+        // updated_at doesn't count as a parameter, so newParamIndex = fieldsWithoutTimeSlots.length
+        const newParamIndex = fieldsWithoutTimeSlots.length;
+        
+        const basicReturnFields = [
+          'id', 'itinerary_id', 'day_number', 'date', 'city_name', 'display_order', 
+          'notes', 'created_at', 'updated_at'
+        ].join(', ');
+        
+        const retryQuery = `
+          UPDATE itinerary_days 
+          SET ${fieldsWithoutTimeSlots.join(', ')}
+          WHERE itinerary_id::text = $${newParamIndex} AND id::text = $${newParamIndex + 1}
+          RETURNING ${basicReturnFields}
+        `;
+        
+        updateResult = await query<any>(retryQuery, valuesWithoutTimeSlots);
+        returnFields = basicReturnFields;
+      } else {
+        throw dbError;
+      }
+    }
 
     if (!updateResult.rows || updateResult.rows.length === 0) {
       return NextResponse.json(
@@ -96,37 +192,47 @@ export async function PATCH(
 
     // Fetch time_slots if column exists (with fallback)
     const day = updateResult.rows[0];
-    try {
-      const timeSlotsResult = await query<any>(
-        `SELECT time_slots FROM itinerary_days WHERE id::text = $1`,
-        [dayId]
-      );
-      if (timeSlotsResult.rows[0]?.time_slots) {
-        day.time_slots = timeSlotsResult.rows[0].time_slots;
-      } else {
+    
+    // If time_slots is in the returned fields, use it; otherwise fetch separately or provide default
+    if (day.time_slots) {
+      // Already returned, use it
+    } else {
+      // Try to fetch it separately
+      try {
+        const timeSlotsResult = await query<any>(
+          `SELECT time_slots FROM itinerary_days WHERE id::text = $1`,
+          [dayId]
+        );
+        if (timeSlotsResult.rows[0]?.time_slots) {
+          day.time_slots = timeSlotsResult.rows[0].time_slots;
+        } else {
+          day.time_slots = {
+            morning: { time: '', activities: [], transfers: [] },
+            afternoon: { time: '', activities: [], transfers: [] },
+            evening: { time: '', activities: [], transfers: [] },
+          };
+        }
+      } catch (error) {
+        // Column doesn't exist, provide default
         day.time_slots = {
           morning: { time: '', activities: [], transfers: [] },
           afternoon: { time: '', activities: [], transfers: [] },
           evening: { time: '', activities: [], transfers: [] },
         };
       }
-    } catch (error) {
-      // Column doesn't exist, provide default
-      day.time_slots = {
-        morning: { time: '', activities: [], transfers: [] },
-        afternoon: { time: '', activities: [], transfers: [] },
-        evening: { time: '', activities: [], transfers: [] },
-      };
     }
 
     return NextResponse.json({ day });
   } catch (error: any) {
+    console.error('[Update Day] Error:', error);
+    console.error('[Update Day] Error message:', error?.message);
+    console.error('[Update Day] Error code:', error?.code);
+    
     // If error is about time_slots column, retry without it
-    if (error?.message?.includes('time_slots') || error?.code === '42703') {
-      console.warn('time_slots column not found, retrying update without it');
-      // Remove time_slots from updates and retry
-      const body = await request.json();
-      const { timeSlots, ...otherUpdates } = body;
+    if (updates && (error?.message?.includes('time_slots') || error?.code === '42703' || error?.message?.includes('column') || error?.message?.includes('does not exist'))) {
+      console.warn('[Update Day] time_slots column not found, retrying update without it');
+      // Remove time_slots from updates and retry (updates already parsed above)
+      const { timeSlots, ...otherUpdates } = updates;
       if (Object.keys(otherUpdates).length > 0) {
         const updateFields: string[] = [];
         const updateValues: any[] = [];

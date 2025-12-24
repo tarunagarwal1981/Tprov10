@@ -4,6 +4,13 @@ import { query } from '@/lib/aws/lambda-database';
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
+// Simple UUID v4 validator (sufficient for distinguishing temp IDs from real DB IDs)
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const isValidUUID = (value: any): boolean =>
+  typeof value === 'string' && UUID_REGEX.test(value);
+
 /**
  * POST /api/operator/packages/activity/pricing
  * Save pricing packages with vehicles for an activity package
@@ -11,6 +18,12 @@ export const runtime = 'nodejs';
 export async function POST(request: NextRequest) {
   try {
     const { packageId, pricingPackages, vehicles } = await request.json();
+
+    console.log('[Pricing API] Received request:', {
+      packageId,
+      pricingPackagesCount: pricingPackages?.length || 0,
+      vehiclesCount: vehicles?.length || 0,
+    });
 
     if (!packageId) {
       return NextResponse.json(
@@ -26,12 +39,45 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Helper to ensure array values are properly formatted for PostgreSQL ARRAY type
+    const ensureArray = (value: any): string[] => {
+      if (!value) return [];
+      if (Array.isArray(value)) {
+        // Ensure all items are strings (PostgreSQL TEXT[] array)
+        return value.map(item => String(item)).filter(item => item.trim() !== '');
+      }
+      if (typeof value === 'string') {
+        try {
+          const parsed = JSON.parse(value);
+          if (Array.isArray(parsed)) {
+            return parsed.map(item => String(item)).filter(item => item.trim() !== '');
+          }
+          return [String(parsed)];
+        } catch {
+          return [value];
+        }
+      }
+      return [String(value)];
+    };
+
     const savedPackageIds: string[] = [];
 
     // Save pricing packages
     for (const pkg of pricingPackages) {
-      // Check if this is an update (has id and not temp) or create
-      if (pkg.id && !pkg.id.startsWith('temp-')) {
+      const isExistingPackage = isValidUUID(pkg.id);
+
+      console.log('[Pricing API] Processing package:', {
+        id: pkg.id,
+        isExistingPackage,
+        packageName: pkg.packageName,
+        includedItems: pkg.includedItems,
+        excludedItems: pkg.excludedItems,
+        includedItemsType: typeof pkg.includedItems,
+        excludedItemsType: typeof pkg.excludedItems,
+      });
+      
+      // Check if this is an update (has a real UUID id) or create
+      if (isExistingPackage) {
         // Update existing
         await query(
           `UPDATE activity_pricing_packages SET
@@ -61,8 +107,10 @@ export async function POST(request: NextRequest) {
             pkg.pickupInstructions || null,
             pkg.dropoffLocation || null,
             pkg.dropoffInstructions || null,
-            pkg.includedItems ? JSON.stringify(pkg.includedItems) : null,
-            pkg.excludedItems ? JSON.stringify(pkg.excludedItems) : null,
+            // included_items and excluded_items are ARRAY type (TEXT[])
+            // Ensure they're proper arrays of strings
+            ensureArray(pkg.includedItems),
+            ensureArray(pkg.excludedItems),
             pkg.isActive !== undefined ? pkg.isActive : true,
             pkg.isFeatured || false,
             pkg.displayOrder || 0,
@@ -101,8 +149,10 @@ export async function POST(request: NextRequest) {
             pkg.pickupInstructions || null,
             pkg.dropoffLocation || null,
             pkg.dropoffInstructions || null,
-            pkg.includedItems ? JSON.stringify(pkg.includedItems) : null,
-            pkg.excludedItems ? JSON.stringify(pkg.excludedItems) : null,
+            // included_items and excluded_items are ARRAY type (TEXT[])
+            // Ensure they're proper arrays of strings
+            ensureArray(pkg.includedItems),
+            ensureArray(pkg.excludedItems),
             pkg.isActive !== undefined ? pkg.isActive : true,
             pkg.isFeatured || false,
             pkg.displayOrder || 0,
@@ -137,9 +187,12 @@ export async function POST(request: NextRequest) {
             [
               pricingPackageId,
               vehicle.vehicleType || 'SEDAN',
-              vehicle.vehicleName || '',
-              vehicle.capacity || 4,
-              vehicle.priceAdjustment || null,
+              // vehicle_name: use vehicleType if vehicleName not provided, or use description if vehicleType is "Others"
+              (vehicle.vehicleType === 'Others' && vehicle.description) 
+                ? vehicle.description 
+                : (vehicle.vehicleName || vehicle.vehicleType || 'Sedan'),
+              vehicle.maxCapacity || vehicle.capacity || 4, // Support both maxCapacity and capacity
+              vehicle.price || vehicle.priceAdjustment || null, // Support both price and priceAdjustment
               vehicle.displayOrder || 0,
             ]
           );
@@ -153,8 +206,23 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('Error saving pricing packages:', error);
+    console.error('Error details:', {
+      message: error.message,
+      detail: error.detail,
+      code: error.code,
+      hint: error.hint,
+      constraint: error.constraint,
+      table: error.table,
+      column: error.column,
+      stack: error.stack,
+    });
     return NextResponse.json(
-      { error: 'Failed to save pricing packages', details: error.message },
+      { 
+        error: 'Failed to save pricing packages', 
+        details: error.message || 'Unknown error',
+        hint: error.hint || error.detail || null,
+        code: error.code || null,
+      },
       { status: 500 }
     );
   }

@@ -108,7 +108,24 @@ export const handler = async (event: any) => {
             body: JSON.stringify({ error: 'Missing query parameter' }),
           };
         }
-        const result = await dbPool.query(query, params || []);
+        // Process params to handle JSONB values that might be strings
+        // When params come through Lambda, JSONB values might be strings that need parsing
+        const processedParams = (params || []).map((param: any, index: number) => {
+          // If it's a string that looks like JSON, try to parse it
+          if (typeof param === 'string' && (param.startsWith('[') || param.startsWith('{'))) {
+            try {
+              const parsed = JSON.parse(param);
+              // Only return parsed if it's an object or array (valid JSONB)
+              if (typeof parsed === 'object' && parsed !== null) {
+                return parsed;
+              }
+            } catch (e) {
+              // Not valid JSON, return as-is
+            }
+          }
+          return param;
+        });
+        const result = await dbPool.query(query, processedParams);
         return {
           statusCode: 200,
           body: JSON.stringify({
