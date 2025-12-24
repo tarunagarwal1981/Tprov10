@@ -261,19 +261,33 @@ export default function LeadDetailPage() {
     setQueryLoading(true);
     try {
       // Create a new query for this itinerary
+      const queryPayload = {
+        agent_id: user.id,
+        destinations: data.destinations,
+        leaving_from: data.leaving_from,
+        nationality: data.nationality,
+        leaving_on: data.leaving_on,
+        travelers: data.travelers,
+        star_rating: data.star_rating,
+        add_transfers: data.add_transfers,
+      };
+      
+      console.log('[LeadDetailPage] Creating query with payload:', {
+        leadId,
+        agentId: user.id,
+        destinations: data.destinations,
+        leaving_from: data.leaving_from,
+        nationality: data.nationality,
+        leaving_on: data.leaving_on,
+        travelers: data.travelers,
+        star_rating: data.star_rating,
+        add_transfers: data.add_transfers,
+      });
+      
       const response = await fetch(`/api/queries/${leadId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          agent_id: user.id,
-          destinations: data.destinations,
-          leaving_from: data.leaving_from,
-          nationality: data.nationality,
-          leaving_on: data.leaving_on,
-          travelers: data.travelers,
-          star_rating: data.star_rating,
-          add_transfers: data.add_transfers,
-        }),
+        body: JSON.stringify(queryPayload),
       });
 
       if (!response.ok) {
@@ -305,10 +319,23 @@ export default function LeadDetailPage() {
         throw new Error('Query created but no ID returned');
       }
       
-      console.log('[LeadDetailPage] Query saved successfully with ID:', savedQuery.id);
+      console.log('[LeadDetailPage] Query saved successfully:', {
+        queryId: savedQuery.id,
+        leadId: savedQuery.lead_id,
+        agentId: savedQuery.agent_id,
+        destinations: savedQuery.destinations,
+        leaving_from: savedQuery.leaving_from,
+        nationality: savedQuery.nationality,
+        leaving_on: savedQuery.leaving_on,
+        travelers: savedQuery.travelers,
+      });
       
       // If editing an existing itinerary's query, update the itinerary's query_id
       if (editingQueryForItinerary) {
+        console.log('[LeadDetailPage] Updating existing itinerary query:', {
+          itineraryId: editingQueryForItinerary,
+          queryId: savedQuery.id,
+        });
         await fetch(`/api/itineraries/${editingQueryForItinerary}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
@@ -319,18 +346,22 @@ export default function LeadDetailPage() {
       toast.success('Query updated successfully!');
       } else {
         // Creating a new itinerary - create itinerary and link query
+        const itineraryPayload = {
+          leadId,
+          agentId: user.id,
+          name: queryAction === 'insert' ? 'Insert Itinerary' : 'Create Itinerary',
+          adultsCount: data.travelers.adults,
+          childrenCount: data.travelers.children,
+          infantsCount: data.travelers.infants,
+          queryId: savedQuery.id,
+        };
+        
+        console.log('[LeadDetailPage] Creating itinerary with payload:', itineraryPayload);
+        
         const itineraryResponse = await fetch('/api/itineraries/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            leadId,
-            agentId: user.id,
-            name: queryAction === 'insert' ? 'Insert Itinerary' : 'Create Itinerary',
-            adultsCount: data.travelers.adults,
-            childrenCount: data.travelers.children,
-            infantsCount: data.travelers.infants,
-            queryId: savedQuery.id,
-          }),
+          body: JSON.stringify(itineraryPayload),
         });
 
         if (!itineraryResponse.ok) {
@@ -344,26 +375,54 @@ export default function LeadDetailPage() {
         }
 
         const { itinerary: createdItinerary } = await itineraryResponse.json();
-        console.log('[LeadDetailPage] Itinerary created successfully:', createdItinerary);
+        console.log('[LeadDetailPage] Itinerary created successfully:', {
+          itineraryId: createdItinerary.id,
+          leadId: createdItinerary.lead_id,
+          agentId: createdItinerary.agent_id,
+          queryId: createdItinerary.query_id,
+          name: createdItinerary.name,
+        });
         
         // Fetch full itinerary details (API only returns ID)
+        console.log('[LeadDetailPage] Fetching full itinerary details:', {
+          itineraryId: createdItinerary.id,
+          agentId: user.id,
+        });
         const fullItineraryResponse = await fetch(`/api/itineraries/${createdItinerary.id}?agentId=${user.id}`);
         let fullItinerary = createdItinerary;
         if (fullItineraryResponse.ok) {
           const { itinerary: fetchedItinerary } = await fullItineraryResponse.json();
           fullItinerary = fetchedItinerary;
-          console.log('[LeadDetailPage] Full itinerary fetched, query_id:', fullItinerary.query_id);
+          console.log('[LeadDetailPage] Full itinerary fetched:', {
+            itineraryId: fullItinerary.id,
+            leadId: fullItinerary.lead_id,
+            agentId: fullItinerary.agent_id,
+            queryId: fullItinerary.query_id,
+            name: fullItinerary.name,
+            expectedQueryId: savedQuery.id,
+            queryIdMatches: fullItinerary.query_id === savedQuery.id,
+          });
+        } else {
+          const errorData = await fullItineraryResponse.json().catch(() => ({}));
+          console.error('[LeadDetailPage] Failed to fetch full itinerary:', {
+            status: fullItineraryResponse.status,
+            error: errorData,
+          });
         }
         
         // Ensure query_id is set (should be set during creation, but double-check)
         if (!fullItinerary.query_id && savedQuery.id) {
-          console.log('[LeadDetailPage] Query ID missing from itinerary, updating...');
+          console.warn('[LeadDetailPage] Query ID missing from itinerary, updating...', {
+            itineraryId: fullItinerary.id,
+            queryId: savedQuery.id,
+          });
           await fetch(`/api/itineraries/${fullItinerary.id}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ queryId: savedQuery.id }),
           });
           fullItinerary.query_id = savedQuery.id;
+          console.log('[LeadDetailPage] Query ID updated in itinerary');
         }
 
         // Refresh itineraries to get the latest data

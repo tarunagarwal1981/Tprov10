@@ -87,8 +87,19 @@ export default function CreateItineraryPage() {
   // Fetch data on mount
   useEffect(() => {
     if (leadId && user?.id) {
+      console.log('[CreateItineraryPage] useEffect triggered, fetching data:', {
+        leadId,
+        queryId,
+        itineraryId,
+        userId: user.id,
+      });
       fetchData();
       fetchRepository();
+    } else {
+      console.warn('[CreateItineraryPage] Missing required data:', {
+        hasLeadId: !!leadId,
+        hasUserId: !!user?.id,
+      });
     }
   }, [leadId, user?.id, queryId, itineraryId]);
 
@@ -104,21 +115,71 @@ export default function CreateItineraryPage() {
         setLead(leadData);
       }
 
-      // Fetch query
+      // Fetch query - use correct endpoint based on whether queryId is provided
       let fetchedQuery: ItineraryQuery | null = null;
-      const queryResponse = await fetch(`/api/queries/${queryId || leadId}`);
-      if (queryResponse.ok) {
-        const { query: queryData } = await queryResponse.json();
-        fetchedQuery = queryData;
-        setQuery(queryData);
+      if (queryId) {
+        // Use the by-id endpoint when queryId is provided
+        const queryUrl = `/api/queries/by-id/${queryId}`;
+        console.log('[CreateItineraryPage] Fetching query by ID:', {
+          queryId,
+          url: queryUrl,
+          leadId,
+          itineraryId,
+        });
+        const queryResponse = await fetch(queryUrl);
+        if (queryResponse.ok) {
+          const { query: queryData } = await queryResponse.json();
+          fetchedQuery = queryData;
+          setQuery(queryData);
+          console.log('[CreateItineraryPage] Query fetched successfully:', {
+            queryId: queryData?.id,
+            leadId: queryData?.lead_id,
+            agentId: queryData?.agent_id,
+            destinations: queryData?.destinations,
+          });
+        } else {
+          const errorData = await queryResponse.json().catch(() => ({}));
+          console.error('[CreateItineraryPage] Failed to fetch query by ID:', {
+            status: queryResponse.status,
+            error: errorData,
+            queryId,
+          });
+          toast.error(errorData.error || 'Failed to fetch query');
+        }
+      } else {
+        // Fallback to fetching by leadId if no queryId provided
+        console.log('[CreateItineraryPage] No queryId provided, fetching by leadId:', leadId);
+        const queryResponse = await fetch(`/api/queries/${leadId}`);
+        if (queryResponse.ok) {
+          const { query: queryData } = await queryResponse.json();
+          fetchedQuery = queryData;
+          setQuery(queryData);
+          console.log('[CreateItineraryPage] Query fetched by leadId successfully:', {
+            queryId: queryData?.id,
+            leadId: queryData?.lead_id,
+          });
+        } else {
+          console.warn('[CreateItineraryPage] No query found for leadId:', leadId);
+        }
       }
 
       // Fetch itinerary if ID provided
       if (itineraryId) {
+        console.log('[CreateItineraryPage] Fetching itinerary:', {
+          itineraryId,
+          agentId: user.id,
+        });
         const itineraryResponse = await fetch(`/api/itineraries/${itineraryId}?agentId=${user.id}`);
         if (itineraryResponse.ok) {
           const { itinerary: itineraryData } = await itineraryResponse.json();
           setItinerary(itineraryData);
+          console.log('[CreateItineraryPage] Itinerary fetched successfully:', {
+            itineraryId: itineraryData?.id,
+            leadId: itineraryData?.lead_id,
+            agentId: itineraryData?.agent_id,
+            queryId: itineraryData?.query_id,
+            name: itineraryData?.name,
+          });
 
           // Fetch days
           const daysResponse = await fetch(`/api/itineraries/${itineraryId}/days`);
@@ -126,10 +187,18 @@ export default function CreateItineraryPage() {
             const { days: daysData } = await daysResponse.json();
             if (daysData && daysData.length > 0) {
               setDays(daysData);
+              console.log('[CreateItineraryPage] Days fetched successfully:', daysData.length);
             } else {
               // No days exist, generate from query
               if (fetchedQuery) {
+                console.log('[CreateItineraryPage] No days found, generating from query:', {
+                  queryId: fetchedQuery.id,
+                  itineraryId,
+                  destinations: fetchedQuery.destinations,
+                });
                 await generateDaysFromQuery(fetchedQuery, itineraryId);
+              } else {
+                console.warn('[CreateItineraryPage] Cannot generate days - no query available');
               }
             }
           } else {
@@ -148,10 +217,26 @@ export default function CreateItineraryPage() {
             
             // Try to generate days from query if available
             if (fetchedQuery) {
+              console.log('[CreateItineraryPage] Generating days from query after error:', {
+                queryId: fetchedQuery.id,
+                itineraryId,
+              });
               await generateDaysFromQuery(fetchedQuery, itineraryId);
+            } else {
+              console.warn('[CreateItineraryPage] Cannot generate days - no query available');
             }
           }
+        } else {
+          console.error('[CreateItineraryPage] Failed to fetch itinerary:', {
+            status: itineraryResponse.status,
+            itineraryId,
+            agentId: user.id,
+          });
+          const errorData = await itineraryResponse.json().catch(() => ({}));
+          console.error('[CreateItineraryPage] Itinerary fetch error:', errorData);
         }
+      } else {
+        console.warn('[CreateItineraryPage] No itineraryId provided in URL');
       }
     } catch (err) {
       console.error('Error fetching data:', err);
