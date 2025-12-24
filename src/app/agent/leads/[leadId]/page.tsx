@@ -388,21 +388,16 @@ export default function LeadDetailPage() {
             url: navUrl
           });
           
-          // Navigate immediately (no setTimeout to avoid state update interference)
-          try {
-            router.push(navUrl);
-            console.log('[LeadDetailPage] router.push called successfully');
-          } catch (err) {
-            console.error('[LeadDetailPage] router.push failed, using window.location:', err);
-            // Fallback to window.location if router.push fails
-            window.location.href = navUrl;
-          }
-          
-          // Close modal and reset state after navigation is initiated
+          // Use window.location.href for reliable navigation (can't be cancelled by re-renders)
+          // Close modal and reset state before navigation
           setQueryModalOpen(false);
           setQueryAction(null);
           
-          // Return early to prevent further execution
+          // Perform hard navigation (full page load) - guaranteed to work
+          console.log('[LeadDetailPage] Performing hard navigation via window.location.href');
+          window.location.href = navUrl;
+          
+          // Return early (though navigation will happen anyway)
           return;
         } else if (queryAction === 'insert') {
           // For "Insert Itinerary", navigate to insert page
@@ -414,19 +409,16 @@ export default function LeadDetailPage() {
             url: navUrl
           });
           
-          try {
-            router.push(navUrl);
-            console.log('[LeadDetailPage] router.push called successfully for insert');
-          } catch (err) {
-            console.error('[LeadDetailPage] router.push failed for insert, using window.location:', err);
-            window.location.href = navUrl;
-          }
-          
-          // Close modal and reset state after navigation is initiated
+          // Use window.location.href for reliable navigation (can't be cancelled by re-renders)
+          // Close modal and reset state before navigation
           setQueryModalOpen(false);
           setQueryAction(null);
           
-          // Return early to prevent further execution
+          // Perform hard navigation (full page load) - guaranteed to work
+          console.log('[LeadDetailPage] Performing hard navigation via window.location.href for insert');
+          window.location.href = navUrl;
+          
+          // Return early (though navigation will happen anyway)
           return;
         } else {
           // For editing existing itinerary, just refresh
