@@ -54,6 +54,18 @@ interface Itinerary {
   query_id: string | null;
 }
 
+interface ItineraryItem {
+  id: string;
+  day_id: string | null;
+  package_type: 'activity' | 'transfer' | 'multi_city' | 'multi_city_hotel' | 'fixed_departure';
+  package_id: string;
+  package_title: string;
+  unit_price: number | null;
+  quantity: number;
+  total_price: number | null;
+  configuration: any;
+}
+
 export default function CreateItineraryPage() {
   const params = useParams();
   const router = useRouter();
@@ -70,6 +82,8 @@ export default function CreateItineraryPage() {
   const [query, setQuery] = useState<ItineraryQuery | null>(null);
   const [itinerary, setItinerary] = useState<Itinerary | null>(null);
   const [days, setDays] = useState<ItineraryDay[]>([]);
+  const [items, setItems] = useState<ItineraryItem[]>([]);
+  const [totalPrice, setTotalPrice] = useState(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savingItinerary, setSavingItinerary] = useState(false);
@@ -103,6 +117,32 @@ export default function CreateItineraryPage() {
       });
     }
   }, [leadId, user?.id, queryId, itineraryId]);
+
+  // Fetch items when itinerary is available
+  useEffect(() => {
+    if (itineraryId && itinerary?.id) {
+      fetchItems();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [itineraryId, itinerary?.id]);
+
+  // Calculate total price when items change
+  useEffect(() => {
+    if (items.length === 0) {
+      setTotalPrice(0);
+      return;
+    }
+
+    // Normalize items to ensure total_price is available
+    const normalizedItems = items.map(item => ({
+      ...item,
+      total_price: item.total_price ?? item.unit_price ?? 0,
+    }));
+
+    const total = normalizedItems.reduce((sum, item) => sum + (Number(item.total_price) || 0), 0);
+    setTotalPrice(total);
+    console.log('[CreateItineraryPage] Total price calculated:', total, 'from', items.length, 'items');
+  }, [items]);
 
   const fetchData = async () => {
     if (!user?.id) return;
@@ -189,6 +229,8 @@ export default function CreateItineraryPage() {
             if (daysData && daysData.length > 0) {
               setDays(daysData);
               console.log('[CreateItineraryPage] Days fetched successfully:', daysData.length);
+              // Fetch items after days are loaded
+              await fetchItems();
             } else {
               // No days exist, generate from query
               if (fetchedQuery) {
@@ -271,6 +313,34 @@ export default function CreateItineraryPage() {
     }
   };
 
+  const fetchItems = async () => {
+    if (!itineraryId) return;
+
+    try {
+      console.log('[CreateItineraryPage] Fetching items for itinerary:', itineraryId);
+      const response = await fetch(`/api/itineraries/${itineraryId}/items`);
+      if (response.ok) {
+        const { items: itemsData } = await response.json();
+        // Normalize items to ensure total_price is available
+        const normalizedItems = itemsData.map((item: ItineraryItem) => ({
+          ...item,
+          total_price: item.total_price ?? item.unit_price ?? 0,
+          unit_price: item.unit_price ?? 0,
+        }));
+        setItems(normalizedItems);
+        console.log('[CreateItineraryPage] Items fetched:', normalizedItems.length);
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('[CreateItineraryPage] Failed to fetch items:', {
+          status: response.status,
+          error: errorData,
+        });
+      }
+    } catch (err) {
+      console.error('[CreateItineraryPage] Error fetching items:', err);
+    }
+  };
+
   const generateDaysFromQuery = async (queryData: ItineraryQuery, itId: string) => {
     if (!queryData.destinations || queryData.destinations.length === 0) {
       return;
@@ -292,6 +362,8 @@ export default function CreateItineraryPage() {
         const { days: createdDays } = await response.json();
         setDays(createdDays);
         toast.success(`Generated ${createdDays.length} days from query`);
+        // Fetch items after days are generated
+        await fetchItems();
       } else {
         const error = await response.json();
         toast.error(error.error || 'Failed to generate days');
@@ -318,80 +390,209 @@ export default function CreateItineraryPage() {
     if (selectedDayIndex === null || !selectedTimeSlot || !itinerary) return;
 
     const day = days[selectedDayIndex];
-    if (!day) return;
-
-    // Update day's time slot with activity
-    const updatedDays = [...days];
-    const existingDay = updatedDays[selectedDayIndex];
-    if (!existingDay) return;
-    
-    const updatedDay: ItineraryDay = {
-      ...existingDay,
-      time_slots: existingDay.time_slots || {
-        morning: { time: '08:00', activities: [], transfers: [] },
-        afternoon: { time: '12:30', activities: [], transfers: [] },
-        evening: { time: '17:00', activities: [], transfers: [] },
-      },
-    };
-
-    const timeSlots = updatedDay.time_slots!;
-    const currentActivities = timeSlots[selectedTimeSlot].activities || [];
-    if (!currentActivities.includes(activity.id)) {
-      timeSlots[selectedTimeSlot].activities = [...currentActivities, activity.id];
+    if (!day || !day.id) {
+      toast.error('Day not found or missing ID');
+      return;
     }
 
-    updatedDays[selectedDayIndex] = updatedDay;
-    setDays(updatedDays);
+    try {
+      // Calculate price based on selected pricing option
+      const pricingOptions = activity.pricing_packages || [];
+      const selectedPricing = pricingOptions.find(p => p.id === selectedPricingId);
+      
+      let calculatedPrice = activity.base_price || 0;
+      if (selectedPricing) {
+        calculatedPrice = 
+          (selectedPricing.adult_price || 0) * (itinerary.adults_count || 0) +
+          (selectedPricing.child_price || 0) * (itinerary.children_count || 0) +
+          (selectedPricing.infant_price || 0) * (itinerary.infants_count || 0) +
+          (selectedPricing.transfer_price_adult || 0) * (itinerary.adults_count || 0) +
+          (selectedPricing.transfer_price_child || 0) * (itinerary.children_count || 0) +
+          (selectedPricing.transfer_price_infant || 0) * (itinerary.infants_count || 0);
+      } else if (activity.base_price) {
+        calculatedPrice = activity.base_price * ((itinerary.adults_count || 0) + (itinerary.children_count || 0));
+      }
 
-    // Update day via API
-    if (updatedDay.id) {
-      await updateDay(updatedDay.id, updatedDay);
+      console.log('[CreateItineraryPage] Creating activity item:', {
+        activityId: activity.id,
+        dayId: day.id,
+        calculatedPrice,
+        selectedPricingId,
+      });
+
+      // Create itinerary item
+      const itemResponse = await fetch(`/api/itineraries/${itinerary.id}/items/create`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          dayId: day.id,
+          packageType: 'activity',
+          packageId: activity.id,
+          operatorId: activity.operator_id,
+          packageTitle: activity.title,
+          packageImageUrl: activity.featured_image_url,
+          configuration: {
+            pricingPackageId: selectedPricingId,
+            timeSlot: selectedTimeSlot,
+          },
+          unitPrice: calculatedPrice,
+          quantity: 1,
+          displayOrder: items.length,
+        }),
+      });
+
+      if (!itemResponse.ok) {
+        const error = await itemResponse.json();
+        throw new Error(error.error || 'Failed to add activity');
+      }
+
+      const { item: newItem } = await itemResponse.json();
+      console.log('[CreateItineraryPage] Activity item created:', newItem.id);
+
+      // Add the new item to items state immediately
+      const normalizedNewItem: ItineraryItem = {
+        ...newItem,
+        total_price: newItem.total_price ?? newItem.unit_price ?? calculatedPrice,
+        unit_price: newItem.unit_price ?? calculatedPrice,
+      };
+      setItems(prev => [...prev, normalizedNewItem]);
+
+      // Update day's time slot with item ID (not activity ID)
+      const updatedDays = [...days];
+      const existingDay = updatedDays[selectedDayIndex];
+      if (!existingDay || !existingDay.id) {
+        throw new Error('Day not found or missing ID');
+      }
+
+      const updatedDay: ItineraryDay = {
+        ...existingDay,
+        time_slots: existingDay.time_slots || {
+          morning: { time: '08:00', activities: [], transfers: [] },
+          afternoon: { time: '12:30', activities: [], transfers: [] },
+          evening: { time: '17:00', activities: [], transfers: [] },
+        },
+      };
+      updatedDay.time_slots![selectedTimeSlot].activities.push(newItem.id);
+      updatedDays[selectedDayIndex] = updatedDay;
+      setDays(updatedDays);
+
+      // Update day in database (don't wait, do it in background)
+      if (updatedDay.id) {
+        updateDay(updatedDay.id, updatedDay).catch(err => {
+          console.error('[CreateItineraryPage] Error updating day:', err);
+        });
+      }
+
+      // Refresh items to get the latest from database
+      await fetchItems();
+
+      setActivityModalOpen(false);
+      setSelectedDayIndex(null);
+      setSelectedTimeSlot(null);
+      toast.success('Activity added successfully');
+    } catch (err) {
+      console.error('[CreateItineraryPage] Error adding activity:', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to add activity');
     }
-
-    setActivityModalOpen(false);
-    setSelectedDayIndex(null);
-    setSelectedTimeSlot(null);
-    toast.success('Activity added successfully');
   };
 
   const handleTransferSelect = async (transfer: TransferPackage) => {
     if (selectedDayIndex === null || !selectedTimeSlot || !itinerary) return;
 
     const day = days[selectedDayIndex];
-    if (!day) return;
-
-    // Update day's time slot with transfer
-    const updatedDays = [...days];
-    const existingDay = updatedDays[selectedDayIndex];
-    if (!existingDay) return;
-    
-    const updatedDay: ItineraryDay = {
-      ...existingDay,
-      time_slots: existingDay.time_slots || {
-        morning: { time: '08:00', activities: [], transfers: [] },
-        afternoon: { time: '12:30', activities: [], transfers: [] },
-        evening: { time: '17:00', activities: [], transfers: [] },
-      },
-    };
-
-    const timeSlots = updatedDay.time_slots!;
-    const currentTransfers = timeSlots[selectedTimeSlot].transfers || [];
-    if (!currentTransfers.includes(transfer.id)) {
-      timeSlots[selectedTimeSlot].transfers = [...currentTransfers, transfer.id];
+    if (!day || !day.id) {
+      toast.error('Day not found or missing ID');
+      return;
     }
 
-    updatedDays[selectedDayIndex] = updatedDay;
-    setDays(updatedDays);
+    try {
+      // Calculate price (transfers typically use base_price)
+      const calculatedPrice = transfer.base_price || 0;
 
-    // Update day via API
-    if (updatedDay.id) {
-      await updateDay(updatedDay.id, updatedDay);
+      console.log('[CreateItineraryPage] Creating transfer item:', {
+        transferId: transfer.id,
+        dayId: day.id,
+        calculatedPrice,
+      });
+
+      // Create itinerary item
+      const itemResponse = await fetch(`/api/itineraries/${itinerary.id}/items/create`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          dayId: day.id,
+          packageType: 'transfer',
+          packageId: transfer.id,
+          operatorId: transfer.operator_id,
+          packageTitle: transfer.title,
+          packageImageUrl: null,
+          configuration: {
+            timeSlot: selectedTimeSlot,
+          },
+          unitPrice: calculatedPrice,
+          quantity: 1,
+          displayOrder: items.length,
+        }),
+      });
+
+      if (!itemResponse.ok) {
+        const error = await itemResponse.json();
+        throw new Error(error.error || 'Failed to add transfer');
+      }
+
+      const { item: newItem } = await itemResponse.json();
+      console.log('[CreateItineraryPage] Transfer item created:', newItem.id);
+
+      // Ensure the new item has total_price
+      if (!newItem.total_price && newItem.unit_price) {
+        newItem.total_price = newItem.unit_price * (newItem.quantity || 1);
+      }
+
+      // Add the new item to items state immediately
+      const normalizedNewItem: ItineraryItem = {
+        ...newItem,
+        total_price: newItem.total_price ?? newItem.unit_price ?? calculatedPrice,
+        unit_price: newItem.unit_price ?? calculatedPrice,
+      };
+      setItems(prev => [...prev, normalizedNewItem]);
+
+      // Update day's time slot with item ID (not transfer ID)
+      const updatedDays = [...days];
+      const existingDay = updatedDays[selectedDayIndex];
+      if (!existingDay || !existingDay.id) {
+        throw new Error('Day not found or missing ID');
+      }
+
+      const updatedDay: ItineraryDay = {
+        ...existingDay,
+        time_slots: existingDay.time_slots || {
+          morning: { time: '08:00', activities: [], transfers: [] },
+          afternoon: { time: '12:30', activities: [], transfers: [] },
+          evening: { time: '17:00', activities: [], transfers: [] },
+        },
+      };
+      updatedDay.time_slots![selectedTimeSlot].transfers.push(newItem.id);
+      updatedDays[selectedDayIndex] = updatedDay;
+      setDays(updatedDays);
+
+      // Update day in database (don't wait, do it in background)
+      if (updatedDay.id) {
+        updateDay(updatedDay.id, updatedDay).catch(err => {
+          console.error('[CreateItineraryPage] Error updating day:', err);
+        });
+      }
+
+      // Refresh items to get the latest from database
+      await fetchItems();
+
+      setTransferModalOpen(false);
+      setSelectedDayIndex(null);
+      setSelectedTimeSlot(null);
+      toast.success('Transfer added successfully');
+    } catch (err) {
+      console.error('[CreateItineraryPage] Error adding transfer:', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to add transfer');
     }
-
-    setTransferModalOpen(false);
-    setSelectedDayIndex(null);
-    setSelectedTimeSlot(null);
-    toast.success('Transfer added successfully');
   };
 
   const updateDay = async (dayId: string, day: ItineraryDay) => {
@@ -514,10 +715,26 @@ export default function CreateItineraryPage() {
                 <FiArrowLeft className="w-4 h-4 mr-2" />
           Back to Lead Details
               </Button>
-        <h1 className="text-2xl font-bold text-gray-900">Create Itinerary</h1>
-        <p className="text-gray-600 mt-2">
-            Build day-wise itinerary for {lead?.customerName || 'customer'}
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Create Itinerary</h1>
+            <p className="text-gray-600 mt-2">
+              Build day-wise itinerary for {lead?.customerName || 'customer'}
+            </p>
+          </div>
+          {/* Total Price Display */}
+          <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
+            <CardContent className="p-4">
+              <div className="text-center">
+                <p className="text-sm text-gray-600 mb-1">Total Itinerary Price</p>
+                <p className="text-3xl font-bold text-green-600">${totalPrice.toFixed(2)}</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  {items.length} {items.length === 1 ? 'item' : 'items'}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
               </div>
 
         {/* Days Timeline */}
@@ -632,43 +849,77 @@ export default function CreateItineraryPage() {
                             </div>
                             {slot.activities.length > 0 ? (
                               <div className="space-y-2">
-                                {slot.activities.map((activityId) => {
-                                  const activity = allActivities.find(a => a.id === activityId);
-                                  return activity ? (
+                                {slot.activities.map((itemId) => {
+                                  // Find item by ID (itemId is now the itinerary_item ID, not activity ID)
+                                  const item = items.find(i => i.id === itemId);
+                                  if (!item) return null;
+                                  
+                                  return (
                                     <div
-                                      key={activityId}
+                                      key={itemId}
                                       className="flex items-center justify-between p-2 bg-white rounded border"
                                     >
-                                      <span className="text-sm">{activity.title}</span>
+                                      <div className="flex-1">
+                                        <span className="text-sm font-medium">{item.package_title}</span>
+                                        {item.total_price && (
+                                          <span className="text-xs text-gray-500 ml-2">
+                                            ${Number(item.total_price).toFixed(2)}
+                                          </span>
+                                        )}
+                                      </div>
                                       <Button
                                         size="sm"
                                         variant="ghost"
-                                        onClick={() => {
-                                          const updatedDays = [...days];
-                                          const existingDay = updatedDays[dayIndex];
-                                          if (!existingDay) return;
-                                          
-                                          const updatedDay: ItineraryDay = {
-                                            ...existingDay,
-                                            time_slots: existingDay.time_slots || {
-                                              morning: { time: '08:00', activities: [], transfers: [] },
-                                              afternoon: { time: '12:30', activities: [], transfers: [] },
-                                              evening: { time: '17:00', activities: [], transfers: [] },
-                                            },
-                                          };
-                                          updatedDay.time_slots![timeSlot].activities = 
-                                            updatedDay.time_slots![timeSlot].activities.filter(id => id !== activityId);
-                                          updatedDays[dayIndex] = updatedDay;
-                                          setDays(updatedDays);
-                                          if (updatedDay.id) {
-                                            updateDay(updatedDay.id, updatedDay);
+                                        onClick={async () => {
+                                          try {
+                                            // Delete item from database
+                                            const deleteResponse = await fetch(`/api/itineraries/${itinerary?.id}/items/${itemId}/delete`, {
+                                              method: 'DELETE',
+                                            });
+                                            
+                                            if (!deleteResponse.ok) {
+                                              const error = await deleteResponse.json();
+                                              throw new Error(error.error || 'Failed to delete item');
+                                            }
+
+                                            // Remove from items state
+                                            setItems(prev => prev.filter(i => i.id !== itemId));
+
+                                            // Update day's time slot
+                                            const updatedDays = [...days];
+                                            const existingDay = updatedDays[dayIndex];
+                                            if (!existingDay) return;
+                                            
+                                            const updatedDay: ItineraryDay = {
+                                              ...existingDay,
+                                              time_slots: existingDay.time_slots || {
+                                                morning: { time: '08:00', activities: [], transfers: [] },
+                                                afternoon: { time: '12:30', activities: [], transfers: [] },
+                                                evening: { time: '17:00', activities: [], transfers: [] },
+                                              },
+                                            };
+                                            updatedDay.time_slots![timeSlot].activities = 
+                                              updatedDay.time_slots![timeSlot].activities.filter(id => id !== itemId);
+                                            updatedDays[dayIndex] = updatedDay;
+                                            setDays(updatedDays);
+                                            
+                                            if (updatedDay.id) {
+                                              updateDay(updatedDay.id, updatedDay).catch(err => {
+                                                console.error('[CreateItineraryPage] Error updating day:', err);
+                                              });
+                                            }
+
+                                            toast.success('Activity removed successfully');
+                                          } catch (err) {
+                                            console.error('[CreateItineraryPage] Error removing activity:', err);
+                                            toast.error(err instanceof Error ? err.message : 'Failed to remove activity');
                                           }
                                         }}
                                       >
                                         <FiX className="w-4 h-4" />
                                       </Button>
                                     </div>
-                                  ) : null;
+                                  );
                                 })}
                               </div>
                             ) : (
@@ -691,43 +942,77 @@ export default function CreateItineraryPage() {
                             </div>
                             {slot.transfers.length > 0 ? (
                               <div className="space-y-2">
-                                {slot.transfers.map((transferId) => {
-                                  const transfer = allTransfers.find(t => t.id === transferId);
-                                  return transfer ? (
+                                {slot.transfers.map((itemId) => {
+                                  // Find item by ID (itemId is now the itinerary_item ID, not transfer ID)
+                                  const item = items.find(i => i.id === itemId);
+                                  if (!item) return null;
+                                  
+                                  return (
                                     <div
-                                      key={transferId}
+                                      key={itemId}
                                       className="flex items-center justify-between p-2 bg-white rounded border"
                                     >
-                                      <span className="text-sm">{transfer.title}</span>
+                                      <div className="flex-1">
+                                        <span className="text-sm font-medium">{item.package_title}</span>
+                                        {item.total_price && (
+                                          <span className="text-xs text-gray-500 ml-2">
+                                            ${Number(item.total_price).toFixed(2)}
+                                          </span>
+                                        )}
+                                      </div>
                                       <Button
                                         size="sm"
                                         variant="ghost"
-                                        onClick={() => {
-                                          const updatedDays = [...days];
-                                          const existingDay = updatedDays[dayIndex];
-                                          if (!existingDay) return;
-                                          
-                                          const updatedDay: ItineraryDay = {
-                                            ...existingDay,
-                                            time_slots: existingDay.time_slots || {
-                                              morning: { time: '08:00', activities: [], transfers: [] },
-                                              afternoon: { time: '12:30', activities: [], transfers: [] },
-                                              evening: { time: '17:00', activities: [], transfers: [] },
-                                            },
-                                          };
-                                          updatedDay.time_slots![timeSlot].transfers = 
-                                            updatedDay.time_slots![timeSlot].transfers.filter(id => id !== transferId);
-                                          updatedDays[dayIndex] = updatedDay;
-                                          setDays(updatedDays);
-                                          if (updatedDay.id) {
-                                            updateDay(updatedDay.id, updatedDay);
+                                        onClick={async () => {
+                                          try {
+                                            // Delete item from database
+                                            const deleteResponse = await fetch(`/api/itineraries/${itinerary?.id}/items/${itemId}/delete`, {
+                                              method: 'DELETE',
+                                            });
+                                            
+                                            if (!deleteResponse.ok) {
+                                              const error = await deleteResponse.json();
+                                              throw new Error(error.error || 'Failed to delete item');
+                                            }
+
+                                            // Remove from items state
+                                            setItems(prev => prev.filter(i => i.id !== itemId));
+
+                                            // Update day's time slot
+                                            const updatedDays = [...days];
+                                            const existingDay = updatedDays[dayIndex];
+                                            if (!existingDay) return;
+                                            
+                                            const updatedDay: ItineraryDay = {
+                                              ...existingDay,
+                                              time_slots: existingDay.time_slots || {
+                                                morning: { time: '08:00', activities: [], transfers: [] },
+                                                afternoon: { time: '12:30', activities: [], transfers: [] },
+                                                evening: { time: '17:00', activities: [], transfers: [] },
+                                              },
+                                            };
+                                            updatedDay.time_slots![timeSlot].transfers = 
+                                              updatedDay.time_slots![timeSlot].transfers.filter(id => id !== itemId);
+                                            updatedDays[dayIndex] = updatedDay;
+                                            setDays(updatedDays);
+                                            
+                                            if (updatedDay.id) {
+                                              updateDay(updatedDay.id, updatedDay).catch(err => {
+                                                console.error('[CreateItineraryPage] Error updating day:', err);
+                                              });
+                                            }
+
+                                            toast.success('Transfer removed successfully');
+                                          } catch (err) {
+                                            console.error('[CreateItineraryPage] Error removing transfer:', err);
+                                            toast.error(err instanceof Error ? err.message : 'Failed to remove transfer');
                                           }
                                         }}
                                       >
                                         <FiX className="w-4 h-4" />
                                       </Button>
                                     </div>
-                                  ) : null;
+                                  );
                                 })}
                               </div>
                             ) : (
