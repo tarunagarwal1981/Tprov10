@@ -15,7 +15,8 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const idsParam = searchParams.get('ids');
     
-    let queryString = `SELECT id, name, email, company_name FROM users 
+    // Extract companyName from profile JSONB field since company_name is not a direct column
+    let queryString = `SELECT id, name, email, profile->>'companyName' as company_name FROM users 
                        WHERE role IN ('TOUR_OPERATOR', 'ADMIN', 'SUPER_ADMIN')`;
     let params: any[] = [];
     
