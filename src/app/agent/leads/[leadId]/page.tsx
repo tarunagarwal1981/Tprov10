@@ -28,7 +28,6 @@ import { queryService, type ItineraryQuery } from '@/lib/services/queryService';
 import { itineraryService, type Itinerary } from '@/lib/services/itineraryService';
 import { MarketplaceService } from '@/lib/services/marketplaceService';
 import { QueryModal } from '@/components/agent/QueryModal';
-import { DayByDayItineraryView } from '@/components/agent/DayByDayItineraryView';
 // Removed Supabase import - now using AWS API routes
 
 interface LeadDetails {
@@ -60,9 +59,7 @@ export default function LeadDetailPage() {
   const [queryLoading, setQueryLoading] = useState(false);
   const [queryAction, setQueryAction] = useState<'create' | 'insert' | null>(null); // Track which card was clicked
   const [editingQueryForItinerary, setEditingQueryForItinerary] = useState<string | null>(null); // Track which itinerary's query is being edited
-  const [expandedItineraryId, setExpandedItineraryId] = useState<string | null>(null); // Track which itinerary is expanded to show days
   const sidebarInitialized = React.useRef(false);
-  const priceUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isFetchingRef = useRef(false);
   const fetchLeadDataRef = useRef<(() => Promise<void>) | null>(null);
   const lastFetchKeyRef = useRef<string | null>(null);
@@ -206,51 +203,6 @@ export default function LeadDetailPage() {
   useEffect(() => {
     fetchLeadDataRef.current = fetchLeadData;
   }, [fetchLeadData]);
-
-  // Memoized callbacks for DayByDayItineraryView to prevent infinite loops
-  const handleDaysGenerated = useCallback(async () => {
-    const currentKey = `${leadId}-${user?.id}`;
-    if (!isFetchingRef.current && currentKey) {
-      lastFetchKeyRef.current = null; // Reset to allow fresh fetch
-      isFetchingRef.current = true;
-      try {
-        await fetchLeadData();
-        if (lastFetchKeyRef.current === null || lastFetchKeyRef.current === currentKey) {
-          lastFetchKeyRef.current = currentKey;
-        }
-      } finally {
-        if (lastFetchKeyRef.current === null || lastFetchKeyRef.current === currentKey) {
-          isFetchingRef.current = false;
-        }
-      }
-    }
-  }, [fetchLeadData, leadId, user?.id]);
-
-  const createHandlePriceUpdated = useCallback((itineraryId: string) => {
-    return async (totalPrice: number) => {
-      // Debounce price updates to prevent infinite loops
-      if (priceUpdateTimeoutRef.current) {
-        clearTimeout(priceUpdateTimeoutRef.current);
-      }
-      
-      priceUpdateTimeoutRef.current = setTimeout(async () => {
-        // Update itinerary total price in database
-        // Note: Database trigger will automatically update total_price, so we don't need to refetch
-        // Removing fetchLeadData() call to prevent infinite loops
-        try {
-          await fetch(`/api/itineraries/${itineraryId}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ totalPrice }),
-          });
-        } catch (err) {
-          console.error('Error updating itinerary price:', err);
-        }
-        // Removed fetchLeadData() call - database trigger handles price update automatically
-        // This prevents infinite loops while still keeping the database in sync
-      }, 1000); // Debounce by 1 second
-    };
-  }, [leadId, user?.id]); // Removed fetchLeadData from dependencies - we no longer call it in this callback
 
   // Fetch lead and query data - only on mount or when leadId/user?.id actually changes
   useEffect(() => {
@@ -426,30 +378,13 @@ export default function LeadDetailPage() {
 
         toast.success('Query and itinerary created successfully!');
         
-        // For "Create Itinerary", expand it to show day-by-day view inline (NO NAVIGATION)
+        // For "Create Itinerary", navigate to day-by-day itinerary page
         if (queryAction === 'create') {
-          console.log('[LeadDetailPage] Setting expanded itinerary ID:', fullItinerary.id);
-          // Set expanded state immediately so the view renders
-          setExpandedItineraryId(fullItinerary.id);
-          // Refresh the page data in background to ensure everything is up to date
-          // Reset the lastFetchKeyRef to force a fresh fetch
-          const currentKey = `${leadId}-${user.id}`;
-          if (!isFetchingRef.current) {
-            lastFetchKeyRef.current = null; // Reset to allow fresh fetch
-            isFetchingRef.current = true;
-            fetchLeadData().finally(() => {
-              if (lastFetchKeyRef.current === null || lastFetchKeyRef.current === currentKey) {
-                lastFetchKeyRef.current = currentKey;
-                isFetchingRef.current = false;
-              }
-            }).catch(err => {
-              console.error('Error refreshing lead data:', err);
-              if (lastFetchKeyRef.current === null || lastFetchKeyRef.current === currentKey) {
-                lastFetchKeyRef.current = currentKey;
-                isFetchingRef.current = false;
-              }
-            });
-          }
+          console.log('[LeadDetailPage] Navigating to day-by-day itinerary page:', fullItinerary.id);
+          // Navigate to the existing day-by-day itinerary page
+          setTimeout(() => {
+            router.push(`/agent/leads/${leadId}/itineraries/new?queryId=${savedQuery.id}&itineraryId=${fullItinerary.id}`);
+          }, 100);
         } else if (queryAction === 'insert') {
           // For "Insert Itinerary", navigate to insert page
           setTimeout(() => {
@@ -612,7 +547,6 @@ export default function LeadDetailPage() {
               const itineraryQuery = queries[itinerary.id];
               const isInsertItinerary = itinerary.name.toLowerCase().includes('insert');
               const isCreateItinerary = itinerary.name.toLowerCase().includes('create');
-              const isExpanded = expandedItineraryId === itinerary.id;
               
               return (
                 <div key={itinerary.id} className="space-y-4">
@@ -700,42 +634,23 @@ export default function LeadDetailPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setExpandedItineraryId(isExpanded ? null : itinerary.id)}
+                            onClick={() => {
+                              if (itinerary.query_id) {
+                                router.push(`/agent/leads/${leadId}/itineraries/new?queryId=${itinerary.query_id}&itineraryId=${itinerary.id}`);
+                              } else {
+                                toast.error('Query is not linked to this itinerary yet. Please wait...');
+                              }
+                            }}
                             className="flex-1"
+                            disabled={!itinerary.query_id}
                           >
                             <FiEye className="w-4 h-4 mr-1" />
-                            {isExpanded ? 'Collapse' : 'View Days'}
+                            View Days
                           </Button>
                         )}
                       </div>
                     </CardContent>
                   </Card>
-
-                  {/* Day-by-Day Itinerary View (inline, only for Create Itinerary) */}
-                  {isCreateItinerary && isExpanded && itinerary.query_id && (
-                    <Card className="border-2 border-blue-200">
-                      <CardContent className="p-6">
-                        <DayByDayItineraryView
-                          key={`itinerary-${itinerary.id}`}
-                          itineraryId={itinerary.id}
-                          queryId={itinerary.query_id}
-                          adultsCount={itinerary.adults_count}
-                          childrenCount={itinerary.children_count}
-                          infantsCount={itinerary.infants_count}
-                          onDaysGenerated={handleDaysGenerated}
-                          onPriceUpdated={createHandlePriceUpdated(itinerary.id)}
-                        />
-                      </CardContent>
-                    </Card>
-                  )}
-                  {/* Show message if Create Itinerary is expanded but query_id is missing */}
-                  {isCreateItinerary && isExpanded && !itinerary.query_id && (
-                    <Card className="border-2 border-yellow-200">
-                      <CardContent className="p-6 text-center">
-                        <p className="text-gray-600">Query is being linked to itinerary. Please wait...</p>
-                      </CardContent>
-                    </Card>
-                  )}
                 </div>
               );
             })}
