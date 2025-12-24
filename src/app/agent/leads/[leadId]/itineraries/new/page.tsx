@@ -59,6 +59,7 @@ interface ItineraryItem {
   day_id: string | null;
   package_type: 'activity' | 'transfer' | 'multi_city' | 'multi_city_hotel' | 'fixed_departure';
   package_id: string;
+  operator_id: string;
   package_title: string;
   unit_price: number | null;
   quantity: number;
@@ -92,6 +93,9 @@ export default function CreateItineraryPage() {
   const [allActivities, setAllActivities] = useState<ActivityPackage[]>([]);
   const [allTransfers, setAllTransfers] = useState<TransferPackage[]>([]);
   const [loadingRepository, setLoadingRepository] = useState(true);
+
+  // Operator names mapping
+  const [operatorNames, setOperatorNames] = useState<Record<string, string>>({});
 
   // Modal states
   const [activityModalOpen, setActivityModalOpen] = useState(false);
@@ -313,6 +317,28 @@ export default function CreateItineraryPage() {
     }
   };
 
+  const fetchOperatorNames = async (operatorIds: string[]) => {
+    if (operatorIds.length === 0) return;
+    
+    try {
+      const uniqueIds = [...new Set(operatorIds.filter(Boolean))];
+      if (uniqueIds.length === 0) return;
+      
+      const response = await fetch(`/api/operators?ids=${uniqueIds.join(',')}`);
+      if (response.ok) {
+        const { operators } = await response.json();
+        const nameMap: Record<string, string> = {};
+        operators.forEach((op: any) => {
+          nameMap[op.id] = op.name || 'Unknown Operator';
+        });
+        setOperatorNames(prev => ({ ...prev, ...nameMap }));
+        console.log('[CreateItineraryPage] Operator names fetched:', Object.keys(nameMap).length);
+      }
+    } catch (err) {
+      console.error('[CreateItineraryPage] Error fetching operator names:', err);
+    }
+  };
+
   const fetchItems = async () => {
     if (!itineraryId) return;
 
@@ -329,6 +355,12 @@ export default function CreateItineraryPage() {
         }));
         setItems(normalizedItems);
         console.log('[CreateItineraryPage] Items fetched:', normalizedItems.length);
+        
+        // Fetch operator names for all items
+        const operatorIds = normalizedItems.map((item: ItineraryItem) => item.operator_id).filter(Boolean) as string[];
+        if (operatorIds.length > 0) {
+          await fetchOperatorNames(operatorIds);
+        }
       } else {
         const errorData = await response.json().catch(() => ({}));
         console.error('[CreateItineraryPage] Failed to fetch items:', {
@@ -485,6 +517,11 @@ export default function CreateItineraryPage() {
 
       // Refresh items to get the latest from database
       await fetchItems();
+      
+      // Fetch operator name for the new item
+      if (newItem.operator_id) {
+        await fetchOperatorNames([newItem.operator_id]);
+      }
 
       setActivityModalOpen(false);
       setSelectedDayIndex(null);
@@ -584,6 +621,11 @@ export default function CreateItineraryPage() {
 
       // Refresh items to get the latest from database
       await fetchItems();
+      
+      // Fetch operator name for the new item
+      if (newItem.operator_id) {
+        await fetchOperatorNames([newItem.operator_id]);
+      }
 
       setTransferModalOpen(false);
       setSelectedDayIndex(null);
@@ -723,17 +765,44 @@ export default function CreateItineraryPage() {
             </p>
           </div>
           {/* Total Price Display */}
-          <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
-            <CardContent className="p-4">
-              <div className="text-center">
-                <p className="text-sm text-gray-600 mb-1">Total Itinerary Price</p>
-                <p className="text-3xl font-bold text-green-600">${totalPrice.toFixed(2)}</p>
-                <p className="text-xs text-gray-500 mt-1">
-                  {items.length} {items.length === 1 ? 'item' : 'items'}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="flex gap-4">
+            <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
+              <CardContent className="p-4">
+                <div className="text-center">
+                  <p className="text-sm text-gray-600 mb-1">Total Itinerary Price</p>
+                  <p className="text-3xl font-bold text-green-600">${totalPrice.toFixed(2)}</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {items.length} {items.length === 1 ? 'item' : 'items'}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+            
+            {/* Operator Breakdown */}
+            {Object.keys(operatorNames).length > 0 && items.length > 0 && (
+              <Card className="bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200 min-w-[250px]">
+                <CardContent className="p-4">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-3">Price by Operator</h3>
+                  <div className="space-y-2">
+                    {Object.entries(
+                      items.reduce((acc, item) => {
+                        const opId = item.operator_id;
+                        const opName = operatorNames[opId] || 'Unknown Operator';
+                        if (!acc[opName]) acc[opName] = 0;
+                        acc[opName] += Number(item.total_price) || Number(item.unit_price) || 0;
+                        return acc;
+                      }, {} as Record<string, number>)
+                    ).map(([opName, total]) => (
+                      <div key={opName} className="flex justify-between items-center text-sm">
+                        <span className="text-gray-600 truncate mr-2">{opName}</span>
+                        <span className="font-semibold text-gray-900 whitespace-nowrap">${total.toFixed(2)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </div>
               </div>
 
@@ -854,18 +923,30 @@ export default function CreateItineraryPage() {
                                   const item = items.find(i => i.id === itemId);
                                   if (!item) return null;
                                   
+                                  const operatorName = operatorNames[item.operator_id] || 'Unknown Operator';
+                                  const itemPrice = Number(item.total_price) || Number(item.unit_price) || 0;
+                                  
                                   return (
                                     <div
                                       key={itemId}
-                                      className="flex items-center justify-between p-2 bg-white rounded border"
+                                      className="flex items-center justify-between p-3 bg-white rounded-lg border shadow-sm hover:shadow-md transition-shadow"
                                     >
                                       <div className="flex-1">
-                                        <span className="text-sm font-medium">{item.package_title}</span>
-                                        {item.total_price && (
-                                          <span className="text-xs text-gray-500 ml-2">
-                                            ${Number(item.total_price).toFixed(2)}
+                                        <div className="flex items-center gap-2 mb-1">
+                                          <span className="text-sm font-medium text-gray-900">{item.package_title}</span>
+                                          <Badge 
+                                            variant="outline" 
+                                            className="text-xs bg-blue-50 text-blue-700 border-blue-200"
+                                          >
+                                            {operatorName}
+                                          </Badge>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-sm font-semibold text-green-600">
+                                            ${itemPrice.toFixed(2)}
                                           </span>
-                                        )}
+                                          <span className="text-xs text-gray-400">• Pay to operator</span>
+                                        </div>
                                       </div>
                                       <Button
                                         size="sm"
@@ -944,21 +1025,33 @@ export default function CreateItineraryPage() {
                               <div className="space-y-2">
                                 {slot.transfers.map((itemId) => {
                                   // Find item by ID (itemId is now the itinerary_item ID, not transfer ID)
-                                  const item = items.find(i => i.id === itemId);
+                                  const item = items.find(i => i.id === itemId && i.package_type === 'transfer');
                                   if (!item) return null;
+                                  
+                                  const operatorName = operatorNames[item.operator_id] || 'Unknown Operator';
+                                  const itemPrice = Number(item.total_price) || Number(item.unit_price) || 0;
                                   
                                   return (
                                     <div
                                       key={itemId}
-                                      className="flex items-center justify-between p-2 bg-white rounded border"
+                                      className="flex items-center justify-between p-3 bg-white rounded-lg border shadow-sm hover:shadow-md transition-shadow"
                                     >
                                       <div className="flex-1">
-                                        <span className="text-sm font-medium">{item.package_title}</span>
-                                        {item.total_price && (
-                                          <span className="text-xs text-gray-500 ml-2">
-                                            ${Number(item.total_price).toFixed(2)}
+                                        <div className="flex items-center gap-2 mb-1">
+                                          <span className="text-sm font-medium text-gray-900">{item.package_title}</span>
+                                          <Badge 
+                                            variant="outline" 
+                                            className="text-xs bg-green-50 text-green-700 border-green-200"
+                                          >
+                                            {operatorName}
+                                          </Badge>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-sm font-semibold text-green-600">
+                                            ${itemPrice.toFixed(2)}
                                           </span>
-                                        )}
+                                          <span className="text-xs text-gray-400">• Pay to operator</span>
+                                        </div>
                                       </div>
                                       <Button
                                         size="sm"

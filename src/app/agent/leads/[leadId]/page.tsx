@@ -77,6 +77,33 @@ export default function LeadDetailPage() {
     }
   }, []);
 
+  // Refresh itinerary data when page becomes visible (e.g., returning from day-by-day page)
+  useEffect(() => {
+    if (!user?.id) return;
+    
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        // Refresh itinerary data to get updated prices
+        console.log('[LeadDetailPage] Page visible, refreshing itinerary data');
+        fetchLeadDataRef.current?.();
+      }
+    };
+    
+    // Also refresh on focus (when user switches back to tab)
+    const handleFocus = () => {
+      console.log('[LeadDetailPage] Window focused, refreshing itinerary data');
+      fetchLeadDataRef.current?.();
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [user?.id]);
+
   const fetchLeadData = useCallback(async () => {
     if (!user?.id) return;
     // Don't check or set isFetchingRef here - let the caller manage it
