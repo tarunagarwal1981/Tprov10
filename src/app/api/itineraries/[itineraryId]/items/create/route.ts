@@ -208,8 +208,9 @@ export async function POST(
 
     console.log('[Create Item] ✅ Successfully created item with ID:', finalId);
 
+    // Return the full created item (not just ID) so frontend can use total_price, operator_id, etc.
     return NextResponse.json({
-      item: { id: finalId },
+      item: createdItem,
       created: true,
     });
   } catch (error) {

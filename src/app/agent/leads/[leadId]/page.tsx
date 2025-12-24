@@ -763,7 +763,7 @@ export default function LeadDetailPage() {
                       <div className="flex items-center justify-between pt-2 border-t">
                         <span className="text-sm text-gray-600">Total Price</span>
                         <span className="text-xl font-bold text-green-600">
-                          ${itinerary.total_price.toFixed(2)}
+                          ${(itinerary.total_price ?? 0).toFixed(2)}
                         </span>
                       </div>
                       <div className="flex gap-2 pt-2 border-t">

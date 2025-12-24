@@ -143,9 +143,27 @@ export default function CreateItineraryPage() {
       total_price: item.total_price ?? item.unit_price ?? 0,
     }));
 
-    const total = normalizedItems.reduce((sum, item) => sum + (Number(item.total_price) || 0), 0);
+    // Calculate total from all items - use total_price first, then unit_price as fallback
+    const total = normalizedItems.reduce((sum, item) => {
+      const itemPrice = Number(item.total_price) || Number(item.unit_price) || 0;
+      console.log('[CreateItineraryPage] Item price calculation:', {
+        id: item.id,
+        package_title: item.package_title,
+        total_price: item.total_price,
+        unit_price: item.unit_price,
+        calculated: itemPrice,
+      });
+      return sum + itemPrice;
+    }, 0);
+    
     setTotalPrice(total);
     console.log('[CreateItineraryPage] Total price calculated:', total, 'from', items.length, 'items');
+    console.log('[CreateItineraryPage] Items breakdown:', normalizedItems.map(i => ({
+      title: i.package_title,
+      total_price: i.total_price,
+      unit_price: i.unit_price,
+      final_price: Number(i.total_price) || Number(i.unit_price) || 0,
+    })));
   }, [items]);
 
   const fetchData = async () => {
@@ -347,17 +365,31 @@ export default function CreateItineraryPage() {
       const response = await fetch(`/api/itineraries/${itineraryId}/items`);
       if (response.ok) {
         const { items: itemsData } = await response.json();
-        // Normalize items to ensure total_price is available
-        const normalizedItems = itemsData.map((item: ItineraryItem) => ({
-          ...item,
-          total_price: item.total_price ?? item.unit_price ?? 0,
-          unit_price: item.unit_price ?? 0,
-        }));
+        // Normalize items to ensure total_price and operator_id are available
+        const normalizedItems = itemsData.map((item: ItineraryItem) => {
+          const totalPrice = Number(item.total_price) || Number(item.unit_price) || 0;
+          const unitPrice = Number(item.unit_price) || 0;
+          return {
+            ...item,
+            total_price: totalPrice,
+            unit_price: unitPrice,
+            operator_id: item.operator_id || '', // Ensure operator_id exists
+          };
+        });
         setItems(normalizedItems);
         console.log('[CreateItineraryPage] Items fetched:', normalizedItems.length);
+        console.log('[CreateItineraryPage] Items details:', normalizedItems.map((i: ItineraryItem) => ({
+          id: i.id,
+          title: i.package_title,
+          operator_id: i.operator_id,
+          total_price: i.total_price,
+          unit_price: i.unit_price,
+        })));
         
         // Fetch operator names for all items
-        const operatorIds = normalizedItems.map((item: ItineraryItem) => item.operator_id).filter(Boolean) as string[];
+        const operatorIds = normalizedItems
+          .map((item: ItineraryItem) => item.operator_id)
+          .filter((id: string | undefined): id is string => Boolean(id) && id !== '');
         if (operatorIds.length > 0) {
           await fetchOperatorNames(operatorIds);
         }
@@ -479,13 +511,29 @@ export default function CreateItineraryPage() {
       }
 
       const { item: newItem } = await itemResponse.json();
-      console.log('[CreateItineraryPage] Activity item created:', newItem.id);
+      console.log('[CreateItineraryPage] Activity item created:', {
+        id: newItem.id,
+        operator_id: newItem.operator_id,
+        total_price: newItem.total_price,
+        unit_price: newItem.unit_price,
+        calculatedPrice,
+      });
+
+      // Ensure operator_id is included
+      if (!newItem.operator_id && activity.operator_id) {
+        newItem.operator_id = activity.operator_id;
+      }
+
+      // Use database values if available, otherwise use calculated
+      const finalTotalPrice = newItem.total_price ?? newItem.unit_price ?? calculatedPrice;
+      const finalUnitPrice = newItem.unit_price ?? calculatedPrice;
 
       // Add the new item to items state immediately
       const normalizedNewItem: ItineraryItem = {
         ...newItem,
-        total_price: newItem.total_price ?? newItem.unit_price ?? calculatedPrice,
-        unit_price: newItem.unit_price ?? calculatedPrice,
+        operator_id: newItem.operator_id || activity.operator_id,
+        total_price: finalTotalPrice,
+        unit_price: finalUnitPrice,
       };
       setItems(prev => [...prev, normalizedNewItem]);
 
@@ -515,12 +563,13 @@ export default function CreateItineraryPage() {
         });
       }
 
-      // Refresh items to get the latest from database
+      // Refresh items to get the latest from database (this will also fetch operator names)
       await fetchItems();
       
-      // Fetch operator name for the new item
-      if (newItem.operator_id) {
-        await fetchOperatorNames([newItem.operator_id]);
+      // Also fetch operator name immediately if not already fetched
+      const operatorId = newItem.operator_id || activity.operator_id;
+      if (operatorId && !operatorNames[operatorId]) {
+        await fetchOperatorNames([operatorId]);
       }
 
       setActivityModalOpen(false);
@@ -578,18 +627,29 @@ export default function CreateItineraryPage() {
       }
 
       const { item: newItem } = await itemResponse.json();
-      console.log('[CreateItineraryPage] Transfer item created:', newItem.id);
+      console.log('[CreateItineraryPage] Transfer item created:', {
+        id: newItem.id,
+        operator_id: newItem.operator_id,
+        total_price: newItem.total_price,
+        unit_price: newItem.unit_price,
+        calculatedPrice,
+      });
 
-      // Ensure the new item has total_price
-      if (!newItem.total_price && newItem.unit_price) {
-        newItem.total_price = newItem.unit_price * (newItem.quantity || 1);
+      // Ensure operator_id is included
+      if (!newItem.operator_id && transfer.operator_id) {
+        newItem.operator_id = transfer.operator_id;
       }
+
+      // Use database values if available, otherwise use calculated
+      const finalTotalPrice = newItem.total_price ?? newItem.unit_price ?? calculatedPrice;
+      const finalUnitPrice = newItem.unit_price ?? calculatedPrice;
 
       // Add the new item to items state immediately
       const normalizedNewItem: ItineraryItem = {
         ...newItem,
-        total_price: newItem.total_price ?? newItem.unit_price ?? calculatedPrice,
-        unit_price: newItem.unit_price ?? calculatedPrice,
+        operator_id: newItem.operator_id || transfer.operator_id,
+        total_price: finalTotalPrice,
+        unit_price: finalUnitPrice,
       };
       setItems(prev => [...prev, normalizedNewItem]);
 
@@ -619,12 +679,13 @@ export default function CreateItineraryPage() {
         });
       }
 
-      // Refresh items to get the latest from database
+      // Refresh items to get the latest from database (this will also fetch operator names)
       await fetchItems();
       
-      // Fetch operator name for the new item
-      if (newItem.operator_id) {
-        await fetchOperatorNames([newItem.operator_id]);
+      // Also fetch operator name immediately if not already fetched
+      const operatorId = newItem.operator_id || transfer.operator_id;
+      if (operatorId && !operatorNames[operatorId]) {
+        await fetchOperatorNames([operatorId]);
       }
 
       setTransferModalOpen(false);
@@ -923,7 +984,9 @@ export default function CreateItineraryPage() {
                                   const item = items.find(i => i.id === itemId);
                                   if (!item) return null;
                                   
-                                  const operatorName = operatorNames[item.operator_id] || 'Unknown Operator';
+                                  const operatorName = item.operator_id 
+                                    ? (operatorNames[item.operator_id] || 'Loading...') 
+                                    : 'Unknown Operator';
                                   const itemPrice = Number(item.total_price) || Number(item.unit_price) || 0;
                                   
                                   return (
@@ -932,20 +995,24 @@ export default function CreateItineraryPage() {
                                       className="flex items-center justify-between p-3 bg-white rounded-lg border shadow-sm hover:shadow-md transition-shadow"
                                     >
                                       <div className="flex-1">
-                                        <div className="flex items-center gap-2 mb-1">
+                                        <div className="flex items-center gap-2 mb-1 flex-wrap">
                                           <span className="text-sm font-medium text-gray-900">{item.package_title}</span>
-                                          <Badge 
-                                            variant="outline" 
-                                            className="text-xs bg-blue-50 text-blue-700 border-blue-200"
-                                          >
-                                            {operatorName}
-                                          </Badge>
+                                          {item.operator_id && (
+                                            <Badge 
+                                              variant="outline" 
+                                              className="text-xs bg-blue-50 text-blue-700 border-blue-200"
+                                            >
+                                              {operatorName}
+                                            </Badge>
+                                          )}
                                         </div>
                                         <div className="flex items-center gap-2">
                                           <span className="text-sm font-semibold text-green-600">
                                             ${itemPrice.toFixed(2)}
                                           </span>
-                                          <span className="text-xs text-gray-400">• Pay to operator</span>
+                                          {item.operator_id && (
+                                            <span className="text-xs text-gray-400">• Pay to operator</span>
+                                          )}
                                         </div>
                                       </div>
                                       <Button
@@ -1028,7 +1095,9 @@ export default function CreateItineraryPage() {
                                   const item = items.find(i => i.id === itemId && i.package_type === 'transfer');
                                   if (!item) return null;
                                   
-                                  const operatorName = operatorNames[item.operator_id] || 'Unknown Operator';
+                                  const operatorName = item.operator_id 
+                                    ? (operatorNames[item.operator_id] || 'Loading...') 
+                                    : 'Unknown Operator';
                                   const itemPrice = Number(item.total_price) || Number(item.unit_price) || 0;
                                   
                                   return (
@@ -1037,20 +1106,24 @@ export default function CreateItineraryPage() {
                                       className="flex items-center justify-between p-3 bg-white rounded-lg border shadow-sm hover:shadow-md transition-shadow"
                                     >
                                       <div className="flex-1">
-                                        <div className="flex items-center gap-2 mb-1">
+                                        <div className="flex items-center gap-2 mb-1 flex-wrap">
                                           <span className="text-sm font-medium text-gray-900">{item.package_title}</span>
-                                          <Badge 
-                                            variant="outline" 
-                                            className="text-xs bg-green-50 text-green-700 border-green-200"
-                                          >
-                                            {operatorName}
-                                          </Badge>
+                                          {item.operator_id && (
+                                            <Badge 
+                                              variant="outline" 
+                                              className="text-xs bg-green-50 text-green-700 border-green-200"
+                                            >
+                                              {operatorName}
+                                            </Badge>
+                                          )}
                                         </div>
                                         <div className="flex items-center gap-2">
                                           <span className="text-sm font-semibold text-green-600">
                                             ${itemPrice.toFixed(2)}
                                           </span>
-                                          <span className="text-xs text-gray-400">• Pay to operator</span>
+                                          {item.operator_id && (
+                                            <span className="text-xs text-gray-400">• Pay to operator</span>
+                                          )}
                                         </div>
                                       </div>
                                       <Button
