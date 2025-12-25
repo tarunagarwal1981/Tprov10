@@ -158,14 +158,18 @@ export default function LeadDetailPage() {
           if (itinerariesResponse.ok) {
             const { itineraries: itinerariesData } = await itinerariesResponse.json();
             console.log('[LeadDetailPage] Fetched itineraries:', itinerariesData.length);
-            console.log('[LeadDetailPage] Itineraries with prices:', itinerariesData.map((it: Itinerary) => ({
-              id: it.id,
-              name: it.name,
-              total_price: it.total_price,
-              total_price_type: typeof it.total_price,
-              total_price_is_null: it.total_price === null,
-              total_price_is_undefined: it.total_price === undefined,
-            })));
+            // Log each itinerary's price details explicitly
+            itinerariesData.forEach((it: Itinerary, index: number) => {
+              console.log(`[LeadDetailPage] Itinerary ${index + 1}:`, {
+                id: it.id,
+                name: it.name,
+                total_price: it.total_price,
+                total_price_type: typeof it.total_price,
+                total_price_is_null: it.total_price === null,
+                total_price_is_undefined: it.total_price === undefined,
+                total_price_value: it.total_price ?? 'NULL/UNDEFINED',
+              });
+            });
             
             // Fetch queries for each itinerary (with timeout per query)
             const queriesMap: Record<string, ItineraryQuery> = {};
@@ -715,9 +719,8 @@ export default function LeadDetailPage() {
               
               // Log price information for debugging
               const displayPrice = (itinerary.total_price ?? 0);
-              console.log('[LeadDetailPage] Rendering itinerary card:', {
+              console.log(`[LeadDetailPage] Rendering card for "${itinerary.name}":`, {
                 id: itinerary.id,
-                name: itinerary.name,
                 total_price_raw: itinerary.total_price,
                 total_price_type: typeof itinerary.total_price,
                 total_price_is_null: itinerary.total_price === null,
@@ -725,6 +728,8 @@ export default function LeadDetailPage() {
                 displayPrice,
                 displayPrice_formatted: `$${displayPrice.toFixed(2)}`,
               });
+              // Also log as a simple string for easy reading
+              console.log(`[LeadDetailPage] Price for "${itinerary.name}": total_price=${itinerary.total_price}, displayPrice=${displayPrice}, formatted=$${displayPrice.toFixed(2)}`);
               
               return (
                 <div key={itinerary.id} className="space-y-4">

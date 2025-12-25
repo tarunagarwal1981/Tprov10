@@ -74,14 +74,20 @@ export class ItineraryService {
         [leadId]
       );
       console.log('[ItineraryService] Fetched itineraries from DB:', result.rows.length);
-      console.log('[ItineraryService] Itinerary total_price values:', result.rows.map((it: Itinerary) => ({
-        id: it.id,
-        name: it.name,
-        total_price: it.total_price,
-        total_price_type: typeof it.total_price,
-        total_price_is_null: it.total_price === null,
-        total_price_is_undefined: it.total_price === undefined,
-      })));
+      // Log each itinerary's price details explicitly
+      result.rows.forEach((it: Itinerary, index: number) => {
+        console.log(`[ItineraryService] Itinerary ${index + 1} from DB:`, {
+          id: it.id,
+          name: it.name,
+          total_price: it.total_price,
+          total_price_type: typeof it.total_price,
+          total_price_is_null: it.total_price === null,
+          total_price_is_undefined: it.total_price === undefined,
+          total_price_value: it.total_price ?? 'NULL/UNDEFINED',
+        });
+        // Also log as a simple string for easy reading
+        console.log(`[ItineraryService] Price for "${it.name}": total_price=${it.total_price} (type: ${typeof it.total_price})`);
+      });
       return result.rows;
     } catch (error) {
       console.error('Error fetching lead itineraries:', error);
