@@ -736,9 +736,27 @@ export default function LeadDetailPage() {
                   <Card className="hover:shadow-lg transition-shadow">
                     <CardHeader>
                       <div className="flex items-start justify-between">
-                        <CardTitle className="text-lg font-semibold line-clamp-1">
-                          {itinerary.name}
-                        </CardTitle>
+                        <div className="flex-1">
+                          <CardTitle className="text-lg font-semibold line-clamp-1">
+                            {itinerary.name}
+                          </CardTitle>
+                          {/* Option 1: Copyable ID badge in header */}
+                          {itinerary.customer_id && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 px-2 mt-2 text-xs font-mono text-gray-500 hover:text-gray-700 border border-gray-300 hover:border-gray-400"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigator.clipboard.writeText(itinerary.customer_id);
+                                toast.success('Itinerary ID copied to clipboard');
+                              }}
+                            >
+                              <FiCopy className="w-3 h-3 mr-1" />
+                              {itinerary.customer_id}
+                            </Button>
+                          )}
+                        </div>
                         <Badge variant="secondary">{itinerary.status}</Badge>
                       </div>
                     </CardHeader>
@@ -792,6 +810,30 @@ export default function LeadDetailPage() {
                           ${displayPrice.toFixed(2)}
                         </span>
                       </div>
+                      {/* Option 2: ID in footer with copy icon */}
+                      {itinerary.customer_id && (
+                        <div className="flex items-center justify-between pt-2 border-t text-xs">
+                          <span className="text-gray-500">Reference ID:</span>
+                          <div className="flex items-center gap-2">
+                            <code className="text-gray-600 font-mono bg-gray-50 px-2 py-1 rounded">
+                              {itinerary.customer_id}
+                            </code>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-5 w-5 p-0 hover:bg-gray-100"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigator.clipboard.writeText(itinerary.customer_id!);
+                                toast.success('Itinerary ID copied');
+                              }}
+                              title="Copy ID"
+                            >
+                              <FiCopy className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                       <div className="flex gap-2 pt-2 border-t">
                         <Button
                           variant="ghost"

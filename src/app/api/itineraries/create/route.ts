@@ -30,18 +30,34 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Generate customer_id before creating itinerary
+    const customerIdResult = await query<{ customer_id: string }>(
+      `SELECT generate_itinerary_customer_id() as customer_id`,
+      []
+    );
+    const customerId = customerIdResult.rows[0]?.customer_id;
+
+    if (!customerId) {
+      console.error('[Create Itinerary] Failed to generate customer_id');
+      return NextResponse.json(
+        { error: 'Failed to generate customer ID' },
+        { status: 500 }
+      );
+    }
+
     // Create new itinerary (allow multiple itineraries per lead)
     // Generate UUID for id column - use UUID type directly
-    const insertResult = await query<{ id: string }>(
+    const insertResult = await query<{ id: string; customer_id: string }>(
       `INSERT INTO itineraries (
-        id, lead_id, agent_id, name, adults_count, children_count, 
+        id, lead_id, agent_id, name, customer_id, adults_count, children_count, 
         infants_count, start_date, end_date, status, total_price, currency, query_id
-      ) VALUES (gen_random_uuid(), $1::uuid, $2::uuid, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::uuid)
-      RETURNING id`,
+      ) VALUES (gen_random_uuid(), $1::uuid, $2::uuid, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13::uuid)
+      RETURNING id, customer_id`,
       [
         leadId,
         agentId,
         name,
+        customerId,
         adultsCount,
         childrenCount,
         infantsCount,
@@ -63,7 +79,10 @@ export async function POST(request: NextRequest) {
 
     const createdItinerary = insertResult.rows[0];
     return NextResponse.json({
-      itinerary: { id: createdItinerary.id },
+      itinerary: { 
+        id: createdItinerary.id,
+        customer_id: createdItinerary.customer_id,
+      },
       created: true,
     });
   } catch (error) {
