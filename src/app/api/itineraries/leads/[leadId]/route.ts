@@ -16,6 +16,17 @@ export async function GET(
     const { leadId } = await params;
     const itineraries = await itineraryService.getLeadItineraries(leadId);
     
+    console.log('[API] /api/itineraries/leads/[leadId] - Returning itineraries:', {
+      leadId,
+      count: itineraries.length,
+      total_prices: itineraries.map((it: any) => ({
+        id: it.id,
+        name: it.name,
+        total_price: it.total_price,
+        total_price_type: typeof it.total_price,
+      })),
+    });
+    
     return NextResponse.json({ itineraries });
   } catch (error) {
     console.error('Error fetching itineraries:', error);

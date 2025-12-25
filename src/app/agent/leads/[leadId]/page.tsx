@@ -158,6 +158,14 @@ export default function LeadDetailPage() {
           if (itinerariesResponse.ok) {
             const { itineraries: itinerariesData } = await itinerariesResponse.json();
             console.log('[LeadDetailPage] Fetched itineraries:', itinerariesData.length);
+            console.log('[LeadDetailPage] Itineraries with prices:', itinerariesData.map((it: Itinerary) => ({
+              id: it.id,
+              name: it.name,
+              total_price: it.total_price,
+              total_price_type: typeof it.total_price,
+              total_price_is_null: it.total_price === null,
+              total_price_is_undefined: it.total_price === undefined,
+            })));
             
             // Fetch queries for each itinerary (with timeout per query)
             const queriesMap: Record<string, ItineraryQuery> = {};
@@ -705,6 +713,19 @@ export default function LeadDetailPage() {
               const isInsertItinerary = itinerary.name.toLowerCase().includes('insert');
               const isCreateItinerary = itinerary.name.toLowerCase().includes('create');
               
+              // Log price information for debugging
+              const displayPrice = (itinerary.total_price ?? 0);
+              console.log('[LeadDetailPage] Rendering itinerary card:', {
+                id: itinerary.id,
+                name: itinerary.name,
+                total_price_raw: itinerary.total_price,
+                total_price_type: typeof itinerary.total_price,
+                total_price_is_null: itinerary.total_price === null,
+                total_price_is_undefined: itinerary.total_price === undefined,
+                displayPrice,
+                displayPrice_formatted: `$${displayPrice.toFixed(2)}`,
+              });
+              
               return (
                 <div key={itinerary.id} className="space-y-4">
                   <Card className="hover:shadow-lg transition-shadow">
@@ -763,7 +784,7 @@ export default function LeadDetailPage() {
                       <div className="flex items-center justify-between pt-2 border-t">
                         <span className="text-sm text-gray-600">Total Price</span>
                         <span className="text-xl font-bold text-green-600">
-                          ${(itinerary.total_price ?? 0).toFixed(2)}
+                          ${displayPrice.toFixed(2)}
                         </span>
                       </div>
                       <div className="flex gap-2 pt-2 border-t">

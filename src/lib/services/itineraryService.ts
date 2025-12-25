@@ -73,6 +73,15 @@ export class ItineraryService {
         'SELECT * FROM itineraries WHERE lead_id = $1 ORDER BY created_at DESC',
         [leadId]
       );
+      console.log('[ItineraryService] Fetched itineraries from DB:', result.rows.length);
+      console.log('[ItineraryService] Itinerary total_price values:', result.rows.map((it: Itinerary) => ({
+        id: it.id,
+        name: it.name,
+        total_price: it.total_price,
+        total_price_type: typeof it.total_price,
+        total_price_is_null: it.total_price === null,
+        total_price_is_undefined: it.total_price === undefined,
+      })));
       return result.rows;
     } catch (error) {
       console.error('Error fetching lead itineraries:', error);
