@@ -263,16 +263,6 @@ function PurchasedLeadCard({
               <FiPackage className="w-4 h-4 mr-2" />
               Create Proposal
             </Button>
-            {lead.customerPhone && (
-              <Button 
-                variant="outline"
-                className="flex-1 border-blue-300 text-blue-600 hover:bg-blue-50"
-                onClick={() => window.location.href = `tel:${lead.customerPhone}`}
-              >
-                <FiPhone className="w-4 h-4 mr-2" />
-                Call
-              </Button>
-            )}
           </div>
         </CardContent>
       </Card>
