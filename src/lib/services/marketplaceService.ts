@@ -313,7 +313,8 @@ export class MarketplaceService {
   static async getAgentPurchasedLeads(agentId: string): Promise<LeadPurchase[]> {
     try {
       // Get purchases with lead details using JOIN
-      const result = await query<LeadPurchaseDB & { lead: MarketplaceLeadDB }>(
+      // Also join with leads table to get customer_id
+      const result = await query<LeadPurchaseDB & { lead: MarketplaceLeadDB & { customer_id?: string | null } }>(
         `SELECT 
           lp.*,
           jsonb_build_object(
@@ -333,10 +334,12 @@ export class MarketplaceService {
             'customer_email', lm.customer_email,
             'customer_phone', lm.customer_phone,
             'special_requirements', lm.special_requirements,
-            'detailed_requirements', lm.detailed_requirements
+            'detailed_requirements', lm.detailed_requirements,
+            'customer_id', l.customer_id
           ) as lead
         FROM lead_purchases lp
         JOIN lead_marketplace lm ON lp.lead_id::text = lm.id::text
+        LEFT JOIN leads l ON l.marketplace_lead_id::text = lm.id::text AND l.agent_id::text = lp.agent_id::text
         WHERE lp.agent_id::text = $1
         ORDER BY lp.purchased_at DESC`,
         [agentId]

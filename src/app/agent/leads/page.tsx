@@ -13,6 +13,7 @@ import {
   FiStar,
   FiRefreshCw,
   FiPackage,
+  FiCopy,
 } from 'react-icons/fi';
 import { FaPlane, FaHiking, FaUmbrellaBeach, FaPaw, FaGem, FaMoneyBillWave, FaUsers, FaHeart } from 'react-icons/fa';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -84,6 +85,7 @@ function PurchasedLeadCard({
   purchase: LeadPurchase;
   onCreateItinerary: (leadId: string) => void;
 }) {
+  const toast = useToast();
   const { lead } = purchase;
   if (!lead) return null;
 
@@ -122,10 +124,28 @@ function PurchasedLeadCard({
             {/* Title and destination */}
             <div>
               <h3 className="text-xl font-bold text-gray-900 mb-2 line-clamp-2">{lead.title}</h3>
-              <div className="flex items-center gap-2 text-gray-600">
+              <div className="flex items-center gap-2 text-gray-600 mb-2">
                 <FiMapPin className="w-4 h-4 flex-shrink-0" />
                 <span className="font-medium truncate">{lead.destination}</span>
               </div>
+              {/* Option 1: Copyable ID badge in header */}
+              {lead.customerId && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2 text-xs font-mono text-gray-500 hover:text-gray-700 border border-gray-300 hover:border-gray-400"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (lead.customerId) {
+                      navigator.clipboard.writeText(lead.customerId);
+                      toast.success('Lead ID copied to clipboard');
+                    }
+                  }}
+                >
+                  <FiCopy className="w-3 h-3 mr-1" />
+                  {lead.customerId}
+                </Button>
+              )}
             </div>
 
             {/* Lead details */}
@@ -207,6 +227,31 @@ function PurchasedLeadCard({
                 Paid: ${purchase.purchasePrice}
               </div>
             </div>
+            {/* Option 2: ID in footer with copy icon */}
+            {lead.customerId && (
+              <div className="flex items-center justify-between pt-2 border-t border-gray-200 text-xs">
+                <span className="text-gray-500">Reference ID:</span>
+                <div className="flex items-center gap-2">
+                  <code className="text-gray-600 font-mono bg-gray-50 px-2 py-1 rounded">
+                    {lead.customerId}
+                  </code>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-5 w-5 p-0 hover:bg-gray-100"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (lead.customerId) {
+                        navigator.clipboard.writeText(lead.customerId);
+                      }
+                    }}
+                    title="Copy ID"
+                  >
+                    <FiCopy className="w-3 h-3" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Action buttons */}
@@ -216,17 +261,8 @@ function PurchasedLeadCard({
               className="w-full flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white"
             >
               <FiPackage className="w-4 h-4 mr-2" />
-              Create Itinerary
+              Create Proposal
             </Button>
-            {lead.customerEmail && (
-              <Button 
-                className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white"
-                onClick={() => window.location.href = `mailto:${lead.customerEmail}`}
-              >
-                <FiMail className="w-4 h-4 mr-2" />
-                Send Email
-              </Button>
-            )}
             {lead.customerPhone && (
               <Button 
                 variant="outline"

@@ -70,24 +70,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Generate customer_id before creating lead
+    const customerIdResult = await query<{ customer_id: string }>(
+      `SELECT generate_lead_customer_id() as customer_id`,
+      []
+    );
+    const customerId = customerIdResult.rows[0]?.customer_id;
+
+    if (!customerId) {
+      console.error('[Leads Ensure] Failed to generate customer_id');
+      return NextResponse.json(
+        { error: 'Failed to generate customer ID' },
+        { status: 500 }
+      );
+    }
+
     // Create lead in leads table
-    // Note: We'll use the Lambda database service to insert
-    // Since we don't have a direct insert function, we'll need to add it to the Lambda
-    // For now, let's use a workaround by calling the existing query function with INSERT
-    
-    // Actually, we need to add an 'insert' action to the Lambda database service
-    // For now, let's return the marketplace lead data and let the client handle it
-    // OR we can use a raw SQL INSERT via the query function
-    
-    const insertResult = await query<{ id: string }>(
+    const insertResult = await query<{ id: string; customer_id: string }>(
       `INSERT INTO leads (
-        id, agent_id, marketplace_lead_id, customer_name, customer_email, 
+        id, agent_id, marketplace_lead_id, customer_id, customer_name, customer_email, 
         customer_phone, destination, requirements, stage, is_purchased, purchased_from_marketplace
-      ) VALUES (gen_random_uuid(), $1::uuid, $2::uuid, $3, $4, $5, $6, $7, $8, $9, $10)
-      RETURNING id`,
+      ) VALUES (gen_random_uuid(), $1::uuid, $2::uuid, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      RETURNING id, customer_id`,
       [
         agentId,
         leadId,
+        customerId,
         marketplaceLead.customer_name || '',
         marketplaceLead.customer_email || '',
         marketplaceLead.customer_phone || null,
@@ -109,6 +117,7 @@ export async function POST(request: NextRequest) {
     const createdLead = insertResult.rows[0];
     return NextResponse.json({ 
       leadId: createdLead.id,
+      customerId: createdLead.customer_id,
       created: true 
     });
   } catch (error) {
