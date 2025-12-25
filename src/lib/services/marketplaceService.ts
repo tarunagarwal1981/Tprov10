@@ -310,8 +310,34 @@ export class MarketplaceService {
    * @param agentId - The agent ID
    * @returns Promise with array of purchased leads with full details
    */
-  static async getAgentPurchasedLeads(agentId: string): Promise<LeadPurchase[]> {
+  static async getAgentPurchasedLeads(agentId: string, userRole?: string): Promise<LeadPurchase[]> {
     try {
+      // Check if user is a sub-agent
+      const isSubAgent = userRole === 'SUB_AGENT';
+      
+      let whereClause = 'lp.agent_id::text = $1';
+      let queryParams: any[] = [agentId];
+      
+      if (isSubAgent) {
+        // Sub-agents only see leads assigned to them
+        whereClause = `EXISTS (
+          SELECT 1 FROM sub_agent_assignments saa
+          WHERE saa.lead_id::text = lp.lead_id::text
+          AND saa.sub_agent_id::text = $1
+        )`;
+      } else {
+        // Main agents see all their purchased leads OR leads assigned to their sub-agents
+        whereClause = `(
+          lp.agent_id::text = $1
+          OR EXISTS (
+            SELECT 1 FROM sub_agent_assignments saa
+            JOIN users u ON saa.sub_agent_id::text = u.id::text
+            WHERE saa.lead_id::text = lp.lead_id::text
+            AND u.parent_agent_id::text = $1
+          )
+        )`;
+      }
+      
       // Get purchases with lead details using JOIN
       // Also join with leads table to get customer_id
       const result = await query<LeadPurchaseDB & { lead: MarketplaceLeadDB & { customer_id?: string | null } }>(
@@ -340,9 +366,9 @@ export class MarketplaceService {
         FROM lead_purchases lp
         JOIN lead_marketplace lm ON lp.lead_id::text = lm.id::text
         LEFT JOIN leads l ON l.marketplace_lead_id::text = lm.id::text AND l.agent_id::text = lp.agent_id::text
-        WHERE lp.agent_id::text = $1
+        WHERE ${whereClause}
         ORDER BY lp.purchased_at DESC`,
-        [agentId]
+        queryParams
       );
 
       // Map purchases and include full lead details

@@ -14,7 +14,7 @@ export interface Itinerary {
   lead_id: string;
   agent_id: string;
   name: string;
-  status: 'draft' | 'completed' | 'sent' | 'approved' | 'rejected';
+  status: 'draft' | 'completed' | 'sent' | 'approved' | 'rejected' | 'confirmed' | 'invoice_sent' | 'payment_received' | 'locked';
   adults_count: number;
   children_count: number;
   infants_count: number;
@@ -29,6 +29,11 @@ export interface Itinerary {
   created_at: string;
   updated_at: string;
   sent_at: string | null;
+  confirmed_at: string | null;
+  confirmed_by: string | null;
+  is_locked: boolean;
+  locked_at: string | null;
+  locked_by: string | null;
 }
 
 export interface ItineraryDay {

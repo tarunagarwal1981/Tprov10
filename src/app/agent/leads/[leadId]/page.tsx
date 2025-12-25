@@ -17,6 +17,9 @@ import {
   FiCopy,
   FiEye,
   FiTrash2,
+  FiDownload,
+  FiFileText,
+  FiLock,
 } from 'react-icons/fi';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -28,6 +31,8 @@ import { queryService, type ItineraryQuery } from '@/lib/services/queryService';
 import { itineraryService, type Itinerary } from '@/lib/services/itineraryService';
 import { MarketplaceService } from '@/lib/services/marketplaceService';
 import { QueryModal } from '@/components/agent/QueryModal';
+import { LeadCommunicationHistory } from '@/components/agent/LeadCommunicationHistory';
+import { AssignLeadToSubAgent } from '@/components/agent/AssignLeadToSubAgent';
 // Removed Supabase import - now using AWS API routes
 
 interface LeadDetails {
@@ -699,9 +704,22 @@ export default function LeadDetailPage() {
                   <span>{lead.travelersCount} travelers</span>
                 </div>
               )}
+              <div className="pt-3 border-t border-gray-200 mt-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setAssignLeadModalOpen(true)}
+                  className="w-full"
+                >
+                  <FiUser className="w-4 h-4 mr-2" />
+                  Assign to Sub-Agent
+                </Button>
+              </div>
             </CardContent>
           </Card>
 
+          {/* Communication History */}
+          <LeadCommunicationHistory leadId={leadId} />
         </div>
 
         {/* Right Column - Proposals Section */}
@@ -759,7 +777,15 @@ export default function LeadDetailPage() {
                             </Button>
                           )}
                         </div>
-                        <Badge variant="secondary">{itinerary.status}</Badge>
+                        <div className="flex items-center gap-2">
+                          {itinerary.is_locked && (
+                            <Badge variant="outline" className="bg-emerald-100 text-emerald-700 border-emerald-200">
+                              <FiLock className="w-3 h-3 mr-1" />
+                              Locked
+                            </Badge>
+                          )}
+                          <Badge variant="secondary">{itinerary.status}</Badge>
+                        </div>
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
@@ -878,6 +904,46 @@ export default function LeadDetailPage() {
                           </Button>
                         )}
                         <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            if (!itinerary.id) {
+                              toast.error('Itinerary not available');
+                              return;
+                            }
+                            try {
+                              const response = await fetch(`/api/itineraries/${itinerary.id}/pdf`, {
+                                headers: {
+                                  'Authorization': `Bearer ${user?.accessToken || ''}`,
+                                },
+                              });
+                              if (response.ok) {
+                                const blob = await response.blob();
+                                const url = window.URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = `itinerary-${itinerary.customer_id || itinerary.id}.pdf`;
+                                document.body.appendChild(a);
+                                a.click();
+                                window.URL.revokeObjectURL(url);
+                                document.body.removeChild(a);
+                                toast.success('Itinerary PDF downloaded');
+                              } else {
+                                const error = await response.json();
+                                toast.error(error.error || 'Failed to generate PDF');
+                              }
+                            } catch (error) {
+                              console.error('Error downloading PDF:', error);
+                              toast.error('Failed to download PDF');
+                            }
+                          }}
+                          className="border-blue-200 text-blue-600 hover:bg-blue-50 flex-shrink-0"
+                          title="Download PDF"
+                        >
+                          <FiDownload className="w-4 h-4" />
+                        </Button>
+                        <Button
                           variant="ghost"
                           size="sm"
                           onClick={(e) => {
@@ -940,6 +1006,17 @@ export default function LeadDetailPage() {
         initialData={editingQueryForItinerary ? queries[editingQueryForItinerary] || null : null}
         leadId={leadId}
         loading={queryLoading}
+      />
+
+      {/* Assign Lead Modal */}
+      <AssignLeadToSubAgent
+        leadId={leadId}
+        open={assignLeadModalOpen}
+        onClose={() => setAssignLeadModalOpen(false)}
+        onSuccess={() => {
+          // Refresh lead data if needed
+          fetchLeadDataRef.current?.();
+        }}
       />
     </div>
   );
