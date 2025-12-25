@@ -102,6 +102,11 @@ async function fixDuplicates() {
     );
 
     const stats = verifyResult.rows[0];
+    if (!stats) {
+      console.log('⚠️  Could not fetch statistics');
+      return;
+    }
+    
     console.log(`Total itineraries: ${stats.total}`);
     console.log(`With customer_id: ${stats.with_customer_id}`);
     console.log(`Duplicates: ${stats.duplicates}`);

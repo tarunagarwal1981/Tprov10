@@ -25,6 +25,11 @@ async function applyTriggerFix() {
     for (let i = 0; i < statements.length; i++) {
       const statement = statements[i];
       
+      // Skip if statement is undefined or empty
+      if (!statement) {
+        continue;
+      }
+      
       // Skip the verification query for now (we'll run it separately)
       if (statement.includes('SELECT') && statement.includes('status')) {
         continue;

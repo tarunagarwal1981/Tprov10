@@ -748,8 +748,10 @@ export default function LeadDetailPage() {
                               className="h-6 px-2 mt-2 text-xs font-mono text-gray-500 hover:text-gray-700 border border-gray-300 hover:border-gray-400"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                navigator.clipboard.writeText(itinerary.customer_id);
-                                toast.success('Itinerary ID copied to clipboard');
+                                if (itinerary.customer_id) {
+                                  navigator.clipboard.writeText(itinerary.customer_id);
+                                  toast.success('Itinerary ID copied to clipboard');
+                                }
                               }}
                             >
                               <FiCopy className="w-3 h-3 mr-1" />
@@ -824,8 +826,10 @@ export default function LeadDetailPage() {
                               className="h-5 w-5 p-0 hover:bg-gray-100"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                navigator.clipboard.writeText(itinerary.customer_id!);
-                                toast.success('Itinerary ID copied');
+                                if (itinerary.customer_id) {
+                                  navigator.clipboard.writeText(itinerary.customer_id);
+                                  toast.success('Itinerary ID copied');
+                                }
                               }}
                               title="Copy ID"
                             >
