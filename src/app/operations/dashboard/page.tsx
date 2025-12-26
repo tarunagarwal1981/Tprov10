@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/context/CognitoAuthContext';
 import { useToast } from '@/hooks/useToast';
+import { getAccessToken } from '@/lib/auth/getAccessToken';
 
 interface Itinerary {
   id: string;
@@ -34,9 +35,10 @@ export default function OperationsDashboard() {
     try {
       setLoading(true);
       // Fetch all confirmed itineraries
+      const accessToken = getAccessToken();
       const response = await fetch('/api/itineraries/confirmed', {
         headers: {
-          'Authorization': `Bearer ${user?.accessToken || ''}`,
+          'Authorization': `Bearer ${accessToken || ''}`,
         },
       });
       if (response.ok) {

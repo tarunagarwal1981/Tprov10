@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/useToast';
 import { useAuth } from '@/context/CognitoAuthContext';
+import { getAccessToken } from '@/lib/auth/getAccessToken';
 
 interface CreateSubAgentFormProps {
   open: boolean;
@@ -64,7 +65,7 @@ export function CreateSubAgentForm({ open, onClose, onSuccess }: CreateSubAgentF
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${user?.accessToken || ''}`,
+          'Authorization': `Bearer ${getAccessToken() || ''}`,
         },
         body: JSON.stringify({
           name: formData.name,
@@ -195,7 +196,7 @@ export function CreateSubAgentForm({ open, onClose, onSuccess }: CreateSubAgentF
                   Generate
                 </Button>
               </div>
-              <p className="text-xs text-gray-500 mt-1">Minimum 8 characters. Use "Generate" for a secure password.</p>
+              <p className="text-xs text-gray-500 mt-1">Minimum 8 characters. Use &quot;Generate&quot; for a secure password.</p>
             </div>
 
             {/* Actions */}

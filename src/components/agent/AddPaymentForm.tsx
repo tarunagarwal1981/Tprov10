@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/useToast';
 import { useAuth } from '@/context/CognitoAuthContext';
+import { getAccessToken } from '@/lib/auth/getAccessToken';
 
 interface AddPaymentFormProps {
   itineraryId: string;
@@ -67,7 +68,7 @@ export function AddPaymentForm({ itineraryId, open, onClose, onSuccess }: AddPay
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${user?.accessToken || ''}`,
+          'Authorization': `Bearer ${getAccessToken() || ''}`,
         },
         body: JSON.stringify({
           amount: parseFloat(formData.amount),

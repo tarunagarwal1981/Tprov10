@@ -86,8 +86,9 @@ export async function GET(
       const { renderToBuffer } = await import('@react-pdf/renderer');
       const { InvoicePDF } = await import('@/lib/pdf/templates/InvoicePDF');
       
+      const InvoicePDFComponent = InvoicePDF as React.ComponentType<any>;
       const pdfBuffer = await renderToBuffer(
-        React.createElement(InvoicePDF, {
+        React.createElement(InvoicePDFComponent, {
           invoice: {
             invoice_number: invoice.invoice_number,
             total_amount: invoice.total_amount,
@@ -109,7 +110,7 @@ export async function GET(
         })
       );
 
-      return new NextResponse(pdfBuffer, {
+      return new NextResponse(pdfBuffer as any, {
         headers: {
           'Content-Type': 'application/pdf',
           'Content-Disposition': `attachment; filename="invoice-${invoice.invoice_number}.pdf"`,

@@ -128,8 +128,9 @@ export async function GET(
       const { renderToBuffer } = await import('@react-pdf/renderer');
       const { VoucherPDF } = await import('@/lib/pdf/templates/VoucherPDF');
       
+      const VoucherPDFComponent = VoucherPDF as React.ComponentType<any>;
       const pdfBuffer = await renderToBuffer(
-        React.createElement(VoucherPDF, {
+        React.createElement(VoucherPDFComponent, {
           voucher: {
             voucher_number: voucherNumber,
             booking_reference: bookingReference,
@@ -162,7 +163,7 @@ export async function GET(
         })
       );
 
-      return new NextResponse(pdfBuffer, {
+      return new NextResponse(pdfBuffer as any, {
         headers: {
           'Content-Type': 'application/pdf',
           'Content-Disposition': `attachment; filename="voucher-${voucherNumber}.pdf"`,

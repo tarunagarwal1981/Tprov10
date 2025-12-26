@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/context/CognitoAuthContext';
 import { useToast } from '@/hooks/useToast';
+import { getAccessToken } from '@/lib/auth/getAccessToken';
 import { ActivitySelectorModal } from '@/components/itinerary/ActivitySelectorModal';
 import { TransferSelectorModal } from '@/components/itinerary/TransferSelectorModal';
 import { OperatorContactCard } from '@/components/agent/OperatorContactCard';
@@ -53,6 +54,7 @@ interface Itinerary {
   start_date: string | null;
   end_date: string | null;
   query_id: string | null;
+  customer_id?: string | null;
 }
 
 interface ItineraryItem {
@@ -889,9 +891,10 @@ export default function CreateItineraryPage() {
                     return;
                   }
                   try {
+                    const accessToken = getAccessToken();
                     const response = await fetch(`/api/itineraries/${itinerary.id}/pdf`, {
                       headers: {
-                        'Authorization': `Bearer ${user?.accessToken || ''}`,
+                        'Authorization': `Bearer ${accessToken || ''}`,
                       },
                     });
                     if (response.ok) {
@@ -1356,9 +1359,10 @@ export default function CreateItineraryPage() {
                     return;
                   }
                   try {
+                    const accessToken = getAccessToken();
                     const response = await fetch(`/api/itineraries/${itinerary.id}/pdf`, {
                       headers: {
-                        'Authorization': `Bearer ${user?.accessToken || ''}`,
+                        'Authorization': `Bearer ${accessToken || ''}`,
                       },
                     });
                     if (response.ok) {

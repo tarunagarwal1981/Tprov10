@@ -19,7 +19,7 @@ export type Database = {
           email: string
           name: string
           phone?: string
-          role: 'SUPER_ADMIN' | 'ADMIN' | 'TOUR_OPERATOR' | 'TRAVEL_AGENT' | 'USER'
+          role: 'SUPER_ADMIN' | 'ADMIN' | 'TOUR_OPERATOR' | 'TRAVEL_AGENT' | 'SUB_AGENT' | 'OPERATIONS' | 'SALES' | 'USER'
           profile: Json
           created_at: string
           updated_at: string

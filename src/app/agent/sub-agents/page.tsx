@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/context/CognitoAuthContext';
 import { useToast } from '@/hooks/useToast';
+import { getAccessToken } from '@/lib/auth/getAccessToken';
 import { CreateSubAgentForm } from '@/components/agent/CreateSubAgentForm';
 
 interface SubAgent {
@@ -36,9 +37,10 @@ export default function SubAgentsPage() {
   const fetchSubAgents = async () => {
     try {
       setLoading(true);
+      const accessToken = getAccessToken();
       const response = await fetch('/api/agents/sub-agents', {
         headers: {
-          'Authorization': `Bearer ${user?.accessToken || ''}`,
+          'Authorization': `Bearer ${accessToken || ''}`,
         },
       });
       if (response.ok) {
@@ -61,12 +63,13 @@ export default function SubAgentsPage() {
     }
 
     try {
-      const response = await fetch(`/api/agents/sub-agents/${subAgentId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${user?.accessToken || ''}`,
-        },
-      });
+        const accessToken = getAccessToken();
+        const response = await fetch(`/api/agents/sub-agents/${subAgentId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${accessToken || ''}`,
+          },
+        });
 
       if (response.ok) {
         toast.success('Sub-agent deleted successfully');

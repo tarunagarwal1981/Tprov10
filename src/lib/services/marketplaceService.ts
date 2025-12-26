@@ -316,7 +316,7 @@ export class MarketplaceService {
       const isSubAgent = userRole === 'SUB_AGENT';
       
       let whereClause = 'lp.agent_id::text = $1';
-      let queryParams: any[] = [agentId];
+      const queryParams: any[] = [agentId];
       
       if (isSubAgent) {
         // Sub-agents only see leads assigned to them

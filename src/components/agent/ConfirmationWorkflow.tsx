@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/useToast';
 import { useAuth } from '@/context/CognitoAuthContext';
+import { getAccessToken } from '@/lib/auth/getAccessToken';
 
 interface ConfirmationWorkflowProps {
   itineraryId: string;
@@ -38,7 +39,7 @@ export function ConfirmationWorkflow({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${user?.accessToken || ''}`,
+          'Authorization': `Bearer ${getAccessToken() || ''}`,
         },
         body: JSON.stringify({ lock: true }),
       });

@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/useToast';
 import { useAuth } from '@/context/CognitoAuthContext';
+import { getAccessToken } from '@/lib/auth/getAccessToken';
 
 interface Invoice {
   id: string;
@@ -71,9 +72,10 @@ export function InvoiceList({ itineraryId }: InvoiceListProps) {
   const fetchInvoices = async () => {
     try {
       setLoading(true);
+      const accessToken = getAccessToken();
       const response = await fetch(`/api/invoices?itineraryId=${itineraryId}`, {
         headers: {
-          'Authorization': `Bearer ${user?.accessToken || ''}`,
+          'Authorization': `Bearer ${accessToken || ''}`,
         },
       });
       if (response.ok) {
@@ -92,9 +94,10 @@ export function InvoiceList({ itineraryId }: InvoiceListProps) {
 
   const handleDownloadPDF = async (invoiceId: string, invoiceNumber: string) => {
     try {
+      const accessToken = getAccessToken();
       const response = await fetch(`/api/itineraries/${itineraryId}/invoice/pdf`, {
         headers: {
-          'Authorization': `Bearer ${user?.accessToken || ''}`,
+          'Authorization': `Bearer ${accessToken || ''}`,
         },
       });
       if (response.ok) {
@@ -124,7 +127,7 @@ export function InvoiceList({ itineraryId }: InvoiceListProps) {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${user?.accessToken || ''}`,
+          'Authorization': `Bearer ${getAccessToken() || ''}`,
         },
         body: JSON.stringify({
           status: 'paid',

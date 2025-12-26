@@ -27,6 +27,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/context/CognitoAuthContext';
 import { useToast } from '@/hooks/useToast';
+import { getAccessToken } from '@/lib/auth/getAccessToken';
 import { queryService, type ItineraryQuery } from '@/lib/services/queryService';
 import { itineraryService, type Itinerary } from '@/lib/services/itineraryService';
 import { MarketplaceService } from '@/lib/services/marketplaceService';
@@ -64,6 +65,7 @@ export default function LeadDetailPage() {
   const [queryLoading, setQueryLoading] = useState(false);
   const [queryAction, setQueryAction] = useState<'create' | 'insert' | null>(null); // Track which card was clicked
   const [editingQueryForItinerary, setEditingQueryForItinerary] = useState<string | null>(null); // Track which itinerary's query is being edited
+  const [assignLeadModalOpen, setAssignLeadModalOpen] = useState(false);
   const sidebarInitialized = React.useRef(false);
   const isFetchingRef = useRef(false);
   const fetchLeadDataRef = useRef<(() => Promise<void>) | null>(null);
@@ -913,9 +915,10 @@ export default function LeadDetailPage() {
                               return;
                             }
                             try {
+                              const accessToken = getAccessToken();
                               const response = await fetch(`/api/itineraries/${itinerary.id}/pdf`, {
                                 headers: {
-                                  'Authorization': `Bearer ${user?.accessToken || ''}`,
+                                  'Authorization': `Bearer ${accessToken || ''}`,
                                 },
                               });
                               if (response.ok) {

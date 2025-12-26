@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/CognitoAuthContext';
 import { useToast } from '@/hooks/useToast';
+import { getAccessToken } from '@/lib/auth/getAccessToken';
 import { useRouter } from 'next/navigation';
 
 interface Lead {
@@ -35,9 +36,10 @@ export default function SalesDashboard() {
     try {
       setLoading(true);
       // Fetch all leads (sales can see all leads)
+      const accessToken = getAccessToken();
       const response = await fetch(`/api/marketplace/purchased?agentId=${user?.id}`, {
         headers: {
-          'Authorization': `Bearer ${user?.accessToken || ''}`,
+          'Authorization': `Bearer ${accessToken || ''}`,
         },
       });
       if (response.ok) {

@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/useToast';
 import { useAuth } from '@/context/CognitoAuthContext';
+import { getAccessToken } from '@/lib/auth/getAccessToken';
 import { AddPaymentForm } from './AddPaymentForm';
 
 interface Payment {
@@ -71,9 +72,10 @@ export function PaymentTrackingPanel({ itineraryId, totalPrice }: PaymentTrackin
   const fetchPayments = async () => {
     try {
       setLoading(true);
+      const accessToken = getAccessToken();
       const response = await fetch(`/api/itineraries/${itineraryId}/payments`, {
         headers: {
-          'Authorization': `Bearer ${user?.accessToken || ''}`,
+          'Authorization': `Bearer ${accessToken || ''}`,
         },
       });
       if (response.ok) {

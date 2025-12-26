@@ -485,7 +485,7 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
             email: userData.email,
             name: userData.name,
             phone: userData.phone,
-            role: userData.role,
+            role: userData.role as any,
             profile: userData.profile,
             updated_at: new Date().toISOString(),
           })
@@ -505,7 +505,7 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
             email: userData.email,
             name: userData.name,
             phone: userData.phone,
-            role: userData.role,
+            role: userData.role as any,
             profile: userData.profile,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
@@ -959,6 +959,18 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'view_analytics',
   ],
   TRAVEL_AGENT: [
+    'manage_bookings',
+    'view_analytics',
+  ],
+  SUB_AGENT: [
+    'manage_bookings',
+    'view_analytics',
+  ],
+  OPERATIONS: [
+    'view_analytics',
+    'manage_bookings',
+  ],
+  SALES: [
     'manage_bookings',
     'view_analytics',
   ],

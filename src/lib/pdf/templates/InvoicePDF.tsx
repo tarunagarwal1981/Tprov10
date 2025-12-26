@@ -96,7 +96,17 @@ const styles = StyleSheet.create({
     marginTop: 30,
     padding: 15,
     backgroundColor: '#f9fafb',
-    borderRadius: 5,
+  },
+  customerInfo: {
+    fontSize: 10,
+    marginBottom: 3,
+  },
+  paymentTermText: {
+    fontSize: 9,
+    marginBottom: 5,
+  },
+  textRight: {
+    textAlign: 'right',
   },
 });
 
@@ -160,16 +170,16 @@ export const InvoicePDF = ({ invoice, itinerary, lead, items }: InvoicePDFProps)
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Bill To:</Text>
           {lead.customerName && (
-            <Text style={{ fontSize: 10, marginBottom: 3 }}>{lead.customerName}</Text>
+            <Text style={styles.customerInfo}>{lead.customerName}</Text>
           )}
           {lead.customerEmail && (
-            <Text style={{ fontSize: 10, marginBottom: 3 }}>{lead.customerEmail}</Text>
+            <Text style={styles.customerInfo}>{lead.customerEmail}</Text>
           )}
           {lead.customerPhone && (
-            <Text style={{ fontSize: 10, marginBottom: 3 }}>{lead.customerPhone}</Text>
+            <Text style={styles.customerInfo}>{lead.customerPhone}</Text>
           )}
           {itinerary.customer_id && (
-            <Text style={{ fontSize: 10, marginBottom: 3 }}>
+            <Text style={styles.customerInfo}>
               Reference ID: {itinerary.customer_id}
             </Text>
           )}
@@ -178,7 +188,7 @@ export const InvoicePDF = ({ invoice, itinerary, lead, items }: InvoicePDFProps)
         {/* Itinerary Reference */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Itinerary:</Text>
-          <Text style={{ fontSize: 10 }}>{itinerary.name}</Text>
+          <Text style={styles.customerInfo}>{itinerary.name}</Text>
         </View>
 
         {/* Items Table */}
@@ -189,8 +199,8 @@ export const InvoicePDF = ({ invoice, itinerary, lead, items }: InvoicePDFProps)
               <Text style={styles.tableCellDescription}>Description</Text>
               <Text style={styles.tableCell}>Type</Text>
               <Text style={styles.tableCell}>Qty</Text>
-              <Text style={[styles.tableCell, { textAlign: 'right' }]}>Unit Price</Text>
-              <Text style={[styles.tableCell, { textAlign: 'right' }]}>Total</Text>
+              <Text style={[styles.tableCell, styles.textRight]}>Unit Price</Text>
+              <Text style={[styles.tableCell, styles.textRight]}>Total</Text>
             </View>
             {items.map((item) => (
               <View key={item.id} style={styles.tableRow}>
@@ -201,10 +211,10 @@ export const InvoicePDF = ({ invoice, itinerary, lead, items }: InvoicePDFProps)
                    item.package_type}
                 </Text>
                 <Text style={styles.tableCell}>{item.quantity}</Text>
-                <Text style={[styles.tableCell, { textAlign: 'right' }]}>
+                <Text style={[styles.tableCell, styles.textRight]}>
                   {formatCurrency(item.unit_price || 0)}
                 </Text>
-                <Text style={[styles.tableCell, { textAlign: 'right' }]}>
+                <Text style={[styles.tableCell, styles.textRight]}>
                   {formatCurrency(item.total_price || item.unit_price || 0)}
                 </Text>
               </View>
@@ -230,13 +240,13 @@ export const InvoicePDF = ({ invoice, itinerary, lead, items }: InvoicePDFProps)
         {/* Payment Terms */}
         <View style={styles.paymentTerms}>
           <Text style={styles.sectionTitle}>Payment Terms:</Text>
-          <Text style={{ fontSize: 9, marginBottom: 5 }}>
+          <Text style={styles.paymentTermText}>
             • Payment is due within 30 days of invoice date
           </Text>
-          <Text style={{ fontSize: 9, marginBottom: 5 }}>
+          <Text style={styles.paymentTermText}>
             • Please include invoice number with your payment
           </Text>
-          <Text style={{ fontSize: 9 }}>
+          <Text style={styles.paymentTermText}>
             • For payment inquiries, please contact your travel agent
           </Text>
         </View>

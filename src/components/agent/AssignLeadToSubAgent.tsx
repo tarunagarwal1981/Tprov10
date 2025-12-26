@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/useToast';
 import { useAuth } from '@/context/CognitoAuthContext';
+import { getAccessToken } from '@/lib/auth/getAccessToken';
 
 interface SubAgent {
   id: string;
@@ -41,7 +42,7 @@ export function AssignLeadToSubAgent({ leadId, open, onClose, onSuccess }: Assig
       setLoading(true);
       const response = await fetch('/api/agents/sub-agents', {
         headers: {
-          'Authorization': `Bearer ${user?.accessToken || ''}`,
+          'Authorization': `Bearer ${getAccessToken() || ''}`,
         },
       });
       if (response.ok) {
@@ -70,7 +71,7 @@ export function AssignLeadToSubAgent({ leadId, open, onClose, onSuccess }: Assig
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${user?.accessToken || ''}`,
+          'Authorization': `Bearer ${getAccessToken() || ''}`,
         },
         body: JSON.stringify({
           sub_agent_id: selectedSubAgentId,

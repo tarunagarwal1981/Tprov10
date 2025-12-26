@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
         );
         return {
           ...subAgent,
-          assignedLeadsCount: parseInt(assignmentsResult.rows[0]?.count || '0', 10),
+          assignedLeadsCount: parseInt(String(assignmentsResult.rows[0]?.count || '0'), 10),
         };
       })
     );

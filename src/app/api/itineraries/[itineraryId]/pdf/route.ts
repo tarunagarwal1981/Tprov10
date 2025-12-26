@@ -140,8 +140,9 @@ export async function GET(
       const { renderToBuffer } = await import('@react-pdf/renderer');
       const { ItineraryPDF } = await import('@/lib/pdf/templates/ItineraryPDF');
       
+      const ItineraryPDFComponent = ItineraryPDF as React.ComponentType<any>;
       const pdfBuffer = await renderToBuffer(
-        React.createElement(ItineraryPDF, {
+        React.createElement(ItineraryPDFComponent, {
           itinerary: {
             id: itinerary.id,
             name: itinerary.name,
@@ -167,7 +168,7 @@ export async function GET(
       );
 
       // Return PDF
-      return new NextResponse(pdfBuffer, {
+      return new NextResponse(pdfBuffer as any, {
         headers: {
           'Content-Type': 'application/pdf',
           'Content-Disposition': `attachment; filename="itinerary-${itinerary.customer_id || itineraryId}.pdf"`,
