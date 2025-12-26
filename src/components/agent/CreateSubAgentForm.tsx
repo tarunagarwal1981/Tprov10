@@ -158,7 +158,8 @@ export function CreateSubAgentForm({ open, onClose, onSuccess }: CreateSubAgentF
           password: '',
           phone: '',
         });
-        onSuccess();
+        onClose(); // Close the form
+        onSuccess(); // Refresh the sub-agents list
       } else {
         // Handle different error types with specific messages
         const errorMessage = responseData.details || responseData.error || 'Failed to create sub-agent';

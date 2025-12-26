@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { query, queryOne } from '@/lib/aws/lambda-database';
 import { getUserIdFromToken } from '@/lib/auth/getUserIdFromToken';
 import { CognitoIdentityProviderClient, AdminCreateUserCommand, AdminSetUserPasswordCommand } from '@aws-sdk/client-cognito-identity-provider';
+import { v4 as uuidv4 } from 'uuid';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -167,14 +168,18 @@ export async function POST(request: NextRequest) {
       });
 
       const createUserResponse = await cognitoClient.send(createUserCommand);
-      cognitoUserId = createUserResponse.User?.Username || '';
+      const cognitoUsername = createUserResponse.User?.Username || '';
 
-      if (!cognitoUserId) {
-        console.error('[Sub-Agent Creation] Failed to get user ID from Cognito response');
-        throw new Error('Failed to get user ID from Cognito');
+      if (!cognitoUsername) {
+        console.error('[Sub-Agent Creation] Failed to get username from Cognito response');
+        throw new Error('Failed to get username from Cognito');
       }
 
-      console.log('[Sub-Agent Creation] User created in Cognito:', cognitoUserId);
+      console.log('[Sub-Agent Creation] User created in Cognito:', cognitoUsername);
+      
+      // Generate UUID for database (Cognito username is email, but database id field requires UUID)
+      cognitoUserId = uuidv4();
+      console.log('[Sub-Agent Creation] Generated UUID for database:', cognitoUserId);
 
       // Set password
       console.log('[Sub-Agent Creation] Setting password in Cognito...');
