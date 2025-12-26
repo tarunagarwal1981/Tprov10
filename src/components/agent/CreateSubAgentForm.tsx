@@ -67,24 +67,66 @@ export function CreateSubAgentForm({ open, onClose, onSuccess }: CreateSubAgentF
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    console.log('[CreateSubAgentForm] Form submission started:', {
+      name: formData.name,
+      email: formData.email,
+      hasPassword: !!formData.password,
+      passwordLength: formData.password.length,
+      hasPhone: !!formData.phone,
+    });
+
+    // Client-side validation
     if (!formData.name || !formData.email || !formData.password) {
-      toast.error('Please fill in all required fields');
+      const missingFields = [];
+      if (!formData.name) missingFields.push('Name');
+      if (!formData.email) missingFields.push('Email');
+      if (!formData.password) missingFields.push('Password');
+      
+      console.warn('[CreateSubAgentForm] Validation failed: Missing required fields:', missingFields);
+      toast.error(`Please fill in all required fields: ${missingFields.join(', ')}`);
       return;
     }
 
+    // Email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      console.warn('[CreateSubAgentForm] Validation failed: Invalid email format:', formData.email);
+      toast.error('Please enter a valid email address');
+      return;
+    }
+
+    // Password length validation
     if (formData.password.length < 8) {
+      console.warn('[CreateSubAgentForm] Validation failed: Password too short');
       toast.error('Password must be at least 8 characters long');
       return;
     }
+
+    // Password complexity validation
+    const hasUpperCase = /[A-Z]/.test(formData.password);
+    const hasLowerCase = /[a-z]/.test(formData.password);
+    const hasNumber = /[0-9]/.test(formData.password);
+    const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(formData.password);
+    
+    if (!hasUpperCase || !hasLowerCase || !hasNumber || !hasSpecial) {
+      console.warn('[CreateSubAgentForm] Validation failed: Password complexity requirements not met');
+      toast.error('Password must contain uppercase, lowercase, number, and special character');
+      return;
+    }
+
+    console.log('[CreateSubAgentForm] Client-side validations passed, submitting to API...');
 
     setLoading(true);
     try {
       const accessToken = getAccessToken();
       if (!accessToken) {
+        console.error('[CreateSubAgentForm] No access token found');
         toast.error('Please log in again');
+        setLoading(false);
         return;
       }
 
+      console.log('[CreateSubAgentForm] Sending request to API...');
       const response = await fetch('/api/agents/sub-agents', {
         method: 'POST',
         headers: {
@@ -99,7 +141,16 @@ export function CreateSubAgentForm({ open, onClose, onSuccess }: CreateSubAgentF
         }),
       });
 
+      const responseData = await response.json();
+      console.log('[CreateSubAgentForm] API response:', {
+        status: response.status,
+        ok: response.ok,
+        error: responseData.error,
+        details: responseData.details,
+      });
+
       if (response.ok) {
+        console.log('[CreateSubAgentForm] Sub-agent created successfully:', responseData.subAgent);
         toast.success('Sub-agent created successfully');
         setFormData({
           name: '',
@@ -109,12 +160,26 @@ export function CreateSubAgentForm({ open, onClose, onSuccess }: CreateSubAgentF
         });
         onSuccess();
       } else {
-        const error = await response.json();
-        toast.error(error.error || 'Failed to create sub-agent');
+        // Handle different error types with specific messages
+        const errorMessage = responseData.details || responseData.error || 'Failed to create sub-agent';
+        
+        if (response.status === 400) {
+          console.error('[CreateSubAgentForm] Validation error:', errorMessage);
+          toast.error(errorMessage);
+        } else if (response.status === 409) {
+          console.error('[CreateSubAgentForm] Conflict error - user already exists:', errorMessage);
+          toast.error(errorMessage);
+        } else if (response.status === 401) {
+          console.error('[CreateSubAgentForm] Unauthorized - token may be expired');
+          toast.error('Your session has expired. Please log in again.');
+        } else {
+          console.error('[CreateSubAgentForm] Server error:', errorMessage);
+          toast.error(errorMessage);
+        }
       }
     } catch (error) {
-      console.error('Error creating sub-agent:', error);
-      toast.error('Failed to create sub-agent');
+      console.error('[CreateSubAgentForm] Network or unexpected error:', error);
+      toast.error('Failed to create sub-agent. Please try again.');
     } finally {
       setLoading(false);
     }
