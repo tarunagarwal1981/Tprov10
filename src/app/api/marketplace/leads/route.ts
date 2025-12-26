@@ -81,10 +81,42 @@ export async function POST(request: NextRequest) {
       posted_at,
     } = body;
 
-    // Validate required fields
+    // Validate required fields based on table constraints
     if (!title || !destination || !customer_name || !customer_email || !lead_price) {
       return NextResponse.json(
         { error: 'Missing required fields: title, destination, customer_name, customer_email, lead_price' },
+        { status: 400 }
+      );
+    }
+
+    // Validate NOT NULL fields from table schema
+    if (!trip_type) {
+      return NextResponse.json(
+        { error: 'trip_type is required' },
+        { status: 400 }
+      );
+    }
+    if (budget_min === null || budget_min === undefined) {
+      return NextResponse.json(
+        { error: 'budget_min is required' },
+        { status: 400 }
+      );
+    }
+    if (budget_max === null || budget_max === undefined) {
+      return NextResponse.json(
+        { error: 'budget_max is required' },
+        { status: 400 }
+      );
+    }
+    if (duration_days === null || duration_days === undefined) {
+      return NextResponse.json(
+        { error: 'duration_days is required' },
+        { status: 400 }
+      );
+    }
+    if (!expires_at) {
+      return NextResponse.json(
+        { error: 'expires_at is required' },
         { status: 400 }
       );
     }
@@ -101,11 +133,11 @@ export async function POST(request: NextRequest) {
       [
         title,
         destination,
-        trip_type || null,
-        budget_min || null,
-        budget_max || null,
-        duration_days || null,
-        travelers_count || null,
+        trip_type,
+        budget_min,
+        budget_max,
+        duration_days,
+        travelers_count || 1, // Default from table
         travel_date_start || null,
         travel_date_end || null,
         special_requirements || null,
@@ -113,10 +145,10 @@ export async function POST(request: NextRequest) {
         customer_email,
         customer_phone || null,
         detailed_requirements || null,
-        lead_quality_score || null,
+        lead_quality_score || 50, // Default from table
         lead_price,
         status || 'AVAILABLE',
-        expires_at || null,
+        expires_at,
         posted_at || new Date().toISOString(),
       ]
     );
