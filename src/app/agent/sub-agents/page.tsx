@@ -38,9 +38,15 @@ export default function SubAgentsPage() {
     try {
       setLoading(true);
       const accessToken = getAccessToken();
+      if (!accessToken) {
+        toast.error('Please log in again');
+        setLoading(false);
+        return;
+      }
+
       const response = await fetch('/api/agents/sub-agents', {
         headers: {
-          'Authorization': `Bearer ${accessToken || ''}`,
+          'Authorization': `Bearer ${accessToken}`,
         },
       });
       if (response.ok) {
@@ -64,10 +70,15 @@ export default function SubAgentsPage() {
 
     try {
         const accessToken = getAccessToken();
+        if (!accessToken) {
+          toast.error('Please log in again');
+          return;
+        }
+
         const response = await fetch(`/api/agents/sub-agents/${subAgentId}`, {
           method: 'DELETE',
           headers: {
-            'Authorization': `Bearer ${accessToken || ''}`,
+            'Authorization': `Bearer ${accessToken}`,
           },
         });
 

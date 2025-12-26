@@ -61,11 +61,17 @@ export function CreateSubAgentForm({ open, onClose, onSuccess }: CreateSubAgentF
 
     setLoading(true);
     try {
+      const accessToken = getAccessToken();
+      if (!accessToken) {
+        toast.error('Please log in again');
+        return;
+      }
+
       const response = await fetch('/api/agents/sub-agents', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${getAccessToken() || ''}`,
+          'Authorization': `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
           name: formData.name,
