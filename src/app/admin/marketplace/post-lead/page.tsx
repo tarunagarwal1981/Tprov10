@@ -39,7 +39,6 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { useToast } from '@/hooks/useToast';
-import { createClient } from '@/lib/supabase/client';
 import { TripType, LeadStatus } from '@/lib/types/marketplace';
 import { useRouter } from 'next/navigation';
 
@@ -206,16 +205,17 @@ export default function PostLeadPage() {
     setIsSubmitting(true);
 
     try {
-      const supabase = createClient();
-
       // Prepare expiration date
       const expiresAt = new Date(data.expiresAt);
       expiresAt.setHours(23, 59, 59, 999);
 
-      // Insert into lead_marketplace table
-      const { data: marketplaceLead, error: marketplaceError } = await supabase
-        .from('lead_marketplace')
-        .insert({
+      // Create marketplace lead via API
+      const response = await fetch('/api/marketplace/leads', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           title: data.title,
           destination: data.destination,
           trip_type: data.tripType,
@@ -235,12 +235,12 @@ export default function PostLeadPage() {
           status: LeadStatus.AVAILABLE,
           expires_at: expiresAt.toISOString(),
           posted_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
+        }),
+      });
 
-      if (marketplaceError) {
-        throw new Error(marketplaceError.message);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to post lead');
       }
 
       toast.success('Lead posted successfully to the marketplace!');

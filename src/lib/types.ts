@@ -414,63 +414,7 @@ export const isActivityPackage = (pkg: Package): pkg is ActivityPackage =>
   pkg.type === 'ACTIVITY_PACKAGE';
 
 // ============================================================================
-// DATABASE TYPES (for Supabase)
+// DATABASE TYPES (for AWS Lambda Database Service)
 // ============================================================================
-
-export interface Database {
-  public: {
-    Tables: {
-      users: {
-        Row: User;
-        Insert: Omit<User, 'id' | 'created_at' | 'updated_at'>;
-        Update: Partial<Omit<User, 'id' | 'created_at' | 'updated_at'>>;
-      };
-      destinations: {
-        Row: Destination;
-        Insert: Omit<Destination, 'id' | 'created_at' | 'updated_at'>;
-        Update: Partial<Omit<Destination, 'id' | 'created_at' | 'updated_at'>>;
-      };
-      hotels: {
-        Row: Hotel;
-        Insert: Omit<Hotel, 'id' | 'created_at' | 'updated_at'>;
-        Update: Partial<Omit<Hotel, 'id' | 'created_at' | 'updated_at'>>;
-      };
-      activities: {
-        Row: Activity;
-        Insert: Omit<Activity, 'id' | 'created_at' | 'updated_at'>;
-        Update: Partial<Omit<Activity, 'id' | 'created_at' | 'updated_at'>>;
-      };
-      bookings: {
-        Row: Booking;
-        Insert: Omit<Booking, 'id' | 'created_at' | 'updated_at'>;
-        Update: Partial<Omit<Booking, 'id' | 'created_at' | 'updated_at'>>;
-      };
-      tour_operators: {
-        Row: TourOperator;
-        Insert: Omit<TourOperator, 'id' | 'created_at' | 'updated_at'>;
-        Update: Partial<Omit<TourOperator, 'id' | 'created_at' | 'updated_at'>>;
-      };
-      travel_agents: {
-        Row: TravelAgent;
-        Insert: Omit<TravelAgent, 'id' | 'created_at' | 'updated_at'>;
-        Update: Partial<Omit<TravelAgent, 'id' | 'created_at' | 'updated_at'>>;
-      };
-    };
-    Views: {
-      [_ in never]: never;
-    };
-    Functions: {
-      [_ in never]: never;
-    };
-    Enums: {
-      user_role: UserRole;
-      package_type: Package['type'];
-      booking_status: BookingStatus;
-      hotel_category: HotelCategory;
-      activity_category: ActivityCategory;
-      difficulty_level: DifficultyLevel;
-      room_type: RoomType;
-      meal_plan: MealPlan;
-    };
-  };
-}
+// Note: Database operations are handled via AWS Lambda database service
+// Types are defined inline in API routes and services

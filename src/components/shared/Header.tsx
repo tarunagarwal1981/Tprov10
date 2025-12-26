@@ -55,7 +55,6 @@ import {
   CommandSeparator,
   CommandShortcut,
 } from '@/components/ui/command';
-import { createClient } from '@/lib/supabase/client';
 
 // ============================================================================
 // TYPES AND INTERFACES
@@ -508,28 +507,8 @@ export function Header({
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  // Supabase realtime notifications
-  useEffect(() => {
-    let channel: any;
-    try {
-      const supabase = createClient();
-      channel = supabase
-        .channel('notifications-changes')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, (payload: any) => {
-          if (payload.eventType === 'INSERT') {
-            const newItem = payload.new as NotificationItem;
-            setNotificationsState(prev => [
-              { ...newItem, timestamp: new Date(newItem.timestamp) },
-              ...prev,
-            ]);
-          }
-        })
-        .subscribe();
-    } catch {}
-    return () => {
-      try { channel && channel.unsubscribe && channel.unsubscribe(); } catch {}
-    };
-  }, []);
+  // Note: Realtime notifications removed - using polling instead if needed
+  // For AWS implementation, consider using EventBridge or polling API endpoint
 
   const breadcrumbs = getBreadcrumbs(pathname || "");
   const unreadNotifications = notificationsState.filter(n => !n.isRead).length;
