@@ -17,13 +17,31 @@ interface CreateSubAgentFormProps {
 }
 
 const generatePassword = () => {
+  // Generate password that meets Cognito requirements:
+  // - At least 8 characters
+  // - Contains uppercase, lowercase, number, and special character
   const length = 12;
-  const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+  const lowercase = 'abcdefghijklmnopqrstuvwxyz';
+  const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const numbers = '0123456789';
+  const special = '!@#$%^&*';
+  const allChars = lowercase + uppercase + numbers + special;
+  
   let password = '';
-  for (let i = 0; i < length; i++) {
-    password += charset.charAt(Math.floor(Math.random() * charset.length));
+  
+  // Ensure at least one of each required character type
+  password += lowercase.charAt(Math.floor(Math.random() * lowercase.length));
+  password += uppercase.charAt(Math.floor(Math.random() * uppercase.length));
+  password += numbers.charAt(Math.floor(Math.random() * numbers.length));
+  password += special.charAt(Math.floor(Math.random() * special.length));
+  
+  // Fill the rest randomly
+  for (let i = password.length; i < length; i++) {
+    password += allChars.charAt(Math.floor(Math.random() * allChars.length));
   }
-  return password;
+  
+  // Shuffle the password to avoid predictable pattern
+  return password.split('').sort(() => Math.random() - 0.5).join('');
 };
 
 export function CreateSubAgentForm({ open, onClose, onSuccess }: CreateSubAgentFormProps) {
