@@ -5,6 +5,7 @@ import { IdempotencyService } from '@/lib/services/idempotencyService';
 import { FraudPreventionService } from '@/lib/services/fraudPreventionService';
 import { TermsService } from '@/lib/services/termsService';
 import { getUserIdFromToken } from '@/lib/auth/getUserIdFromToken';
+import { ensureLeadFromPurchase } from '@/lib/services/leadService';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -202,6 +203,25 @@ export async function POST(request: NextRequest) {
           purchaseId: purchase?.id,
           paymentId: payment.id 
         });
+
+        // Automatically create lead in leads table after successful purchase
+        try {
+          console.log('[Purchase API] Ensuring lead exists in leads table...');
+          const leadResult = await ensureLeadFromPurchase(leadId, agentId);
+          console.log('[Purchase API] Lead ensured:', {
+            leadId: leadResult.leadId,
+            customerId: leadResult.customerId,
+            created: leadResult.created,
+          });
+        } catch (leadError: any) {
+          // Don't fail the purchase if lead creation fails - it can be created later via /api/leads/ensure
+          console.error('[Purchase API] Failed to ensure lead exists (non-fatal):', {
+            error: leadError?.message || String(leadError),
+            leadId,
+            agentId,
+          });
+          // Continue with purchase success response
+        }
         
         return NextResponse.json({ 
           purchase,
@@ -223,6 +243,26 @@ export async function POST(request: NextRequest) {
           status: PaymentStatus.PENDING,
           failureReason: 'Payment gateway not yet integrated',
         });
+
+        // Automatically create lead in leads table after successful purchase
+        // (Even though payment is pending, the purchase is recorded)
+        try {
+          console.log('[Purchase API] Ensuring lead exists in leads table...');
+          const leadResult = await ensureLeadFromPurchase(leadId, agentId);
+          console.log('[Purchase API] Lead ensured:', {
+            leadId: leadResult.leadId,
+            customerId: leadResult.customerId,
+            created: leadResult.created,
+          });
+        } catch (leadError: any) {
+          // Don't fail the purchase if lead creation fails - it can be created later via /api/leads/ensure
+          console.error('[Purchase API] Failed to ensure lead exists (non-fatal):', {
+            error: leadError?.message || String(leadError),
+            leadId,
+            agentId,
+          });
+          // Continue with purchase success response
+        }
 
         return NextResponse.json({ 
           purchase,
