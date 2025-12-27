@@ -20,7 +20,7 @@ CREATE TYPE accessibility_facility AS ENUM ('RESTROOMS', 'PARKING', 'ELEVATOR', 
 -- Create activity_packages table
 CREATE TABLE activity_packages (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    operator_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    operator_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     
     -- Basic Information
     title VARCHAR(100) NOT NULL,
@@ -306,111 +306,45 @@ CREATE TRIGGER generate_package_slug_trigger
     FOR EACH ROW EXECUTE FUNCTION generate_package_slug();
 
 -- Enable Row Level Security (RLS)
-ALTER TABLE activity_packages ENABLE ROW LEVEL SECURITY;
-ALTER TABLE activity_package_images ENABLE ROW LEVEL SECURITY;
-ALTER TABLE activity_package_time_slots ENABLE ROW LEVEL SECURITY;
-ALTER TABLE activity_package_variants ENABLE ROW LEVEL SECURITY;
-ALTER TABLE activity_package_faqs ENABLE ROW LEVEL SECURITY;
+-- RLS disabled (not used in AWS RDS)
+-- RLS disabled (not used in AWS RDS)
+-- RLS disabled (not used in AWS RDS)
+-- RLS disabled (not used in AWS RDS)
+-- RLS disabled (not used in AWS RDS)
 
 -- Create RLS policies
 -- Activity packages: Users can only see their own packages, or published packages
-CREATE POLICY "Users can view their own activity packages" ON activity_packages
-    FOR SELECT USING (auth.uid() = operator_id);
+-- RLS Policy removed (not used in AWS RDS)
 
-CREATE POLICY "Users can view published activity packages" ON activity_packages
-    FOR SELECT USING (status = 'published');
+-- RLS Policy removed (not used in AWS RDS)
 
-CREATE POLICY "Users can insert their own activity packages" ON activity_packages
-    FOR INSERT WITH CHECK (auth.uid() = operator_id);
+-- RLS Policy removed (not used in AWS RDS)
 
-CREATE POLICY "Users can update their own activity packages" ON activity_packages
-    FOR UPDATE USING (auth.uid() = operator_id);
+-- RLS Policy removed (not used in AWS RDS)
 
-CREATE POLICY "Users can delete their own activity packages" ON activity_packages
-    FOR DELETE USING (auth.uid() = operator_id);
+-- RLS Policy removed (not used in AWS RDS)
 
 -- Activity package images: Users can only manage images for their own packages
-CREATE POLICY "Users can view images for their packages or published packages" ON activity_package_images
-    FOR SELECT USING (
-        EXISTS (
-            SELECT 1 FROM activity_packages 
-            WHERE id = package_id 
-            AND (operator_id = auth.uid() OR status = 'published')
-        )
-    );
+-- RLS Policy removed (not used in AWS RDS)
 
-CREATE POLICY "Users can insert images for their packages" ON activity_package_images
-    FOR INSERT WITH CHECK (
-        EXISTS (
-            SELECT 1 FROM activity_packages 
-            WHERE id = package_id AND operator_id = auth.uid()
-        )
-    );
+-- RLS Policy removed (not used in AWS RDS)
 
-CREATE POLICY "Users can update images for their packages" ON activity_package_images
-    FOR UPDATE USING (
-        EXISTS (
-            SELECT 1 FROM activity_packages 
-            WHERE id = package_id AND operator_id = auth.uid()
-        )
-    );
+-- RLS Policy removed (not used in AWS RDS)
 
-CREATE POLICY "Users can delete images for their packages" ON activity_package_images
-    FOR DELETE USING (
-        EXISTS (
-            SELECT 1 FROM activity_packages 
-            WHERE id = package_id AND operator_id = auth.uid()
-        )
-    );
+-- RLS Policy removed (not used in AWS RDS)
 
 -- Similar policies for other related tables
-CREATE POLICY "Users can manage time slots for their packages" ON activity_package_time_slots
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM activity_packages 
-            WHERE id = package_id AND operator_id = auth.uid()
-        )
-    );
+-- RLS Policy removed (not used in AWS RDS)
 
-CREATE POLICY "Users can view time slots for published packages" ON activity_package_time_slots
-    FOR SELECT USING (
-        EXISTS (
-            SELECT 1 FROM activity_packages 
-            WHERE id = package_id AND status = 'published'
-        )
-    );
+-- RLS Policy removed (not used in AWS RDS)
 
-CREATE POLICY "Users can manage variants for their packages" ON activity_package_variants
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM activity_packages 
-            WHERE id = package_id AND operator_id = auth.uid()
-        )
-    );
+-- RLS Policy removed (not used in AWS RDS)
 
-CREATE POLICY "Users can view variants for published packages" ON activity_package_variants
-    FOR SELECT USING (
-        EXISTS (
-            SELECT 1 FROM activity_packages 
-            WHERE id = package_id AND status = 'published'
-        )
-    );
+-- RLS Policy removed (not used in AWS RDS)
 
-CREATE POLICY "Users can manage FAQs for their packages" ON activity_package_faqs
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM activity_packages 
-            WHERE id = package_id AND operator_id = auth.uid()
-        )
-    );
+-- RLS Policy removed (not used in AWS RDS)
 
-CREATE POLICY "Users can view FAQs for published packages" ON activity_package_faqs
-    FOR SELECT USING (
-        EXISTS (
-            SELECT 1 FROM activity_packages 
-            WHERE id = package_id AND status = 'published'
-        )
-    );
+-- RLS Policy removed (not used in AWS RDS)
 
 -- Create storage bucket for activity package images
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
@@ -423,26 +357,13 @@ VALUES (
 ) ON CONFLICT (id) DO NOTHING;
 
 -- Create storage policies for activity package images
-CREATE POLICY "Users can upload images for their packages" ON storage.objects
-    FOR INSERT WITH CHECK (
-        bucket_id = 'activity-package-images' AND
-        auth.uid()::text = (storage.foldername(name))[1]
-    );
+-- RLS Policy removed (not used in AWS RDS)
 
-CREATE POLICY "Users can update images for their packages" ON storage.objects
-    FOR UPDATE USING (
-        bucket_id = 'activity-package-images' AND
-        auth.uid()::text = (storage.foldername(name))[1]
-    );
+-- RLS Policy removed (not used in AWS RDS)
 
-CREATE POLICY "Users can delete images for their packages" ON storage.objects
-    FOR DELETE USING (
-        bucket_id = 'activity-package-images' AND
-        auth.uid()::text = (storage.foldername(name))[1]
-    );
+-- RLS Policy removed (not used in AWS RDS)
 
-CREATE POLICY "Anyone can view published package images" ON storage.objects
-    FOR SELECT USING (bucket_id = 'activity-package-images');
+-- RLS Policy removed (not used in AWS RDS)
 
 -- Create function to handle image uploads
 CREATE OR REPLACE FUNCTION handle_activity_package_image_upload()

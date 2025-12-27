@@ -237,168 +237,96 @@ CREATE INDEX IF NOT EXISTS idx_multi_city_hotel_package_cancellation_package ON 
 -- 13. ENABLE ROW LEVEL SECURITY
 -- ============================================================================
 
-ALTER TABLE multi_city_hotel_packages ENABLE ROW LEVEL SECURITY;
-ALTER TABLE multi_city_hotel_package_cities ENABLE ROW LEVEL SECURITY;
-ALTER TABLE multi_city_hotel_package_city_hotels ENABLE ROW LEVEL SECURITY;
-ALTER TABLE multi_city_hotel_package_day_plans ENABLE ROW LEVEL SECURITY;
-ALTER TABLE multi_city_hotel_package_day_flights ENABLE ROW LEVEL SECURITY;
-ALTER TABLE multi_city_hotel_pricing_packages ENABLE ROW LEVEL SECURITY;
-ALTER TABLE multi_city_hotel_pricing_vehicles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE multi_city_hotel_package_inclusions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE multi_city_hotel_package_exclusions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE multi_city_hotel_package_addons ENABLE ROW LEVEL SECURITY;
-ALTER TABLE multi_city_hotel_package_cancellation_tiers ENABLE ROW LEVEL SECURITY;
+-- RLS disabled (not used in AWS RDS)
+-- RLS disabled (not used in AWS RDS)
+-- RLS disabled (not used in AWS RDS)
+-- RLS disabled (not used in AWS RDS)
+-- RLS disabled (not used in AWS RDS)
+-- RLS disabled (not used in AWS RDS)
+-- RLS disabled (not used in AWS RDS)
+-- RLS disabled (not used in AWS RDS)
+-- RLS disabled (not used in AWS RDS)
+-- RLS disabled (not used in AWS RDS)
+-- RLS disabled (not used in AWS RDS)
 
 -- ============================================================================
 -- 13. CREATE RLS POLICIES
 -- ============================================================================
 
 -- Main packages table policies
-DROP POLICY IF EXISTS "Operators can view their own hotel packages" ON multi_city_hotel_packages;
-CREATE POLICY "Operators can view their own hotel packages"
-  ON multi_city_hotel_packages FOR SELECT
-  USING (operator_id = auth.uid());
+-- DROP POLICY removed (RLS not used)
+-- RLS Policy removed (not used in AWS RDS)
 
-DROP POLICY IF EXISTS "Operators can create hotel packages" ON multi_city_hotel_packages;
-CREATE POLICY "Operators can create hotel packages"
-  ON multi_city_hotel_packages FOR INSERT
-  WITH CHECK (operator_id = auth.uid());
+-- DROP POLICY removed (RLS not used)
+-- RLS Policy removed (not used in AWS RDS)
 
-DROP POLICY IF EXISTS "Operators can update their own hotel packages" ON multi_city_hotel_packages;
-CREATE POLICY "Operators can update their own hotel packages"
-  ON multi_city_hotel_packages FOR UPDATE
-  USING (operator_id = auth.uid());
+-- DROP POLICY removed (RLS not used)
+-- RLS Policy removed (not used in AWS RDS)
 
-DROP POLICY IF EXISTS "Operators can delete their own hotel packages" ON multi_city_hotel_packages;
-CREATE POLICY "Operators can delete their own hotel packages"
-  ON multi_city_hotel_packages FOR DELETE
-  USING (operator_id = auth.uid());
+-- DROP POLICY removed (RLS not used)
+-- RLS Policy removed (not used in AWS RDS)
 
-DROP POLICY IF EXISTS "Public can view published hotel packages" ON multi_city_hotel_packages;
-CREATE POLICY "Public can view published hotel packages"
-  ON multi_city_hotel_packages FOR SELECT
-  USING (status = 'published');
+-- DROP POLICY removed (RLS not used)
+-- RLS Policy removed (not used in AWS RDS)
 
 -- Related tables policies (cities, day plans, flights, etc.)
-DROP POLICY IF EXISTS "Operators can manage their hotel package cities" ON multi_city_hotel_package_cities;
-CREATE POLICY "Operators can manage their hotel package cities"
-  ON multi_city_hotel_package_cities FOR ALL
-  USING (package_id IN (SELECT id FROM multi_city_hotel_packages WHERE operator_id = auth.uid()));
+-- DROP POLICY removed (RLS not used)
+-- RLS Policy removed (not used in AWS RDS)
 
-DROP POLICY IF EXISTS "Operators can manage their hotel package city hotels" ON multi_city_hotel_package_city_hotels;
-CREATE POLICY "Operators can manage their hotel package city hotels"
-  ON multi_city_hotel_package_city_hotels FOR ALL
-  USING (city_id IN (
-    SELECT id FROM multi_city_hotel_package_cities WHERE package_id IN (
-      SELECT id FROM multi_city_hotel_packages WHERE operator_id = auth.uid()
-    )
-  ));
+-- DROP POLICY removed (RLS not used)
+-- RLS Policy removed (not used in AWS RDS)
 
-DROP POLICY IF EXISTS "Operators can manage their hotel package day plans" ON multi_city_hotel_package_day_plans;
-CREATE POLICY "Operators can manage their hotel package day plans"
-  ON multi_city_hotel_package_day_plans FOR ALL
-  USING (package_id IN (SELECT id FROM multi_city_hotel_packages WHERE operator_id = auth.uid()));
+-- DROP POLICY removed (RLS not used)
+-- RLS Policy removed (not used in AWS RDS)
 
-DROP POLICY IF EXISTS "Operators can manage their hotel package day flights" ON multi_city_hotel_package_day_flights;
-CREATE POLICY "Operators can manage their hotel package day flights"
-  ON multi_city_hotel_package_day_flights FOR ALL
-  USING (day_plan_id IN (
-    SELECT id FROM multi_city_hotel_package_day_plans WHERE package_id IN (
-      SELECT id FROM multi_city_hotel_packages WHERE operator_id = auth.uid()
-    )
-  ));
+-- DROP POLICY removed (RLS not used)
+-- RLS Policy removed (not used in AWS RDS)
 
-DROP POLICY IF EXISTS "Operators can manage their hotel package pricing" ON multi_city_hotel_pricing_packages;
-CREATE POLICY "Operators can manage their hotel package pricing"
-  ON multi_city_hotel_pricing_packages FOR ALL
-  USING (package_id IN (SELECT id FROM multi_city_hotel_packages WHERE operator_id = auth.uid()));
+-- DROP POLICY removed (RLS not used)
+-- RLS Policy removed (not used in AWS RDS)
 
-DROP POLICY IF EXISTS "Operators can manage their hotel package vehicles" ON multi_city_hotel_pricing_vehicles;
-CREATE POLICY "Operators can manage their hotel package vehicles"
-  ON multi_city_hotel_pricing_vehicles FOR ALL
-  USING (pricing_package_id IN (
-    SELECT id FROM multi_city_hotel_pricing_packages WHERE package_id IN (
-      SELECT id FROM multi_city_hotel_packages WHERE operator_id = auth.uid()
-    )
-  ));
+-- DROP POLICY removed (RLS not used)
+-- RLS Policy removed (not used in AWS RDS)
 
-DROP POLICY IF EXISTS "Operators can manage their hotel package inclusions" ON multi_city_hotel_package_inclusions;
-CREATE POLICY "Operators can manage their hotel package inclusions"
-  ON multi_city_hotel_package_inclusions FOR ALL
-  USING (package_id IN (SELECT id FROM multi_city_hotel_packages WHERE operator_id = auth.uid()));
+-- DROP POLICY removed (RLS not used)
+-- RLS Policy removed (not used in AWS RDS)
 
-DROP POLICY IF EXISTS "Operators can manage their hotel package exclusions" ON multi_city_hotel_package_exclusions;
-CREATE POLICY "Operators can manage their hotel package exclusions"
-  ON multi_city_hotel_package_exclusions FOR ALL
-  USING (package_id IN (SELECT id FROM multi_city_hotel_packages WHERE operator_id = auth.uid()));
+-- DROP POLICY removed (RLS not used)
+-- RLS Policy removed (not used in AWS RDS)
 
-DROP POLICY IF EXISTS "Operators can manage their hotel package addons" ON multi_city_hotel_package_addons;
-CREATE POLICY "Operators can manage their hotel package addons"
-  ON multi_city_hotel_package_addons FOR ALL
-  USING (package_id IN (SELECT id FROM multi_city_hotel_packages WHERE operator_id = auth.uid()));
+-- DROP POLICY removed (RLS not used)
+-- RLS Policy removed (not used in AWS RDS)
 
-DROP POLICY IF EXISTS "Operators can manage their hotel package cancellation tiers" ON multi_city_hotel_package_cancellation_tiers;
-CREATE POLICY "Operators can manage their hotel package cancellation tiers"
-  ON multi_city_hotel_package_cancellation_tiers FOR ALL
-  USING (package_id IN (SELECT id FROM multi_city_hotel_packages WHERE operator_id = auth.uid()));
+-- DROP POLICY removed (RLS not used)
+-- RLS Policy removed (not used in AWS RDS)
 
 -- Public read policies for published packages
-DROP POLICY IF EXISTS "Public can view published hotel package details" ON multi_city_hotel_package_cities;
-CREATE POLICY "Public can view published hotel package details"
-  ON multi_city_hotel_package_cities FOR SELECT
-  USING (package_id IN (SELECT id FROM multi_city_hotel_packages WHERE status = 'published'));
+-- DROP POLICY removed (RLS not used)
+-- RLS Policy removed (not used in AWS RDS)
 
-DROP POLICY IF EXISTS "Public can view published hotel package city hotels" ON multi_city_hotel_package_city_hotels;
-CREATE POLICY "Public can view published hotel package city hotels"
-  ON multi_city_hotel_package_city_hotels FOR SELECT
-  USING (city_id IN (
-    SELECT id FROM multi_city_hotel_package_cities WHERE package_id IN (
-      SELECT id FROM multi_city_hotel_packages WHERE status = 'published'
-    )
-  ));
+-- DROP POLICY removed (RLS not used)
+-- RLS Policy removed (not used in AWS RDS)
 
-DROP POLICY IF EXISTS "Public can view published hotel package day plans" ON multi_city_hotel_package_day_plans;
-CREATE POLICY "Public can view published hotel package day plans"
-  ON multi_city_hotel_package_day_plans FOR SELECT
-  USING (package_id IN (SELECT id FROM multi_city_hotel_packages WHERE status = 'published'));
+-- DROP POLICY removed (RLS not used)
+-- RLS Policy removed (not used in AWS RDS)
 
-DROP POLICY IF EXISTS "Public can view published hotel package flights" ON multi_city_hotel_package_day_flights;
-CREATE POLICY "Public can view published hotel package flights"
-  ON multi_city_hotel_package_day_flights FOR SELECT
-  USING (day_plan_id IN (
-    SELECT id FROM multi_city_hotel_package_day_plans WHERE package_id IN (
-      SELECT id FROM multi_city_hotel_packages WHERE status = 'published'
-    )
-  ));
+-- DROP POLICY removed (RLS not used)
+-- RLS Policy removed (not used in AWS RDS)
 
-DROP POLICY IF EXISTS "Public can view published hotel package pricing" ON multi_city_hotel_pricing_packages;
-CREATE POLICY "Public can view published hotel package pricing"
-  ON multi_city_hotel_pricing_packages FOR SELECT
-  USING (package_id IN (SELECT id FROM multi_city_hotel_packages WHERE status = 'published'));
+-- DROP POLICY removed (RLS not used)
+-- RLS Policy removed (not used in AWS RDS)
 
-DROP POLICY IF EXISTS "Public can view published hotel package vehicles" ON multi_city_hotel_pricing_vehicles;
-CREATE POLICY "Public can view published hotel package vehicles"
-  ON multi_city_hotel_pricing_vehicles FOR SELECT
-  USING (pricing_package_id IN (
-    SELECT id FROM multi_city_hotel_pricing_packages WHERE package_id IN (
-      SELECT id FROM multi_city_hotel_packages WHERE status = 'published'
-    )
-  ));
+-- DROP POLICY removed (RLS not used)
+-- RLS Policy removed (not used in AWS RDS)
 
-DROP POLICY IF EXISTS "Public can view published hotel package inclusions" ON multi_city_hotel_package_inclusions;
-CREATE POLICY "Public can view published hotel package inclusions"
-  ON multi_city_hotel_package_inclusions FOR SELECT
-  USING (package_id IN (SELECT id FROM multi_city_hotel_packages WHERE status = 'published'));
+-- DROP POLICY removed (RLS not used)
+-- RLS Policy removed (not used in AWS RDS)
 
-DROP POLICY IF EXISTS "Public can view published hotel package exclusions" ON multi_city_hotel_package_exclusions;
-CREATE POLICY "Public can view published hotel package exclusions"
-  ON multi_city_hotel_package_exclusions FOR SELECT
-  USING (package_id IN (SELECT id FROM multi_city_hotel_packages WHERE status = 'published'));
+-- DROP POLICY removed (RLS not used)
+-- RLS Policy removed (not used in AWS RDS)
 
-DROP POLICY IF EXISTS "Public can view active hotel package addons" ON multi_city_hotel_package_addons;
-CREATE POLICY "Public can view active hotel package addons"
-  ON multi_city_hotel_package_addons FOR SELECT
-  USING (is_active = true AND package_id IN (SELECT id FROM multi_city_hotel_packages WHERE status = 'published'));
+-- DROP POLICY removed (RLS not used)
+-- RLS Policy removed (not used in AWS RDS)
 
 -- ============================================================================
 -- 14. CREATE TRIGGERS

@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     // }
 
-    console.log('🔄 Updating database URLs from Supabase to S3...');
+    console.log('🔄 Updating database URLs to S3...');
 
     // Update public_url
     const updatePublicUrl = `

@@ -1,53 +1,57 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { createSupabaseBrowserClient } from '@/lib/supabase/client';
+import { useAuth } from '@/context/CognitoAuthContext';
 
 export const DatabaseChecker: React.FC = () => {
   const [dbStatus, setDbStatus] = useState<any>({});
   const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth();
 
   useEffect(() => {
     const checkDatabase = async () => {
       try {
-        const supabase = createSupabaseBrowserClient();
-        
-        // Check if users table exists and is accessible
-        const { data: users, error: usersError } = await supabase
-          .from('users')
-          .select('count')
-          .limit(1);
+        // Check if users API endpoint is accessible
+        const usersStatus: { accessible: boolean; error: string | null; data: any } = { accessible: false, error: null, data: null };
+        try {
+          const response = await fetch('/api/user/profile');
+          usersStatus.accessible = response.ok;
+          if (response.ok) {
+            const data = await response.json();
+            usersStatus.data = data;
+          } else {
+            usersStatus.error = `Status: ${response.status}`;
+          }
+        } catch (err: any) {
+          usersStatus.error = err.message;
+        }
 
-        // Check if we can query the table structure
-        const { data: sampleUser, error: sampleError } = await supabase
-          .from('users')
-          .select('id, email, role, name')
-          .limit(1);
-
-        // Try to get the current user's profile specifically
-        const { data: { session } } = await supabase.auth.getSession();
+        // Check current user profile if logged in
         let currentUserProfile = null;
         let currentUserError = null;
         
-        if (session?.user) {
-          const result = await supabase
-            .from('users')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
-          currentUserProfile = result.data;
-          currentUserError = result.error;
+        if (user?.id) {
+          try {
+            const response = await fetch('/api/user/profile');
+            if (response.ok) {
+              const data = await response.json();
+              currentUserProfile = data;
+            } else {
+              currentUserError = `Status: ${response.status}`;
+            }
+          } catch (err: any) {
+            currentUserError = err.message;
+          }
         }
 
         setDbStatus({
-          usersTableAccessible: !usersError,
-          usersError: usersError?.message || null,
-          sampleQuery: !sampleError,
-          sampleError: sampleError?.message || null,
-          sampleData: sampleUser,
-          currentUserQuery: session?.user ? {
+          usersTableAccessible: usersStatus.accessible,
+          usersError: usersStatus.error,
+          sampleQuery: usersStatus.accessible,
+          sampleData: usersStatus.data,
+          currentUserQuery: user?.id ? {
             accessible: !currentUserError,
-            error: currentUserError?.message || null,
+            error: currentUserError,
             data: currentUserProfile
           } : null,
           timestamp: new Date().toISOString(),

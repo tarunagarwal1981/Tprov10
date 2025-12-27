@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 
 export const NetworkDebugger: React.FC = () => {
   const [networkStatus, setNetworkStatus] = useState<any>({});
@@ -9,8 +8,6 @@ export const NetworkDebugger: React.FC = () => {
   useEffect(() => {
     const checkNetwork = async () => {
       try {
-        const supabase = createSupabaseBrowserClient();
-        
         // Check network connectivity
         const networkInfo = {
           online: navigator.onLine,
@@ -21,15 +18,18 @@ export const NetworkDebugger: React.FC = () => {
           } : null
         };
         
-        // Test Supabase REST API directly
-        const { data: restData, error: restError } = await supabase
-          .from('users')
-          .select('count')
-          .limit(1);
+        // Test AWS API connection
+        const apiStatus = { connected: false, error: null };
+        try {
+          const response = await fetch('/api/health', { method: 'GET' });
+          apiStatus.connected = response.ok;
+        } catch (err: any) {
+          apiStatus.error = err.message;
+        }
         
         setNetworkStatus({
           networkInfo,
-          supabaseUrl: (supabase as any).supabaseUrl,
+          apiStatus,
           timestamp: new Date().toISOString(),
         });
       } catch (err) {
@@ -69,9 +69,12 @@ export const NetworkDebugger: React.FC = () => {
         )}
         
         <div>
-          <strong>Supabase URL:</strong>
-          <div className="text-xs mt-1 break-all">
-            {networkStatus.supabaseUrl}
+          <strong>API Status:</strong>
+          <div className="text-xs mt-1">
+            {networkStatus.apiStatus?.connected ? '✅ Connected' : '❌ Disconnected'}
+            {networkStatus.apiStatus?.error && (
+              <div className="text-red-300 mt-1">{networkStatus.apiStatus.error}</div>
+            )}
           </div>
         </div>
       </div>

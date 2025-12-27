@@ -79,70 +79,25 @@ CREATE INDEX IF NOT EXISTS idx_multi_city_private_package_rows_car_type
 -- 4. ENABLE ROW LEVEL SECURITY FOR PRIVATE PACKAGE ROWS
 -- ============================================================================
 
-ALTER TABLE multi_city_private_package_rows ENABLE ROW LEVEL SECURITY;
+-- RLS disabled (not used in AWS RDS)
 
 -- Drop existing policies if they exist
-DROP POLICY IF EXISTS "Operators can view their own private package rows" ON multi_city_private_package_rows;
-DROP POLICY IF EXISTS "Operators can create private package rows" ON multi_city_private_package_rows;
-DROP POLICY IF EXISTS "Operators can update their own private package rows" ON multi_city_private_package_rows;
-DROP POLICY IF EXISTS "Operators can delete their own private package rows" ON multi_city_private_package_rows;
-DROP POLICY IF EXISTS "Public can view private package rows for published tours" ON multi_city_private_package_rows;
+-- DROP POLICY removed (RLS not used)
+-- DROP POLICY removed (RLS not used)
+-- DROP POLICY removed (RLS not used)
+-- DROP POLICY removed (RLS not used)
+-- DROP POLICY removed (RLS not used)
 
 -- Private package rows policies
-CREATE POLICY "Operators can view their own private package rows"
-  ON multi_city_private_package_rows FOR SELECT
-  USING (
-    pricing_package_id IN (
-      SELECT id FROM multi_city_pricing_packages 
-      WHERE package_id IN (
-        SELECT id FROM multi_city_packages WHERE operator_id = auth.uid()
-      )
-    )
-  );
+-- RLS Policy removed (not used in AWS RDS)
 
-CREATE POLICY "Operators can create private package rows"
-  ON multi_city_private_package_rows FOR INSERT
-  WITH CHECK (
-    pricing_package_id IN (
-      SELECT id FROM multi_city_pricing_packages 
-      WHERE package_id IN (
-        SELECT id FROM multi_city_packages WHERE operator_id = auth.uid()
-      )
-    )
-  );
+-- RLS Policy removed (not used in AWS RDS)
 
-CREATE POLICY "Operators can update their own private package rows"
-  ON multi_city_private_package_rows FOR UPDATE
-  USING (
-    pricing_package_id IN (
-      SELECT id FROM multi_city_pricing_packages 
-      WHERE package_id IN (
-        SELECT id FROM multi_city_packages WHERE operator_id = auth.uid()
-      )
-    )
-  );
+-- RLS Policy removed (not used in AWS RDS)
 
-CREATE POLICY "Operators can delete their own private package rows"
-  ON multi_city_private_package_rows FOR DELETE
-  USING (
-    pricing_package_id IN (
-      SELECT id FROM multi_city_pricing_packages 
-      WHERE package_id IN (
-        SELECT id FROM multi_city_packages WHERE operator_id = auth.uid()
-      )
-    )
-  );
+-- RLS Policy removed (not used in AWS RDS)
 
-CREATE POLICY "Public can view private package rows for published tours"
-  ON multi_city_private_package_rows FOR SELECT
-  USING (
-    pricing_package_id IN (
-      SELECT id FROM multi_city_pricing_packages 
-      WHERE package_id IN (
-        SELECT id FROM multi_city_packages WHERE status = 'published'
-      )
-    )
-  );
+-- RLS Policy removed (not used in AWS RDS)
 
 -- ============================================================================
 -- 5. CREATE TRIGGER FOR PRIVATE PACKAGE ROWS UPDATE TIMESTAMP
@@ -207,63 +162,18 @@ CREATE TABLE IF NOT EXISTS multi_city_hotel_private_package_rows (
 CREATE INDEX IF NOT EXISTS idx_multi_city_hotel_private_package_rows_pricing_package_id 
   ON multi_city_hotel_private_package_rows(pricing_package_id);
 
-ALTER TABLE multi_city_hotel_private_package_rows ENABLE ROW LEVEL SECURITY;
+-- RLS disabled (not used in AWS RDS)
 
 -- RLS policies for multi_city_hotel_private_package_rows
-CREATE POLICY "Operators can view their own hotel private package rows"
-  ON multi_city_hotel_private_package_rows FOR SELECT
-  USING (
-    pricing_package_id IN (
-      SELECT id FROM multi_city_hotel_pricing_packages 
-      WHERE package_id IN (
-        SELECT id FROM multi_city_hotel_packages WHERE operator_id = auth.uid()
-      )
-    )
-  );
+-- RLS Policy removed (not used in AWS RDS)
 
-CREATE POLICY "Operators can create hotel private package rows"
-  ON multi_city_hotel_private_package_rows FOR INSERT
-  WITH CHECK (
-    pricing_package_id IN (
-      SELECT id FROM multi_city_hotel_pricing_packages 
-      WHERE package_id IN (
-        SELECT id FROM multi_city_hotel_packages WHERE operator_id = auth.uid()
-      )
-    )
-  );
+-- RLS Policy removed (not used in AWS RDS)
 
-CREATE POLICY "Operators can update their own hotel private package rows"
-  ON multi_city_hotel_private_package_rows FOR UPDATE
-  USING (
-    pricing_package_id IN (
-      SELECT id FROM multi_city_hotel_pricing_packages 
-      WHERE package_id IN (
-        SELECT id FROM multi_city_hotel_packages WHERE operator_id = auth.uid()
-      )
-    )
-  );
+-- RLS Policy removed (not used in AWS RDS)
 
-CREATE POLICY "Operators can delete their own hotel private package rows"
-  ON multi_city_hotel_private_package_rows FOR DELETE
-  USING (
-    pricing_package_id IN (
-      SELECT id FROM multi_city_hotel_pricing_packages 
-      WHERE package_id IN (
-        SELECT id FROM multi_city_hotel_packages WHERE operator_id = auth.uid()
-      )
-    )
-  );
+-- RLS Policy removed (not used in AWS RDS)
 
-CREATE POLICY "Public can view hotel private package rows for published tours"
-  ON multi_city_hotel_private_package_rows FOR SELECT
-  USING (
-    pricing_package_id IN (
-      SELECT id FROM multi_city_hotel_pricing_packages 
-      WHERE package_id IN (
-        SELECT id FROM multi_city_hotel_packages WHERE status = 'published'
-      )
-    )
-  );
+-- RLS Policy removed (not used in AWS RDS)
 
 -- ============================================================================
 -- 8. CREATE PRIVATE PACKAGE ROWS TABLE FOR FIXED DEPARTURE FLIGHT PACKAGES
@@ -285,63 +195,18 @@ CREATE TABLE IF NOT EXISTS fixed_departure_flight_private_package_rows (
 CREATE INDEX IF NOT EXISTS idx_fixed_departure_flight_private_package_rows_pricing_package_id 
   ON fixed_departure_flight_private_package_rows(pricing_package_id);
 
-ALTER TABLE fixed_departure_flight_private_package_rows ENABLE ROW LEVEL SECURITY;
+-- RLS disabled (not used in AWS RDS)
 
 -- RLS policies for fixed_departure_flight_private_package_rows
-CREATE POLICY "Operators can view their own flight private package rows"
-  ON fixed_departure_flight_private_package_rows FOR SELECT
-  USING (
-    pricing_package_id IN (
-      SELECT id FROM fixed_departure_flight_pricing_packages 
-      WHERE package_id IN (
-        SELECT id FROM fixed_departure_flight_packages WHERE operator_id = auth.uid()
-      )
-    )
-  );
+-- RLS Policy removed (not used in AWS RDS)
 
-CREATE POLICY "Operators can create flight private package rows"
-  ON fixed_departure_flight_private_package_rows FOR INSERT
-  WITH CHECK (
-    pricing_package_id IN (
-      SELECT id FROM fixed_departure_flight_pricing_packages 
-      WHERE package_id IN (
-        SELECT id FROM fixed_departure_flight_packages WHERE operator_id = auth.uid()
-      )
-    )
-  );
+-- RLS Policy removed (not used in AWS RDS)
 
-CREATE POLICY "Operators can update their own flight private package rows"
-  ON fixed_departure_flight_private_package_rows FOR UPDATE
-  USING (
-    pricing_package_id IN (
-      SELECT id FROM fixed_departure_flight_pricing_packages 
-      WHERE package_id IN (
-        SELECT id FROM fixed_departure_flight_packages WHERE operator_id = auth.uid()
-      )
-    )
-  );
+-- RLS Policy removed (not used in AWS RDS)
 
-CREATE POLICY "Operators can delete their own flight private package rows"
-  ON fixed_departure_flight_private_package_rows FOR DELETE
-  USING (
-    pricing_package_id IN (
-      SELECT id FROM fixed_departure_flight_pricing_packages 
-      WHERE package_id IN (
-        SELECT id FROM fixed_departure_flight_packages WHERE operator_id = auth.uid()
-      )
-    )
-  );
+-- RLS Policy removed (not used in AWS RDS)
 
-CREATE POLICY "Public can view flight private package rows for published tours"
-  ON fixed_departure_flight_private_package_rows FOR SELECT
-  USING (
-    pricing_package_id IN (
-      SELECT id FROM fixed_departure_flight_pricing_packages 
-      WHERE package_id IN (
-        SELECT id FROM fixed_departure_flight_packages WHERE status = 'published'
-      )
-    )
-  );
+-- RLS Policy removed (not used in AWS RDS)
 
 -- ============================================================================
 -- 9. CREATE TRIGGERS FOR UPDATED_AT TIMESTAMPS

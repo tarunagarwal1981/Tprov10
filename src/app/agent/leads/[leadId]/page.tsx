@@ -20,6 +20,7 @@ import {
   FiDownload,
   FiFileText,
   FiLock,
+  FiCheck,
 } from 'react-icons/fi';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -34,6 +35,13 @@ import { MarketplaceService } from '@/lib/services/marketplaceService';
 import { QueryModal } from '@/components/agent/QueryModal';
 import { LeadCommunicationHistory } from '@/components/agent/LeadCommunicationHistory';
 import { AssignLeadToSubAgent } from '@/components/agent/AssignLeadToSubAgent';
+import { GenerateInvoiceModal } from '@/components/agent/GenerateInvoiceModal';
+import { ConfirmPaymentModal } from '@/components/agent/ConfirmPaymentModal';
+import { LeadStageSelector } from '@/components/agent/LeadStageSelector';
+import { LeadPrioritySelector } from '@/components/agent/LeadPrioritySelector';
+import { FollowUpDatePicker } from '@/components/agent/FollowUpDatePicker';
+import { LeadNotesEditor } from '@/components/agent/LeadNotesEditor';
+import { StageBadge, PriorityBadge, OverdueBadge } from '@/components/agent/LeadStatusBadges';
 // Removed Supabase import - now using AWS API routes
 
 interface LeadDetails {
@@ -46,6 +54,12 @@ interface LeadDetails {
   budgetMax?: number;
   durationDays?: number;
   travelersCount?: number;
+  stage?: string;
+  priority?: string;
+  notes?: string | null;
+  requirements?: string | null;
+  next_follow_up_date?: string | null;
+  customer_id?: string | null;
 }
 
 export default function LeadDetailPage() {
@@ -61,11 +75,18 @@ export default function LeadDetailPage() {
   const [queries, setQueries] = useState<Record<string, ItineraryQuery>>({}); // Map of itinerary_id -> query
   const [itineraries, setItineraries] = useState<Itinerary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [itineraryPayments, setItineraryPayments] = useState<Record<string, { totalPaid: number; payments: any[] }>>({});
+  const [itineraryInvoices, setItineraryInvoices] = useState<Record<string, any[]>>({});
   const [queryModalOpen, setQueryModalOpen] = useState(false);
   const [queryLoading, setQueryLoading] = useState(false);
   const [queryAction, setQueryAction] = useState<'create' | 'insert' | null>(null); // Track which card was clicked
   const [editingQueryForItinerary, setEditingQueryForItinerary] = useState<string | null>(null); // Track which itinerary's query is being edited
   const [assignLeadModalOpen, setAssignLeadModalOpen] = useState(false);
+  const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
+  const [selectedItineraryForInvoice, setSelectedItineraryForInvoice] = useState<{ id: string; totalPrice: number } | null>(null);
+  const [confirmingItineraryId, setConfirmingItineraryId] = useState<string | null>(null);
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [selectedItineraryForPayment, setSelectedItineraryForPayment] = useState<{ id: string; totalPrice: number } | null>(null);
   const sidebarInitialized = React.useRef(false);
   const isFetchingRef = useRef(false);
   const fetchLeadDataRef = useRef<(() => Promise<void>) | null>(null);
@@ -141,14 +162,33 @@ export default function LeadDetailPage() {
           throw new Error(`Failed to fetch lead details: ${response.status}`);
         }
 
-        const { lead: leadData } = await response.json();
+        const { lead: leadDataRaw } = await response.json();
 
-        if (!leadData) {
+        if (!leadDataRaw) {
           console.error('[LeadDetailPage] Lead data is null');
           setLead(null);
           setLoading(false);
           return; // Don't navigate away, just show error state
         }
+
+        // Map to LeadDetails format with all fields
+        const leadData: LeadDetails = {
+          id: leadDataRaw.id,
+          customer_id: leadDataRaw.customer_id,
+          destination: leadDataRaw.destination,
+          customerName: leadDataRaw.customerName,
+          customerEmail: leadDataRaw.customerEmail,
+          customerPhone: leadDataRaw.customerPhone,
+          budgetMin: leadDataRaw.budgetMin ?? undefined,
+          budgetMax: leadDataRaw.budgetMax ?? undefined,
+          durationDays: leadDataRaw.durationDays ?? undefined,
+          travelersCount: leadDataRaw.travelersCount ?? undefined,
+          stage: leadDataRaw.stage || 'NEW',
+          priority: leadDataRaw.priority || 'MEDIUM',
+          notes: leadDataRaw.notes,
+          requirements: leadDataRaw.requirements,
+          next_follow_up_date: leadDataRaw.next_follow_up_date,
+        };
 
         console.log('[LeadDetailPage] Lead data fetched successfully');
         
@@ -203,16 +243,63 @@ export default function LeadDetailPage() {
             await Promise.all(queryPromises);
             console.log('[LeadDetailPage] Fetched queries:', Object.keys(queriesMap).length);
             
+            // Fetch payments and invoices for all itineraries
+            const paymentsMap: Record<string, { totalPaid: number; payments: any[] }> = {};
+            const invoicesMap: Record<string, any[]> = {};
+            
+            if (itinerariesData && itinerariesData.length > 0) {
+              const accessToken = getAccessToken();
+              await Promise.all(
+                itinerariesData.map(async (itinerary: Itinerary) => {
+                  try {
+                    // Fetch payments
+                    const paymentsResponse = await fetch(`/api/itineraries/${itinerary.id}/payments`, {
+                      headers: {
+                        'Authorization': `Bearer ${accessToken || ''}`,
+                      },
+                    });
+                    if (paymentsResponse.ok) {
+                      const { payments: paymentsData } = await paymentsResponse.json();
+                      const totalPaid = (paymentsData || []).reduce((sum: number, payment: any) => {
+                        if (payment.payment_type === 'refund') {
+                          return sum - payment.amount;
+                        }
+                        return sum + payment.amount;
+                      }, 0);
+                      paymentsMap[itinerary.id] = { totalPaid, payments: paymentsData || [] };
+                    }
+                    
+                    // Fetch invoices
+                    const invoicesResponse = await fetch(`/api/invoices?itineraryId=${itinerary.id}`, {
+                      headers: {
+                        'Authorization': `Bearer ${accessToken || ''}`,
+                      },
+                    });
+                    if (invoicesResponse.ok) {
+                      const { invoices: invoicesData } = await invoicesResponse.json();
+                      invoicesMap[itinerary.id] = invoicesData || [];
+                    }
+                  } catch (err) {
+                    console.error(`Error fetching payments/invoices for itinerary ${itinerary.id}:`, err);
+                  }
+                })
+              );
+            }
+            
             // Batch all state updates together to minimize re-renders
             // Use React's automatic batching (React 18+) by doing all updates in the same synchronous block
             setLead(leadData);
             setItineraries(itinerariesData || []);
             setQueries(queriesMap);
+            setItineraryPayments(paymentsMap);
+            setItineraryInvoices(invoicesMap);
           } else {
             console.warn('[LeadDetailPage] Failed to fetch itineraries:', itinerariesResponse.status);
             setLead(leadData);
             setItineraries([]);
             setQueries({});
+            setItineraryPayments({});
+            setItineraryInvoices({});
           }
         } catch (err) {
           clearTimeout(itinerariesTimeout);
@@ -561,6 +648,55 @@ export default function LeadDetailPage() {
     return destinations.map(d => `${d.city} (${d.nights} ${d.nights === 1 ? 'night' : 'nights'})`).join(' → ');
   };
 
+  // Handle Generate Invoice
+  const handleGenerateInvoice = (itinerary: Itinerary) => {
+    setSelectedItineraryForInvoice({
+      id: itinerary.id,
+      totalPrice: itinerary.total_price ?? 0,
+    });
+    setInvoiceModalOpen(true);
+  };
+
+  // Handle Confirm Itinerary
+  const handleConfirmItinerary = async (itineraryId: string) => {
+    if (confirmingItineraryId === itineraryId) return; // Prevent double-click
+    
+    setConfirmingItineraryId(itineraryId);
+    try {
+      const accessToken = getAccessToken();
+      const response = await fetch(`/api/itineraries/${itineraryId}/confirm`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken || ''}`,
+        },
+        body: JSON.stringify({ lock: true }),
+      });
+
+      if (response.ok) {
+        toast.success('Itinerary confirmed and locked successfully');
+        fetchLeadDataRef.current?.();
+      } else {
+        const error = await response.json();
+        toast.error(error.error || 'Failed to confirm itinerary');
+      }
+    } catch (error) {
+      console.error('Error confirming itinerary:', error);
+      toast.error('Failed to confirm itinerary');
+    } finally {
+      setConfirmingItineraryId(null);
+    }
+  };
+
+  // Handle Confirm Payment
+  const handleConfirmPayment = (itinerary: Itinerary) => {
+    setSelectedItineraryForPayment({
+      id: itinerary.id,
+      totalPrice: itinerary.total_price ?? 0,
+    });
+    setPaymentModalOpen(true);
+  };
+
   // Handle itinerary deletion
   const handleDeleteItinerary = async (itineraryId: string, itineraryName: string) => {
     // Confirmation dialog
@@ -661,7 +797,39 @@ export default function LeadDetailPage() {
             <CardHeader>
               <CardTitle className="text-lg">Lead Information</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-4">
+              {/* Stage and Priority */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Stage</label>
+                  <LeadStageSelector
+                    leadId={leadId}
+                    currentStage={lead.stage || 'NEW'}
+                    onUpdate={() => fetchLeadDataRef.current?.()}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Priority</label>
+                  <LeadPrioritySelector
+                    leadId={leadId}
+                    currentPriority={lead.priority || 'MEDIUM'}
+                    onUpdate={() => fetchLeadDataRef.current?.()}
+                  />
+                </div>
+              </div>
+
+              {/* Follow-up Date */}
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Follow-up Date</label>
+                <FollowUpDatePicker
+                  leadId={leadId}
+                  currentDate={lead.next_follow_up_date || null}
+                  onUpdate={() => fetchLeadDataRef.current?.()}
+                />
+              </div>
+
+              <Separator />
+
               {lead.customerName && (
                 <div className="flex items-center gap-2 text-sm">
                   <FiUser className="w-4 h-4 text-gray-500" />
@@ -722,6 +890,21 @@ export default function LeadDetailPage() {
 
           {/* Communication History */}
           <LeadCommunicationHistory leadId={leadId} />
+
+          {/* Notes and Requirements */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Notes & Requirements</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <LeadNotesEditor
+                leadId={leadId}
+                notes={lead.notes || null}
+                requirements={lead.requirements || null}
+                onUpdate={() => fetchLeadDataRef.current?.()}
+              />
+            </CardContent>
+          </Card>
         </div>
 
         {/* Right Column - Proposals Section */}
@@ -834,6 +1017,49 @@ export default function LeadDetailPage() {
                           <span>{itinerary.children_count} Children</span>
                         )}
                       </div>
+                      {/* Payment Summary */}
+                      {itineraryPayments[itinerary.id] && (
+                        <div className="space-y-2 pt-2 border-t">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-gray-600">Paid:</span>
+                            <span className="font-semibold text-green-600">
+                              ${itineraryPayments[itinerary.id]?.totalPaid.toFixed(2) || '0.00'} / ${displayPrice.toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div
+                              className={`h-2 rounded-full ${
+                                (itineraryPayments[itinerary.id]?.totalPaid || 0) >= displayPrice
+                                  ? 'bg-green-500'
+                                  : (itineraryPayments[itinerary.id]?.totalPaid || 0) > 0
+                                  ? 'bg-amber-500'
+                                  : 'bg-gray-300'
+                              }`}
+                              style={{
+                                width: `${Math.min(((itineraryPayments[itinerary.id]?.totalPaid || 0) / displayPrice) * 100, 100)}%`,
+                              }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Invoice Status */}
+                      {(() => {
+                        const invoices = itineraryInvoices[itinerary.id];
+                        return invoices && invoices.length > 0 ? (
+                          <div className="pt-2 border-t flex flex-wrap gap-2">
+                            {invoices.map((invoice) => (
+                              <Badge
+                                key={invoice.id}
+                                className="bg-blue-100 text-blue-700 border-blue-200 text-xs"
+                              >
+                                Invoice: {invoice.invoice_number} ({invoice.status})
+                              </Badge>
+                            ))}
+                          </div>
+                        ) : null;
+                      })()}
+                      
                       <div className="flex items-center justify-between pt-2 border-t">
                         <span className="text-sm text-gray-600">Total Price</span>
                         <span className="text-xl font-bold text-green-600">
@@ -905,6 +1131,45 @@ export default function LeadDetailPage() {
                             View Days
                           </Button>
                         )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleGenerateInvoice(itinerary);
+                          }}
+                          className="border-green-200 text-green-600 hover:bg-green-50 flex-shrink-0"
+                          title="Generate Invoice"
+                          disabled={itinerary.is_locked || (itinerary.total_price ?? 0) <= 0}
+                        >
+                          <FiFileText className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleConfirmItinerary(itinerary.id);
+                          }}
+                          className="border-emerald-200 text-emerald-600 hover:bg-emerald-50 flex-shrink-0"
+                          title="Confirm Itinerary"
+                          disabled={itinerary.is_locked || confirmingItineraryId === itinerary.id}
+                        >
+                          <FiCheck className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleConfirmPayment(itinerary);
+                          }}
+                          className="border-purple-200 text-purple-600 hover:bg-purple-50 flex-shrink-0"
+                          title="Confirm Payment"
+                          disabled={itinerary.is_locked}
+                        >
+                          <FiDollarSign className="w-4 h-4" />
+                        </Button>
                         <Button
                           variant="outline"
                           size="sm"
@@ -1021,6 +1286,38 @@ export default function LeadDetailPage() {
           fetchLeadDataRef.current?.();
         }}
       />
+
+      {/* Generate Invoice Modal */}
+      {selectedItineraryForInvoice && (
+        <GenerateInvoiceModal
+          itineraryId={selectedItineraryForInvoice.id}
+          totalPrice={selectedItineraryForInvoice.totalPrice}
+          open={invoiceModalOpen}
+          onClose={() => {
+            setInvoiceModalOpen(false);
+            setSelectedItineraryForInvoice(null);
+          }}
+          onSuccess={() => {
+            fetchLeadDataRef.current?.();
+          }}
+        />
+      )}
+
+      {/* Confirm Payment Modal */}
+      {selectedItineraryForPayment && (
+        <ConfirmPaymentModal
+          itineraryId={selectedItineraryForPayment.id}
+          totalPrice={selectedItineraryForPayment.totalPrice}
+          open={paymentModalOpen}
+          onClose={() => {
+            setPaymentModalOpen(false);
+            setSelectedItineraryForPayment(null);
+          }}
+          onSuccess={() => {
+            fetchLeadDataRef.current?.();
+          }}
+        />
+      )}
     </div>
   );
 }

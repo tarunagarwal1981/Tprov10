@@ -239,168 +239,96 @@ CREATE INDEX IF NOT EXISTS idx_fixed_departure_flight_package_cancellation_packa
 -- 13. ENABLE ROW LEVEL SECURITY
 -- ============================================================================
 
-ALTER TABLE fixed_departure_flight_packages ENABLE ROW LEVEL SECURITY;
-ALTER TABLE fixed_departure_flight_package_cities ENABLE ROW LEVEL SECURITY;
-ALTER TABLE fixed_departure_flight_package_city_hotels ENABLE ROW LEVEL SECURITY;
-ALTER TABLE fixed_departure_flight_package_day_plans ENABLE ROW LEVEL SECURITY;
-ALTER TABLE fixed_departure_flight_package_day_flights ENABLE ROW LEVEL SECURITY;
-ALTER TABLE fixed_departure_flight_pricing_packages ENABLE ROW LEVEL SECURITY;
-ALTER TABLE fixed_departure_flight_pricing_vehicles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE fixed_departure_flight_package_inclusions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE fixed_departure_flight_package_exclusions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE fixed_departure_flight_package_addons ENABLE ROW LEVEL SECURITY;
-ALTER TABLE fixed_departure_flight_package_cancellation_tiers ENABLE ROW LEVEL SECURITY;
+-- RLS disabled (not used in AWS RDS)
+-- RLS disabled (not used in AWS RDS)
+-- RLS disabled (not used in AWS RDS)
+-- RLS disabled (not used in AWS RDS)
+-- RLS disabled (not used in AWS RDS)
+-- RLS disabled (not used in AWS RDS)
+-- RLS disabled (not used in AWS RDS)
+-- RLS disabled (not used in AWS RDS)
+-- RLS disabled (not used in AWS RDS)
+-- RLS disabled (not used in AWS RDS)
+-- RLS disabled (not used in AWS RDS)
 
 -- ============================================================================
 -- 13. CREATE RLS POLICIES
 -- ============================================================================
 
 -- Main packages table policies
-DROP POLICY IF EXISTS "Operators can view their own flight packages" ON fixed_departure_flight_packages;
-CREATE POLICY "Operators can view their own flight packages"
-  ON fixed_departure_flight_packages FOR SELECT
-  USING (operator_id = auth.uid());
+-- DROP POLICY removed (RLS not used)
+-- RLS Policy removed (not used in AWS RDS)
 
-DROP POLICY IF EXISTS "Operators can create flight packages" ON fixed_departure_flight_packages;
-CREATE POLICY "Operators can create flight packages"
-  ON fixed_departure_flight_packages FOR INSERT
-  WITH CHECK (operator_id = auth.uid());
+-- DROP POLICY removed (RLS not used)
+-- RLS Policy removed (not used in AWS RDS)
 
-DROP POLICY IF EXISTS "Operators can update their own flight packages" ON fixed_departure_flight_packages;
-CREATE POLICY "Operators can update their own flight packages"
-  ON fixed_departure_flight_packages FOR UPDATE
-  USING (operator_id = auth.uid());
+-- DROP POLICY removed (RLS not used)
+-- RLS Policy removed (not used in AWS RDS)
 
-DROP POLICY IF EXISTS "Operators can delete their own flight packages" ON fixed_departure_flight_packages;
-CREATE POLICY "Operators can delete their own flight packages"
-  ON fixed_departure_flight_packages FOR DELETE
-  USING (operator_id = auth.uid());
+-- DROP POLICY removed (RLS not used)
+-- RLS Policy removed (not used in AWS RDS)
 
-DROP POLICY IF EXISTS "Public can view published flight packages" ON fixed_departure_flight_packages;
-CREATE POLICY "Public can view published flight packages"
-  ON fixed_departure_flight_packages FOR SELECT
-  USING (status = 'published');
+-- DROP POLICY removed (RLS not used)
+-- RLS Policy removed (not used in AWS RDS)
 
 -- Related tables policies (cities, day plans, flights, etc.)
-DROP POLICY IF EXISTS "Operators can manage their flight package cities" ON fixed_departure_flight_package_cities;
-CREATE POLICY "Operators can manage their flight package cities"
-  ON fixed_departure_flight_package_cities FOR ALL
-  USING (package_id IN (SELECT id FROM fixed_departure_flight_packages WHERE operator_id = auth.uid()));
+-- DROP POLICY removed (RLS not used)
+-- RLS Policy removed (not used in AWS RDS)
 
-DROP POLICY IF EXISTS "Operators can manage their flight package city hotels" ON fixed_departure_flight_package_city_hotels;
-CREATE POLICY "Operators can manage their flight package city hotels"
-  ON fixed_departure_flight_package_city_hotels FOR ALL
-  USING (city_id IN (
-    SELECT id FROM fixed_departure_flight_package_cities WHERE package_id IN (
-      SELECT id FROM fixed_departure_flight_packages WHERE operator_id = auth.uid()
-    )
-  ));
+-- DROP POLICY removed (RLS not used)
+-- RLS Policy removed (not used in AWS RDS)
 
-DROP POLICY IF EXISTS "Operators can manage their flight package day plans" ON fixed_departure_flight_package_day_plans;
-CREATE POLICY "Operators can manage their flight package day plans"
-  ON fixed_departure_flight_package_day_plans FOR ALL
-  USING (package_id IN (SELECT id FROM fixed_departure_flight_packages WHERE operator_id = auth.uid()));
+-- DROP POLICY removed (RLS not used)
+-- RLS Policy removed (not used in AWS RDS)
 
-DROP POLICY IF EXISTS "Operators can manage their flight package day flights" ON fixed_departure_flight_package_day_flights;
-CREATE POLICY "Operators can manage their flight package day flights"
-  ON fixed_departure_flight_package_day_flights FOR ALL
-  USING (day_plan_id IN (
-    SELECT id FROM fixed_departure_flight_package_day_plans WHERE package_id IN (
-      SELECT id FROM fixed_departure_flight_packages WHERE operator_id = auth.uid()
-    )
-  ));
+-- DROP POLICY removed (RLS not used)
+-- RLS Policy removed (not used in AWS RDS)
 
-DROP POLICY IF EXISTS "Operators can manage their flight package pricing" ON fixed_departure_flight_pricing_packages;
-CREATE POLICY "Operators can manage their flight package pricing"
-  ON fixed_departure_flight_pricing_packages FOR ALL
-  USING (package_id IN (SELECT id FROM fixed_departure_flight_packages WHERE operator_id = auth.uid()));
+-- DROP POLICY removed (RLS not used)
+-- RLS Policy removed (not used in AWS RDS)
 
-DROP POLICY IF EXISTS "Operators can manage their flight package vehicles" ON fixed_departure_flight_pricing_vehicles;
-CREATE POLICY "Operators can manage their flight package vehicles"
-  ON fixed_departure_flight_pricing_vehicles FOR ALL
-  USING (pricing_package_id IN (
-    SELECT id FROM fixed_departure_flight_pricing_packages WHERE package_id IN (
-      SELECT id FROM fixed_departure_flight_packages WHERE operator_id = auth.uid()
-    )
-  ));
+-- DROP POLICY removed (RLS not used)
+-- RLS Policy removed (not used in AWS RDS)
 
-DROP POLICY IF EXISTS "Operators can manage their flight package inclusions" ON fixed_departure_flight_package_inclusions;
-CREATE POLICY "Operators can manage their flight package inclusions"
-  ON fixed_departure_flight_package_inclusions FOR ALL
-  USING (package_id IN (SELECT id FROM fixed_departure_flight_packages WHERE operator_id = auth.uid()));
+-- DROP POLICY removed (RLS not used)
+-- RLS Policy removed (not used in AWS RDS)
 
-DROP POLICY IF EXISTS "Operators can manage their flight package exclusions" ON fixed_departure_flight_package_exclusions;
-CREATE POLICY "Operators can manage their flight package exclusions"
-  ON fixed_departure_flight_package_exclusions FOR ALL
-  USING (package_id IN (SELECT id FROM fixed_departure_flight_packages WHERE operator_id = auth.uid()));
+-- DROP POLICY removed (RLS not used)
+-- RLS Policy removed (not used in AWS RDS)
 
-DROP POLICY IF EXISTS "Operators can manage their flight package addons" ON fixed_departure_flight_package_addons;
-CREATE POLICY "Operators can manage their flight package addons"
-  ON fixed_departure_flight_package_addons FOR ALL
-  USING (package_id IN (SELECT id FROM fixed_departure_flight_packages WHERE operator_id = auth.uid()));
+-- DROP POLICY removed (RLS not used)
+-- RLS Policy removed (not used in AWS RDS)
 
-DROP POLICY IF EXISTS "Operators can manage their flight package cancellation tiers" ON fixed_departure_flight_package_cancellation_tiers;
-CREATE POLICY "Operators can manage their flight package cancellation tiers"
-  ON fixed_departure_flight_package_cancellation_tiers FOR ALL
-  USING (package_id IN (SELECT id FROM fixed_departure_flight_packages WHERE operator_id = auth.uid()));
+-- DROP POLICY removed (RLS not used)
+-- RLS Policy removed (not used in AWS RDS)
 
 -- Public read policies for published packages
-DROP POLICY IF EXISTS "Public can view published flight package details" ON fixed_departure_flight_package_cities;
-CREATE POLICY "Public can view published flight package details"
-  ON fixed_departure_flight_package_cities FOR SELECT
-  USING (package_id IN (SELECT id FROM fixed_departure_flight_packages WHERE status = 'published'));
+-- DROP POLICY removed (RLS not used)
+-- RLS Policy removed (not used in AWS RDS)
 
-DROP POLICY IF EXISTS "Public can view published flight package city hotels" ON fixed_departure_flight_package_city_hotels;
-CREATE POLICY "Public can view published flight package city hotels"
-  ON fixed_departure_flight_package_city_hotels FOR SELECT
-  USING (city_id IN (
-    SELECT id FROM fixed_departure_flight_package_cities WHERE package_id IN (
-      SELECT id FROM fixed_departure_flight_packages WHERE status = 'published'
-    )
-  ));
+-- DROP POLICY removed (RLS not used)
+-- RLS Policy removed (not used in AWS RDS)
 
-DROP POLICY IF EXISTS "Public can view published flight package day plans" ON fixed_departure_flight_package_day_plans;
-CREATE POLICY "Public can view published flight package day plans"
-  ON fixed_departure_flight_package_day_plans FOR SELECT
-  USING (package_id IN (SELECT id FROM fixed_departure_flight_packages WHERE status = 'published'));
+-- DROP POLICY removed (RLS not used)
+-- RLS Policy removed (not used in AWS RDS)
 
-DROP POLICY IF EXISTS "Public can view published flight package flights" ON fixed_departure_flight_package_day_flights;
-CREATE POLICY "Public can view published flight package flights"
-  ON fixed_departure_flight_package_day_flights FOR SELECT
-  USING (day_plan_id IN (
-    SELECT id FROM fixed_departure_flight_package_day_plans WHERE package_id IN (
-      SELECT id FROM fixed_departure_flight_packages WHERE status = 'published'
-    )
-  ));
+-- DROP POLICY removed (RLS not used)
+-- RLS Policy removed (not used in AWS RDS)
 
-DROP POLICY IF EXISTS "Public can view published flight package pricing" ON fixed_departure_flight_pricing_packages;
-CREATE POLICY "Public can view published flight package pricing"
-  ON fixed_departure_flight_pricing_packages FOR SELECT
-  USING (package_id IN (SELECT id FROM fixed_departure_flight_packages WHERE status = 'published'));
+-- DROP POLICY removed (RLS not used)
+-- RLS Policy removed (not used in AWS RDS)
 
-DROP POLICY IF EXISTS "Public can view published flight package vehicles" ON fixed_departure_flight_pricing_vehicles;
-CREATE POLICY "Public can view published flight package vehicles"
-  ON fixed_departure_flight_pricing_vehicles FOR SELECT
-  USING (pricing_package_id IN (
-    SELECT id FROM fixed_departure_flight_pricing_packages WHERE package_id IN (
-      SELECT id FROM fixed_departure_flight_packages WHERE status = 'published'
-    )
-  ));
+-- DROP POLICY removed (RLS not used)
+-- RLS Policy removed (not used in AWS RDS)
 
-DROP POLICY IF EXISTS "Public can view published flight package inclusions" ON fixed_departure_flight_package_inclusions;
-CREATE POLICY "Public can view published flight package inclusions"
-  ON fixed_departure_flight_package_inclusions FOR SELECT
-  USING (package_id IN (SELECT id FROM fixed_departure_flight_packages WHERE status = 'published'));
+-- DROP POLICY removed (RLS not used)
+-- RLS Policy removed (not used in AWS RDS)
 
-DROP POLICY IF EXISTS "Public can view published flight package exclusions" ON fixed_departure_flight_package_exclusions;
-CREATE POLICY "Public can view published flight package exclusions"
-  ON fixed_departure_flight_package_exclusions FOR SELECT
-  USING (package_id IN (SELECT id FROM fixed_departure_flight_packages WHERE status = 'published'));
+-- DROP POLICY removed (RLS not used)
+-- RLS Policy removed (not used in AWS RDS)
 
-DROP POLICY IF EXISTS "Public can view active flight package addons" ON fixed_departure_flight_package_addons;
-CREATE POLICY "Public can view active flight package addons"
-  ON fixed_departure_flight_package_addons FOR SELECT
-  USING (is_active = true AND package_id IN (SELECT id FROM fixed_departure_flight_packages WHERE status = 'published'));
+-- DROP POLICY removed (RLS not used)
+-- RLS Policy removed (not used in AWS RDS)
 
 -- ============================================================================
 -- 14. CREATE TRIGGERS

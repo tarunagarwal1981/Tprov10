@@ -42,81 +42,22 @@ CREATE INDEX IF NOT EXISTS idx_activity_package_vehicles_display_order
 -- ========================================
 
 -- Enable RLS
-ALTER TABLE activity_package_vehicles ENABLE ROW LEVEL SECURITY;
+-- RLS disabled (not used in AWS RDS)
 
 -- Allow operators to view vehicles for their own pricing packages
-CREATE POLICY "Operators can view their own package vehicles"
-  ON activity_package_vehicles
-  FOR SELECT
-  USING (
-    pricing_package_id IN (
-      SELECT id FROM activity_pricing_packages 
-      WHERE package_id IN (
-        SELECT id FROM activity_packages WHERE operator_id = auth.uid()
-      )
-    )
-  );
+-- RLS Policy removed (not used in AWS RDS)
 
 -- Allow operators to create vehicles for their own pricing packages
-CREATE POLICY "Operators can create package vehicles"
-  ON activity_package_vehicles
-  FOR INSERT
-  WITH CHECK (
-    pricing_package_id IN (
-      SELECT id FROM activity_pricing_packages 
-      WHERE package_id IN (
-        SELECT id FROM activity_packages WHERE operator_id = auth.uid()
-      )
-    )
-  );
+-- RLS Policy removed (not used in AWS RDS)
 
 -- Allow operators to update their own package vehicles
-CREATE POLICY "Operators can update their own package vehicles"
-  ON activity_package_vehicles
-  FOR UPDATE
-  USING (
-    pricing_package_id IN (
-      SELECT id FROM activity_pricing_packages 
-      WHERE package_id IN (
-        SELECT id FROM activity_packages WHERE operator_id = auth.uid()
-      )
-    )
-  )
-  WITH CHECK (
-    pricing_package_id IN (
-      SELECT id FROM activity_pricing_packages 
-      WHERE package_id IN (
-        SELECT id FROM activity_packages WHERE operator_id = auth.uid()
-      )
-    )
-  );
+-- RLS Policy removed (not used in AWS RDS)
 
 -- Allow operators to delete their own package vehicles
-CREATE POLICY "Operators can delete their own package vehicles"
-  ON activity_package_vehicles
-  FOR DELETE
-  USING (
-    pricing_package_id IN (
-      SELECT id FROM activity_pricing_packages 
-      WHERE package_id IN (
-        SELECT id FROM activity_packages WHERE operator_id = auth.uid()
-      )
-    )
-  );
+-- RLS Policy removed (not used in AWS RDS)
 
 -- Allow public to view vehicles for active pricing packages of published activities
-CREATE POLICY "Public can view vehicles for published activities"
-  ON activity_package_vehicles
-  FOR SELECT
-  USING (
-    pricing_package_id IN (
-      SELECT id FROM activity_pricing_packages 
-      WHERE is_active = true 
-      AND package_id IN (
-        SELECT id FROM activity_packages WHERE status = 'published'
-      )
-    )
-  );
+-- RLS Policy removed (not used in AWS RDS)
 
 -- ========================================
 -- 4. TRIGGERS FOR AUTOMATIC TIMESTAMP UPDATES

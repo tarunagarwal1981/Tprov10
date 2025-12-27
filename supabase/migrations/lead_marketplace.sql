@@ -78,7 +78,7 @@ CREATE TABLE lead_purchases (
     
     -- References
     lead_id UUID NOT NULL REFERENCES lead_marketplace(id) ON DELETE CASCADE,
-    agent_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    agent_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     
     -- Purchase Information
     purchase_price DECIMAL(10,2) NOT NULL,
@@ -221,132 +221,48 @@ $$ language 'plpgsql';
 -- ============================================================================
 
 -- Enable RLS on tables
-ALTER TABLE lead_marketplace ENABLE ROW LEVEL SECURITY;
-ALTER TABLE lead_purchases ENABLE ROW LEVEL SECURITY;
+-- RLS disabled (not used in AWS RDS)
+-- RLS disabled (not used in AWS RDS)
 
 -- ============================================================================
 -- RLS POLICIES FOR LEAD_MARKETPLACE
 -- ============================================================================
 
 -- Policy: Travel agents can view AVAILABLE leads in marketplace
-CREATE POLICY "Travel agents can view available leads" 
-    ON lead_marketplace
-    FOR SELECT 
-    USING (
-        status = 'AVAILABLE' 
-        AND expires_at > NOW()
-    );
+-- RLS Policy removed (not used in AWS RDS)
 
 -- Policy: Agents who purchased a lead can view full details
-CREATE POLICY "Purchasing agent can view purchased lead details" 
-    ON lead_marketplace
-    FOR SELECT 
-    USING (
-        status = 'PURCHASED' 
-        AND EXISTS (
-            SELECT 1 FROM lead_purchases 
-            WHERE lead_purchases.lead_id = lead_marketplace.id 
-            AND lead_purchases.agent_id = auth.uid()
-        )
-    );
+-- RLS Policy removed (not used in AWS RDS)
 
 -- Policy: Admins can see everything
 -- Note: This assumes you have a function to check admin role
 -- You may need to adjust this based on your user role implementation
-CREATE POLICY "Admins can view all leads" 
-    ON lead_marketplace
-    FOR SELECT 
-    USING (
-        EXISTS (
-            SELECT 1 FROM auth.users 
-            WHERE auth.users.id = auth.uid() 
-            AND auth.users.raw_user_meta_data->>'role' = 'admin'
-        )
-    );
+-- RLS Policy removed (not used in AWS RDS)
 
 -- Policy: System/Admin can insert leads into marketplace
-CREATE POLICY "Admins can insert leads" 
-    ON lead_marketplace
-    FOR INSERT 
-    WITH CHECK (
-        EXISTS (
-            SELECT 1 FROM auth.users 
-            WHERE auth.users.id = auth.uid() 
-            AND auth.users.raw_user_meta_data->>'role' = 'admin'
-        )
-    );
+-- RLS Policy removed (not used in AWS RDS)
 
 -- Policy: System/Admin can update leads
-CREATE POLICY "Admins can update leads" 
-    ON lead_marketplace
-    FOR UPDATE 
-    USING (
-        EXISTS (
-            SELECT 1 FROM auth.users 
-            WHERE auth.users.id = auth.uid() 
-            AND auth.users.raw_user_meta_data->>'role' = 'admin'
-        )
-    );
+-- RLS Policy removed (not used in AWS RDS)
 
 -- Policy: System/Admin can delete leads
-CREATE POLICY "Admins can delete leads" 
-    ON lead_marketplace
-    FOR DELETE 
-    USING (
-        EXISTS (
-            SELECT 1 FROM auth.users 
-            WHERE auth.users.id = auth.uid() 
-            AND auth.users.raw_user_meta_data->>'role' = 'admin'
-        )
-    );
+-- RLS Policy removed (not used in AWS RDS)
 
 -- ============================================================================
 -- RLS POLICIES FOR LEAD_PURCHASES
 -- ============================================================================
 
 -- Policy: Agents can view their own purchases
-CREATE POLICY "Agents can view their own purchases" 
-    ON lead_purchases
-    FOR SELECT 
-    USING (agent_id = auth.uid());
+-- RLS Policy removed (not used in AWS RDS)
 
 -- Policy: Agents can create their own purchases
-CREATE POLICY "Agents can purchase leads" 
-    ON lead_purchases
-    FOR INSERT 
-    WITH CHECK (
-        agent_id = auth.uid()
-        AND EXISTS (
-            SELECT 1 FROM lead_marketplace 
-            WHERE lead_marketplace.id = lead_id 
-            AND lead_marketplace.status = 'AVAILABLE'
-            AND lead_marketplace.expires_at > NOW()
-        )
-    );
+-- RLS Policy removed (not used in AWS RDS)
 
 -- Policy: Admins can view all purchases
-CREATE POLICY "Admins can view all purchases" 
-    ON lead_purchases
-    FOR SELECT 
-    USING (
-        EXISTS (
-            SELECT 1 FROM auth.users 
-            WHERE auth.users.id = auth.uid() 
-            AND auth.users.raw_user_meta_data->>'role' = 'admin'
-        )
-    );
+-- RLS Policy removed (not used in AWS RDS)
 
 -- Policy: Admins can delete purchases
-CREATE POLICY "Admins can delete purchases" 
-    ON lead_purchases
-    FOR DELETE 
-    USING (
-        EXISTS (
-            SELECT 1 FROM auth.users 
-            WHERE auth.users.id = auth.uid() 
-            AND auth.users.raw_user_meta_data->>'role' = 'admin'
-        )
-    );
+-- RLS Policy removed (not used in AWS RDS)
 
 -- ============================================================================
 -- 7. HELPER FUNCTIONS

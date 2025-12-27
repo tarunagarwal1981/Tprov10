@@ -2,36 +2,36 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/CognitoAuthContext';
-import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 
 export const LoginDebugger: React.FC = () => {
   const [debugInfo, setDebugInfo] = useState<any>({});
   const { user, loading, error, isInitialized } = useAuth();
-  const [supabaseStatus, setSupabaseStatus] = useState<any>({});
+  const [awsStatus, setAwsStatus] = useState<any>({});
 
   useEffect(() => {
-    const checkSupabaseConnection = async () => {
+    const checkAwsConnection = async () => {
       try {
-        const supabase = createSupabaseBrowserClient();
-        
-        // Check environment variables
-        const envCheck = {
-          hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-          hasKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-          url: process.env.NEXT_PUBLIC_SUPABASE_URL?.substring(0, 30) + '...',
+        // Check AWS Cognito status
+        const cognitoStatus = {
+          hasRegion: !!process.env.NEXT_PUBLIC_AWS_REGION,
+          region: process.env.NEXT_PUBLIC_AWS_REGION || 'not set',
         };
 
-        // Check Supabase connection
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        // Check API connection
+        const apiStatus = { connected: false, error: null };
+        try {
+          const response = await fetch('/api/health', { method: 'GET' });
+          apiStatus.connected = response.ok;
+        } catch (err: any) {
+          apiStatus.error = err.message;
+        }
         
-        setSupabaseStatus({
-          envCheck,
-          session: session ? 'exists' : 'none',
-          sessionError: sessionError?.message || null,
-          supabaseUrl: (supabase as any).supabaseUrl || 'unknown',
+        setAwsStatus({
+          cognitoStatus,
+          apiStatus,
         });
       } catch (err) {
-        setSupabaseStatus({
+        setAwsStatus({
           error: err instanceof Error ? err.message : 'Unknown error',
         });
       }
@@ -46,7 +46,7 @@ export const LoginDebugger: React.FC = () => {
       timestamp: new Date().toISOString(),
     });
 
-    checkSupabaseConnection();
+    checkAwsConnection();
   }, [user, loading, error, isInitialized]);
 
   // Only show in development
@@ -67,9 +67,9 @@ export const LoginDebugger: React.FC = () => {
         </div>
         
         <div>
-          <strong>Supabase Status:</strong>
+          <strong>AWS Status:</strong>
           <pre className="text-xs mt-1 overflow-auto max-h-20">
-            {JSON.stringify(supabaseStatus, null, 2)}
+            {JSON.stringify(awsStatus, null, 2)}
           </pre>
         </div>
       </div>

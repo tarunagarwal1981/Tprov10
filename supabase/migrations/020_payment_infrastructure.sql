@@ -368,12 +368,12 @@ COMMENT ON COLUMN payment_idempotency.expires_at IS 'Idempotency keys expire aft
 -- ============================================================================
 
 -- Enable RLS on all tables
-ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
-ALTER TABLE payment_idempotency ENABLE ROW LEVEL SECURITY;
-ALTER TABLE fraud_prevention_logs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE terms_acceptance ENABLE ROW LEVEL SECURITY;
-ALTER TABLE refund_policies ENABLE ROW LEVEL SECURITY;
-ALTER TABLE payment_metrics ENABLE ROW LEVEL SECURITY;
+-- RLS disabled (not used in AWS RDS)
+-- RLS disabled (not used in AWS RDS)
+-- RLS disabled (not used in AWS RDS)
+-- RLS disabled (not used in AWS RDS)
+-- RLS disabled (not used in AWS RDS)
+-- RLS disabled (not used in AWS RDS)
 
 -- RLS Policies will be added in a separate migration file
 -- to allow for proper testing and review

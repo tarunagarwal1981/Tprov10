@@ -285,7 +285,7 @@ SELECT
     'Operators Created' as check_type,
     COUNT(*) as count,
     COUNT(*) FILTER (WHERE raw_user_meta_data->>'role' = 'TOUR_OPERATOR') as operators
-FROM auth.users
+FROM users
 WHERE email IN (
     'bali.adventure@touroperator.com',
     'java.cultural@touroperator.com',
@@ -301,7 +301,7 @@ SELECT
     status
 FROM activity_packages
 WHERE operator_id IN (
-    SELECT id FROM auth.users 
+    SELECT id FROM users 
     WHERE email IN (
         'bali.adventure@touroperator.com',
         'java.cultural@touroperator.com',
