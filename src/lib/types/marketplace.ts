@@ -58,6 +58,7 @@ export interface MarketplaceLead {
   customerEmail?: string;
   customerPhone?: string;
   detailedRequirements?: string;
+  customerId?: string | null; // Customer-facing ID from leads table (e.g., LD250001)
 }
 
 /**

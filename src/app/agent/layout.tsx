@@ -7,7 +7,7 @@ import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { useAuth } from '@/context/CognitoAuthContext';
 import { UserRole } from '@/lib/types';
 
-const AGENT_ROLES: UserRole[] = ['TRAVEL_AGENT', 'ADMIN', 'SUPER_ADMIN'];
+const AGENT_ROLES: UserRole[] = ['TRAVEL_AGENT', 'SUB_AGENT', 'ADMIN', 'SUPER_ADMIN', 'OPERATIONS', 'SALES'];
 
 export default function AgentLayout({ children }: { children: React.ReactNode }) {
   const { user, isInitialized } = useAuth();
@@ -16,6 +16,21 @@ export default function AgentLayout({ children }: { children: React.ReactNode })
   const [checkingProfile, setCheckingProfile] = useState(true);
   const hasRedirectedRef = useRef(false);
   const isOnboardingOrProfile = pathname?.includes('/onboarding') || pathname?.includes('/profile');
+
+  // Redirect OPERATIONS and SALES users to their respective dashboards
+  useEffect(() => {
+    if (!isInitialized || !user) return;
+    
+    if (user.role === 'OPERATIONS' && !pathname?.startsWith('/operations')) {
+      router.push('/operations/dashboard');
+      return;
+    }
+    
+    if (user.role === 'SALES' && !pathname?.startsWith('/sales')) {
+      router.push('/sales/dashboard');
+      return;
+    }
+  }, [user, isInitialized, pathname, router]);
 
   useEffect(() => {
     // Reset check flag when pathname changes to onboarding/profile

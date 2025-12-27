@@ -17,6 +17,9 @@ import {
   FiCopy,
   FiEye,
   FiTrash2,
+  FiDownload,
+  FiFileText,
+  FiLock,
 } from 'react-icons/fi';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,10 +27,13 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/context/CognitoAuthContext';
 import { useToast } from '@/hooks/useToast';
+import { getAccessToken } from '@/lib/auth/getAccessToken';
 import { queryService, type ItineraryQuery } from '@/lib/services/queryService';
 import { itineraryService, type Itinerary } from '@/lib/services/itineraryService';
 import { MarketplaceService } from '@/lib/services/marketplaceService';
 import { QueryModal } from '@/components/agent/QueryModal';
+import { LeadCommunicationHistory } from '@/components/agent/LeadCommunicationHistory';
+import { AssignLeadToSubAgent } from '@/components/agent/AssignLeadToSubAgent';
 // Removed Supabase import - now using AWS API routes
 
 interface LeadDetails {
@@ -59,6 +65,7 @@ export default function LeadDetailPage() {
   const [queryLoading, setQueryLoading] = useState(false);
   const [queryAction, setQueryAction] = useState<'create' | 'insert' | null>(null); // Track which card was clicked
   const [editingQueryForItinerary, setEditingQueryForItinerary] = useState<string | null>(null); // Track which itinerary's query is being edited
+  const [assignLeadModalOpen, setAssignLeadModalOpen] = useState(false);
   const sidebarInitialized = React.useRef(false);
   const isFetchingRef = useRef(false);
   const fetchLeadDataRef = useRef<(() => Promise<void>) | null>(null);
@@ -158,6 +165,18 @@ export default function LeadDetailPage() {
           if (itinerariesResponse.ok) {
             const { itineraries: itinerariesData } = await itinerariesResponse.json();
             console.log('[LeadDetailPage] Fetched itineraries:', itinerariesData.length);
+            // Log each itinerary's price details explicitly
+            itinerariesData.forEach((it: Itinerary, index: number) => {
+              console.log(`[LeadDetailPage] Itinerary ${index + 1}:`, {
+                id: it.id,
+                name: it.name,
+                total_price: it.total_price,
+                total_price_type: typeof it.total_price,
+                total_price_is_null: it.total_price === null,
+                total_price_is_undefined: it.total_price === undefined,
+                total_price_value: it.total_price ?? 'NULL/UNDEFINED',
+              });
+            });
             
             // Fetch queries for each itinerary (with timeout per query)
             const queriesMap: Record<string, ItineraryQuery> = {};
@@ -687,9 +706,22 @@ export default function LeadDetailPage() {
                   <span>{lead.travelersCount} travelers</span>
                 </div>
               )}
+              <div className="pt-3 border-t border-gray-200 mt-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setAssignLeadModalOpen(true)}
+                  className="w-full"
+                >
+                  <FiUser className="w-4 h-4 mr-2" />
+                  Assign to Sub-Agent
+                </Button>
+              </div>
             </CardContent>
           </Card>
 
+          {/* Communication History */}
+          <LeadCommunicationHistory leadId={leadId} />
         </div>
 
         {/* Right Column - Proposals Section */}
@@ -705,15 +737,57 @@ export default function LeadDetailPage() {
               const isInsertItinerary = itinerary.name.toLowerCase().includes('insert');
               const isCreateItinerary = itinerary.name.toLowerCase().includes('create');
               
+              // Log price information for debugging
+              const displayPrice = (itinerary.total_price ?? 0);
+              console.log(`[LeadDetailPage] Rendering card for "${itinerary.name}":`, {
+                id: itinerary.id,
+                total_price_raw: itinerary.total_price,
+                total_price_type: typeof itinerary.total_price,
+                total_price_is_null: itinerary.total_price === null,
+                total_price_is_undefined: itinerary.total_price === undefined,
+                displayPrice,
+                displayPrice_formatted: `$${displayPrice.toFixed(2)}`,
+              });
+              // Also log as a simple string for easy reading
+              console.log(`[LeadDetailPage] Price for "${itinerary.name}": total_price=${itinerary.total_price}, displayPrice=${displayPrice}, formatted=$${displayPrice.toFixed(2)}`);
+              
               return (
                 <div key={itinerary.id} className="space-y-4">
                   <Card className="hover:shadow-lg transition-shadow">
                     <CardHeader>
                       <div className="flex items-start justify-between">
-                        <CardTitle className="text-lg font-semibold line-clamp-1">
-                          {itinerary.name}
-                        </CardTitle>
-                        <Badge variant="secondary">{itinerary.status}</Badge>
+                        <div className="flex-1">
+                          <CardTitle className="text-lg font-semibold line-clamp-1">
+                            {itinerary.name}
+                          </CardTitle>
+                          {/* Option 1: Copyable ID badge in header */}
+                          {itinerary.customer_id && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 px-2 mt-2 text-xs font-mono text-gray-500 hover:text-gray-700 border border-gray-300 hover:border-gray-400"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (itinerary.customer_id) {
+                                  navigator.clipboard.writeText(itinerary.customer_id);
+                                  toast.success('Itinerary ID copied to clipboard');
+                                }
+                              }}
+                            >
+                              <FiCopy className="w-3 h-3 mr-1" />
+                              {itinerary.customer_id}
+                            </Button>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {itinerary.is_locked && (
+                            <Badge variant="outline" className="bg-emerald-100 text-emerald-700 border-emerald-200">
+                              <FiLock className="w-3 h-3 mr-1" />
+                              Locked
+                            </Badge>
+                          )}
+                          <Badge variant="secondary">{itinerary.status}</Badge>
+                        </div>
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
@@ -763,9 +837,35 @@ export default function LeadDetailPage() {
                       <div className="flex items-center justify-between pt-2 border-t">
                         <span className="text-sm text-gray-600">Total Price</span>
                         <span className="text-xl font-bold text-green-600">
-                          ${(itinerary.total_price ?? 0).toFixed(2)}
+                          ${displayPrice.toFixed(2)}
                         </span>
                       </div>
+                      {/* Option 2: ID in footer with copy icon */}
+                      {itinerary.customer_id && (
+                        <div className="flex items-center justify-between pt-2 border-t text-xs">
+                          <span className="text-gray-500">Reference ID:</span>
+                          <div className="flex items-center gap-2">
+                            <code className="text-gray-600 font-mono bg-gray-50 px-2 py-1 rounded">
+                              {itinerary.customer_id}
+                            </code>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-5 w-5 p-0 hover:bg-gray-100"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (itinerary.customer_id) {
+                                  navigator.clipboard.writeText(itinerary.customer_id);
+                                  toast.success('Itinerary ID copied');
+                                }
+                              }}
+                              title="Copy ID"
+                            >
+                              <FiCopy className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                       <div className="flex gap-2 pt-2 border-t">
                         <Button
                           variant="ghost"
@@ -805,6 +905,47 @@ export default function LeadDetailPage() {
                             View Days
                           </Button>
                         )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            if (!itinerary.id) {
+                              toast.error('Itinerary not available');
+                              return;
+                            }
+                            try {
+                              const accessToken = getAccessToken();
+                              const response = await fetch(`/api/itineraries/${itinerary.id}/pdf`, {
+                                headers: {
+                                  'Authorization': `Bearer ${accessToken || ''}`,
+                                },
+                              });
+                              if (response.ok) {
+                                const blob = await response.blob();
+                                const url = window.URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = `itinerary-${itinerary.customer_id || itinerary.id}.pdf`;
+                                document.body.appendChild(a);
+                                a.click();
+                                window.URL.revokeObjectURL(url);
+                                document.body.removeChild(a);
+                                toast.success('Itinerary PDF downloaded');
+                              } else {
+                                const error = await response.json();
+                                toast.error(error.error || 'Failed to generate PDF');
+                              }
+                            } catch (error) {
+                              console.error('Error downloading PDF:', error);
+                              toast.error('Failed to download PDF');
+                            }
+                          }}
+                          className="border-blue-200 text-blue-600 hover:bg-blue-50 flex-shrink-0"
+                          title="Download PDF"
+                        >
+                          <FiDownload className="w-4 h-4" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -868,6 +1009,17 @@ export default function LeadDetailPage() {
         initialData={editingQueryForItinerary ? queries[editingQueryForItinerary] || null : null}
         leadId={leadId}
         loading={queryLoading}
+      />
+
+      {/* Assign Lead Modal */}
+      <AssignLeadToSubAgent
+        leadId={leadId}
+        open={assignLeadModalOpen}
+        onClose={() => setAssignLeadModalOpen(false)}
+        onSuccess={() => {
+          // Refresh lead data if needed
+          fetchLeadDataRef.current?.();
+        }}
       />
     </div>
   );

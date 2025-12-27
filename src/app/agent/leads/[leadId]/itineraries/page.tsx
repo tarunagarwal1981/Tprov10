@@ -78,13 +78,14 @@ export default function LeadItinerariesPage() {
     if (!confirm('Are you sure you want to delete this itinerary?')) return;
 
     try {
-      const supabase = await import('@/lib/supabase/client').then(m => m.createClient());
-      const { error } = await supabase
-        .from('itineraries' as any)
-        .delete()
-        .eq('id', itineraryId);
-
-      if (error) throw error;
+      const response = await fetch(`/api/itineraries/${itineraryId}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to delete itinerary');
+      }
 
       toast.success('Itinerary deleted successfully');
       setItineraries(prev => prev.filter(i => i.id !== itineraryId));

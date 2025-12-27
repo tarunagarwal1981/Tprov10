@@ -2,15 +2,17 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { FiArrowLeft, FiClock, FiPlus, FiX, FiMapPin, FiSave } from 'react-icons/fi';
+import { FiArrowLeft, FiClock, FiPlus, FiX, FiMapPin, FiSave, FiMail, FiPhone, FiGlobe, FiCopy, FiDownload, FiFileText, FiLock } from 'react-icons/fi';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/context/CognitoAuthContext';
 import { useToast } from '@/hooks/useToast';
+import { getAccessToken } from '@/lib/auth/getAccessToken';
 import { ActivitySelectorModal } from '@/components/itinerary/ActivitySelectorModal';
 import { TransferSelectorModal } from '@/components/itinerary/TransferSelectorModal';
+import { OperatorContactCard } from '@/components/agent/OperatorContactCard';
 import type { ItineraryQuery } from '@/lib/services/queryService';
 import type { TimeSlot } from '@/lib/utils/timeSlots';
 import type { ActivityPackage } from '@/lib/services/smartItineraryFilter';
@@ -52,6 +54,7 @@ interface Itinerary {
   start_date: string | null;
   end_date: string | null;
   query_id: string | null;
+  customer_id?: string | null;
 }
 
 interface ItineraryItem {
@@ -88,14 +91,28 @@ export default function CreateItineraryPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savingItinerary, setSavingItinerary] = useState(false);
+  const [isLocked, setIsLocked] = useState(false);
   
   // Activities and Transfers Repository
   const [allActivities, setAllActivities] = useState<ActivityPackage[]>([]);
   const [allTransfers, setAllTransfers] = useState<TransferPackage[]>([]);
   const [loadingRepository, setLoadingRepository] = useState(true);
 
-  // Operator names mapping
-  const [operatorNames, setOperatorNames] = useState<Record<string, string>>({});
+  // Operator details mapping (name, email, phone, website, address, whatsapp)
+  interface OperatorDetails {
+    name: string;
+    email: string | null;
+    phone: string | null;
+    website: string | null;
+    address: string | null;
+    whatsapp: string | null;
+  }
+  const [operatorDetails, setOperatorDetails] = useState<Record<string, OperatorDetails>>({});
+  
+  // Keep operatorNames for backward compatibility
+  const operatorNames: Record<string, string> = Object.fromEntries(
+    Object.entries(operatorDetails).map(([id, details]) => [id, details.name])
+  );
 
   // Modal states
   const [activityModalOpen, setActivityModalOpen] = useState(false);
@@ -190,10 +207,10 @@ export default function CreateItineraryPage() {
           itineraryId,
         });
         const queryResponse = await fetch(queryUrl);
-        if (queryResponse.ok) {
-          const { query: queryData } = await queryResponse.json();
-          fetchedQuery = queryData;
-          setQuery(queryData);
+      if (queryResponse.ok) {
+        const { query: queryData } = await queryResponse.json();
+        fetchedQuery = queryData;
+        setQuery(queryData);
           console.log('[CreateItineraryPage] Query fetched successfully:', {
             queryId: queryData?.id,
             leadId: queryData?.lead_id,
@@ -236,12 +253,14 @@ export default function CreateItineraryPage() {
         if (itineraryResponse.ok) {
           const { itinerary: itineraryData } = await itineraryResponse.json();
           setItinerary(itineraryData);
+          setIsLocked(itineraryData?.is_locked || false);
           console.log('[CreateItineraryPage] Itinerary fetched successfully:', {
             itineraryId: itineraryData?.id,
             leadId: itineraryData?.lead_id,
             agentId: itineraryData?.agent_id,
             queryId: itineraryData?.query_id,
             name: itineraryData?.name,
+            is_locked: itineraryData?.is_locked,
           });
 
           // Fetch days
@@ -345,15 +364,22 @@ export default function CreateItineraryPage() {
       const response = await fetch(`/api/operators?ids=${uniqueIds.join(',')}`);
       if (response.ok) {
         const { operators } = await response.json();
-        const nameMap: Record<string, string> = {};
+        const detailsMap: Record<string, OperatorDetails> = {};
         operators.forEach((op: any) => {
-          nameMap[op.id] = op.name || 'Unknown Operator';
+          detailsMap[op.id] = {
+            name: op.name || 'Unknown Operator',
+            email: op.email || null,
+            phone: op.phone || null,
+            website: op.website || null,
+            address: op.address || null,
+            whatsapp: op.whatsapp || null,
+          };
         });
-        setOperatorNames(prev => ({ ...prev, ...nameMap }));
-        console.log('[CreateItineraryPage] Operator names fetched:', Object.keys(nameMap).length);
+        setOperatorDetails(prev => ({ ...prev, ...detailsMap }));
+        console.log('[CreateItineraryPage] Operator details fetched:', Object.keys(detailsMap).length);
       }
     } catch (err) {
-      console.error('[CreateItineraryPage] Error fetching operator names:', err);
+      console.error('[CreateItineraryPage] Error fetching operator details:', err);
     }
   };
 
@@ -439,12 +465,20 @@ export default function CreateItineraryPage() {
   };
 
   const handleAddActivity = (dayIndex: number, timeSlot: TimeSlot) => {
+    if (isLocked) {
+      toast.error('This itinerary is locked and cannot be edited');
+      return;
+    }
     setSelectedDayIndex(dayIndex);
     setSelectedTimeSlot(timeSlot);
     setActivityModalOpen(true);
   };
 
   const handleAddTransfer = (dayIndex: number, timeSlot: TimeSlot) => {
+    if (isLocked) {
+      toast.error('This itinerary is locked and cannot be edited');
+      return;
+    }
     setSelectedDayIndex(dayIndex);
     setSelectedTimeSlot(timeSlot);
     setTransferModalOpen(true);
@@ -538,26 +572,26 @@ export default function CreateItineraryPage() {
       setItems(prev => [...prev, normalizedNewItem]);
 
       // Update day's time slot with item ID (not activity ID)
-      const updatedDays = [...days];
-      const existingDay = updatedDays[selectedDayIndex];
+    const updatedDays = [...days];
+    const existingDay = updatedDays[selectedDayIndex];
       if (!existingDay || !existingDay.id) {
         throw new Error('Day not found or missing ID');
       }
-
-      const updatedDay: ItineraryDay = {
-        ...existingDay,
-        time_slots: existingDay.time_slots || {
-          morning: { time: '08:00', activities: [], transfers: [] },
-          afternoon: { time: '12:30', activities: [], transfers: [] },
-          evening: { time: '17:00', activities: [], transfers: [] },
-        },
-      };
+    
+    const updatedDay: ItineraryDay = {
+      ...existingDay,
+      time_slots: existingDay.time_slots || {
+        morning: { time: '08:00', activities: [], transfers: [] },
+        afternoon: { time: '12:30', activities: [], transfers: [] },
+        evening: { time: '17:00', activities: [], transfers: [] },
+      },
+    };
       updatedDay.time_slots![selectedTimeSlot].activities.push(newItem.id);
-      updatedDays[selectedDayIndex] = updatedDay;
-      setDays(updatedDays);
+    updatedDays[selectedDayIndex] = updatedDay;
+    setDays(updatedDays);
 
       // Update day in database (don't wait, do it in background)
-      if (updatedDay.id) {
+    if (updatedDay.id) {
         updateDay(updatedDay.id, updatedDay).catch(err => {
           console.error('[CreateItineraryPage] Error updating day:', err);
         });
@@ -570,12 +604,12 @@ export default function CreateItineraryPage() {
       const operatorId = newItem.operator_id || activity.operator_id;
       if (operatorId && !operatorNames[operatorId]) {
         await fetchOperatorNames([operatorId]);
-      }
+    }
 
-      setActivityModalOpen(false);
-      setSelectedDayIndex(null);
-      setSelectedTimeSlot(null);
-      toast.success('Activity added successfully');
+    setActivityModalOpen(false);
+    setSelectedDayIndex(null);
+    setSelectedTimeSlot(null);
+    toast.success('Activity added successfully');
     } catch (err) {
       console.error('[CreateItineraryPage] Error adding activity:', err);
       toast.error(err instanceof Error ? err.message : 'Failed to add activity');
@@ -654,26 +688,26 @@ export default function CreateItineraryPage() {
       setItems(prev => [...prev, normalizedNewItem]);
 
       // Update day's time slot with item ID (not transfer ID)
-      const updatedDays = [...days];
-      const existingDay = updatedDays[selectedDayIndex];
+    const updatedDays = [...days];
+    const existingDay = updatedDays[selectedDayIndex];
       if (!existingDay || !existingDay.id) {
         throw new Error('Day not found or missing ID');
       }
-
-      const updatedDay: ItineraryDay = {
-        ...existingDay,
-        time_slots: existingDay.time_slots || {
-          morning: { time: '08:00', activities: [], transfers: [] },
-          afternoon: { time: '12:30', activities: [], transfers: [] },
-          evening: { time: '17:00', activities: [], transfers: [] },
-        },
-      };
+    
+    const updatedDay: ItineraryDay = {
+      ...existingDay,
+      time_slots: existingDay.time_slots || {
+        morning: { time: '08:00', activities: [], transfers: [] },
+        afternoon: { time: '12:30', activities: [], transfers: [] },
+        evening: { time: '17:00', activities: [], transfers: [] },
+      },
+    };
       updatedDay.time_slots![selectedTimeSlot].transfers.push(newItem.id);
-      updatedDays[selectedDayIndex] = updatedDay;
-      setDays(updatedDays);
+    updatedDays[selectedDayIndex] = updatedDay;
+    setDays(updatedDays);
 
       // Update day in database (don't wait, do it in background)
-      if (updatedDay.id) {
+    if (updatedDay.id) {
         updateDay(updatedDay.id, updatedDay).catch(err => {
           console.error('[CreateItineraryPage] Error updating day:', err);
         });
@@ -686,12 +720,12 @@ export default function CreateItineraryPage() {
       const operatorId = newItem.operator_id || transfer.operator_id;
       if (operatorId && !operatorNames[operatorId]) {
         await fetchOperatorNames([operatorId]);
-      }
+    }
 
-      setTransferModalOpen(false);
-      setSelectedDayIndex(null);
-      setSelectedTimeSlot(null);
-      toast.success('Transfer added successfully');
+    setTransferModalOpen(false);
+    setSelectedDayIndex(null);
+    setSelectedTimeSlot(null);
+    toast.success('Transfer added successfully');
     } catch (err) {
       console.error('[CreateItineraryPage] Error adding transfer:', err);
       toast.error(err instanceof Error ? err.message : 'Failed to add transfer');
@@ -819,14 +853,22 @@ export default function CreateItineraryPage() {
           Back to Lead Details
               </Button>
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Create Itinerary</h1>
-            <p className="text-gray-600 mt-2">
-              Build day-wise itinerary for {lead?.customerName || 'customer'}
-            </p>
+          <div className="flex items-center gap-3">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Create Itinerary</h1>
+              <p className="text-gray-600 mt-2">
+                Build day-wise itinerary for {lead?.customerName || 'customer'}
+              </p>
+            </div>
+            {isLocked && (
+              <Badge variant="outline" className="bg-emerald-100 text-emerald-700 border-emerald-200">
+                <FiLock className="w-3 h-3 mr-1" />
+                Locked
+              </Badge>
+            )}
           </div>
-          {/* Total Price Display */}
-          <div className="flex gap-4">
+          {/* Total Price Display & PDF Actions */}
+          <div className="flex gap-4 items-start">
             <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
               <CardContent className="p-4">
                 <div className="text-center">
@@ -838,6 +880,49 @@ export default function CreateItineraryPage() {
                 </div>
               </CardContent>
             </Card>
+            
+            {/* PDF Actions */}
+            <div className="flex flex-col gap-2">
+              <Button
+                size="sm"
+                onClick={async () => {
+                  if (!itinerary?.id) {
+                    toast.error('Itinerary not available');
+                    return;
+                  }
+                  try {
+                    const accessToken = getAccessToken();
+                    const response = await fetch(`/api/itineraries/${itinerary.id}/pdf`, {
+                      headers: {
+                        'Authorization': `Bearer ${accessToken || ''}`,
+                      },
+                    });
+                    if (response.ok) {
+                      const blob = await response.blob();
+                      const url = window.URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `itinerary-${itinerary.customer_id || itinerary.id}.pdf`;
+                      document.body.appendChild(a);
+                      a.click();
+                      window.URL.revokeObjectURL(url);
+                      document.body.removeChild(a);
+                      toast.success('Itinerary PDF downloaded');
+                    } else {
+                      const error = await response.json();
+                      toast.error(error.error || 'Failed to generate PDF');
+                    }
+                  } catch (error) {
+                    console.error('Error downloading PDF:', error);
+                    toast.error('Failed to download PDF');
+                  }
+                }}
+                className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white"
+              >
+                <FiDownload className="w-4 h-4 mr-2" />
+                Download PDF
+              </Button>
+            </div>
             
             {/* Operator Breakdown */}
             {Object.keys(operatorNames).length > 0 && items.length > 0 && (
@@ -972,6 +1057,7 @@ export default function CreateItineraryPage() {
                                 size="sm"
                                 variant="outline"
                                 onClick={() => handleAddActivity(dayIndex, timeSlot)}
+                                disabled={isLocked}
                               >
                                 <FiPlus className="w-4 h-4 mr-1" />
                                 Add Activity
@@ -987,37 +1073,52 @@ export default function CreateItineraryPage() {
                                   const operatorName = item.operator_id 
                                     ? (operatorNames[item.operator_id] || 'Loading...') 
                                     : 'Unknown Operator';
+                                  const operatorDetailsForActivity = item.operator_id 
+                                    ? (operatorDetails[item.operator_id] || null)
+                                    : null;
                                   const itemPrice = Number(item.total_price) || Number(item.unit_price) || 0;
                                   
                                   return (
                                     <div
                                       key={itemId}
-                                      className="flex items-center justify-between p-3 bg-white rounded-lg border shadow-sm hover:shadow-md transition-shadow"
+                                      className="p-3 bg-white rounded-lg border shadow-sm hover:shadow-md transition-shadow"
                                     >
-                                      <div className="flex-1">
-                                        <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                          <span className="text-sm font-medium text-gray-900">{item.package_title}</span>
-                                          {item.operator_id && (
-                                            <Badge 
-                                              variant="outline" 
-                                              className="text-xs bg-blue-50 text-blue-700 border-blue-200"
-                                            >
-                                              {operatorName}
-                                            </Badge>
-                                          )}
+                                      <div className="flex items-center justify-between mb-2">
+                                        <div className="flex-1">
+                                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                            <span className="text-sm font-medium text-gray-900">{item.package_title}</span>
+                                            {item.operator_id && (
+                                              <Badge 
+                                                variant="outline" 
+                                                className="text-xs bg-blue-50 text-blue-700 border-blue-200"
+                                              >
+                                                {operatorName}
+                                              </Badge>
+                                            )}
+                                          </div>
+                                          <div className="flex items-center gap-2">
+                                            <span className="text-sm font-semibold text-green-600">
+                                              ${itemPrice.toFixed(2)}
+                                            </span>
+                                            {item.operator_id && (
+                                              <span className="text-xs text-gray-400">• Pay to operator</span>
+                                            )}
+                                          </div>
                                         </div>
-                                        <div className="flex items-center gap-2">
-                                          <span className="text-sm font-semibold text-green-600">
-                                            ${itemPrice.toFixed(2)}
-                                          </span>
-                                          {item.operator_id && (
-                                            <span className="text-xs text-gray-400">• Pay to operator</span>
-                                          )}
-                                        </div>
+                                        {item.operator_id && operatorDetailsForActivity && (
+                                          <div className="mt-2">
+                                            <OperatorContactCard
+                                              operatorId={item.operator_id}
+                                              operatorDetails={operatorDetailsForActivity}
+                                              variant="inline"
+                                            />
+                                          </div>
+                                        )}
                                       </div>
                                       <Button
                                         size="sm"
                                         variant="ghost"
+                                        className="text-red-500 hover:text-red-700"
                                         onClick={async () => {
                                           try {
                                             // Delete item from database
@@ -1034,24 +1135,24 @@ export default function CreateItineraryPage() {
                                             setItems(prev => prev.filter(i => i.id !== itemId));
 
                                             // Update day's time slot
-                                            const updatedDays = [...days];
-                                            const existingDay = updatedDays[dayIndex];
-                                            if (!existingDay) return;
-                                            
-                                            const updatedDay: ItineraryDay = {
-                                              ...existingDay,
-                                              time_slots: existingDay.time_slots || {
-                                                morning: { time: '08:00', activities: [], transfers: [] },
-                                                afternoon: { time: '12:30', activities: [], transfers: [] },
-                                                evening: { time: '17:00', activities: [], transfers: [] },
-                                              },
-                                            };
-                                            updatedDay.time_slots![timeSlot].activities = 
+                                          const updatedDays = [...days];
+                                          const existingDay = updatedDays[dayIndex];
+                                          if (!existingDay) return;
+                                          
+                                          const updatedDay: ItineraryDay = {
+                                            ...existingDay,
+                                            time_slots: existingDay.time_slots || {
+                                              morning: { time: '08:00', activities: [], transfers: [] },
+                                              afternoon: { time: '12:30', activities: [], transfers: [] },
+                                              evening: { time: '17:00', activities: [], transfers: [] },
+                                            },
+                                          };
+                                          updatedDay.time_slots![timeSlot].activities = 
                                               updatedDay.time_slots![timeSlot].activities.filter(id => id !== itemId);
-                                            updatedDays[dayIndex] = updatedDay;
-                                            setDays(updatedDays);
+                                          updatedDays[dayIndex] = updatedDay;
+                                          setDays(updatedDays);
                                             
-                                            if (updatedDay.id) {
+                                          if (updatedDay.id) {
                                               updateDay(updatedDay.id, updatedDay).catch(err => {
                                                 console.error('[CreateItineraryPage] Error updating day:', err);
                                               });
@@ -1083,6 +1184,7 @@ export default function CreateItineraryPage() {
                                 size="sm"
                                 variant="outline"
                                 onClick={() => handleAddTransfer(dayIndex, timeSlot)}
+                                disabled={isLocked}
                               >
                                 <FiPlus className="w-4 h-4 mr-1" />
                                 Add Transfer
@@ -1098,37 +1200,52 @@ export default function CreateItineraryPage() {
                                   const operatorName = item.operator_id 
                                     ? (operatorNames[item.operator_id] || 'Loading...') 
                                     : 'Unknown Operator';
+                                  const operatorDetailsForTransfer = item.operator_id 
+                                    ? (operatorDetails[item.operator_id] || null)
+                                    : null;
                                   const itemPrice = Number(item.total_price) || Number(item.unit_price) || 0;
                                   
                                   return (
                                     <div
                                       key={itemId}
-                                      className="flex items-center justify-between p-3 bg-white rounded-lg border shadow-sm hover:shadow-md transition-shadow"
+                                      className="p-3 bg-white rounded-lg border shadow-sm hover:shadow-md transition-shadow"
                                     >
-                                      <div className="flex-1">
-                                        <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                          <span className="text-sm font-medium text-gray-900">{item.package_title}</span>
-                                          {item.operator_id && (
-                                            <Badge 
-                                              variant="outline" 
-                                              className="text-xs bg-green-50 text-green-700 border-green-200"
-                                            >
-                                              {operatorName}
-                                            </Badge>
-                                          )}
+                                      <div className="flex items-center justify-between mb-2">
+                                        <div className="flex-1">
+                                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                            <span className="text-sm font-medium text-gray-900">{item.package_title}</span>
+                                            {item.operator_id && (
+                                              <Badge 
+                                                variant="outline" 
+                                                className="text-xs bg-green-50 text-green-700 border-green-200"
+                                              >
+                                                {operatorName}
+                                              </Badge>
+                                            )}
+                                          </div>
+                                          <div className="flex items-center gap-2">
+                                            <span className="text-sm font-semibold text-green-600">
+                                              ${itemPrice.toFixed(2)}
+                                            </span>
+                                            {item.operator_id && (
+                                              <span className="text-xs text-gray-400">• Pay to operator</span>
+                                            )}
+                                          </div>
                                         </div>
-                                        <div className="flex items-center gap-2">
-                                          <span className="text-sm font-semibold text-green-600">
-                                            ${itemPrice.toFixed(2)}
-                                          </span>
-                                          {item.operator_id && (
-                                            <span className="text-xs text-gray-400">• Pay to operator</span>
-                                          )}
-                                        </div>
+                                        {item.operator_id && operatorDetailsForTransfer && (
+                                          <div className="mt-2">
+                                            <OperatorContactCard
+                                              operatorId={item.operator_id}
+                                              operatorDetails={operatorDetailsForTransfer}
+                                              variant="inline"
+                                            />
+                                          </div>
+                                        )}
                                       </div>
                                       <Button
                                         size="sm"
                                         variant="ghost"
+                                        className="text-red-500 hover:text-red-700"
                                         onClick={async () => {
                                           try {
                                             // Delete item from database
@@ -1145,24 +1262,24 @@ export default function CreateItineraryPage() {
                                             setItems(prev => prev.filter(i => i.id !== itemId));
 
                                             // Update day's time slot
-                                            const updatedDays = [...days];
-                                            const existingDay = updatedDays[dayIndex];
-                                            if (!existingDay) return;
-                                            
-                                            const updatedDay: ItineraryDay = {
-                                              ...existingDay,
-                                              time_slots: existingDay.time_slots || {
-                                                morning: { time: '08:00', activities: [], transfers: [] },
-                                                afternoon: { time: '12:30', activities: [], transfers: [] },
-                                                evening: { time: '17:00', activities: [], transfers: [] },
-                                              },
-                                            };
-                                            updatedDay.time_slots![timeSlot].transfers = 
+                                          const updatedDays = [...days];
+                                          const existingDay = updatedDays[dayIndex];
+                                          if (!existingDay) return;
+                                          
+                                          const updatedDay: ItineraryDay = {
+                                            ...existingDay,
+                                            time_slots: existingDay.time_slots || {
+                                              morning: { time: '08:00', activities: [], transfers: [] },
+                                              afternoon: { time: '12:30', activities: [], transfers: [] },
+                                              evening: { time: '17:00', activities: [], transfers: [] },
+                                            },
+                                          };
+                                          updatedDay.time_slots![timeSlot].transfers = 
                                               updatedDay.time_slots![timeSlot].transfers.filter(id => id !== itemId);
-                                            updatedDays[dayIndex] = updatedDay;
-                                            setDays(updatedDays);
+                                          updatedDays[dayIndex] = updatedDay;
+                                          setDays(updatedDays);
                                             
-                                            if (updatedDay.id) {
+                                          if (updatedDay.id) {
                                               updateDay(updatedDay.id, updatedDay).catch(err => {
                                                 console.error('[CreateItineraryPage] Error updating day:', err);
                                               });
@@ -1231,32 +1348,76 @@ export default function CreateItineraryPage() {
 
         {/* Save Button Section */}
         {days.length > 0 && (
-          <div className="mt-8 flex justify-end gap-4 pb-6">
-            <Button
-              variant="outline"
-              onClick={() => router.push(`/agent/leads/${leadId}`)}
-              disabled={savingItinerary}
-            >
-              <FiArrowLeft className="w-4 h-4 mr-2" />
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSaveItinerary}
-              disabled={savingItinerary}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              {savingItinerary ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <FiSave className="w-4 h-4 mr-2" />
-                  Save Itinerary
-                </>
-              )}
-            </Button>
+          <div className="mt-8 flex justify-between items-center gap-4 pb-6">
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={async () => {
+                  if (!itinerary?.id) {
+                    toast.error('Itinerary not available');
+                    return;
+                  }
+                  try {
+                    const accessToken = getAccessToken();
+                    const response = await fetch(`/api/itineraries/${itinerary.id}/pdf`, {
+                      headers: {
+                        'Authorization': `Bearer ${accessToken || ''}`,
+                      },
+                    });
+                    if (response.ok) {
+                      const blob = await response.blob();
+                      const url = window.URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `itinerary-${itinerary.customer_id || itinerary.id}.pdf`;
+                      document.body.appendChild(a);
+                      a.click();
+                      window.URL.revokeObjectURL(url);
+                      document.body.removeChild(a);
+                      toast.success('Itinerary PDF downloaded');
+                    } else {
+                      const error = await response.json();
+                      toast.error(error.error || 'Failed to generate PDF');
+                    }
+                  } catch (error) {
+                    console.error('Error downloading PDF:', error);
+                    toast.error('Failed to download PDF');
+                  }
+                }}
+                className="border-blue-200 text-blue-600 hover:bg-blue-50"
+              >
+                <FiDownload className="w-4 h-4 mr-2" />
+                Download PDF
+              </Button>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => router.push(`/agent/leads/${leadId}`)}
+                disabled={savingItinerary}
+              >
+                <FiArrowLeft className="w-4 h-4 mr-2" />
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSaveItinerary}
+                disabled={savingItinerary}
+                className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white"
+              >
+                {savingItinerary ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <FiSave className="w-4 h-4 mr-2" />
+                    Save Itinerary
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         )}
       </div>

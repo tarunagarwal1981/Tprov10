@@ -16,6 +16,23 @@ export async function GET(
     const { leadId } = await params;
     const itineraries = await itineraryService.getLeadItineraries(leadId);
     
+    console.log('[API] /api/itineraries/leads/[leadId] - Returning itineraries:', {
+      leadId,
+      count: itineraries.length,
+    });
+    // Log each itinerary's price details explicitly
+    itineraries.forEach((it: any, index: number) => {
+      console.log(`[API] Itinerary ${index + 1} in response:`, {
+        id: it.id,
+        name: it.name,
+        total_price: it.total_price,
+        total_price_type: typeof it.total_price,
+        total_price_value: it.total_price ?? 'NULL/UNDEFINED',
+      });
+      // Also log as a simple string for easy reading
+      console.log(`[API] Price for "${it.name}": total_price=${it.total_price} (type: ${typeof it.total_price})`);
+    });
+    
     return NextResponse.json({ itineraries });
   } catch (error) {
     console.error('Error fetching itineraries:', error);

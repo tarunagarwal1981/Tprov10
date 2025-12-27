@@ -10,10 +10,11 @@ import { query, queryOne, queryMany } from '@/lib/aws/lambda-database';
 
 export interface Itinerary {
   id: string;
+  customer_id: string | null;
   lead_id: string;
   agent_id: string;
   name: string;
-  status: 'draft' | 'completed' | 'sent' | 'approved' | 'rejected';
+  status: 'draft' | 'completed' | 'sent' | 'approved' | 'rejected' | 'confirmed' | 'invoice_sent' | 'payment_received' | 'locked';
   adults_count: number;
   children_count: number;
   infants_count: number;
@@ -28,6 +29,11 @@ export interface Itinerary {
   created_at: string;
   updated_at: string;
   sent_at: string | null;
+  confirmed_at: string | null;
+  confirmed_by: string | null;
+  is_locked: boolean;
+  locked_at: string | null;
+  locked_by: string | null;
 }
 
 export interface ItineraryDay {
@@ -73,6 +79,21 @@ export class ItineraryService {
         'SELECT * FROM itineraries WHERE lead_id = $1 ORDER BY created_at DESC',
         [leadId]
       );
+      console.log('[ItineraryService] Fetched itineraries from DB:', result.rows.length);
+      // Log each itinerary's price details explicitly
+      result.rows.forEach((it: Itinerary, index: number) => {
+        console.log(`[ItineraryService] Itinerary ${index + 1} from DB:`, {
+          id: it.id,
+          name: it.name,
+          total_price: it.total_price,
+          total_price_type: typeof it.total_price,
+          total_price_is_null: it.total_price === null,
+          total_price_is_undefined: it.total_price === undefined,
+          total_price_value: it.total_price ?? 'NULL/UNDEFINED',
+        });
+        // Also log as a simple string for easy reading
+        console.log(`[ItineraryService] Price for "${it.name}": total_price=${it.total_price} (type: ${typeof it.total_price})`);
+      });
       return result.rows;
     } catch (error) {
       console.error('Error fetching lead itineraries:', error);
@@ -219,18 +240,26 @@ export class ItineraryService {
     try {
       const { itinerary, days, items } = await this.getItineraryDetails(itineraryId);
 
+      // Generate customer_id for duplicate
+      const customerIdResult = await query<{ customer_id: string }>(
+        `SELECT generate_itinerary_customer_id() as customer_id`,
+        []
+      );
+      const customerId = customerIdResult.rows[0]?.customer_id;
+
       // Create new itinerary
       const newItineraryResult = await query<Itinerary>(
         `INSERT INTO itineraries (
-          lead_id, agent_id, name, status, adults_count, children_count,
+          lead_id, agent_id, name, customer_id, status, adults_count, children_count,
           infants_count, start_date, end_date, total_price, currency,
           lead_budget_min, lead_budget_max, notes
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
         RETURNING *`,
         [
           itinerary.lead_id,
           itinerary.agent_id,
           newName,
+          customerId,
           'draft',
           itinerary.adults_count,
           itinerary.children_count,

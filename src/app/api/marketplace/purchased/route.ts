@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { MarketplaceService } from '@/lib/services/marketplaceService';
+import { getUserIdFromToken } from '@/lib/auth/getUserIdFromToken';
+import { queryOne } from '@/lib/aws/lambda-database';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 /**
  * GET /api/marketplace/purchased?agentId=xxx
- * Get purchased leads for an agent
+ * Get purchased leads for an agent (filtered by sub-agent assignment if sub-agent)
  */
 export async function GET(request: NextRequest) {
   try {
@@ -20,7 +22,21 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const purchases = await MarketplaceService.getAgentPurchasedLeads(agentId);
+    // Get user role to determine filtering
+    const authHeader = request.headers.get('authorization');
+    const token = authHeader?.replace('Bearer ', '') || '';
+    const userId = await getUserIdFromToken(token);
+    
+    let userRole: string | undefined;
+    if (userId) {
+      const user = await queryOne<{ role: string }>(
+        'SELECT role FROM users WHERE id = $1',
+        [userId]
+      );
+      userRole = user?.role;
+    }
+
+    const purchases = await MarketplaceService.getAgentPurchasedLeads(agentId, userRole);
     
     return NextResponse.json({ purchases });
   } catch (error) {

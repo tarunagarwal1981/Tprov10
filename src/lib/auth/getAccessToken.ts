@@ -7,7 +7,13 @@ export function getAccessToken(): string | null {
     return null;
   }
 
-  // Try Cognito tokens first
+  // Try Cognito access token (stored directly as string by CognitoAuthContext)
+  const accessToken = localStorage.getItem('cognito_access_token');
+  if (accessToken) {
+    return accessToken;
+  }
+
+  // Try Cognito tokens (JSON format - legacy or alternative storage)
   const tokens = localStorage.getItem('cognito_tokens');
   if (tokens) {
     try {

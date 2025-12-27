@@ -763,6 +763,18 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'manage_bookings',
     'view_analytics',
   ],
+  SUB_AGENT: [
+    'manage_bookings',
+    'view_analytics',
+  ],
+  OPERATIONS: [
+    'view_analytics',
+    'manage_bookings',
+  ],
+  SALES: [
+    'manage_bookings',
+    'view_analytics',
+  ],
   USER: [
     'view_analytics',
   ],
@@ -792,9 +804,11 @@ export const useRBAC = () => {
 
   const permissions = useMemo(() => userRole ? ROLE_PERMISSIONS[userRole] || [] : [], [userRole]);
   
-  const isAdmin = useMemo(() => hasRole('ADMIN') || hasRole('SUPER_ADMIN'), [hasRole]);
-  const isOperator = useMemo(() => hasRole('TOUR_OPERATOR'), [hasRole]);
-  const isAgent = useMemo(() => hasRole('TRAVEL_AGENT'), [hasRole]);
+    const isAdmin = useMemo(() => hasRole('ADMIN') || hasRole('SUPER_ADMIN'), [hasRole]);
+    const isOperator = useMemo(() => hasRole('TOUR_OPERATOR'), [hasRole]);
+    const isAgent = useMemo(() => hasRole('TRAVEL_AGENT') || hasRole('SUB_AGENT'), [hasRole]);
+    const isOperations = useMemo(() => hasRole('OPERATIONS'), [hasRole]);
+    const isSales = useMemo(() => hasRole('SALES'), [hasRole]);
   
   return {
     hasRole,
@@ -805,6 +819,8 @@ export const useRBAC = () => {
     isAdmin,
     isOperator,
     isAgent,
+    isOperations,
+    isSales,
   };
 };
 
