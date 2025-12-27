@@ -70,9 +70,12 @@ export function LeadStageSelector({ leadId, currentStage, onUpdate, variant = 'd
     );
   }
 
+  // Ensure currentStage is not empty string
+  const safeStage = currentStage && currentStage.trim() !== '' ? currentStage : 'NEW';
+
   return (
     <Select
-      value={currentStage}
+      value={safeStage}
       onValueChange={handleChange}
       disabled={loading}
     >

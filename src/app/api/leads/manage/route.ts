@@ -50,7 +50,8 @@ export async function GET(request: NextRequest) {
     const offset = (page - 1) * limit;
 
     // Build WHERE clause
-    const whereConditions: string[] = ['l.agent_id = $1'];
+    // Cast userId to UUID for comparison with agent_id (which is UUID type)
+    const whereConditions: string[] = ['l.agent_id::text = $1'];
     const queryParams: any[] = [userId];
     let paramIndex = 2;
 
@@ -105,9 +106,9 @@ export async function GET(request: NextRequest) {
         MAX(lc.created_at) as last_communication_at,
         MAX(lc.communication_type) as last_communication_type
       FROM leads l
-      LEFT JOIN itineraries i ON i.lead_id = l.id
-      LEFT JOIN itinerary_payments ip ON ip.itinerary_id = i.id
-      LEFT JOIN lead_communications lc ON lc.lead_id = l.id
+      LEFT JOIN itineraries i ON i.lead_id::text = l.id::text
+      LEFT JOIN itinerary_payments ip ON ip.itinerary_id::text = i.id::text
+      LEFT JOIN lead_communications lc ON lc.lead_id::text = l.id::text
       WHERE ${whereClause}
       GROUP BY l.id
       ORDER BY ${orderByClause}

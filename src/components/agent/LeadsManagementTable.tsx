@@ -492,7 +492,7 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
                                   <label className="text-xs text-gray-500 mb-1 block">Stage</label>
                                   <LeadStageSelector
                                     leadId={lead.id}
-                                    currentStage={lead.stage}
+                                    currentStage={lead.stage || 'NEW'}
                                     onUpdate={onRefresh}
                                   />
                                 </div>
@@ -500,7 +500,7 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
                                   <label className="text-xs text-gray-500 mb-1 block">Priority</label>
                                   <LeadPrioritySelector
                                     leadId={lead.id}
-                                    currentPriority={lead.priority}
+                                    currentPriority={lead.priority || 'MEDIUM'}
                                     onUpdate={onRefresh}
                                   />
                                 </div>

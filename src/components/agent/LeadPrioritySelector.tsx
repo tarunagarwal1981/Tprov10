@@ -66,9 +66,12 @@ export function LeadPrioritySelector({ leadId, currentPriority, onUpdate, varian
     );
   }
 
+  // Ensure currentPriority is not empty string
+  const safePriority = currentPriority && currentPriority.trim() !== '' ? currentPriority : 'MEDIUM';
+
   return (
     <Select
-      value={currentPriority}
+      value={safePriority}
       onValueChange={handleChange}
       disabled={loading}
     >
