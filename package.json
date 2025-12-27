@@ -14,7 +14,9 @@
     "netlify:build": "npm run build",
     "netlify:dev": "netlify dev",
     "migrate": "ts-node --transpile-only scripts/run-migration.ts",
-    "migrate:check": "ts-node --transpile-only scripts/check-migration.ts"
+    "migrate:check": "ts-node --transpile-only scripts/check-migration.ts",
+    "migrate:payment": "ts-node --transpile-only scripts/run-payment-migration.ts",
+    "migrate:payment:lambda": "ts-node --transpile-only scripts/run-payment-migration-via-lambda.ts"
   },
   "dependencies": {
     "@aws-sdk/client-cognito-identity-provider": "^3.700.0",

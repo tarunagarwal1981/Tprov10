@@ -131,14 +131,14 @@ export default function LeadsManagementPage() {
             </div>
             <div className="w-48">
               <Select
-                value={filters.status}
-                onValueChange={(value) => handleFilterChange('status', value)}
+                value={filters.status || "all"}
+                onValueChange={(value) => handleFilterChange('status', value === "all" ? "" : value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="All Statuses" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Statuses</SelectItem>
+                  <SelectItem value="all">All Statuses</SelectItem>
                   <SelectItem value="NEW">New</SelectItem>
                   <SelectItem value="CONTACTED">Contacted</SelectItem>
                   <SelectItem value="QUALIFIED">Qualified</SelectItem>
