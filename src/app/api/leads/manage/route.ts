@@ -126,6 +126,68 @@ export async function GET(request: NextRequest) {
       console.log('[Leads Manage] Sample lead IDs:', result.rows.slice(0, 3).map(r => r.id));
     }
 
+    // Check if there are purchased leads that don't have entries in leads table
+    // This handles old purchases made before automatic lead creation was implemented
+    const purchasedLeadsCheck = await query<{ count: number }>(
+      `SELECT COUNT(*) as count 
+       FROM lead_purchases lp
+       LEFT JOIN leads l ON l.marketplace_lead_id::text = lp.lead_id::text AND l.agent_id::text = lp.agent_id::text
+       WHERE lp.agent_id::text = $1 AND l.id IS NULL`,
+      [userId]
+    );
+    const missingLeadsCount = parseInt(purchasedLeadsCheck.rows[0]?.count || '0');
+    
+    if (missingLeadsCount > 0) {
+      console.log(`[Leads Manage] Found ${missingLeadsCount} purchased leads without entries in leads table. Syncing...`);
+      
+      // Get the missing lead IDs
+      const missingLeads = await query<{ lead_id: string }>(
+        `SELECT DISTINCT lp.lead_id::text as lead_id
+         FROM lead_purchases lp
+         LEFT JOIN leads l ON l.marketplace_lead_id::text = lp.lead_id::text AND l.agent_id::text = lp.agent_id::text
+         WHERE lp.agent_id::text = $1 AND l.id IS NULL
+         LIMIT 10`,
+        [userId]
+      );
+
+      // Import leadService to create missing leads
+      const { ensureLeadFromPurchase } = await import('@/lib/services/leadService');
+      
+      // Create leads for missing purchases (limit to 10 at a time to avoid timeout)
+      for (const missingLead of missingLeads.rows) {
+        try {
+          await ensureLeadFromPurchase(missingLead.lead_id, userId);
+          console.log(`[Leads Manage] Created lead for purchase: ${missingLead.lead_id}`);
+        } catch (error: any) {
+          console.error(`[Leads Manage] Failed to create lead for ${missingLead.lead_id}:`, error.message);
+        }
+      }
+
+      // Re-query after syncing
+      const resultAfterSync = await query<LeadWithAggregates>(sqlQuery, queryParams);
+      console.log('[Leads Manage] Result count after sync:', resultAfterSync.rows.length);
+      
+      // Get total count for pagination after sync
+      const countQuery = `
+        SELECT COUNT(DISTINCT l.id) as total
+        FROM leads l
+        WHERE ${whereClause}
+      `;
+      const countParams = queryParams.slice(0, -2); // Remove limit and offset
+      const countResultAfterSync = await query<{ total: number }>(countQuery, countParams);
+      const totalAfterSync = countResultAfterSync.rows[0]?.total || 0;
+      
+      return NextResponse.json({
+        leads: resultAfterSync.rows,
+        pagination: {
+          page,
+          limit,
+          total: totalAfterSync,
+          totalPages: Math.ceil(totalAfterSync / limit),
+        },
+      });
+    }
+
     // Get total count for pagination
     const countQuery = `
       SELECT COUNT(DISTINCT l.id) as total

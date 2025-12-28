@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { createPortal } from 'react-dom';
 import {
   FiChevronDown,
   FiChevronRight,
@@ -126,6 +127,8 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
   const { user } = useAuth();
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [quickActionMenu, setQuickActionMenu] = useState<string | null>(null);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
+  const menuButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const [queryModalOpen, setQueryModalOpen] = useState(false);
   const [queryAction, setQueryAction] = useState<'create' | 'insert' | null>(null);
   const [selectedLeadForQuery, setSelectedLeadForQuery] = useState<string | null>(null);
@@ -420,62 +423,24 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => setQuickActionMenu(quickActionMenu === lead.id ? null : lead.id)}
+                          onClick={(e) => {
+                            const button = e.currentTarget;
+                            const rect = button.getBoundingClientRect();
+                            if (quickActionMenu === lead.id) {
+                              setQuickActionMenu(null);
+                              setMenuPosition(null);
+                            } else {
+                              setQuickActionMenu(lead.id);
+                              setMenuPosition({
+                                top: rect.bottom + window.scrollY + 4,
+                                left: rect.right + window.scrollX - 192, // 192 = w-48 (12rem)
+                              });
+                            }
+                          }}
                           className="h-8 w-8 p-0"
                         >
                           <FiMoreVertical className="w-4 h-4" />
                         </Button>
-                        {quickActionMenu === lead.id && (
-                          <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50 border border-gray-200">
-                            <div className="py-1">
-                              <button
-                                onClick={() => {
-                                  setSelectedLeadForQuery(lead.id);
-                                  setQueryAction('create');
-                                  setQueryModalOpen(true);
-                                  setQuickActionMenu(null);
-                                }}
-                                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
-                              >
-                                <FiPackage className="w-4 h-4" />
-                                Create Itinerary
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setSelectedLeadForQuery(lead.id);
-                                  setQueryAction('insert');
-                                  setQueryModalOpen(true);
-                                  setQuickActionMenu(null);
-                                }}
-                                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
-                              >
-                                <FiPackage className="w-4 h-4" />
-                                Insert Itinerary
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setSelectedLeadForCommunication(lead.id);
-                                  setCommunicationModalOpen(true);
-                                  setQuickActionMenu(null);
-                                }}
-                                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
-                              >
-                                <FiMail className="w-4 h-4" />
-                                Add Communication
-                              </button>
-                              <button
-                                onClick={() => {
-                                  router.push(`/agent/leads/${lead.id}`);
-                                  setQuickActionMenu(null);
-                                }}
-                                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
-                              >
-                                <FiEye className="w-4 h-4" />
-                                View Full Details
-                              </button>
-                            </div>
-                          </div>
-                        )}
                       </div>
                     </td>
                   </tr>
@@ -695,10 +660,81 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
 
       {/* Click outside to close menu */}
       {quickActionMenu && (
-        <div
-          className="fixed inset-0 z-40"
-          onClick={() => setQuickActionMenu(null)}
-        />
+        <>
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => {
+              setQuickActionMenu(null);
+              setMenuPosition(null);
+            }}
+          />
+          {menuPosition && typeof window !== 'undefined' && createPortal(
+            <div
+              className="fixed w-48 bg-white rounded-md shadow-lg z-50 border border-gray-200"
+              style={{
+                top: `${menuPosition.top}px`,
+                left: `${menuPosition.left}px`,
+              }}
+            >
+              <div className="py-1">
+                <button
+                  onClick={() => {
+                    const leadId = quickActionMenu;
+                    setSelectedLeadForQuery(leadId);
+                    setQueryAction('create');
+                    setQueryModalOpen(true);
+                    setQuickActionMenu(null);
+                    setMenuPosition(null);
+                  }}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                >
+                  <FiPackage className="w-4 h-4" />
+                  Create Itinerary
+                </button>
+                <button
+                  onClick={() => {
+                    const leadId = quickActionMenu;
+                    setSelectedLeadForQuery(leadId);
+                    setQueryAction('insert');
+                    setQueryModalOpen(true);
+                    setQuickActionMenu(null);
+                    setMenuPosition(null);
+                  }}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                >
+                  <FiPackage className="w-4 h-4" />
+                  Insert Itinerary
+                </button>
+                <button
+                  onClick={() => {
+                    const leadId = quickActionMenu;
+                    setSelectedLeadForCommunication(leadId);
+                    setCommunicationModalOpen(true);
+                    setQuickActionMenu(null);
+                    setMenuPosition(null);
+                  }}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                >
+                  <FiMail className="w-4 h-4" />
+                  Add Communication
+                </button>
+                <button
+                  onClick={() => {
+                    const leadId = quickActionMenu;
+                    router.push(`/agent/leads/${leadId}`);
+                    setQuickActionMenu(null);
+                    setMenuPosition(null);
+                  }}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                >
+                  <FiEye className="w-4 h-4" />
+                  View Full Details
+                </button>
+              </div>
+            </div>,
+            document.body
+          )}
+        </>
       )}
     </div>
   );
