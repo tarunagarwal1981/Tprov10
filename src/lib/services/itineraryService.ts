@@ -75,8 +75,9 @@ export class ItineraryService {
   // Get all itineraries for a lead
   async getLeadItineraries(leadId: string): Promise<Itinerary[]> {
     try {
+      console.log('[ItineraryService] Fetching itineraries for leadId:', leadId);
       const result = await query<Itinerary>(
-        'SELECT * FROM itineraries WHERE lead_id = $1 ORDER BY created_at DESC',
+        'SELECT * FROM itineraries WHERE lead_id::text = $1 ORDER BY created_at DESC',
         [leadId]
       );
       console.log('[ItineraryService] Fetched itineraries from DB:', result.rows.length);

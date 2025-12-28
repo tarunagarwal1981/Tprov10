@@ -42,13 +42,21 @@ export default function CreateProposalPage() {
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
 
   useEffect(() => {
-    console.log('[ProposalsPage] useEffect triggered:', { leadId, userId: user?.id });
+    console.log('[ProposalsPage] ===== useEffect triggered =====');
+    console.log('[ProposalsPage] leadId:', leadId);
+    console.log('[ProposalsPage] user?.id:', user?.id);
+    console.log('[ProposalsPage] user object:', user);
+    
     if (leadId && user?.id) {
-      console.log('[ProposalsPage] Calling fetchLeadData and fetchItineraries');
+      console.log('[ProposalsPage] ✅ Conditions met - Calling fetchLeadData and fetchItineraries');
       fetchLeadData();
       fetchItineraries();
     } else {
-      console.log('[ProposalsPage] Skipping fetch - missing leadId or userId');
+      console.warn('[ProposalsPage] ⚠️ Skipping fetch - missing:', {
+        leadId: !leadId ? 'leadId is missing' : 'leadId exists',
+        userId: !user?.id ? 'userId is missing' : 'userId exists',
+        userExists: !!user,
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [leadId, user?.id]);
@@ -96,39 +104,81 @@ export default function CreateProposalPage() {
   };
 
   const fetchItineraries = async () => {
+    console.log('[ProposalsPage] ===== fetchItineraries START =====');
+    console.log('[ProposalsPage] fetchItineraries: user?.id:', user?.id);
+    console.log('[ProposalsPage] fetchItineraries: leadId:', leadId);
+    
     if (!user?.id) {
-      console.log('[ProposalsPage] fetchItineraries: No user ID, skipping');
+      console.error('[ProposalsPage] ❌ fetchItineraries: No user ID, skipping');
       return;
     }
     
-    console.log('[ProposalsPage] fetchItineraries: Starting fetch for leadId:', leadId);
+    if (!leadId) {
+      console.error('[ProposalsPage] ❌ fetchItineraries: No leadId, skipping');
+      return;
+    }
+    
+    const apiUrl = `/api/itineraries/leads/${leadId}`;
+    console.log('[ProposalsPage] fetchItineraries: API URL:', apiUrl);
+    console.log('[ProposalsPage] fetchItineraries: Setting loading state to true');
     setLoadingItineraries(true);
+    
     try {
-      const response = await fetch(`/api/itineraries/leads/${leadId}`);
-      console.log('[ProposalsPage] fetchItineraries: Response status:', response.status, response.ok);
+      console.log('[ProposalsPage] fetchItineraries: Making fetch request...');
+      const startTime = Date.now();
+      const response = await fetch(apiUrl);
+      const fetchDuration = Date.now() - startTime;
+      
+      console.log('[ProposalsPage] fetchItineraries: Fetch completed in', fetchDuration, 'ms');
+      console.log('[ProposalsPage] fetchItineraries: Response status:', response.status);
+      console.log('[ProposalsPage] fetchItineraries: Response ok:', response.ok);
+      console.log('[ProposalsPage] fetchItineraries: Response headers:', Object.fromEntries(response.headers.entries()));
       
       if (response.ok) {
+        console.log('[ProposalsPage] fetchItineraries: ✅ Response OK - Parsing JSON...');
         const result = await response.json();
-        console.log('[ProposalsPage] fetchItineraries: Full response:', JSON.stringify(result, null, 2));
+        console.log('[ProposalsPage] fetchItineraries: ✅ JSON parsed successfully');
+        console.log('[ProposalsPage] fetchItineraries: Full response object:', result);
+        console.log('[ProposalsPage] fetchItineraries: result.itineraries:', result.itineraries);
+        console.log('[ProposalsPage] fetchItineraries: result type:', typeof result);
+        console.log('[ProposalsPage] fetchItineraries: result keys:', Object.keys(result));
+        
         const data = result.itineraries || result || [];
-        console.log('[ProposalsPage] fetchItineraries: Extracted data:', data.length, 'items:', JSON.stringify(data, null, 2));
+        console.log('[ProposalsPage] fetchItineraries: Extracted data:', data);
+        console.log('[ProposalsPage] fetchItineraries: Data length:', data.length);
+        console.log('[ProposalsPage] fetchItineraries: Is array?', Array.isArray(data));
+        console.log('[ProposalsPage] fetchItineraries: Data items:', JSON.stringify(data, null, 2));
+        
         if (Array.isArray(data)) {
+          console.log('[ProposalsPage] fetchItineraries: ✅ Data is array - Setting state with', data.length, 'itineraries');
           setItineraries(data);
-          console.log('[ProposalsPage] fetchItineraries: State set successfully with', data.length, 'itineraries');
+          console.log('[ProposalsPage] fetchItineraries: ✅ State updated - itineraries should now be:', data.length);
         } else {
-          console.error('[ProposalsPage] fetchItineraries: Data is not an array:', typeof data, data);
+          console.error('[ProposalsPage] ❌ fetchItineraries: Data is NOT an array!');
+          console.error('[ProposalsPage] fetchItineraries: Data type:', typeof data);
+          console.error('[ProposalsPage] fetchItineraries: Data value:', data);
           setItineraries([]);
         }
       } else {
+        console.error('[ProposalsPage] ❌ fetchItineraries: Response NOT OK');
         const errorText = await response.text();
-        console.error('[ProposalsPage] fetchItineraries: Response not OK:', response.status, errorText);
+        console.error('[ProposalsPage] fetchItineraries: Error status:', response.status);
+        console.error('[ProposalsPage] fetchItineraries: Error text:', errorText);
         toast.error('Failed to load itineraries');
+        setItineraries([]);
       }
     } catch (error) {
-      console.error('[ProposalsPage] Error fetching itineraries:', error);
+      console.error('[ProposalsPage] ❌ fetchItineraries: EXCEPTION caught!');
+      console.error('[ProposalsPage] fetchItineraries: Error type:', error instanceof Error ? error.constructor.name : typeof error);
+      console.error('[ProposalsPage] fetchItineraries: Error message:', error instanceof Error ? error.message : String(error));
+      console.error('[ProposalsPage] fetchItineraries: Error stack:', error instanceof Error ? error.stack : 'No stack');
+      console.error('[ProposalsPage] fetchItineraries: Full error object:', error);
       toast.error('Failed to load itineraries');
+      setItineraries([]);
     } finally {
+      console.log('[ProposalsPage] fetchItineraries: Setting loading state to false');
       setLoadingItineraries(false);
+      console.log('[ProposalsPage] ===== fetchItineraries END =====');
     }
   };
 
@@ -368,6 +418,14 @@ export default function CreateProposalPage() {
           </Card>
 
           {/* Existing Itineraries Section */}
+          {(() => {
+            console.log('[ProposalsPage] ===== RENDER: Existing Itineraries Section =====');
+            console.log('[ProposalsPage] Render: itineraries.length =', itineraries.length);
+            console.log('[ProposalsPage] Render: loadingItineraries =', loadingItineraries);
+            console.log('[ProposalsPage] Render: itineraries array:', itineraries);
+            console.log('[ProposalsPage] Render: Will show section?', itineraries.length > 0 || loadingItineraries);
+            return null;
+          })()}
           <div className="mb-8">
             <div className="flex items-center justify-between mb-4">
               <div>
