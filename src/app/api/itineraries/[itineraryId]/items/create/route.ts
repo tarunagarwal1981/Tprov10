@@ -60,7 +60,7 @@ export async function POST(
     
     const insertValues = [
         itineraryId,
-        dayId,
+        dayId || null, // Use null if dayId is not provided
         packageType,
         packageId,
         operatorId,
@@ -80,7 +80,7 @@ export async function POST(
 
     console.log('[Create Item] Inserting with values:', { 
       itineraryId, 
-      dayId, 
+      dayId: dayId || 'NULL', 
       packageType, 
       packageId, 
       operatorId, 
@@ -90,31 +90,78 @@ export async function POST(
       totalPrice 
     });
 
-    console.log('[Create Item] Executing INSERT query with values:', {
-      itineraryId,
-      dayId,
-      packageType,
-      packageId,
-      operatorId,
-      packageTitle,
-      unitPrice,
-      quantity,
-      totalPrice,
-      finalDisplayOrder,
-      valuesCount: insertValues.length,
-    });
-
     let insertResult;
     try {
       // Generate UUID explicitly for id column (in case default isn't working)
+      // Handle null dayId - use conditional query since PostgreSQL can't cast NULL to UUID
+      const insertQuery = dayId
+        ? `INSERT INTO itinerary_items (
+            id, itinerary_id, day_id, package_type, package_id, operator_id,
+            package_title, package_image_url, configuration, unit_price,
+            quantity, total_price, display_order, notes
+          ) VALUES (
+            gen_random_uuid(), 
+            $1::uuid, 
+            $2::uuid, 
+            $3, 
+            $4::uuid, 
+            $5::uuid, 
+            $6, 
+            $7, 
+            $8::jsonb, 
+            $9, 
+            $10, 
+            $11, 
+            $12, 
+            $13
+          )
+          RETURNING *`
+        : `INSERT INTO itinerary_items (
+            id, itinerary_id, day_id, package_type, package_id, operator_id,
+            package_title, package_image_url, configuration, unit_price,
+            quantity, total_price, display_order, notes
+          ) VALUES (
+            gen_random_uuid(), 
+            $1::uuid, 
+            NULL, 
+            $2, 
+            $3::uuid, 
+            $4::uuid, 
+            $5, 
+            $6, 
+            $7::jsonb, 
+            $8, 
+            $9, 
+            $10, 
+            $11, 
+            $12
+          )
+          RETURNING *`;
+      
+      // Adjust parameters based on whether dayId is provided
+      const queryParams = dayId 
+        ? insertValues 
+        : [
+            itineraryId,
+            packageType,
+            packageId,
+            operatorId,
+            packageTitle,
+            packageImageUrl || null,
+            configValue,
+            unitPrice,
+            quantity,
+            totalPrice,
+            finalDisplayOrder,
+            notes || null,
+          ];
+      
+      console.log('[Create Item] Using query', dayId ? 'with dayId' : 'without dayId (NULL)');
+      console.log('[Create Item] Query params count:', queryParams.length);
+      
       insertResult = await query<any>(
-        `INSERT INTO itinerary_items (
-          id, itinerary_id, day_id, package_type, package_id, operator_id,
-          package_title, package_image_url, configuration, unit_price,
-          quantity, total_price, display_order, notes
-        ) VALUES (gen_random_uuid(), $1::uuid, $2::uuid, $3, $4::uuid, $5::uuid, $6, $7, $8::jsonb, $9, $10, $11, $12, $13)
-        RETURNING *`,
-        insertValues
+        insertQuery,
+        queryParams
       );
 
       const firstRow = insertResult.rows?.[0];
@@ -135,8 +182,30 @@ export async function POST(
         error: dbError instanceof Error ? dbError.message : String(dbError),
         stack: dbError instanceof Error ? dbError.stack : undefined,
         name: dbError instanceof Error ? dbError.name : undefined,
+        insertValues: insertValues.map((v, i) => ({ 
+          index: i + 1, 
+          value: v === null ? 'NULL' : (typeof v === 'string' && v.length > 50 ? v.substring(0, 50) + '...' : v), 
+          type: typeof v 
+        })),
+        dayId: dayId || 'NULL',
+        itineraryId,
       });
-      throw dbError;
+      
+      // Return more detailed error to help debug
+      const errorMessage = dbError instanceof Error ? dbError.message : String(dbError);
+      return NextResponse.json(
+        { 
+          error: 'Failed to create itinerary item', 
+          details: errorMessage,
+          debug: {
+            dayId: dayId || null,
+            itineraryId,
+            packageType,
+            hasDayId: !!dayId,
+          }
+        },
+        { status: 500 }
+      );
     }
 
     if (!insertResult || !insertResult.rows || insertResult.rows.length === 0) {

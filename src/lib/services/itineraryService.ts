@@ -107,6 +107,11 @@ export class ItineraryService {
         marketplace_lead_id: leadInfo.marketplace_lead_id,
         agent_id: leadInfo.agent_id,
       });
+      console.log('[ItineraryService] ⚠️ IMPORTANT: Will marketplace_lead_id trigger FALLBACK?', {
+        has_marketplace_lead_id: !!leadInfo.marketplace_lead_id,
+        marketplace_lead_id_value: leadInfo.marketplace_lead_id,
+        marketplace_lead_id_type: typeof leadInfo.marketplace_lead_id,
+      });
       
       // STEP 1: PRIMARY QUERY - Get all itineraries directly linked to this leads.id
       // This is the main query - should find most/all itineraries for this specific lead
@@ -135,53 +140,80 @@ export class ItineraryService {
       const additionalItineraries: Itinerary[] = [];
       
       if (leadInfo.marketplace_lead_id) {
-        console.log('[ItineraryService] Lead has marketplace_lead_id, executing FALLBACK query');
+        console.log('[ItineraryService] ✅ Lead has marketplace_lead_id, executing FALLBACK query');
         console.log('[ItineraryService] This will find ALL itineraries for ALL leads.id records with marketplace_lead_id:', leadInfo.marketplace_lead_id);
+        console.log('[ItineraryService] AgentId for filtering:', agentId || 'not provided (will show all)');
         
-        // Find all leads with the same marketplace_lead_id and same agent_id (security)
-        // Then get all their itineraries
-        const marketplaceQuery = agentId
-          ? `SELECT DISTINCT i.* 
-             FROM itineraries i
-             INNER JOIN leads l ON l.id::text = i.lead_id::text
-             WHERE l.marketplace_lead_id::text = $1 
-             AND l.agent_id::text = $2
-             AND l.marketplace_lead_id IS NOT NULL
-             ORDER BY i.created_at DESC`
-          : `SELECT DISTINCT i.* 
+        // First, let's check how many leads.id records exist with this marketplace_lead_id
+        const leadsCheck = await query<{ id: string; agent_id: string }>(
+          `SELECT id::text as id, agent_id::text as agent_id
+           FROM leads
+           WHERE marketplace_lead_id::text = $1`,
+          [leadInfo.marketplace_lead_id]
+        );
+        console.log('[ItineraryService] Found', leadsCheck.rows.length, 'leads.id records with marketplace_lead_id:', leadInfo.marketplace_lead_id);
+        if (leadsCheck.rows.length > 0) {
+          console.log('[ItineraryService] These leads.id records:', leadsCheck.rows.map(l => ({ id: l.id, agent_id: l.agent_id })));
+        }
+        
+        // Find ALL leads with the same marketplace_lead_id (regardless of agent_id in SQL)
+        // We'll filter by agent_id in JavaScript to ensure we catch all potential matches
+        // This is important because there might be data inconsistencies
+        const marketplaceQuery = `SELECT DISTINCT i.*, l.agent_id::text as lead_agent_id
              FROM itineraries i
              INNER JOIN leads l ON l.id::text = i.lead_id::text
              WHERE l.marketplace_lead_id::text = $1 
              AND l.marketplace_lead_id IS NOT NULL
              ORDER BY i.created_at DESC`;
         
-        const marketplaceParams = agentId ? [leadInfo.marketplace_lead_id, agentId] : [leadInfo.marketplace_lead_id];
-        const marketplaceResult = await query<Itinerary>(marketplaceQuery, marketplaceParams);
-        console.log('[ItineraryService] FALLBACK query (marketplace_lead_id) found:', marketplaceResult.rows.length, 'itineraries');
+        const marketplaceResult = await query<Itinerary & { lead_agent_id?: string }>(marketplaceQuery, [leadInfo.marketplace_lead_id]);
+        console.log('[ItineraryService] FALLBACK query (marketplace_lead_id) found:', marketplaceResult.rows.length, 'itineraries (before agent_id filter)');
         
         // Log details about what was found
         if (marketplaceResult.rows.length > 0) {
           const uniqueLeadIds = new Set(marketplaceResult.rows.map(it => it.lead_id));
+          const uniqueAgentIds = new Set(marketplaceResult.rows.map(it => (it as any).lead_agent_id || it.agent_id).filter(Boolean));
           console.log('[ItineraryService] These itineraries are linked to', uniqueLeadIds.size, 'different lead_id records:', Array.from(uniqueLeadIds));
+          console.log('[ItineraryService] These itineraries belong to', uniqueAgentIds.size, 'different agent_id records:', Array.from(uniqueAgentIds));
+          
+          // Log breakdown by agent_id
+          const byAgentId: Record<string, number> = {};
+          marketplaceResult.rows.forEach(it => {
+            const agentIdKey = (it as any).lead_agent_id || it.agent_id || 'unknown';
+            byAgentId[agentIdKey] = (byAgentId[agentIdKey] || 0) + 1;
+          });
+          console.log('[ItineraryService] Itineraries breakdown by agent_id:', byAgentId);
         }
         
-        // Filter by agent_id if not already filtered in query (double-check for security)
+        // Filter by agent_id in JavaScript (security measure)
+        // Only include itineraries where the lead's agent_id matches the requested agentId
         const filteredMarketplace = agentId 
-          ? marketplaceResult.rows.filter(it => it.agent_id === agentId)
+          ? marketplaceResult.rows.filter(it => {
+              const leadAgentId = (it as any).lead_agent_id || it.agent_id;
+              const matches = leadAgentId === agentId;
+              if (!matches) {
+                console.log(`[ItineraryService] Filtering out itinerary ${it.id} - lead_agent_id: ${leadAgentId}, requested agentId: ${agentId}`);
+              }
+              return matches;
+            })
           : marketplaceResult.rows;
         
-        console.log('[ItineraryService] After agent_id filter:', filteredMarketplace.length, 'itineraries');
+        console.log('[ItineraryService] After agent_id filter:', filteredMarketplace.length, 'itineraries (from', marketplaceResult.rows.length, 'total)');
         
         // Add only new itineraries (not already found in PRIMARY query)
         filteredMarketplace.forEach(it => {
           if (!foundItineraryIds.has(it.id)) {
             foundItineraryIds.add(it.id);
-            additionalItineraries.push(it);
-            console.log(`[ItineraryService] Additional itinerary ${it.id} (lead_id: ${it.lead_id}) found via FALLBACK query`);
+            // Remove the temporary lead_agent_id field before adding
+            const { lead_agent_id, ...cleanItinerary } = it as any;
+            additionalItineraries.push(cleanItinerary as Itinerary);
+            console.log(`[ItineraryService] ✅ Additional itinerary ${it.id} (lead_id: ${it.lead_id}, agent_id: ${it.agent_id}) found via FALLBACK query`);
           } else {
             console.log(`[ItineraryService] Itinerary ${it.id} already found via PRIMARY query, skipping duplicate`);
           }
         });
+      } else {
+        console.log('[ItineraryService] Lead does NOT have marketplace_lead_id, skipping FALLBACK query');
       }
       
       // STEP 3: Combine all itineraries and sort by created_at

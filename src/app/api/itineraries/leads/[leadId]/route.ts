@@ -36,8 +36,10 @@ export async function GET(
     }
     
     console.log('[API] Calling itineraryService.getLeadItineraries with leadId and agentId...');
+    console.log('[API] Parameters:', { leadId, agentId: agentId || 'NOT PROVIDED' });
     const itineraries = await itineraryService.getLeadItineraries(leadId, agentId);
     console.log('[API] ✅ getLeadItineraries returned:', itineraries.length, 'itineraries');
+    console.log('[API] ⚠️ If this count is lower than expected, check backend logs for PRIMARY/FALLBACK query results');
     
     console.log('[API] /api/itineraries/leads/[leadId] - Returning itineraries:', {
       leadId,
