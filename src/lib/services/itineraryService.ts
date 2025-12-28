@@ -108,16 +108,14 @@ export class ItineraryService {
         agent_id: leadInfo.agent_id,
       });
       
-      // First, get all itineraries directly linked to this lead_id
-      // Note: We don't filter by agent_id here because all itineraries for a lead should be visible
-      // The lead itself is already filtered by agent_id in the leads table
+      // STEP 1: PRIMARY QUERY - Get all itineraries directly linked to this leads.id
+      // This is the main query - should find most/all itineraries for this specific lead
       const directQuery = 'SELECT * FROM itineraries WHERE lead_id::text = $1 ORDER BY created_at DESC';
-      console.log('[ItineraryService] Executing direct query for lead_id:', leadId, 'agentId filter:', agentId || 'none (showing all)');
+      console.log('[ItineraryService] Executing PRIMARY query for lead_id:', leadId);
       const directResult = await query<Itinerary>(directQuery, [leadId]);
-      console.log('[ItineraryService] Direct query found:', directResult.rows.length, 'itineraries');
+      console.log('[ItineraryService] PRIMARY query found:', directResult.rows.length, 'itineraries');
       
-      // If agentId is provided, filter results to only include itineraries for that agent
-      // This is a security measure, but we log if we're filtering some out
+      // Filter by agent_id if provided (security measure)
       let filteredDirect = directResult.rows;
       if (agentId) {
         const beforeFilter = filteredDirect.length;
@@ -132,63 +130,61 @@ export class ItineraryService {
       const foundItineraryIds = new Set<string>();
       filteredDirect.forEach(it => foundItineraryIds.add(it.id));
       
-      // Now, if we have customer_id or marketplace_lead_id, find additional itineraries
-      // that might be linked to other leads with the same customer/marketplace_lead
+      // STEP 2: FALLBACK QUERY - If lead has marketplace_lead_id, find ALL itineraries for ALL leads with same marketplace_lead_id
+      // This handles data inconsistencies where multiple leads.id records exist for the same marketplace lead
       const additionalItineraries: Itinerary[] = [];
       
-      // Find itineraries via customer_id (if lead has customer_id)
-      if (leadInfo.customer_id) {
-        console.log('[ItineraryService] Searching for additional itineraries via customer_id:', leadInfo.customer_id);
-        // Don't filter by agent_id in the query - filter after to match direct query behavior
-        const customerQuery = `SELECT i.* FROM itineraries i
-           INNER JOIN leads l ON l.id::text = i.lead_id::text
-           WHERE l.customer_id = $1 AND l.customer_id IS NOT NULL
-           ORDER BY i.created_at DESC`;
-        
-        const customerResult = await query<Itinerary>(customerQuery, [leadInfo.customer_id]);
-        console.log('[ItineraryService] Customer_id query found:', customerResult.rows.length, 'itineraries');
-        
-        // Filter by agent_id if provided, then add only new itineraries
-        const filteredCustomer = agentId 
-          ? customerResult.rows.filter(it => it.agent_id === agentId)
-          : customerResult.rows;
-        
-        filteredCustomer.forEach(it => {
-          if (!foundItineraryIds.has(it.id)) {
-            foundItineraryIds.add(it.id);
-            additionalItineraries.push(it);
-            console.log(`[ItineraryService] Additional itinerary ${it.id} found via customer_id`);
-          }
-        });
-      }
-      
-      // Find itineraries via marketplace_lead_id (if lead has marketplace_lead_id)
       if (leadInfo.marketplace_lead_id) {
-        console.log('[ItineraryService] Searching for additional itineraries via marketplace_lead_id:', leadInfo.marketplace_lead_id);
-        // Don't filter by agent_id in the query - filter after to match direct query behavior
-        const marketplaceQuery = `SELECT i.* FROM itineraries i
-           INNER JOIN leads l ON l.id::text = i.lead_id::text
-           WHERE l.marketplace_lead_id::text = $1 AND l.marketplace_lead_id IS NOT NULL
-           ORDER BY i.created_at DESC`;
+        console.log('[ItineraryService] Lead has marketplace_lead_id, executing FALLBACK query');
+        console.log('[ItineraryService] This will find ALL itineraries for ALL leads.id records with marketplace_lead_id:', leadInfo.marketplace_lead_id);
         
-        const marketplaceResult = await query<Itinerary>(marketplaceQuery, [leadInfo.marketplace_lead_id]);
-        console.log('[ItineraryService] Marketplace_lead_id query found:', marketplaceResult.rows.length, 'itineraries');
+        // Find all leads with the same marketplace_lead_id and same agent_id (security)
+        // Then get all their itineraries
+        const marketplaceQuery = agentId
+          ? `SELECT DISTINCT i.* 
+             FROM itineraries i
+             INNER JOIN leads l ON l.id::text = i.lead_id::text
+             WHERE l.marketplace_lead_id::text = $1 
+             AND l.agent_id::text = $2
+             AND l.marketplace_lead_id IS NOT NULL
+             ORDER BY i.created_at DESC`
+          : `SELECT DISTINCT i.* 
+             FROM itineraries i
+             INNER JOIN leads l ON l.id::text = i.lead_id::text
+             WHERE l.marketplace_lead_id::text = $1 
+             AND l.marketplace_lead_id IS NOT NULL
+             ORDER BY i.created_at DESC`;
         
-        // Filter by agent_id if provided, then add only new itineraries
+        const marketplaceParams = agentId ? [leadInfo.marketplace_lead_id, agentId] : [leadInfo.marketplace_lead_id];
+        const marketplaceResult = await query<Itinerary>(marketplaceQuery, marketplaceParams);
+        console.log('[ItineraryService] FALLBACK query (marketplace_lead_id) found:', marketplaceResult.rows.length, 'itineraries');
+        
+        // Log details about what was found
+        if (marketplaceResult.rows.length > 0) {
+          const uniqueLeadIds = new Set(marketplaceResult.rows.map(it => it.lead_id));
+          console.log('[ItineraryService] These itineraries are linked to', uniqueLeadIds.size, 'different lead_id records:', Array.from(uniqueLeadIds));
+        }
+        
+        // Filter by agent_id if not already filtered in query (double-check for security)
         const filteredMarketplace = agentId 
           ? marketplaceResult.rows.filter(it => it.agent_id === agentId)
           : marketplaceResult.rows;
         
+        console.log('[ItineraryService] After agent_id filter:', filteredMarketplace.length, 'itineraries');
+        
+        // Add only new itineraries (not already found in PRIMARY query)
         filteredMarketplace.forEach(it => {
           if (!foundItineraryIds.has(it.id)) {
             foundItineraryIds.add(it.id);
             additionalItineraries.push(it);
-            console.log(`[ItineraryService] Additional itinerary ${it.id} found via marketplace_lead_id`);
+            console.log(`[ItineraryService] Additional itinerary ${it.id} (lead_id: ${it.lead_id}) found via FALLBACK query`);
+          } else {
+            console.log(`[ItineraryService] Itinerary ${it.id} already found via PRIMARY query, skipping duplicate`);
           }
         });
       }
       
-      // Combine all itineraries and sort by created_at
+      // STEP 3: Combine all itineraries and sort by created_at
       const finalItineraries = [...filteredDirect, ...additionalItineraries].sort((a, b) => {
         const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
         const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
@@ -197,9 +193,8 @@ export class ItineraryService {
       
       console.log('[ItineraryService] Fetched itineraries from DB (total):', finalItineraries.length);
       console.log('[ItineraryService] Breakdown:', {
-        direct_query_total: directResult.rows.length,
-        direct_query_after_agent_filter: filteredDirect.length,
-        additional_via_customer_id: additionalItineraries.length,
+        primary_query: filteredDirect.length,
+        fallback_query: additionalItineraries.length,
         total_final: finalItineraries.length,
       });
       
