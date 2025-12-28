@@ -140,8 +140,24 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error fetching leads for management:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorCode = (error as any)?.code;
+    const errorDetail = (error as any)?.detail;
+    
+    console.error('Error details:', {
+      message: errorMessage,
+      code: errorCode,
+      detail: errorDetail,
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    
     return NextResponse.json(
-      { error: 'Failed to fetch leads', details: error instanceof Error ? error.message : 'Unknown error' },
+      { 
+        error: 'Failed to fetch leads', 
+        details: errorMessage,
+        code: errorCode,
+        detail: errorDetail,
+      },
       { status: 500 }
     );
   }
