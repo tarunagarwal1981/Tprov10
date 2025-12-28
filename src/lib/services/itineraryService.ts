@@ -109,19 +109,28 @@ export class ItineraryService {
       });
       
       // First, get all itineraries directly linked to this lead_id
-      // This is the primary query - should find most/all itineraries
-      const directQuery = agentId
-        ? 'SELECT * FROM itineraries WHERE lead_id::text = $1 AND agent_id::text = $2 ORDER BY created_at DESC'
-        : 'SELECT * FROM itineraries WHERE lead_id::text = $1 ORDER BY created_at DESC';
-      
-      const directParams = agentId ? [leadId, agentId] : [leadId];
-      console.log('[ItineraryService] Executing direct query for lead_id:', leadId);
-      const directResult = await query<Itinerary>(directQuery, directParams);
+      // Note: We don't filter by agent_id here because all itineraries for a lead should be visible
+      // The lead itself is already filtered by agent_id in the leads table
+      const directQuery = 'SELECT * FROM itineraries WHERE lead_id::text = $1 ORDER BY created_at DESC';
+      console.log('[ItineraryService] Executing direct query for lead_id:', leadId, 'agentId filter:', agentId || 'none (showing all)');
+      const directResult = await query<Itinerary>(directQuery, [leadId]);
       console.log('[ItineraryService] Direct query found:', directResult.rows.length, 'itineraries');
+      
+      // If agentId is provided, filter results to only include itineraries for that agent
+      // This is a security measure, but we log if we're filtering some out
+      let filteredDirect = directResult.rows;
+      if (agentId) {
+        const beforeFilter = filteredDirect.length;
+        filteredDirect = filteredDirect.filter(it => it.agent_id === agentId);
+        const afterFilter = filteredDirect.length;
+        if (beforeFilter > afterFilter) {
+          console.log(`[ItineraryService] ⚠️ Filtered out ${beforeFilter - afterFilter} itineraries due to agent_id mismatch`);
+        }
+      }
       
       // Track all found itinerary IDs to avoid duplicates
       const foundItineraryIds = new Set<string>();
-      directResult.rows.forEach(it => foundItineraryIds.add(it.id));
+      filteredDirect.forEach(it => foundItineraryIds.add(it.id));
       
       // Now, if we have customer_id or marketplace_lead_id, find additional itineraries
       // that might be linked to other leads with the same customer/marketplace_lead
@@ -130,22 +139,21 @@ export class ItineraryService {
       // Find itineraries via customer_id (if lead has customer_id)
       if (leadInfo.customer_id) {
         console.log('[ItineraryService] Searching for additional itineraries via customer_id:', leadInfo.customer_id);
-        const customerQuery = agentId
-          ? `SELECT i.* FROM itineraries i
-             INNER JOIN leads l ON l.id::text = i.lead_id::text
-             WHERE l.customer_id = $1 AND i.agent_id::text = $2 AND l.customer_id IS NOT NULL
-             ORDER BY i.created_at DESC`
-          : `SELECT i.* FROM itineraries i
-             INNER JOIN leads l ON l.id::text = i.lead_id::text
-             WHERE l.customer_id = $1 AND l.customer_id IS NOT NULL
-             ORDER BY i.created_at DESC`;
+        // Don't filter by agent_id in the query - filter after to match direct query behavior
+        const customerQuery = `SELECT i.* FROM itineraries i
+           INNER JOIN leads l ON l.id::text = i.lead_id::text
+           WHERE l.customer_id = $1 AND l.customer_id IS NOT NULL
+           ORDER BY i.created_at DESC`;
         
-        const customerParams = agentId ? [leadInfo.customer_id, agentId] : [leadInfo.customer_id];
-        const customerResult = await query<Itinerary>(customerQuery, customerParams);
+        const customerResult = await query<Itinerary>(customerQuery, [leadInfo.customer_id]);
         console.log('[ItineraryService] Customer_id query found:', customerResult.rows.length, 'itineraries');
         
-        // Add only new itineraries (not already found)
-        customerResult.rows.forEach(it => {
+        // Filter by agent_id if provided, then add only new itineraries
+        const filteredCustomer = agentId 
+          ? customerResult.rows.filter(it => it.agent_id === agentId)
+          : customerResult.rows;
+        
+        filteredCustomer.forEach(it => {
           if (!foundItineraryIds.has(it.id)) {
             foundItineraryIds.add(it.id);
             additionalItineraries.push(it);
@@ -157,22 +165,21 @@ export class ItineraryService {
       // Find itineraries via marketplace_lead_id (if lead has marketplace_lead_id)
       if (leadInfo.marketplace_lead_id) {
         console.log('[ItineraryService] Searching for additional itineraries via marketplace_lead_id:', leadInfo.marketplace_lead_id);
-        const marketplaceQuery = agentId
-          ? `SELECT i.* FROM itineraries i
-             INNER JOIN leads l ON l.id::text = i.lead_id::text
-             WHERE l.marketplace_lead_id::text = $1 AND i.agent_id::text = $2 AND l.marketplace_lead_id IS NOT NULL
-             ORDER BY i.created_at DESC`
-          : `SELECT i.* FROM itineraries i
-             INNER JOIN leads l ON l.id::text = i.lead_id::text
-             WHERE l.marketplace_lead_id::text = $1 AND l.marketplace_lead_id IS NOT NULL
-             ORDER BY i.created_at DESC`;
+        // Don't filter by agent_id in the query - filter after to match direct query behavior
+        const marketplaceQuery = `SELECT i.* FROM itineraries i
+           INNER JOIN leads l ON l.id::text = i.lead_id::text
+           WHERE l.marketplace_lead_id::text = $1 AND l.marketplace_lead_id IS NOT NULL
+           ORDER BY i.created_at DESC`;
         
-        const marketplaceParams = agentId ? [leadInfo.marketplace_lead_id, agentId] : [leadInfo.marketplace_lead_id];
-        const marketplaceResult = await query<Itinerary>(marketplaceQuery, marketplaceParams);
+        const marketplaceResult = await query<Itinerary>(marketplaceQuery, [leadInfo.marketplace_lead_id]);
         console.log('[ItineraryService] Marketplace_lead_id query found:', marketplaceResult.rows.length, 'itineraries');
         
-        // Add only new itineraries (not already found)
-        marketplaceResult.rows.forEach(it => {
+        // Filter by agent_id if provided, then add only new itineraries
+        const filteredMarketplace = agentId 
+          ? marketplaceResult.rows.filter(it => it.agent_id === agentId)
+          : marketplaceResult.rows;
+        
+        filteredMarketplace.forEach(it => {
           if (!foundItineraryIds.has(it.id)) {
             foundItineraryIds.add(it.id);
             additionalItineraries.push(it);
@@ -182,7 +189,7 @@ export class ItineraryService {
       }
       
       // Combine all itineraries and sort by created_at
-      const finalItineraries = [...directResult.rows, ...additionalItineraries].sort((a, b) => {
+      const finalItineraries = [...filteredDirect, ...additionalItineraries].sort((a, b) => {
         const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
         const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
         return dateB - dateA; // Descending order (newest first)
@@ -190,13 +197,10 @@ export class ItineraryService {
       
       console.log('[ItineraryService] Fetched itineraries from DB (total):', finalItineraries.length);
       console.log('[ItineraryService] Breakdown:', {
-        direct: directResult.rows.length,
-        via_customer_id: additionalItineraries.filter(it => {
-          // Check if this itinerary was found via customer_id (would need to track this)
-          return true; // Simplified for now
-        }).length,
-        via_marketplace_lead_id: additionalItineraries.length,
-        total_unique: finalItineraries.length,
+        direct_query_total: directResult.rows.length,
+        direct_query_after_agent_filter: filteredDirect.length,
+        additional_via_customer_id: additionalItineraries.length,
+        total_final: finalItineraries.length,
       });
       
       // Log each itinerary's details
