@@ -42,10 +42,15 @@ export default function CreateProposalPage() {
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
 
   useEffect(() => {
+    console.log('[ProposalsPage] useEffect triggered:', { leadId, userId: user?.id });
     if (leadId && user?.id) {
+      console.log('[ProposalsPage] Calling fetchLeadData and fetchItineraries');
       fetchLeadData();
       fetchItineraries();
+    } else {
+      console.log('[ProposalsPage] Skipping fetch - missing leadId or userId');
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [leadId, user?.id]);
 
   const fetchLeadData = async () => {
@@ -91,17 +96,36 @@ export default function CreateProposalPage() {
   };
 
   const fetchItineraries = async () => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      console.log('[ProposalsPage] fetchItineraries: No user ID, skipping');
+      return;
+    }
     
+    console.log('[ProposalsPage] fetchItineraries: Starting fetch for leadId:', leadId);
     setLoadingItineraries(true);
     try {
       const response = await fetch(`/api/itineraries/leads/${leadId}`);
+      console.log('[ProposalsPage] fetchItineraries: Response status:', response.status, response.ok);
+      
       if (response.ok) {
-        const { itineraries: data } = await response.json();
-        setItineraries(data || []);
+        const result = await response.json();
+        console.log('[ProposalsPage] fetchItineraries: Full response:', JSON.stringify(result, null, 2));
+        const data = result.itineraries || result || [];
+        console.log('[ProposalsPage] fetchItineraries: Extracted data:', data.length, 'items:', JSON.stringify(data, null, 2));
+        if (Array.isArray(data)) {
+          setItineraries(data);
+          console.log('[ProposalsPage] fetchItineraries: State set successfully with', data.length, 'itineraries');
+        } else {
+          console.error('[ProposalsPage] fetchItineraries: Data is not an array:', typeof data, data);
+          setItineraries([]);
+        }
+      } else {
+        const errorText = await response.text();
+        console.error('[ProposalsPage] fetchItineraries: Response not OK:', response.status, errorText);
+        toast.error('Failed to load itineraries');
       }
     } catch (error) {
-      console.error('Error fetching itineraries:', error);
+      console.error('[ProposalsPage] Error fetching itineraries:', error);
       toast.error('Failed to load itineraries');
     } finally {
       setLoadingItineraries(false);
@@ -344,22 +368,37 @@ export default function CreateProposalPage() {
           </Card>
 
           {/* Existing Itineraries Section */}
-          {itineraries.length > 0 && (
-            <div className="mb-8">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900 mb-1">Existing Proposals</h2>
-                  <p className="text-gray-600">View and manage your created itineraries</p>
-                </div>
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-1">Existing Proposals</h2>
+                <p className="text-gray-600">
+                  View and manage your created itineraries
+                  {process.env.NODE_ENV === 'development' && (
+                    <span className="ml-2 text-xs text-gray-400">
+                      (Debug: {itineraries.length} itineraries, loading: {loadingItineraries ? 'yes' : 'no'})
+                    </span>
+                  )}
+                </p>
               </div>
-              
-              {loadingItineraries ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {itineraries.map((itinerary) => (
+            </div>
+            
+            {loadingItineraries ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              </div>
+            ) : itineraries.length === 0 ? (
+              <Card className="text-center py-8">
+                <CardContent>
+                  <FiFileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-600">No itineraries found for this lead</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {itineraries.map((itinerary) => {
+                  console.log('[ProposalsPage] Rendering itinerary card:', itinerary.id, itinerary.name, itinerary);
+                  return (
                     <Card key={itinerary.id} className="hover:shadow-lg transition-shadow">
                       <CardHeader>
                         <div className="flex items-start justify-between mb-2">
@@ -462,11 +501,11 @@ export default function CreateProposalPage() {
                         )}
                       </CardContent>
                     </Card>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+                  );
+                })}
+              </div>
+            )}
+          </div>
 
           {/* Proposal Selection */}
           <div className="mb-6">
