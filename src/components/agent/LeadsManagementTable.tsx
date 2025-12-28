@@ -27,7 +27,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/useToast';
 import { useAuth } from '@/context/CognitoAuthContext';
 import { getAccessToken } from '@/lib/auth/getAccessToken';
-import { QueryModal } from '@/components/agent/QueryModal';
 import { AddCommunicationForm } from '@/components/agent/AddCommunicationForm';
 import { AssignLeadToSubAgent } from '@/components/agent/AssignLeadToSubAgent';
 import { LeadCommunicationHistory } from '@/components/agent/LeadCommunicationHistory';
@@ -129,9 +128,6 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
   const [quickActionMenu, setQuickActionMenu] = useState<string | null>(null);
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const menuButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
-  const [queryModalOpen, setQueryModalOpen] = useState(false);
-  const [queryAction, setQueryAction] = useState<'create' | 'insert' | null>(null);
-  const [selectedLeadForQuery, setSelectedLeadForQuery] = useState<string | null>(null);
   const [communicationModalOpen, setCommunicationModalOpen] = useState(false);
   const [selectedLeadForCommunication, setSelectedLeadForCommunication] = useState<string | null>(null);
   const [assignModalOpen, setAssignModalOpen] = useState(false);
@@ -184,75 +180,6 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
     }
   };
 
-  const handleQuerySave = async (data: {
-    destinations: Array<{ city: string; nights: number }>;
-    leaving_from: string;
-    nationality: string;
-    leaving_on: string;
-    travelers: { rooms: number; adults: number; children: number; infants: number };
-    star_rating?: number;
-    add_transfers: boolean;
-  }) => {
-    if (!selectedLeadForQuery || !user?.id) return;
-
-    try {
-      // Create query
-      const queryResponse = await fetch(`/api/queries/${selectedLeadForQuery}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          destinations: data.destinations,
-          leaving_from: data.leaving_from,
-          nationality: data.nationality,
-          leaving_on: data.leaving_on,
-          travelers: data.travelers,
-          star_rating: data.star_rating,
-          add_transfers: data.add_transfers,
-        }),
-      });
-
-      if (!queryResponse.ok) {
-        const error = await queryResponse.json();
-        throw new Error(error.error || 'Failed to create query');
-      }
-
-      const { query: savedQuery } = await queryResponse.json();
-
-      // Create itinerary
-      const itineraryPayload = {
-        leadId: selectedLeadForQuery,
-        agentId: user.id,
-        name: queryAction === 'insert' ? 'Insert Itinerary' : 'Create Itinerary',
-        adultsCount: data.travelers.adults,
-        childrenCount: data.travelers.children,
-        infantsCount: data.travelers.infants,
-        queryId: savedQuery.id,
-      };
-
-      const itineraryResponse = await fetch('/api/itineraries/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(itineraryPayload),
-      });
-
-      if (!itineraryResponse.ok) {
-        const error = await itineraryResponse.json();
-        throw new Error(error.error || 'Failed to create itinerary');
-      }
-
-      const { itinerary: createdItinerary } = await itineraryResponse.json();
-
-      // Navigate based on action
-      if (queryAction === 'create') {
-        router.push(`/agent/leads/${selectedLeadForQuery}/itineraries/new?queryId=${savedQuery.id}&itineraryId=${createdItinerary.id}`);
-      } else {
-        router.push(`/agent/leads/${selectedLeadForQuery}/insert?itineraryId=${createdItinerary.id}&queryId=${savedQuery.id}`);
-      }
-    } catch (error) {
-      console.error('Error creating query/itinerary:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to create itinerary');
-    }
-  };
 
   const handleGenerateInvoice = (itinerary: Itinerary) => {
     setSelectedItineraryForInvoice({
@@ -586,20 +513,6 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
       </div>
 
       {/* Modals */}
-      {selectedLeadForQuery && (
-        <QueryModal
-          isOpen={queryModalOpen}
-          onClose={() => {
-            setQueryModalOpen(false);
-            setSelectedLeadForQuery(null);
-            setQueryAction(null);
-          }}
-          onSave={handleQuerySave}
-          leadId={selectedLeadForQuery}
-          loading={false}
-        />
-      )}
-
       {selectedLeadForCommunication && (
         <AddCommunicationForm
           leadId={selectedLeadForCommunication}
@@ -680,30 +593,14 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
                 <button
                   onClick={() => {
                     const leadId = quickActionMenu;
-                    setSelectedLeadForQuery(leadId);
-                    setQueryAction('create');
-                    setQueryModalOpen(true);
+                    router.push(`/agent/leads/${leadId}/proposals/new`);
                     setQuickActionMenu(null);
                     setMenuPosition(null);
                   }}
                   className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                 >
-                  <FiPackage className="w-4 h-4" />
-                  Create Itinerary
-                </button>
-                <button
-                  onClick={() => {
-                    const leadId = quickActionMenu;
-                    setSelectedLeadForQuery(leadId);
-                    setQueryAction('insert');
-                    setQueryModalOpen(true);
-                    setQuickActionMenu(null);
-                    setMenuPosition(null);
-                  }}
-                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
-                >
-                  <FiPackage className="w-4 h-4" />
-                  Insert Itinerary
+                  <FiFileText className="w-4 h-4" />
+                  Create Proposal
                 </button>
                 <button
                   onClick={() => {
