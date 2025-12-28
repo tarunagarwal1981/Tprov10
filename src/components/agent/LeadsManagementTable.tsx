@@ -141,42 +141,84 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
   const [confirmingItineraryId, setConfirmingItineraryId] = useState<string | null>(null);
 
   const toggleRow = (leadId: string) => {
+    console.log('[LeadsManagementTable] ===== toggleRow START =====');
+    console.log('[LeadsManagementTable] toggleRow: leadId:', leadId);
+    console.log('[LeadsManagementTable] toggleRow: leadId type:', typeof leadId);
+    console.log('[LeadsManagementTable] toggleRow: leadId length:', leadId?.length);
+    console.log('[LeadsManagementTable] toggleRow: Currently expanded?', expandedRows.has(leadId));
+    console.log('[LeadsManagementTable] toggleRow: Has itineraries cached?', !!itineraries[leadId]);
+    console.log('[LeadsManagementTable] toggleRow: Cached itineraries count:', itineraries[leadId]?.length || 0);
+    
     const newExpanded = new Set(expandedRows);
     if (newExpanded.has(leadId)) {
+      console.log('[LeadsManagementTable] toggleRow: Collapsing row for leadId:', leadId);
       newExpanded.delete(leadId);
     } else {
+      console.log('[LeadsManagementTable] toggleRow: Expanding row for leadId:', leadId);
       newExpanded.add(leadId);
       // Fetch itineraries when expanding
       if (!itineraries[leadId]) {
+        console.log('[LeadsManagementTable] toggleRow: No cached itineraries, calling fetchItineraries...');
         fetchItineraries(leadId);
+      } else {
+        console.log('[LeadsManagementTable] toggleRow: Using cached itineraries:', itineraries[leadId].length);
       }
     }
     setExpandedRows(newExpanded);
+    console.log('[LeadsManagementTable] ===== toggleRow END =====');
   };
 
   const fetchItineraries = async (leadId: string) => {
-    if (loadingItineraries.has(leadId)) return;
+    console.log('[LeadsManagementTable] ===== fetchItineraries START =====');
+    console.log('[LeadsManagementTable] fetchItineraries: leadId:', leadId);
+    console.log('[LeadsManagementTable] fetchItineraries: Already loading?', loadingItineraries.has(leadId));
+    
+    if (loadingItineraries.has(leadId)) {
+      console.log('[LeadsManagementTable] fetchItineraries: Already loading, skipping');
+      return;
+    }
     
     setLoadingItineraries(prev => new Set(prev).add(leadId));
     try {
       const accessToken = getAccessToken();
-      const response = await fetch(`/api/itineraries/leads/${leadId}`, {
+      const apiUrl = `/api/itineraries/leads/${leadId}`;
+      console.log('[LeadsManagementTable] fetchItineraries: API URL:', apiUrl);
+      console.log('[LeadsManagementTable] fetchItineraries: Making fetch request...');
+      
+      const response = await fetch(apiUrl, {
         headers: {
           'Authorization': `Bearer ${accessToken || ''}`,
         },
       });
+      
+      console.log('[LeadsManagementTable] fetchItineraries: Response status:', response.status);
+      console.log('[LeadsManagementTable] fetchItineraries: Response ok:', response.ok);
+      
       if (response.ok) {
-        const { itineraries: itinerariesData } = await response.json();
-        setItineraries(prev => ({ ...prev, [leadId]: itinerariesData || [] }));
+        const result = await response.json();
+        console.log('[LeadsManagementTable] fetchItineraries: Response data:', result);
+        const itinerariesData = result.itineraries || [];
+        console.log('[LeadsManagementTable] fetchItineraries: Extracted itineraries:', itinerariesData.length);
+        console.log('[LeadsManagementTable] fetchItineraries: Itineraries data:', JSON.stringify(itinerariesData, null, 2));
+        setItineraries(prev => {
+          const updated = { ...prev, [leadId]: itinerariesData };
+          console.log('[LeadsManagementTable] fetchItineraries: Updated state for leadId:', leadId, 'with', itinerariesData.length, 'itineraries');
+          return updated;
+        });
+      } else {
+        const errorText = await response.text();
+        console.error('[LeadsManagementTable] fetchItineraries: Response not OK:', response.status, errorText);
       }
     } catch (error) {
-      console.error('Error fetching itineraries:', error);
+      console.error('[LeadsManagementTable] fetchItineraries: EXCEPTION:', error);
+      console.error('[LeadsManagementTable] fetchItineraries: Error details:', error instanceof Error ? error.message : String(error));
     } finally {
       setLoadingItineraries(prev => {
         const newSet = new Set(prev);
         newSet.delete(leadId);
         return newSet;
       });
+      console.log('[LeadsManagementTable] ===== fetchItineraries END =====');
     }
   };
 
@@ -278,6 +320,14 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
               const isExpanded = expandedRows.has(lead.id);
               const leadItineraries = itineraries[lead.id] || [];
               const isLoadingItineraries = loadingItineraries.has(lead.id);
+              
+              // Debug logging
+              if (expandedRows.has(lead.id)) {
+                console.log('[LeadsManagementTable] Render: Expanded row for leadId:', lead.id);
+                console.log('[LeadsManagementTable] Render: leadItineraries.length:', leadItineraries.length);
+                console.log('[LeadsManagementTable] Render: lead.itinerary_count:', lead.itinerary_count);
+                console.log('[LeadsManagementTable] Render: isLoadingItineraries:', isLoadingItineraries);
+              }
               const isOverdueFollowUp = isOverdue(lead.next_follow_up_date);
 
               return (
@@ -421,15 +471,41 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
                             <CardContent className="p-2">
                               <div className="flex items-center justify-between mb-2">
                                 <h4 className="font-semibold text-sm text-gray-900">Itineraries</h4>
-                                {isLoadingItineraries && (
-                                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+                                {process.env.NODE_ENV === 'development' && (
+                                  <span className="text-xs text-gray-400">
+                                    ({leadItineraries.length} shown, {lead.itinerary_count} in DB, loading: {isLoadingItineraries ? 'yes' : 'no'})
+                                  </span>
                                 )}
                               </div>
-                              {leadItineraries.length === 0 ? (
-                                <p className="text-xs text-gray-500">No itineraries yet</p>
-                              ) : (
+                              {(() => {
+                                console.log('[LeadsManagementTable] Render Itineraries Section:');
+                                console.log('[LeadsManagementTable] - leadId:', lead.id);
+                                console.log('[LeadsManagementTable] - leadItineraries.length:', leadItineraries.length);
+                                console.log('[LeadsManagementTable] - lead.itinerary_count:', lead.itinerary_count);
+                                console.log('[LeadsManagementTable] - isLoadingItineraries:', isLoadingItineraries);
+                                console.log('[LeadsManagementTable] - leadItineraries:', JSON.stringify(leadItineraries, null, 2));
+                                return null;
+                              })()}
+                              {isLoadingItineraries && (
+                                <div className="flex items-center justify-center py-4">
+                                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                                </div>
+                              )}
+                              {!isLoadingItineraries && leadItineraries.length === 0 && (
+                                <div className="text-center py-4">
+                                  <p className="text-xs text-gray-500">No itineraries found</p>
+                                  {lead.itinerary_count > 0 && (
+                                    <p className="text-xs text-orange-500 mt-1">
+                                      Warning: Database shows {lead.itinerary_count} itineraries but none were fetched. Check console logs.
+                                    </p>
+                                  )}
+                                </div>
+                              )}
+                              {!isLoadingItineraries && leadItineraries.length > 0 && (
                                 <div className="space-y-2">
-                                  {leadItineraries.map((itinerary) => (
+                                  {leadItineraries.map((itinerary) => {
+                                    console.log('[LeadsManagementTable] Rendering itinerary card:', itinerary.id, itinerary.name);
+                                    return (
                                     <div
                                       key={itinerary.id}
                                       className="border border-gray-200 rounded-lg p-2 bg-white"
@@ -496,7 +572,8 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
                                         </Button>
                                       </div>
                                     </div>
-                                  ))}
+                                    );
+                                  })}
                                 </div>
                               )}
                             </CardContent>
