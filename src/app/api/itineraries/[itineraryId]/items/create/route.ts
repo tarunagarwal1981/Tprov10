@@ -13,9 +13,29 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ itineraryId: string }> }
 ) {
+  console.log('[Create Item] ===== POST /api/itineraries/[itineraryId]/items/create START =====');
   try {
     const { itineraryId } = await params;
+    console.log('[Create Item] Extracted itineraryId from params:', itineraryId);
+    
+    // Verify itinerary exists before proceeding
+    const itineraryCheck = await query<{ id: string }>(
+      `SELECT id FROM itineraries WHERE id::text = $1 LIMIT 1`,
+      [itineraryId]
+    );
+    
+    if (!itineraryCheck.rows || itineraryCheck.rows.length === 0) {
+      console.error('[Create Item] Itinerary not found:', itineraryId);
+      return NextResponse.json(
+        { error: 'Itinerary not found', details: `Itinerary with ID ${itineraryId} does not exist` },
+        { status: 404 }
+      );
+    }
+    
+    console.log('[Create Item] Itinerary exists, proceeding with item creation');
+    
     const body = await request.json();
+    console.log('[Create Item] Request body received');
     const {
       dayId = null,
       packageType,
@@ -40,6 +60,9 @@ export async function POST(
         { status: 400 }
       );
     }
+
+    // Note: No need to verify operator exists - the database foreign key constraint will enforce it
+    // The operatorId comes from the activity/transfer package, and the FK constraint ensures it exists
 
     const totalPrice = unitPrice * quantity;
 
@@ -94,6 +117,7 @@ export async function POST(
     try {
       // Generate UUID explicitly for id column (in case default isn't working)
       // Handle null dayId - use conditional query since PostgreSQL can't cast NULL to UUID
+      // Use explicit CAST() function instead of ::uuid syntax to avoid type comparison issues
       const insertQuery = dayId
         ? `INSERT INTO itinerary_items (
             id, itinerary_id, day_id, package_type, package_id, operator_id,
@@ -101,14 +125,14 @@ export async function POST(
             quantity, total_price, display_order, notes
           ) VALUES (
             gen_random_uuid(), 
-            $1::uuid, 
-            $2::uuid, 
+            CAST($1 AS uuid), 
+            CAST($2 AS uuid), 
             $3, 
-            $4::uuid, 
-            $5::uuid, 
+            CAST($4 AS uuid), 
+            CAST($5 AS uuid), 
             $6, 
             $7, 
-            $8::jsonb, 
+            CAST($8 AS jsonb), 
             $9, 
             $10, 
             $11, 
@@ -122,14 +146,14 @@ export async function POST(
             quantity, total_price, display_order, notes
           ) VALUES (
             gen_random_uuid(), 
-            $1::uuid, 
+            CAST($1 AS uuid), 
             NULL, 
             $2, 
-            $3::uuid, 
-            $4::uuid, 
+            CAST($3 AS uuid), 
+            CAST($4 AS uuid), 
             $5, 
             $6, 
-            $7::jsonb, 
+            CAST($7 AS jsonb), 
             $8, 
             $9, 
             $10, 
@@ -283,14 +307,18 @@ export async function POST(
       created: true,
     });
   } catch (error) {
+    console.error('[Create Item] ===== TOP-LEVEL ERROR =====');
     console.error('[Create Item] Error creating itinerary item:', error);
-    console.error('[Create Item] Error details:', {
-      message: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined,
-      name: error instanceof Error ? error.name : undefined,
-    });
+    console.error('[Create Item] Error type:', error instanceof Error ? error.constructor.name : typeof error);
+    console.error('[Create Item] Error message:', error instanceof Error ? error.message : String(error));
+    console.error('[Create Item] Error stack:', error instanceof Error ? error.stack : 'No stack');
+    console.error('[Create Item] ===== END TOP-LEVEL ERROR =====');
     return NextResponse.json(
-      { error: 'Failed to create itinerary item', details: error instanceof Error ? error.message : 'Unknown error' },
+      { 
+        error: 'Failed to create itinerary item', 
+        details: error instanceof Error ? error.message : 'Unknown error',
+        errorType: error instanceof Error ? error.constructor.name : typeof error,
+      },
       { status: 500 }
     );
   }

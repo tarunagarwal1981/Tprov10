@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     // Use the reusable leadService function
     const result = await ensureLeadFromPurchase(leadId, agentId);
 
-    return NextResponse.json({
+      return NextResponse.json({ 
       leadId: result.leadId,
       customerId: result.customerId,
       created: result.created,

@@ -651,7 +651,7 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
       {/* Click outside to close menu */}
       {quickActionMenu && (
         <>
-          <div
+        <div
             className="fixed inset-0 z-40"
             onClick={() => {
               setQuickActionMenu(null);
