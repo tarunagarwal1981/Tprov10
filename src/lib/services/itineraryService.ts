@@ -73,89 +73,135 @@ export interface OperatorInfo {
 
 export class ItineraryService {
   // Get all itineraries for a lead
-  async getLeadItineraries(leadId: string): Promise<Itinerary[]> {
+  async getLeadItineraries(leadId: string, agentId?: string): Promise<Itinerary[]> {
     try {
-      console.log('[ItineraryService] Fetching itineraries for leadId:', leadId);
+      console.log('[ItineraryService] Fetching itineraries for leadId:', leadId, 'agentId:', agentId || 'not provided');
       
-      // First, try direct lead_id match
-      let result = await query<Itinerary>(
-        'SELECT * FROM itineraries WHERE lead_id::text = $1 ORDER BY created_at DESC',
+      // Get the lead's customer_id and marketplace_lead_id first
+      const leadInfo = await queryOne<{
+        customer_id: string | null;
+        marketplace_lead_id: string | null;
+        agent_id: string | null;
+      }>(
+        `SELECT customer_id, marketplace_lead_id::text as marketplace_lead_id, agent_id::text as agent_id
+         FROM leads 
+         WHERE id::text = $1`,
         [leadId]
       );
-      console.log('[ItineraryService] Direct lead_id match found:', result.rows.length, 'itineraries');
       
-      // If no results, try to find by customer_id or marketplace_lead_id
-      if (result.rows.length === 0) {
-        console.log('[ItineraryService] No direct match, trying to find via customer_id or marketplace_lead_id...');
-        
-        // Get the lead's customer_id and marketplace_lead_id
-        const leadInfo = await queryOne<{
-          customer_id: string | null;
-          marketplace_lead_id: string | null;
-        }>(
-          `SELECT customer_id, marketplace_lead_id::text as marketplace_lead_id 
-           FROM leads 
-           WHERE id::text = $1`,
-          [leadId]
+      if (!leadInfo) {
+        console.log('[ItineraryService] Lead not found in leads table, trying direct itinerary query only');
+        // If lead not found, still try direct query (might be marketplace lead ID)
+        const directResult = await query<Itinerary>(
+          agentId
+            ? 'SELECT * FROM itineraries WHERE lead_id::text = $1 AND agent_id::text = $2 ORDER BY created_at DESC'
+            : 'SELECT * FROM itineraries WHERE lead_id::text = $1 ORDER BY created_at DESC',
+          agentId ? [leadId, agentId] : [leadId]
         );
-        
-        if (leadInfo) {
-          console.log('[ItineraryService] Lead info found:', {
-            customer_id: leadInfo.customer_id,
-            marketplace_lead_id: leadInfo.marketplace_lead_id,
-          });
-          
-          // Try to find itineraries by customer_id
-          if (leadInfo.customer_id) {
-            const customerIdResult = await query<Itinerary>(
-              `SELECT i.* FROM itineraries i
-               INNER JOIN leads l ON l.id::text = i.lead_id::text
-               WHERE l.customer_id = $1
-               ORDER BY i.created_at DESC`,
-              [leadInfo.customer_id]
-            );
-            console.log('[ItineraryService] Found by customer_id:', customerIdResult.rows.length, 'itineraries');
-            if (customerIdResult.rows.length > 0) {
-              result = customerIdResult;
-            }
-          }
-          
-          // If still no results and we have marketplace_lead_id, find all leads with same marketplace_lead_id
-          if (result.rows.length === 0 && leadInfo.marketplace_lead_id) {
-            console.log('[ItineraryService] Trying to find via marketplace_lead_id:', leadInfo.marketplace_lead_id);
-            const marketplaceResult = await query<Itinerary>(
-              `SELECT i.* FROM itineraries i
-               INNER JOIN leads l ON l.id::text = i.lead_id::text
-               WHERE l.marketplace_lead_id::text = $1
-               ORDER BY i.created_at DESC`,
-              [leadInfo.marketplace_lead_id]
-            );
-            console.log('[ItineraryService] Found by marketplace_lead_id:', marketplaceResult.rows.length, 'itineraries');
-            if (marketplaceResult.rows.length > 0) {
-              result = marketplaceResult;
-            }
-          }
+        console.log('[ItineraryService] Direct query (no lead info):', directResult.rows.length, 'itineraries');
+        return directResult.rows;
+      }
+      
+      console.log('[ItineraryService] Lead info found:', {
+        customer_id: leadInfo.customer_id,
+        marketplace_lead_id: leadInfo.marketplace_lead_id,
+        agent_id: leadInfo.agent_id,
+      });
+      
+      // Build UNION query to get all related itineraries
+      // This ensures we find itineraries linked via direct lead_id, customer_id, or marketplace_lead_id
+      const queryParts: string[] = [];
+      const queryParams: any[] = [];
+      let paramIndex = 1;
+      
+      // Part 1: Direct lead_id match
+      if (agentId) {
+        queryParts.push(`SELECT i.*, 'direct' as match_type FROM itineraries i WHERE i.lead_id::text = $${paramIndex} AND i.agent_id::text = $${paramIndex + 1}`);
+        queryParams.push(leadId, agentId);
+        paramIndex += 2;
+      } else {
+        queryParts.push(`SELECT i.*, 'direct' as match_type FROM itineraries i WHERE i.lead_id::text = $${paramIndex}`);
+        queryParams.push(leadId);
+        paramIndex += 1;
+      }
+      
+      // Part 2: By customer_id (if lead has customer_id)
+      if (leadInfo.customer_id) {
+        if (agentId) {
+          queryParts.push(`SELECT i.*, 'customer_id' as match_type FROM itineraries i
+            INNER JOIN leads l ON l.id::text = i.lead_id::text
+            WHERE l.customer_id = $${paramIndex} AND i.agent_id::text = $${paramIndex + 1} AND l.customer_id IS NOT NULL`);
+          queryParams.push(leadInfo.customer_id, agentId);
+          paramIndex += 2;
         } else {
-          console.log('[ItineraryService] Lead not found in leads table');
+          queryParts.push(`SELECT i.*, 'customer_id' as match_type FROM itineraries i
+            INNER JOIN leads l ON l.id::text = i.lead_id::text
+            WHERE l.customer_id = $${paramIndex} AND l.customer_id IS NOT NULL`);
+          queryParams.push(leadInfo.customer_id);
+          paramIndex += 1;
         }
       }
       
-      console.log('[ItineraryService] Fetched itineraries from DB (total):', result.rows.length);
-      // Log each itinerary's price details explicitly
-      result.rows.forEach((it: Itinerary, index: number) => {
+      // Part 3: By marketplace_lead_id (if lead has marketplace_lead_id)
+      if (leadInfo.marketplace_lead_id) {
+        if (agentId) {
+          queryParts.push(`SELECT i.*, 'marketplace_lead_id' as match_type FROM itineraries i
+            INNER JOIN leads l ON l.id::text = i.lead_id::text
+            WHERE l.marketplace_lead_id::text = $${paramIndex} AND i.agent_id::text = $${paramIndex + 1} AND l.marketplace_lead_id IS NOT NULL`);
+          queryParams.push(leadInfo.marketplace_lead_id, agentId);
+          paramIndex += 2;
+        } else {
+          queryParts.push(`SELECT i.*, 'marketplace_lead_id' as match_type FROM itineraries i
+            INNER JOIN leads l ON l.id::text = i.lead_id::text
+            WHERE l.marketplace_lead_id::text = $${paramIndex} AND l.marketplace_lead_id IS NOT NULL`);
+          queryParams.push(leadInfo.marketplace_lead_id);
+          paramIndex += 1;
+        }
+      }
+      
+      // Combine all parts with UNION and remove duplicates
+      const unionQuery = queryParts.join(' UNION ') + ' ORDER BY created_at DESC';
+      
+      console.log('[ItineraryService] Executing UNION query with', queryParts.length, 'parts');
+      console.log('[ItineraryService] Query params:', queryParams);
+      
+      const result = await query<Itinerary & { match_type?: string }>(unionQuery, queryParams);
+      
+      // Remove duplicates based on itinerary id (UNION should handle this, but we'll be explicit)
+      const uniqueItineraries = new Map<string, Itinerary>();
+      result.rows.forEach((it: Itinerary & { match_type?: string }) => {
+        if (!uniqueItineraries.has(it.id)) {
+          uniqueItineraries.set(it.id, it);
+          console.log(`[ItineraryService] Itinerary ${it.id} found via: ${it.match_type || 'unknown'}`);
+        }
+      });
+      
+      const finalItineraries = Array.from(uniqueItineraries.values());
+      
+      console.log('[ItineraryService] Fetched itineraries from DB (total unique):', finalItineraries.length);
+      console.log('[ItineraryService] Breakdown:', {
+        direct: result.rows.filter((r: any) => r.match_type === 'direct').length,
+        customer_id: result.rows.filter((r: any) => r.match_type === 'customer_id').length,
+        marketplace_lead_id: result.rows.filter((r: any) => r.match_type === 'marketplace_lead_id').length,
+      });
+      
+      // Log each itinerary's details
+      finalItineraries.forEach((it: Itinerary, index: number) => {
         console.log(`[ItineraryService] Itinerary ${index + 1} from DB:`, {
           id: it.id,
           name: it.name,
+          lead_id: it.lead_id,
+          agent_id: it.agent_id,
           total_price: it.total_price,
           total_price_type: typeof it.total_price,
           total_price_is_null: it.total_price === null,
           total_price_is_undefined: it.total_price === undefined,
           total_price_value: it.total_price ?? 'NULL/UNDEFINED',
         });
-        // Also log as a simple string for easy reading
         console.log(`[ItineraryService] Price for "${it.name}": total_price=${it.total_price} (type: ${typeof it.total_price})`);
       });
-      return result.rows;
+      
+      return finalItineraries;
     } catch (error) {
       console.error('Error fetching lead itineraries:', error);
       throw error;

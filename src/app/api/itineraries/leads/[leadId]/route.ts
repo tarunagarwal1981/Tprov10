@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { itineraryService } from '@/lib/services/itineraryService';
+import { getUserIdFromToken } from '@/lib/auth/getUserIdFromToken';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -19,8 +20,23 @@ export async function GET(
     console.log('[API] leadId type:', typeof leadId);
     console.log('[API] leadId length:', leadId?.length);
     
-    console.log('[API] Calling itineraryService.getLeadItineraries...');
-    const itineraries = await itineraryService.getLeadItineraries(leadId);
+    // Extract agentId from auth token or query param
+    let agentId: string | undefined;
+    try {
+      const authHeader = request.headers.get('authorization');
+      const token = authHeader?.replace('Bearer ', '') || '';
+      const userId = await getUserIdFromToken(token);
+      agentId = userId || undefined;
+      console.log('[API] Extracted agentId from token:', agentId);
+    } catch (error) {
+      console.log('[API] Could not extract agentId from token, trying query param...');
+      const searchParams = request.nextUrl.searchParams;
+      agentId = searchParams.get('agentId') || undefined;
+      console.log('[API] agentId from query param:', agentId);
+    }
+    
+    console.log('[API] Calling itineraryService.getLeadItineraries with leadId and agentId...');
+    const itineraries = await itineraryService.getLeadItineraries(leadId, agentId);
     console.log('[API] ✅ getLeadItineraries returned:', itineraries.length, 'itineraries');
     
     console.log('[API] /api/itineraries/leads/[leadId] - Returning itineraries:', {
