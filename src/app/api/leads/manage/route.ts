@@ -129,13 +129,13 @@ export async function GET(request: NextRequest) {
     // Check if there are purchased leads that don't have entries in leads table
     // This handles old purchases made before automatic lead creation was implemented
     const purchasedLeadsCheck = await query<{ count: number }>(
-      `SELECT COUNT(*) as count 
+      `SELECT COUNT(*)::integer as count 
        FROM lead_purchases lp
        LEFT JOIN leads l ON l.marketplace_lead_id::text = lp.lead_id::text AND l.agent_id::text = lp.agent_id::text
        WHERE lp.agent_id::text = $1 AND l.id IS NULL`,
       [userId]
     );
-    const missingLeadsCount = parseInt(purchasedLeadsCheck.rows[0]?.count || '0');
+    const missingLeadsCount = purchasedLeadsCheck.rows[0]?.count || 0;
     
     if (missingLeadsCount > 0) {
       console.log(`[Leads Manage] Found ${missingLeadsCount} purchased leads without entries in leads table. Syncing...`);
