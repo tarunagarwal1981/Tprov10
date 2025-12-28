@@ -426,7 +426,7 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
                           <FiMoreVertical className="w-4 h-4" />
                         </Button>
                         {quickActionMenu === lead.id && (
-                          <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-20 border border-gray-200">
+                          <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50 border border-gray-200">
                             <div className="py-1">
                               <button
                                 onClick={() => {
@@ -481,15 +481,15 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
                   </tr>
                   {isExpanded && (
                     <tr>
-                      <td colSpan={9} className="px-4 py-4 bg-gray-50">
-                        <div className="space-y-6">
+                      <td colSpan={9} className="px-3 py-3 bg-gray-50">
+                        <div className="space-y-3">
                           {/* Stage, Priority, and Follow-up Management */}
                           <Card>
-                            <CardContent className="p-4">
-                              <h4 className="font-semibold text-gray-900 mb-4">Lead Management</h4>
-                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <CardContent className="p-2">
+                              <h4 className="font-semibold text-sm text-gray-900 mb-2">Lead Management</h4>
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                                 <div>
-                                  <label className="text-xs text-gray-500 mb-1 block">Stage</label>
+                                  <label className="text-[10px] text-gray-500 mb-0.5 block font-medium">Stage</label>
                                   <LeadStageSelector
                                     leadId={lead.id}
                                     currentStage={lead.stage || 'NEW'}
@@ -497,7 +497,7 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
                                   />
                                 </div>
                                 <div>
-                                  <label className="text-xs text-gray-500 mb-1 block">Priority</label>
+                                  <label className="text-[10px] text-gray-500 mb-0.5 block font-medium">Priority</label>
                                   <LeadPrioritySelector
                                     leadId={lead.id}
                                     currentPriority={lead.priority || 'MEDIUM'}
@@ -505,7 +505,7 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
                                   />
                                 </div>
                                 <div>
-                                  <label className="text-xs text-gray-500 mb-1 block">Follow-up Date</label>
+                                  <label className="text-[10px] text-gray-500 mb-0.5 block font-medium">Follow-up Date</label>
                                   <FollowUpDatePicker
                                     leadId={lead.id}
                                     currentDate={lead.next_follow_up_date}
@@ -518,69 +518,69 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
 
                           {/* Communications Timeline */}
                           <Card>
-                            <CardContent className="p-4">
-                              <h4 className="font-semibold text-gray-900 mb-4">Communication History</h4>
+                            <CardContent className="p-2">
+                              <h4 className="font-semibold text-sm text-gray-900 mb-2">Communication History</h4>
                               <LeadCommunicationHistory leadId={lead.id} />
                             </CardContent>
                           </Card>
 
                           {/* Itineraries List */}
                           <Card>
-                            <CardContent className="p-4">
-                              <div className="flex items-center justify-between mb-4">
-                                <h4 className="font-semibold text-gray-900">Itineraries</h4>
+                            <CardContent className="p-2">
+                              <div className="flex items-center justify-between mb-2">
+                                <h4 className="font-semibold text-sm text-gray-900">Itineraries</h4>
                                 {isLoadingItineraries && (
-                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
                                 )}
                               </div>
                               {leadItineraries.length === 0 ? (
-                                <p className="text-sm text-gray-500">No itineraries yet</p>
+                                <p className="text-xs text-gray-500">No itineraries yet</p>
                               ) : (
-                                <div className="space-y-3">
+                                <div className="space-y-2">
                                   {leadItineraries.map((itinerary) => (
                                     <div
                                       key={itinerary.id}
-                                      className="border border-gray-200 rounded-lg p-3 bg-white"
+                                      className="border border-gray-200 rounded-lg p-2 bg-white"
                                     >
-                                      <div className="flex items-center justify-between mb-2">
-                                        <div className="flex items-center gap-2">
-                                          <span className="font-medium text-gray-900">{itinerary.name}</span>
-                                          <Badge variant="secondary">{itinerary.status}</Badge>
+                                      <div className="flex items-center justify-between mb-1.5">
+                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                          <span className="font-medium text-sm text-gray-900">{itinerary.name}</span>
+                                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0.5">{itinerary.status}</Badge>
                                           {itinerary.is_locked && (
-                                            <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">
-                                              <FiLock className="w-3 h-3 mr-1" />
+                                            <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 text-[10px] px-1.5 py-0.5">
+                                              <FiLock className="w-2.5 h-2.5 mr-0.5" />
                                               Locked
                                             </Badge>
                                           )}
                                           {itinerary.customer_id && (
-                                            <span className="text-xs text-gray-500 font-mono">
+                                            <span className="text-[10px] text-gray-500 font-mono">
                                               {itinerary.customer_id}
                                             </span>
                                           )}
                                         </div>
-                                        <div className="text-sm font-semibold text-green-600">
+                                        <div className="text-xs font-semibold text-green-600">
                                           {formatCurrency(itinerary.total_price ?? 0)}
                                         </div>
                                       </div>
-                                      <div className="flex items-center gap-2 flex-wrap">
+                                      <div className="flex items-center gap-1.5 flex-wrap">
                                         <Button
                                           variant="outline"
                                           size="sm"
                                           onClick={() => handleGenerateInvoice(itinerary)}
                                           disabled={itinerary.is_locked || (itinerary.total_price ?? 0) <= 0}
-                                          className="text-xs"
+                                          className="text-[10px] h-7 px-2 py-1"
                                         >
-                                          <FiFileText className="w-3 h-3 mr-1" />
-                                          Generate Invoice
+                                          <FiFileText className="w-2.5 h-2.5 mr-1" />
+                                          Invoice
                                         </Button>
                                         <Button
                                           variant="outline"
                                           size="sm"
                                           onClick={() => handleConfirmItinerary(itinerary.id)}
                                           disabled={itinerary.is_locked || confirmingItineraryId === itinerary.id}
-                                          className="text-xs"
+                                          className="text-[10px] h-7 px-2 py-1"
                                         >
-                                          <FiCheck className="w-3 h-3 mr-1" />
+                                          <FiCheck className="w-2.5 h-2.5 mr-1" />
                                           Confirm
                                         </Button>
                                         <Button
@@ -588,19 +588,19 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
                                           size="sm"
                                           onClick={() => handleConfirmPayment(itinerary)}
                                           disabled={itinerary.is_locked}
-                                          className="text-xs"
+                                          className="text-[10px] h-7 px-2 py-1"
                                         >
-                                          <FiDollarSign className="w-3 h-3 mr-1" />
-                                          Confirm Payment
+                                          <FiDollarSign className="w-2.5 h-2.5 mr-1" />
+                                          Payment
                                         </Button>
                                         <Button
                                           variant="outline"
                                           size="sm"
                                           onClick={() => router.push(`/agent/leads/${lead.id}/itineraries/new?itineraryId=${itinerary.id}`)}
-                                          className="text-xs"
+                                          className="text-[10px] h-7 px-2 py-1"
                                         >
-                                          <FiEye className="w-3 h-3 mr-1" />
-                                          View Days
+                                          <FiEye className="w-2.5 h-2.5 mr-1" />
+                                          View
                                         </Button>
                                       </div>
                                     </div>
@@ -696,7 +696,7 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
       {/* Click outside to close menu */}
       {quickActionMenu && (
         <div
-          className="fixed inset-0 z-10"
+          className="fixed inset-0 z-40"
           onClick={() => setQuickActionMenu(null)}
         />
       )}

@@ -55,6 +55,8 @@ export async function GET(request: NextRequest) {
     const queryParams: any[] = [userId];
     let paramIndex = 2;
 
+    console.log('[Leads Manage] Query params:', { userId, status, search, page, limit, sortBy, sortOrder });
+
     if (status) {
       whereConditions.push(`l.stage = $${paramIndex}`);
       queryParams.push(status);
@@ -117,7 +119,12 @@ export async function GET(request: NextRequest) {
 
     queryParams.push(limit, offset);
 
+    console.log('[Leads Manage] Executing query with params:', queryParams);
     const result = await query<LeadWithAggregates>(sqlQuery, queryParams);
+    console.log('[Leads Manage] Result count:', result.rows.length);
+    if (result.rows.length > 0) {
+      console.log('[Leads Manage] Sample lead IDs:', result.rows.slice(0, 3).map(r => r.id));
+    }
 
     // Get total count for pagination
     const countQuery = `
@@ -128,6 +135,8 @@ export async function GET(request: NextRequest) {
     const countParams = queryParams.slice(0, -2); // Remove limit and offset
     const countResult = await query<{ total: number }>(countQuery, countParams);
     const total = countResult.rows[0]?.total || 0;
+
+    console.log('[Leads Manage] Total leads count:', total);
 
     return NextResponse.json({
       leads: result.rows,
