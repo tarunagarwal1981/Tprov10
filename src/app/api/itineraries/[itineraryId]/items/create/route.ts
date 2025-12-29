@@ -14,9 +14,11 @@ export async function POST(
   { params }: { params: Promise<{ itineraryId: string }> }
 ) {
   console.log('[Create Item] ===== POST /api/itineraries/[itineraryId]/items/create START =====');
+  console.log('[Create Item] Timestamp:', new Date().toISOString());
   try {
     const { itineraryId } = await params;
     console.log('[Create Item] Extracted itineraryId from params:', itineraryId);
+    console.log('[Create Item] Request URL:', request.url);
     
     // Verify itinerary exists before proceeding
     const itineraryCheck = await query<{ id: string }>(
@@ -34,7 +36,19 @@ export async function POST(
     
     console.log('[Create Item] Itinerary exists, proceeding with item creation');
     
-    const body = await request.json();
+    // Parse body with error handling
+    console.log('[Create Item] Parsing request body...');
+    let body;
+    try {
+      body = await request.json();
+      console.log('[Create Item] Request body parsed successfully');
+    } catch (parseError) {
+      console.error('[Create Item] Failed to parse request body:', parseError);
+      return NextResponse.json(
+        { error: 'Invalid JSON in request body', details: parseError instanceof Error ? parseError.message : String(parseError) },
+        { status: 400 }
+      );
+    }
     console.log('[Create Item] Request body received');
     const {
       dayId = null,
@@ -51,7 +65,24 @@ export async function POST(
     } = body;
 
     console.log('[Create Item] Request body:', JSON.stringify(body, null, 2));
-    console.log('[Create Item] Extracted values:', { packageType, packageId, operatorId, packageTitle, unitPrice, quantity });
+    console.log('[Create Item] Request body keys:', Object.keys(body));
+    console.log('[Create Item] Extracted values:', { 
+      packageType, 
+      packageId, 
+      operatorId: operatorId || 'MISSING/UNDEFINED', 
+      packageTitle, 
+      unitPrice, 
+      quantity 
+    });
+    console.log('[Create Item] Value types:', {
+      dayId_type: typeof dayId,
+      packageType_type: typeof packageType,
+      packageId_type: typeof packageId,
+      operatorId_type: typeof operatorId,
+      packageTitle_type: typeof packageTitle,
+      unitPrice_type: typeof unitPrice,
+      quantity_type: typeof quantity,
+    });
 
     // Validate required fields (check for empty strings too)
     if (!packageType || !packageId || !operatorId || !packageTitle || unitPrice === undefined || quantity === undefined) {
@@ -86,9 +117,18 @@ export async function POST(
       );
     }
     if (typeof operatorId !== 'string' || operatorId.trim() === '' || !uuidRegex.test(operatorId)) {
-      console.error('[Create Item] Invalid operatorId:', { operatorId, type: typeof operatorId, isEmpty: operatorId === '' });
+      console.error('[Create Item] Invalid operatorId:', { 
+        operatorId, 
+        type: typeof operatorId, 
+        isEmpty: operatorId === '',
+        isUndefined: operatorId === undefined,
+        isNull: operatorId === null,
+        isWhitespace: typeof operatorId === 'string' && operatorId.trim() === '',
+        isValidUUID: typeof operatorId === 'string' ? uuidRegex.test(operatorId) : false,
+        fullBody: JSON.stringify(body, null, 2),
+      });
       return NextResponse.json(
-        { error: 'Invalid operator ID format or empty', details: `operatorId: ${operatorId}` },
+        { error: 'Invalid operator ID format or empty', details: `operatorId: ${operatorId} (type: ${typeof operatorId})` },
         { status: 400 }
       );
     }
@@ -224,17 +264,34 @@ export async function POST(
       console.log('[Create Item] Query params count:', queryParams.length);
       console.log('[Create Item] Query params details:', queryParams.map((p, i) => ({
         index: i + 1,
-        value: typeof p === 'string' && p.length > 50 ? p.substring(0, 50) + '...' : p,
+        value: p === null ? 'NULL' : (typeof p === 'string' && p.length > 50 ? p.substring(0, 50) + '...' : p),
         type: typeof p,
         isNull: p === null,
         isUndefined: p === undefined,
+        isString: typeof p === 'string',
+        stringLength: typeof p === 'string' ? p.length : 'N/A',
       })));
-      console.log('[Create Item] SQL Query:', insertQuery.substring(0, 200) + '...');
+      console.log('[Create Item] SQL Query (first 500 chars):', insertQuery.substring(0, 500));
+      console.log('[Create Item] About to execute INSERT query...');
+      // Log operatorId position (it's at index 4 when dayId exists, or index 3 when it doesn't)
+      const operatorIdIndex = dayId ? 4 : 3;
+      console.log('[Create Item] OperatorId in queryParams:', {
+        index: operatorIdIndex,
+        value: queryParams[operatorIdIndex],
+        type: typeof queryParams[operatorIdIndex],
+      });
       
       insertResult = await query<any>(
         insertQuery,
         queryParams
       );
+      
+      console.log('[Create Item] INSERT query executed successfully');
+      console.log('[Create Item] Insert result received:', {
+        hasResult: !!insertResult,
+        hasRows: !!insertResult?.rows,
+        rowsLength: insertResult?.rows?.length,
+      });
 
       const firstRow = insertResult.rows?.[0];
       const allKeys = firstRow ? Object.keys(firstRow) : [];
@@ -250,6 +307,11 @@ export async function POST(
         fullResult: JSON.stringify(insertResult, null, 2),
       });
     } catch (dbError) {
+      console.error('[Create Item] ===== DATABASE ERROR CAUGHT =====');
+      console.error('[Create Item] Error object:', dbError);
+      console.error('[Create Item] Error type:', typeof dbError);
+      console.error('[Create Item] Is Error instance:', dbError instanceof Error);
+      
       const errorDetails: any = {
         error: dbError instanceof Error ? dbError.message : String(dbError),
         stack: dbError instanceof Error ? dbError.stack : undefined,
@@ -273,6 +335,10 @@ export async function POST(
       if (dbError instanceof Error) {
         const errorStr = dbError.toString();
         errorDetails.fullErrorString = errorStr;
+        errorDetails.errorCode = (dbError as any).code;
+        errorDetails.errorDetail = (dbError as any).detail;
+        errorDetails.errorConstraint = (dbError as any).constraint;
+        errorDetails.errorHint = (dbError as any).hint;
         
         // Check for specific PostgreSQL error patterns
         if (errorStr.includes('operator does not exist')) {
@@ -287,7 +353,8 @@ export async function POST(
         }
       }
       
-      console.error('[Create Item] Database error during INSERT:', errorDetails);
+      console.error('[Create Item] Full error details:', JSON.stringify(errorDetails, null, 2));
+      console.error('[Create Item] ===== END DATABASE ERROR =====');
       
       // Return more detailed error to help debug
       const errorMessage = dbError instanceof Error ? dbError.message : String(dbError);
@@ -302,6 +369,8 @@ export async function POST(
             hasDayId: !!dayId,
             operatorId,
             packageId,
+            errorType: errorDetails.errorType,
+            errorCode: errorDetails.errorCode,
           }
         },
         { status: 500 }
