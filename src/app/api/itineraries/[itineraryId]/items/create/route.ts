@@ -197,7 +197,8 @@ export async function POST(
     try {
       // Generate UUID explicitly for id column (in case default isn't working)
       // Handle null dayId - use conditional query since PostgreSQL can't cast NULL to UUID
-      // Use ::uuid syntax which PostgreSQL handles better than CAST() for parameterized queries
+      // Note: Do NOT use ::uuid casts in VALUES - PostgreSQL will automatically convert text to UUID
+      // Explicit casts can cause "operator does not exist: uuid = text" errors during FK validation
       const insertQuery = dayId
         ? `INSERT INTO itinerary_items (
             id, itinerary_id, day_id, package_type, package_id, operator_id,
@@ -205,11 +206,11 @@ export async function POST(
             quantity, total_price, display_order, notes
           ) VALUES (
             gen_random_uuid(), 
-            $1::uuid, 
-            $2::uuid, 
+            $1, 
+            $2, 
             $3, 
-            $4::uuid, 
-            $5::uuid, 
+            $4, 
+            $5, 
             $6, 
             $7, 
             $8::jsonb, 
@@ -226,11 +227,11 @@ export async function POST(
             quantity, total_price, display_order, notes
           ) VALUES (
             gen_random_uuid(), 
-            $1::uuid, 
+            $1, 
             NULL, 
             $2, 
-            $3::uuid, 
-            $4::uuid, 
+            $3, 
+            $4, 
             $5, 
             $6, 
             $7::jsonb, 
