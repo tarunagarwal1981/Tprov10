@@ -71,7 +71,7 @@ const formatCurrency = (amount: number) => {
   }).format(amount);
 };
 
-  const formatDate = (date: Date | string) => {
+const formatDate = (date: Date | string) => {
   const dateObj = date instanceof Date ? date : new Date(date);
   return dateObj.toLocaleDateString('en-US', {
     year: 'numeric',
@@ -79,6 +79,18 @@ const formatCurrency = (amount: number) => {
     day: 'numeric',
   });
 };
+
+export function PurchasedLeadsTable({ purchases, loading, onCreateProposal }: PurchasedLeadsTableProps) {
+  const router = useRouter();
+  const { user } = useAuth();
+  const toast = useToast();
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [leadIdMap, setLeadIdMap] = useState<Record<string, string>>({});
+  const [loadingLeadIds, setLoadingLeadIds] = useState<Set<string>>(new Set());
+  const [quickActionMenu, setQuickActionMenu] = useState<string | null>(null);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
+  const [communicationModalOpen, setCommunicationModalOpen] = useState(false);
+  const [selectedLeadForCommunication, setSelectedLeadForCommunication] = useState<string | null>(null);
 
   const ensureLeadExists = async (marketplaceLeadId: string): Promise<string | null> => {
     // Return cached lead ID if available
@@ -155,18 +167,6 @@ const formatCurrency = (amount: number) => {
       toast.error('Please wait for lead information to load');
     }
   };
-
-export function PurchasedLeadsTable({ purchases, loading, onCreateProposal }: PurchasedLeadsTableProps) {
-  const router = useRouter();
-  const { user } = useAuth();
-  const toast = useToast();
-  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
-  const [leadIdMap, setLeadIdMap] = useState<Record<string, string>>({});
-  const [loadingLeadIds, setLoadingLeadIds] = useState<Set<string>>(new Set());
-  const [quickActionMenu, setQuickActionMenu] = useState<string | null>(null);
-  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
-  const [communicationModalOpen, setCommunicationModalOpen] = useState(false);
-  const [selectedLeadForCommunication, setSelectedLeadForCommunication] = useState<string | null>(null);
 
   if (loading) {
     return (
