@@ -135,7 +135,7 @@ export function AgentSidebar() {
 			icon: FileText,
 			enabled: true,
 			submenu: [
-				{ label: "All Leads", href: "/agent/leads" },
+				{ label: "New Leads Management", href: "/agent/leads" },
 				{ label: "Leads Management", href: "/agent/leads/manage" },
 				{ label: "Active", href: "/agent/leads/active" },
 				{ label: "Contacted", href: "/agent/leads/contacted" },

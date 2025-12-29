@@ -3,522 +3,313 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
+  FiSearch,
+  FiChevronLeft,
+  FiChevronRight,
+  FiRefreshCw,
   FiShoppingBag,
-  FiMail,
-  FiPhone,
-  FiUser,
-  FiMapPin,
-  FiCalendar,
   FiDollarSign,
   FiStar,
-  FiRefreshCw,
-  FiPackage,
-  FiCopy,
 } from 'react-icons/fi';
-import { FaPlane, FaHiking, FaUmbrellaBeach, FaPaw, FaGem, FaMoneyBillWave, FaUsers, FaHeart } from 'react-icons/fa';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-// MarketplaceService now accessed via API routes
-import type { LeadPurchase } from '@/lib/types/marketplace';
-import { TripType } from '@/lib/types/marketplace';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/context/CognitoAuthContext';
 import { useToast } from '@/hooks/useToast';
-// queryService now accessed via API routes
+import { getAccessToken } from '@/lib/auth/getAccessToken';
+import { LeadsManagementTable } from '@/components/agent/LeadsManagementTable';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 
-// Trip type icon mapping
-const getTripTypeIcon = (tripType: TripType) => {
-  const icons = {
-    [TripType.ADVENTURE]: FaHiking,
-    [TripType.CULTURAL]: FaPlane,
-    [TripType.BEACH]: FaUmbrellaBeach,
-    [TripType.WILDLIFE]: FaPaw,
-    [TripType.LUXURY]: FaGem,
-    [TripType.BUDGET]: FaMoneyBillWave,
-    [TripType.FAMILY]: FaUsers,
-    [TripType.HONEYMOON]: FaHeart,
-  };
-  return icons[tripType] || FaPlane;
-};
-
-// Trip type color mapping
-const getTripTypeColor = (tripType: TripType) => {
-  const colors = {
-    [TripType.ADVENTURE]: 'orange',
-    [TripType.CULTURAL]: 'purple',
-    [TripType.BEACH]: 'blue',
-    [TripType.WILDLIFE]: 'green',
-    [TripType.LUXURY]: 'yellow',
-    [TripType.BUDGET]: 'gray',
-    [TripType.FAMILY]: 'pink',
-    [TripType.HONEYMOON]: 'red',
-  };
-  return colors[tripType] || 'gray';
-};
-
-// Loading skeleton
-function LeadCardSkeleton() {
-  return (
-    <Card className="border-gray-200 animate-pulse">
-      <CardContent className="p-6">
-        <div className="space-y-4">
-          <div className="h-6 bg-gray-200 rounded w-3/4"></div>
-          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-          <div className="h-32 bg-gray-200 rounded"></div>
-          <div className="flex gap-2">
-            <div className="h-8 bg-gray-200 rounded w-24"></div>
-            <div className="h-8 bg-gray-200 rounded w-24"></div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
+interface LeadWithAggregates {
+  id: string;
+  customer_id: string | null;
+  customer_name: string;
+  customer_email: string;
+  customer_phone: string | null;
+  destination: string;
+  stage: string;
+  priority: string;
+  next_follow_up_date: string | null;
+  last_contacted_at: string | null;
+  created_at: string;
+  itinerary_count: number;
+  total_value: number;
+  total_paid: number;
+  last_communication_at: string | null;
+  last_communication_type: string | null;
+  assigned_to: string | null;
 }
 
-// Purchased lead card component
-function PurchasedLeadCard({ 
-  purchase, 
-  onCreateItinerary 
-}: { 
-  purchase: LeadPurchase;
-  onCreateItinerary: (leadId: string) => void;
-}) {
+export default function NewLeadsManagementPage() {
+  const { user } = useAuth();
   const toast = useToast();
-  const { lead } = purchase;
-  if (!lead) return null;
-
-  const TripIcon = getTripTypeIcon(lead.tripType);
-  const tripColor = getTripTypeColor(lead.tripType);
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      whileHover={{ y: -4 }}
-      transition={{ duration: 0.2 }}
-    >
-      <Card className="border-gray-200 hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col h-full max-h-[850px]">
-        {/* Header with trip type */}
-        <div className={`bg-gradient-to-r from-${tripColor}-500 to-${tripColor}-600 p-4 flex-shrink-0`}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="bg-white/20 backdrop-blur-sm p-2 rounded-lg">
-                <TripIcon className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <Badge className="bg-white/20 text-white border-0 backdrop-blur-sm">
-                  {lead.tripType.replace('_', ' ')}
-                </Badge>
-              </div>
-            </div>
-            <Badge className="bg-green-500 text-white border-0">
-              Purchased
-            </Badge>
-          </div>
-        </div>
-
-        <CardContent className="p-6 flex flex-col flex-grow overflow-hidden">
-          <div className="flex-1 overflow-y-auto min-h-0 space-y-4">
-            {/* Title and destination */}
-            <div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2 line-clamp-2">{lead.title}</h3>
-              <div className="flex items-center gap-2 text-gray-600 mb-2">
-                <FiMapPin className="w-4 h-4 flex-shrink-0" />
-                <span className="font-medium truncate">{lead.destination}</span>
-              </div>
-              {/* Option 1: Copyable ID badge in header */}
-              {lead.customerId && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 px-2 text-xs font-mono text-gray-500 hover:text-gray-700 border border-gray-300 hover:border-gray-400"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (lead.customerId) {
-                      navigator.clipboard.writeText(lead.customerId);
-                      toast.success('Lead ID copied to clipboard');
-                    }
-                  }}
-                >
-                  <FiCopy className="w-3 h-3 mr-1" />
-                  {lead.customerId}
-                </Button>
-              )}
-            </div>
-
-            {/* Lead details */}
-            <div className="grid grid-cols-2 gap-4 pb-4 border-b border-gray-200">
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <FiDollarSign className="w-4 h-4 text-green-600 flex-shrink-0" />
-                <span className="truncate">
-                  ${lead.budgetMin.toLocaleString()} - ${lead.budgetMax.toLocaleString()}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <FiCalendar className="w-4 h-4 text-blue-600 flex-shrink-0" />
-                <span>{lead.durationDays} days</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <FiUser className="w-4 h-4 text-purple-600 flex-shrink-0" />
-                <span>{lead.travelersCount} travelers</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <FiStar className="w-4 h-4 text-yellow-500 flex-shrink-0" />
-                <span>Quality: {lead.leadQualityScore}/100</span>
-              </div>
-            </div>
-
-            {/* Customer contact information - NOW VISIBLE */}
-            <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="bg-blue-500 text-white rounded-full p-1">
-                  <FiUser className="w-4 h-4" />
-                </div>
-                <h4 className="font-semibold text-gray-900">Customer Contact Details</h4>
-              </div>
-              <div className="space-y-2">
-                {lead.customerName && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <FiUser className="w-4 h-4 text-gray-500 flex-shrink-0" />
-                    <span className="font-medium text-gray-900 truncate">{lead.customerName}</span>
-                  </div>
-                )}
-                {lead.customerEmail && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <FiMail className="w-4 h-4 text-gray-500 flex-shrink-0" />
-                    <a 
-                      href={`mailto:${lead.customerEmail}`}
-                      className="text-blue-600 hover:text-blue-800 font-medium truncate"
-                    >
-                      {lead.customerEmail}
-                    </a>
-                  </div>
-                )}
-                {lead.customerPhone && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <FiPhone className="w-4 h-4 text-gray-500 flex-shrink-0" />
-                    <a 
-                      href={`tel:${lead.customerPhone}`}
-                      className="text-blue-600 hover:text-blue-800 font-medium truncate"
-                    >
-                      {lead.customerPhone}
-                    </a>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Special requirements */}
-            {lead.specialRequirements && (
-              <div>
-                <h4 className="text-sm font-semibold text-gray-700 mb-2">Special Requirements:</h4>
-                <p className="text-sm text-gray-600 line-clamp-3">{lead.specialRequirements}</p>
-              </div>
-            )}
-
-            {/* Purchase info */}
-            <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-              <div className="text-sm text-gray-600">
-                Purchased on {new Date(purchase.purchasedAt).toLocaleDateString()}
-              </div>
-              <div className="text-sm font-semibold text-gray-900">
-                Paid: ${purchase.purchasePrice}
-              </div>
-            </div>
-            {/* Option 2: ID in footer with copy icon */}
-            {lead.customerId && (
-              <div className="flex items-center justify-between pt-2 border-t border-gray-200 text-xs">
-                <span className="text-gray-500">Reference ID:</span>
-                <div className="flex items-center gap-2">
-                  <code className="text-gray-600 font-mono bg-gray-50 px-2 py-1 rounded">
-                    {lead.customerId}
-                  </code>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-5 w-5 p-0 hover:bg-gray-100"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (lead.customerId) {
-                        navigator.clipboard.writeText(lead.customerId);
-                      }
-                    }}
-                    title="Copy ID"
-                  >
-                    <FiCopy className="w-3 h-3" />
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Action buttons */}
-          <div className="flex gap-2 mt-4 flex-shrink-0">
-            <Button 
-              onClick={() => onCreateItinerary(lead.id)}
-              className="w-full flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white"
-            >
-              <FiPackage className="w-4 h-4 mr-2" />
-              Create Proposal
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    </motion.div>
-  );
-}
-
-// Empty state component
-function EmptyState() {
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      className="flex flex-col items-center justify-center py-16 px-4"
-    >
-      <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-full p-8 mb-6">
-        <FiPackage className="w-20 h-20 text-blue-500" />
-      </div>
-      <h3 className="text-2xl font-bold text-gray-900 mb-2">No Purchased Leads Yet</h3>
-      <p className="text-gray-600 text-center max-w-md mb-6">
-        You haven&apos;t purchased any leads from the marketplace yet. Browse the marketplace to find quality leads for your business.
-      </p>
-      <Link href="/agent/marketplace">
-        <Button className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white">
-          <FiShoppingBag className="w-4 h-4 mr-2" />
-          Browse Marketplace
-        </Button>
-      </Link>
-    </motion.div>
-  );
-}
-
-export default function MyLeadsPage() {
-  const { user, profile } = useAuth();
-  const toast = useToast();
-  const router = useRouter();
-  
-  const [purchases, setPurchases] = useState<LeadPurchase[]>([]);
+  const [leads, setLeads] = useState<LeadWithAggregates[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [filters, setFilters] = useState({
+    status: '',
+    search: '',
+    page: 1,
+    limit: 20,
+    sortBy: 'created_at',
+    sortOrder: 'desc' as 'asc' | 'desc',
+  });
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 20,
+    total: 0,
+    totalPages: 0,
+  });
 
-  const fetchPurchasedLeads = async () => {
-    const agentId = user?.id;
-    if (!agentId) return;
-    
+  const fetchLeads = async () => {
+    if (!user?.id) return;
+
     setLoading(true);
-    setError(null);
-    
     try {
-      const response = await fetch(`/api/marketplace/purchased?agentId=${agentId}`);
-      if (!response.ok) throw new Error('Failed to fetch purchased leads');
-      const { purchases: data } = await response.json();
-      setPurchases(data);
-    } catch (err) {
-      console.error('Error fetching purchased leads:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load leads');
-      toast.error('Failed to load your purchased leads. Please try again.');
+      const accessToken = getAccessToken();
+      const queryParams = new URLSearchParams();
+      if (filters.status) queryParams.append('status', filters.status);
+      if (filters.search) queryParams.append('search', filters.search);
+      queryParams.append('page', filters.page.toString());
+      queryParams.append('limit', filters.limit.toString());
+      queryParams.append('sortBy', filters.sortBy);
+      queryParams.append('sortOrder', filters.sortOrder);
+
+      const response = await fetch(`/api/leads/purchased?${queryParams.toString()}`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken || ''}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setLeads(data.leads || []);
+        setPagination(data.pagination || { page: 1, limit: 20, total: 0, totalPages: 0 });
+      } else {
+        const error = await response.json();
+        toast.error(error.error || 'Failed to fetch purchased leads');
+      }
+    } catch (error) {
+      console.error('Error fetching purchased leads:', error);
+      toast.error('Failed to fetch purchased leads');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchPurchasedLeads();
-  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+    fetchLeads();
+  }, [filters, user?.id]);
 
-  // Handle Create Itinerary button click
-  const handleCreateItinerary = async (leadId: string) => {
-    if (!user?.id) return;
-    // Navigate directly to lead detail page - query form will appear when card is clicked
-          router.push(`/agent/leads/${leadId}`);
+  const handleFilterChange = (key: string, value: any) => {
+    setFilters(prev => ({
+      ...prev,
+      [key]: value,
+      page: 1, // Reset to first page on filter change
+    }));
   };
+
+  // Calculate stats from leads data
+  const totalPurchased = leads.length;
+  const totalSpent = leads.reduce((sum, lead) => {
+    // Note: purchase price is not in LeadWithAggregates, so we'll use total_value as approximation
+    // or fetch from a separate query if needed. For now, we'll show total value of itineraries.
+    return sum + (lead.total_value || 0);
+  }, 0);
+  // Avg quality score would need to be fetched separately or added to the API response
+  const avgQualityScore = 0; // Placeholder - can be enhanced later
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/30">
-      <div className="p-4 lg:p-6 space-y-6">
-        {/* Page Header */}
+    <div className="container mx-auto px-4 py-8">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">New Leads Management</h1>
+        <p className="text-gray-600">Manage your purchased leads, communications, and payments in one place</p>
+      </div>
+
+      {/* Stats Bar */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <motion.div
-          initial={{ opacity: 0, y: -20 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-          className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl p-6 text-white shadow-xl"
+          transition={{ delay: 0.1 }}
         >
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold mb-2">My Purchased Leads</h1>
-              <p className="text-blue-100 text-lg">
-                View and manage your leads purchased from the marketplace
-              </p>
-            </div>
-            <Button
-              onClick={fetchPurchasedLeads}
-              variant="outline"
-              className="bg-white/10 border-white/20 text-white hover:bg-white/20"
-            >
-              <FiRefreshCw className="w-5 h-5 mr-2" />
-              Refresh
-            </Button>
-          </div>
-        </motion.div>
-
-        {/* Stats Bar */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-          >
-            <Card className="border-gray-200 hover:shadow-md transition-shadow">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div className="p-3 rounded-xl bg-blue-50">
-                    <FiShoppingBag className="w-6 h-6 text-blue-600" />
-                  </div>
-                  <div className="text-right">
-                    <p className="text-2xl font-bold text-gray-900">{purchases.length}</p>
-                    <p className="text-sm text-gray-600 mt-1">Total Purchased</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-          >
-            <Card className="border-gray-200 hover:shadow-md transition-shadow">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div className="p-3 rounded-xl bg-purple-50">
-                    <FiDollarSign className="w-6 h-6 text-purple-600" />
-                  </div>
-                  <div className="text-right">
-                    <p className="text-2xl font-bold text-gray-900">
-                      ${purchases.reduce((sum, p) => {
-                        const price = typeof p.purchasePrice === 'number' 
-                          ? p.purchasePrice 
-                          : parseFloat(String(p.purchasePrice)) || 0;
-                        return sum + price;
-                      }, 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </p>
-                    <p className="text-sm text-gray-600 mt-1">Total Spent</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-          >
-            <Card className="border-gray-200 hover:shadow-md transition-shadow">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div className="p-3 rounded-xl bg-green-50">
-                    <FiStar className="w-6 h-6 text-green-600" />
-                  </div>
-                  <div className="text-right">
-                    <p className="text-2xl font-bold text-gray-900">
-                      {purchases.length > 0
-                        ? Math.round(
-                            purchases.reduce((sum, p) => sum + (p.lead?.leadQualityScore || 0), 0) /
-                              purchases.length
-                          )
-                        : 0}
-                    </p>
-                    <p className="text-sm text-gray-600 mt-1">Avg Quality Score</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        </div>
-
-        {/* Loading State */}
-        {loading && (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {[...Array(6)].map((_, i) => (
-              <LeadCardSkeleton key={i} />
-            ))}
-          </div>
-        )}
-
-        {/* Error State */}
-        {error && !loading && (
-          <Card className="border-red-200 bg-red-50">
+          <Card className="border-gray-200 hover:shadow-md transition-shadow">
             <CardContent className="p-6">
-              <div className="flex flex-col items-center justify-center py-8">
-                <div className="bg-red-100 rounded-full p-4 mb-4">
-                  <FiPackage className="w-12 h-12 text-red-600" />
+              <div className="flex items-center justify-between">
+                <div className="p-3 rounded-xl bg-blue-50">
+                  <FiShoppingBag className="w-6 h-6 text-blue-600" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Error Loading Leads</h3>
-                <p className="text-gray-600 mb-4">{error}</p>
-                <Button 
-                  onClick={fetchPurchasedLeads}
-                  className="bg-red-600 hover:bg-red-700 text-white"
-                >
-                  <FiRefreshCw className="w-4 h-4 mr-2" />
-                  Try Again
-                </Button>
+                <div className="text-right">
+                  <p className="text-2xl font-bold text-gray-900">{pagination.total || totalPurchased}</p>
+                  <p className="text-sm text-gray-600 mt-1">Total Purchased</p>
+                </div>
               </div>
             </CardContent>
           </Card>
-        )}
+        </motion.div>
 
-        {/* Empty State */}
-        {!loading && !error && purchases.length === 0 && (
-          <Card className="border-gray-200">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <Card className="border-gray-200 hover:shadow-md transition-shadow">
             <CardContent className="p-6">
-              <EmptyState />
+              <div className="flex items-center justify-between">
+                <div className="p-3 rounded-xl bg-purple-50">
+                  <FiDollarSign className="w-6 h-6 text-purple-600" />
+                </div>
+                <div className="text-right">
+                  <p className="text-2xl font-bold text-gray-900">
+                    ${totalSpent.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                  <p className="text-sm text-gray-600 mt-1">Total Value</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
-        )}
+        </motion.div>
 
-        {/* Leads Grid */}
-        {!loading && !error && purchases.length > 0 && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold text-gray-900">
-                Your Purchased Leads ({purchases.length})
-              </h2>
-              <Link href="/agent/marketplace">
-                <Button 
-                  variant="outline"
-                  className="border-blue-300 text-blue-600 hover:bg-blue-50"
-                >
-                  <FiShoppingBag className="w-4 h-4 mr-2" />
-                  Browse More Leads
-                </Button>
-              </Link>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {purchases.map((purchase, index) => (
-                <motion.div
-                  key={purchase.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.1 * (index % 6) }}
-                >
-                  <PurchasedLeadCard 
-                    purchase={purchase} 
-                    onCreateItinerary={handleCreateItinerary}
-                  />
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        )}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+        >
+          <Card className="border-gray-200 hover:shadow-md transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div className="p-3 rounded-xl bg-green-50">
+                  <FiStar className="w-6 h-6 text-green-600" />
+                </div>
+                <div className="text-right">
+                  <p className="text-2xl font-bold text-gray-900">
+                    {leads.reduce((sum, lead) => sum + lead.itinerary_count, 0)}
+                  </p>
+                  <p className="text-sm text-gray-600 mt-1">Total Itineraries</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
 
+      {/* Filters */}
+      <Card className="mb-6">
+        <CardContent className="p-4">
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex-1 min-w-[200px]">
+              <div className="relative">
+                <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Input
+                  placeholder="Search by name, email, destination..."
+                  value={filters.search}
+                  onChange={(e) => handleFilterChange('search', e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+            <div className="w-48">
+              <Select
+                value={filters.status || "all"}
+                onValueChange={(value) => handleFilterChange('status', value === "all" ? "" : value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="All Statuses" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="NEW">New</SelectItem>
+                  <SelectItem value="CONTACTED">Contacted</SelectItem>
+                  <SelectItem value="QUALIFIED">Qualified</SelectItem>
+                  <SelectItem value="PROPOSAL_SENT">Proposal Sent</SelectItem>
+                  <SelectItem value="NEGOTIATION">Negotiation</SelectItem>
+                  <SelectItem value="WON">Won</SelectItem>
+                  <SelectItem value="LOST">Lost</SelectItem>
+                  <SelectItem value="ARCHIVED">Archived</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="w-48">
+              <Select
+                value={filters.sortBy}
+                onValueChange={(value) => handleFilterChange('sortBy', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="created_at">Date Created</SelectItem>
+                  <SelectItem value="value">Total Value</SelectItem>
+                  <SelectItem value="last_communication">Last Communication</SelectItem>
+                  <SelectItem value="follow_up">Follow-up Date</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button
+              variant="outline"
+              onClick={fetchLeads}
+              className="flex items-center gap-2"
+            >
+              <FiRefreshCw className="w-4 h-4" />
+              Refresh
+            </Button>
+            <Link href="/agent/marketplace">
+              <Button 
+                variant="outline"
+                className="border-blue-300 text-blue-600 hover:bg-blue-50"
+              >
+                <FiShoppingBag className="w-4 h-4 mr-2" />
+                Browse More Leads
+              </Button>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Table */}
+      <Card>
+        <CardContent className="p-0">
+          <LeadsManagementTable
+            leads={leads}
+            loading={loading}
+            onRefresh={fetchLeads}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Pagination */}
+      {pagination.totalPages > 1 && (
+        <div className="flex items-center justify-between mt-6">
+          <div className="text-sm text-gray-600">
+            Showing {(pagination.page - 1) * pagination.limit + 1} to{' '}
+            {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} leads
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleFilterChange('page', filters.page - 1)}
+              disabled={filters.page === 1}
+            >
+              <FiChevronLeft className="w-4 h-4" />
+              Previous
+            </Button>
+            <span className="text-sm text-gray-600">
+              Page {filters.page} of {pagination.totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleFilterChange('page', filters.page + 1)}
+              disabled={filters.page >= pagination.totalPages}
+            >
+              Next
+              <FiChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
