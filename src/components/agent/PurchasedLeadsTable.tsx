@@ -296,10 +296,47 @@ export function PurchasedLeadsTable({ purchases, loading, onCreateProposal }: Pu
                             setMenuPosition(null);
                           } else {
                             setQuickActionMenu(purchase.id);
-                            setMenuPosition({
-                              top: rect.bottom + window.scrollY + 4,
-                              left: rect.right + window.scrollX - 192, // 192 = w-48 (12rem)
-                            });
+                            
+                            // Smart positioning: keep menu visible and near the button
+                            const menuWidth = 192; // w-48 (12rem)
+                            const menuHeight = 200; // Approximate height
+                            const padding = 8; // Space from button
+                            
+                            // Calculate available space
+                            const spaceRight = window.innerWidth - rect.right;
+                            const spaceLeft = rect.left;
+                            const spaceBottom = window.innerHeight - rect.bottom;
+                            const spaceTop = rect.top;
+                            
+                            // Determine horizontal position
+                            let left: number;
+                            if (spaceRight >= menuWidth) {
+                              // Enough space on right, align to button's right edge
+                              left = rect.right + window.scrollX - menuWidth;
+                            } else if (spaceLeft >= menuWidth) {
+                              // Not enough space on right, but enough on left
+                              left = rect.left + window.scrollX - menuWidth;
+                            } else {
+                              // Not enough space on either side, position at button center
+                              left = rect.left + window.scrollX + (rect.width / 2) - (menuWidth / 2);
+                              // Clamp to viewport
+                              left = Math.max(window.scrollX + padding, Math.min(left, window.scrollX + window.innerWidth - menuWidth - padding));
+                            }
+                            
+                            // Determine vertical position
+                            let top: number;
+                            if (spaceBottom >= menuHeight) {
+                              // Enough space below, position below button
+                              top = rect.bottom + window.scrollY + padding;
+                            } else if (spaceTop >= menuHeight) {
+                              // Not enough space below, position above button
+                              top = rect.top + window.scrollY - menuHeight - padding;
+                            } else {
+                              // Not enough space either way, position below and let it scroll
+                              top = rect.bottom + window.scrollY + padding;
+                            }
+                            
+                            setMenuPosition({ top, left });
                           }
                         }}
                         className="h-8 w-8 p-0"
