@@ -233,7 +233,7 @@ const TRAVEL_AGENT_NAVIGATION: NavigationItem[] = [
     submenu: [
       {
         id: 'all-leads',
-        label: 'New Leads Management',
+        label: 'All Leads',
         href: '/agent/leads',
         icon: FiUsers,
       },

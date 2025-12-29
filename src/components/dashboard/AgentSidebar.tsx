@@ -135,19 +135,11 @@ export function AgentSidebar() {
 			icon: FileText,
 			enabled: true,
 			submenu: [
-				{ label: "New Leads Management", href: "/agent/leads" },
-				{ label: "Leads Management", href: "/agent/leads/manage" },
+				{ label: "All Leads", href: "/agent/leads" },
 				{ label: "Active", href: "/agent/leads/active" },
 				{ label: "Contacted", href: "/agent/leads/contacted" },
 				{ label: "Converted", href: "/agent/leads/converted" },
 			],
-		},
-		{ 
-			id: "sub-agents", 
-			label: "Sub-Agents", 
-			href: "/agent/sub-agents", 
-			icon: Users, 
-			enabled: true 
 		},
 		{
 			id: "bookings",
