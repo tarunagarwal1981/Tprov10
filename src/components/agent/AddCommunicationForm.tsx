@@ -35,7 +35,7 @@ const responseOptions = [
   { value: 'pending', label: 'Pending', color: 'bg-amber-100 text-amber-700 border-amber-200' },
 ];
 
-export function AddCommunicationForm({ leadId, open, onClose, onSuccess }: AddCommunicationFormProps) {
+export function AddCommunicationForm({ leadId, open, onClose, onSuccess }: AddCommunicationFormProps): React.ReactPortal | null {
   const toast = useToast();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -101,16 +101,20 @@ export function AddCommunicationForm({ leadId, open, onClose, onSuccess }: AddCo
     }
   };
 
-  if (!open) return null;
+  if (!open) {
+    return null;
+  }
 
   const modalContent = (
     <div 
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm" 
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm" 
       onClick={onClose}
+      style={{ pointerEvents: 'auto' }}
     >
       <Card 
-        className="w-full max-w-2xl mx-4 bg-white shadow-2xl max-h-[90vh] overflow-y-auto relative" 
+        className="w-full max-w-2xl mx-4 bg-white shadow-2xl max-h-[90vh] overflow-y-auto relative z-[101]" 
         onClick={(e) => e.stopPropagation()}
+        style={{ pointerEvents: 'auto' }}
       >
         <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50 border-b border-gray-200">
           <div className="flex items-center justify-between">
@@ -334,9 +338,10 @@ export function AddCommunicationForm({ leadId, open, onClose, onSuccess }: AddCo
   );
 
   // Render in portal to ensure it's above all other modals
-  if (typeof window !== 'undefined') {
-    return createPortal(modalContent, document.body);
+  if (typeof window === 'undefined') {
+    return null;
   }
-  return null;
+  
+  return createPortal(modalContent, document.body);
 }
 

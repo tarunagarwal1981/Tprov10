@@ -128,6 +128,23 @@ export function LeadCommunicationModal({ leadId, open, onClose }: LeadCommunicat
     }
   }, [open, leadId]);
 
+  // Disable pointer events on Dialog overlay when nested modal is open
+  useEffect(() => {
+    if (showAddForm && typeof window !== 'undefined') {
+      const overlay = document.querySelector('[data-radix-dialog-overlay]');
+      if (overlay) {
+        (overlay as HTMLElement).style.pointerEvents = 'none';
+      }
+      return () => {
+        const overlay = document.querySelector('[data-radix-dialog-overlay]');
+        if (overlay) {
+          (overlay as HTMLElement).style.pointerEvents = '';
+        }
+      };
+    }
+    return undefined;
+  }, [showAddForm]);
+
   const fetchCommunications = async () => {
     try {
       setLoading(true);
