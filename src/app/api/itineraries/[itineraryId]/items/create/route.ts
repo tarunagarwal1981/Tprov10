@@ -22,7 +22,7 @@ export async function POST(
     
     // Verify itinerary exists before proceeding
     const itineraryCheck = await query<{ id: string }>(
-      `SELECT id FROM itineraries WHERE id = $1::uuid LIMIT 1`,
+      `SELECT id FROM itineraries WHERE id::text = $1 LIMIT 1`,
       [itineraryId]
     );
     
@@ -149,7 +149,7 @@ export async function POST(
     const maxOrderResult = await query<{ max_order: number }>(
       `SELECT COALESCE(MAX(display_order), 0) as max_order 
        FROM itinerary_items 
-       WHERE itinerary_id = $1::uuid`,
+       WHERE itinerary_id::text = $1`,
       [itineraryId]
     );
 
