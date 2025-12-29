@@ -20,7 +20,7 @@ export async function POST(
     
     // Verify itinerary exists before proceeding
     const itineraryCheck = await query<{ id: string }>(
-      `SELECT id FROM itineraries WHERE id::text = $1 LIMIT 1`,
+      `SELECT id FROM itineraries WHERE id = $1::uuid LIMIT 1`,
       [itineraryId]
     );
     
@@ -53,10 +53,49 @@ export async function POST(
     console.log('[Create Item] Request body:', JSON.stringify(body, null, 2));
     console.log('[Create Item] Extracted values:', { packageType, packageId, operatorId, packageTitle, unitPrice, quantity });
 
+    // Validate required fields (check for empty strings too)
     if (!packageType || !packageId || !operatorId || !packageTitle || unitPrice === undefined || quantity === undefined) {
-      console.error('[Create Item] Missing required fields:', { packageType, packageId, operatorId, packageTitle, unitPrice, quantity });
+      console.error('[Create Item] Missing required fields:', { 
+        packageType: packageType || 'MISSING', 
+        packageId: packageId || 'MISSING', 
+        operatorId: operatorId || 'MISSING', 
+        packageTitle: packageTitle || 'MISSING', 
+        unitPrice, 
+        quantity 
+      });
       return NextResponse.json(
         { error: 'Missing required fields: packageType, packageId, operatorId, packageTitle, unitPrice, quantity' },
+        { status: 400 }
+      );
+    }
+
+    // Validate UUID format for UUID fields
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(itineraryId)) {
+      console.error('[Create Item] Invalid itineraryId format:', itineraryId);
+      return NextResponse.json(
+        { error: 'Invalid itinerary ID format' },
+        { status: 400 }
+      );
+    }
+    if (!uuidRegex.test(packageId)) {
+      console.error('[Create Item] Invalid packageId format:', packageId);
+      return NextResponse.json(
+        { error: 'Invalid package ID format' },
+        { status: 400 }
+      );
+    }
+    if (typeof operatorId !== 'string' || operatorId.trim() === '' || !uuidRegex.test(operatorId)) {
+      console.error('[Create Item] Invalid operatorId:', { operatorId, type: typeof operatorId, isEmpty: operatorId === '' });
+      return NextResponse.json(
+        { error: 'Invalid operator ID format or empty', details: `operatorId: ${operatorId}` },
+        { status: 400 }
+      );
+    }
+    if (dayId && (typeof dayId !== 'string' || !uuidRegex.test(dayId))) {
+      console.error('[Create Item] Invalid dayId format:', dayId);
+      return NextResponse.json(
+        { error: 'Invalid day ID format' },
         { status: 400 }
       );
     }
@@ -70,7 +109,7 @@ export async function POST(
     const maxOrderResult = await query<{ max_order: number }>(
       `SELECT COALESCE(MAX(display_order), 0) as max_order 
        FROM itinerary_items 
-       WHERE itinerary_id::text = $1`,
+       WHERE itinerary_id = $1::uuid`,
       [itineraryId]
     );
 
@@ -114,10 +153,11 @@ export async function POST(
     });
 
     let insertResult;
+    let queryParams: any[] = [];
     try {
       // Generate UUID explicitly for id column (in case default isn't working)
       // Handle null dayId - use conditional query since PostgreSQL can't cast NULL to UUID
-      // Use explicit CAST() function instead of ::uuid syntax to avoid type comparison issues
+      // Use ::uuid syntax which PostgreSQL handles better than CAST() for parameterized queries
       const insertQuery = dayId
         ? `INSERT INTO itinerary_items (
             id, itinerary_id, day_id, package_type, package_id, operator_id,
@@ -125,14 +165,14 @@ export async function POST(
             quantity, total_price, display_order, notes
           ) VALUES (
             gen_random_uuid(), 
-            CAST($1 AS uuid), 
-            CAST($2 AS uuid), 
+            $1::uuid, 
+            $2::uuid, 
             $3, 
-            CAST($4 AS uuid), 
-            CAST($5 AS uuid), 
+            $4::uuid, 
+            $5::uuid, 
             $6, 
             $7, 
-            CAST($8 AS jsonb), 
+            $8::jsonb, 
             $9, 
             $10, 
             $11, 
@@ -146,14 +186,14 @@ export async function POST(
             quantity, total_price, display_order, notes
           ) VALUES (
             gen_random_uuid(), 
-            CAST($1 AS uuid), 
+            $1::uuid, 
             NULL, 
             $2, 
-            CAST($3 AS uuid), 
-            CAST($4 AS uuid), 
+            $3::uuid, 
+            $4::uuid, 
             $5, 
             $6, 
-            CAST($7 AS jsonb), 
+            $7::jsonb, 
             $8, 
             $9, 
             $10, 
@@ -163,7 +203,7 @@ export async function POST(
           RETURNING *`;
       
       // Adjust parameters based on whether dayId is provided
-      const queryParams = dayId 
+      queryParams = dayId 
         ? insertValues 
         : [
             itineraryId,
@@ -182,6 +222,14 @@ export async function POST(
       
       console.log('[Create Item] Using query', dayId ? 'with dayId' : 'without dayId (NULL)');
       console.log('[Create Item] Query params count:', queryParams.length);
+      console.log('[Create Item] Query params details:', queryParams.map((p, i) => ({
+        index: i + 1,
+        value: typeof p === 'string' && p.length > 50 ? p.substring(0, 50) + '...' : p,
+        type: typeof p,
+        isNull: p === null,
+        isUndefined: p === undefined,
+      })));
+      console.log('[Create Item] SQL Query:', insertQuery.substring(0, 200) + '...');
       
       insertResult = await query<any>(
         insertQuery,
@@ -202,18 +250,44 @@ export async function POST(
         fullResult: JSON.stringify(insertResult, null, 2),
       });
     } catch (dbError) {
-      console.error('[Create Item] Database error during INSERT:', {
+      const errorDetails: any = {
         error: dbError instanceof Error ? dbError.message : String(dbError),
         stack: dbError instanceof Error ? dbError.stack : undefined,
         name: dbError instanceof Error ? dbError.name : undefined,
-        insertValues: insertValues.map((v, i) => ({ 
-          index: i + 1, 
-          value: v === null ? 'NULL' : (typeof v === 'string' && v.length > 50 ? v.substring(0, 50) + '...' : v), 
-          type: typeof v 
-        })),
         dayId: dayId || 'NULL',
         itineraryId,
-      });
+        packageId,
+        operatorId,
+        packageType,
+        hasDayId: !!dayId,
+        queryParams: queryParams.map((v, i) => ({ 
+          index: i + 1, 
+          value: v === null ? 'NULL' : (typeof v === 'string' && v.length > 50 ? v.substring(0, 50) + '...' : v), 
+          type: typeof v,
+          isNull: v === null,
+          isUndefined: v === undefined,
+        })),
+      };
+      
+      // Try to extract more details from the error
+      if (dbError instanceof Error) {
+        const errorStr = dbError.toString();
+        errorDetails.fullErrorString = errorStr;
+        
+        // Check for specific PostgreSQL error patterns
+        if (errorStr.includes('operator does not exist')) {
+          errorDetails.errorType = 'UUID_TYPE_MISMATCH';
+          errorDetails.suggestion = 'Parameter type mismatch - ensure all UUID parameters are valid UUID strings';
+        }
+        if (errorStr.includes('foreign key')) {
+          errorDetails.errorType = 'FOREIGN_KEY_VIOLATION';
+        }
+        if (errorStr.includes('not null')) {
+          errorDetails.errorType = 'NOT_NULL_VIOLATION';
+        }
+      }
+      
+      console.error('[Create Item] Database error during INSERT:', errorDetails);
       
       // Return more detailed error to help debug
       const errorMessage = dbError instanceof Error ? dbError.message : String(dbError);
@@ -226,6 +300,8 @@ export async function POST(
             itineraryId,
             packageType,
             hasDayId: !!dayId,
+            operatorId,
+            packageId,
           }
         },
         { status: 500 }
