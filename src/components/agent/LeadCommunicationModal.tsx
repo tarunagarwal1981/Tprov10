@@ -165,20 +165,24 @@ export function LeadCommunicationModal({ leadId, open, onClose }: LeadCommunicat
   return (
     <>
       <Dialog open={open} onOpenChange={onClose}>
-        <DialogContent size="lg" className="max-h-[80vh] flex flex-col p-0">
-          <DialogHeader className="px-6 pt-6 pb-4 border-b">
-            <DialogTitle className="text-lg font-semibold text-gray-900">Communications</DialogTitle>
+        <DialogContent 
+          size="lg" 
+          className="max-h-[80vh] flex flex-col p-0 bg-white border-gray-200"
+          overlayVariant="subtle"
+        >
+          <DialogHeader className="px-4 pt-4 pb-3 border-b border-gray-200 bg-white">
+            <DialogTitle className="text-base font-semibold text-gray-900">Communications</DialogTitle>
           </DialogHeader>
           
           {/* Scrollable content area */}
-          <div className="flex-1 overflow-y-auto min-h-0 px-6 py-4">
+          <div className="flex-1 overflow-y-auto min-h-0 px-4 py-3 bg-white">
             {loading ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
               </div>
             ) : communications.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-gray-500 mb-4">No communications recorded yet</p>
+              <div className="text-center py-8">
+                <p className="text-gray-500 mb-3 text-sm">No communications recorded yet</p>
                 <Button
                   size="sm"
                   onClick={() => setShowAddForm(true)}
@@ -188,17 +192,17 @@ export function LeadCommunicationModal({ leadId, open, onClose }: LeadCommunicat
                 </Button>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {Object.entries(groupedCommunications).map(([dateKey, comms]) => (
-                  <div key={dateKey} className="space-y-3">
+                  <div key={dateKey} className="space-y-2">
                     <div className="flex items-center gap-2">
                       <div className="h-px bg-gray-300 flex-1"></div>
-                      <h3 className="text-xs font-semibold text-gray-700 px-2">{dateKey}</h3>
+                      <h3 className="text-xs font-semibold text-gray-700 px-2 whitespace-nowrap">{dateKey}</h3>
                       <div className="h-px bg-gray-300 flex-1"></div>
                     </div>
-                    <div className="relative pl-6 space-y-3">
+                    <div className="relative pl-5 space-y-2">
                       {/* Vertical line */}
-                      <div className="absolute left-2 top-0 bottom-0 w-0.5 bg-gradient-to-b from-blue-200 via-purple-200 to-blue-200"></div>
+                      <div className="absolute left-1.5 top-0 bottom-0 w-0.5 bg-gray-200"></div>
                       
                       {comms.map((comm) => {
                         const Icon = getCommunicationIcon(comm.communication_type);
@@ -206,25 +210,25 @@ export function LeadCommunicationModal({ leadId, open, onClose }: LeadCommunicat
                         const responseColor = getResponseBadgeColor(comm.customer_response);
                         
                         return (
-                          <div key={comm.id} className="relative flex items-start gap-3">
+                          <div key={comm.id} className="relative flex items-start gap-2">
                             {/* Timeline dot */}
-                            <div className={`absolute left-0 w-5 h-5 rounded-full ${iconColor} border-2 border-white shadow-sm flex items-center justify-center z-10`}>
-                              <Icon className="w-2.5 h-2.5" />
+                            <div className={`absolute left-0 w-4 h-4 rounded-full ${iconColor} border-2 border-white shadow-sm flex items-center justify-center z-10`}>
+                              <Icon className="w-2 h-2" />
                             </div>
                             
                             {/* Content card */}
-                            <Card className="flex-1 border-gray-200 hover:shadow-sm transition-shadow bg-white ml-6">
-                              <CardContent className="p-3">
-                                <div className="flex items-start justify-between mb-1.5">
-                                  <div className="flex items-center gap-1.5 flex-wrap">
-                                    <Badge variant="outline" className={`text-xs px-1.5 py-0 ${iconColor}`}>
+                            <Card className="flex-1 border-gray-200 hover:shadow-sm transition-shadow bg-white ml-5">
+                              <CardContent className="p-2.5">
+                                <div className="flex items-start justify-between mb-1 gap-2">
+                                  <div className="flex items-center gap-1 flex-wrap">
+                                    <Badge variant="outline" className={`text-xs px-1.5 py-0.5 ${iconColor}`}>
                                       {comm.communication_type.replace('_', ' ')}
                                     </Badge>
-                                    <Badge variant="outline" className="text-xs px-1.5 py-0 bg-gray-100 text-gray-700 border-gray-200">
+                                    <Badge variant="outline" className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-700 border-gray-200">
                                       {comm.direction}
                                     </Badge>
                                     {comm.customer_response && (
-                                      <Badge variant="outline" className={`text-xs px-1.5 py-0 ${responseColor}`}>
+                                      <Badge variant="outline" className={`text-xs px-1.5 py-0.5 ${responseColor}`}>
                                         {comm.customer_response.replace('_', ' ')}
                                       </Badge>
                                     )}
@@ -235,15 +239,15 @@ export function LeadCommunicationModal({ leadId, open, onClose }: LeadCommunicat
                                 </div>
                                 
                                 {comm.subject && (
-                                  <h4 className="text-sm font-semibold text-gray-900 mb-1">{comm.subject}</h4>
+                                  <h4 className="text-sm font-semibold text-gray-900 mb-0.5">{comm.subject}</h4>
                                 )}
                                 
                                 {comm.content && (
-                                  <p className="text-xs text-gray-700 mb-1.5 whitespace-pre-wrap line-clamp-3">{comm.content}</p>
+                                  <p className="text-xs text-gray-700 mb-1 whitespace-pre-wrap line-clamp-2">{comm.content}</p>
                                 )}
                                 
                                 {comm.response_notes && (
-                                  <div className="mt-1.5 p-1.5 bg-gray-50 rounded border border-gray-200">
+                                  <div className="mt-1 p-1.5 bg-gray-50 rounded border border-gray-200">
                                     <p className="text-xs text-gray-600">
                                       <span className="font-medium">Response Notes:</span> {comm.response_notes}
                                     </p>
@@ -262,7 +266,7 @@ export function LeadCommunicationModal({ leadId, open, onClose }: LeadCommunicat
           </div>
           
           {/* Footer with Add Communication button */}
-          <div className="border-t px-6 py-4 bg-gray-50">
+          <div className="border-t border-gray-200 px-4 py-3 bg-white">
             <Button
               onClick={() => setShowAddForm(true)}
               className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white"
