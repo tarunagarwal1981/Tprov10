@@ -23,8 +23,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/context/CognitoAuthContext';
 import { useToast } from '@/hooks/useToast';
 import { getAccessToken } from '@/lib/auth/getAccessToken';
-import { LeadCommunicationHistory } from '@/components/agent/LeadCommunicationHistory';
-import { AddCommunicationForm } from '@/components/agent/AddCommunicationForm';
+import { LeadCommunicationModal } from '@/components/agent/LeadCommunicationModal';
 import type { LeadPurchase } from '@/lib/types/marketplace';
 import { TripType } from '@/lib/types/marketplace';
 
@@ -90,7 +89,7 @@ export function PurchasedLeadsTable({ purchases, loading, onCreateProposal }: Pu
   const [quickActionMenu, setQuickActionMenu] = useState<string | null>(null);
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const [communicationModalOpen, setCommunicationModalOpen] = useState(false);
-  const [selectedLeadForCommunication, setSelectedLeadForCommunication] = useState<string | null>(null);
+  const [selectedLeadForCommunicationModal, setSelectedLeadForCommunicationModal] = useState<string | null>(null);
 
   const ensureLeadExists = async (marketplaceLeadId: string): Promise<string | null> => {
     // Return cached lead ID if available
@@ -158,10 +157,10 @@ export function PurchasedLeadsTable({ purchases, loading, onCreateProposal }: Pu
     setExpandedRows(newExpanded);
   };
 
-  const handleAddCommunication = async (marketplaceLeadId: string) => {
+  const handleViewCommunications = async (marketplaceLeadId: string) => {
     const leadId = await ensureLeadExists(marketplaceLeadId);
     if (leadId) {
-      setSelectedLeadForCommunication(leadId);
+      setSelectedLeadForCommunicationModal(leadId);
       setCommunicationModalOpen(true);
     } else {
       toast.error('Please wait for lead information to load');
@@ -346,33 +345,7 @@ export function PurchasedLeadsTable({ purchases, loading, onCreateProposal }: Pu
                     </div>
                   </td>
                 </tr>
-                {isExpanded && (
-                  <tr>
-                    <td colSpan={8} className="px-3 py-3 bg-gray-50">
-                      <div className="space-y-3">
-                        {/* Communication History */}
-                        <Card>
-                          <CardContent className="p-2">
-                            <h4 className="font-semibold text-sm text-gray-900 mb-2">
-                              Communication History
-                            </h4>
-                            {isLoadingLeadId ? (
-                              <div className="flex items-center justify-center py-4">
-                                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-                              </div>
-                            ) : leadIdFromLeadsTable ? (
-                              <LeadCommunicationHistory leadId={leadIdFromLeadsTable} />
-                            ) : (
-                              <div className="text-center py-4">
-                                <p className="text-xs text-gray-500">Loading lead information...</p>
-                              </div>
-                            )}
-                          </CardContent>
-                        </Card>
-                      </div>
-                    </td>
-                  </tr>
-                )}
+                {/* Expanded row removed - communications now in modal */}
               </React.Fragment>
               );
             })}
@@ -405,7 +378,7 @@ export function PurchasedLeadsTable({ purchases, loading, onCreateProposal }: Pu
                       onClick={async () => {
                         const purchase = purchases.find(p => p.id === quickActionMenu);
                         if (purchase?.lead) {
-                          await handleAddCommunication(purchase.lead.id);
+                          await handleViewCommunications(purchase.lead.id);
                         }
                         setQuickActionMenu(null);
                         setMenuPosition(null);
@@ -413,7 +386,7 @@ export function PurchasedLeadsTable({ purchases, loading, onCreateProposal }: Pu
                       className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                     >
                       <FiMail className="w-4 h-4" />
-                      Add Communication
+                      View Communications
                     </button>
                     <button
                       onClick={() => {
@@ -468,19 +441,14 @@ export function PurchasedLeadsTable({ purchases, loading, onCreateProposal }: Pu
         </>
       )}
 
-      {/* Add Communication Modal */}
-      {selectedLeadForCommunication && (
-        <AddCommunicationForm
-          leadId={selectedLeadForCommunication}
+      {/* Communication Modal */}
+      {selectedLeadForCommunicationModal && (
+        <LeadCommunicationModal
+          leadId={selectedLeadForCommunicationModal}
           open={communicationModalOpen}
           onClose={() => {
             setCommunicationModalOpen(false);
-            setSelectedLeadForCommunication(null);
-          }}
-          onSuccess={() => {
-            // Communication added successfully - the LeadCommunicationHistory component will refresh automatically
-            setCommunicationModalOpen(false);
-            setSelectedLeadForCommunication(null);
+            setSelectedLeadForCommunicationModal(null);
           }}
         />
       )}
