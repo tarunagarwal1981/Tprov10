@@ -141,13 +141,6 @@ export function AgentSidebar() {
 				{ label: "Converted", href: "/agent/leads/converted" },
 			],
 		},
-		{ 
-			id: "sub-agents", 
-			label: "Sub-Agents", 
-			href: "/agent/sub-agents", 
-			icon: Users, 
-			enabled: true 
-		},
 		{
 			id: "bookings",
 			label: "Bookings",

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { itineraryService } from '@/lib/services/itineraryService';
+import { getUserIdFromToken } from '@/lib/auth/getUserIdFromToken';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -13,8 +14,32 @@ export async function GET(
   { params }: { params: Promise<{ leadId: string }> }
 ) {
   try {
+    console.log('[API] ===== GET /api/itineraries/leads/[leadId] START =====');
     const { leadId } = await params;
-    const itineraries = await itineraryService.getLeadItineraries(leadId);
+    console.log('[API] Extracted leadId from params:', leadId);
+    console.log('[API] leadId type:', typeof leadId);
+    console.log('[API] leadId length:', leadId?.length);
+    
+    // Extract agentId from auth token or query param
+    let agentId: string | undefined;
+    try {
+      const authHeader = request.headers.get('authorization');
+      const token = authHeader?.replace('Bearer ', '') || '';
+      const userId = await getUserIdFromToken(token);
+      agentId = userId || undefined;
+      console.log('[API] Extracted agentId from token:', agentId);
+    } catch (error) {
+      console.log('[API] Could not extract agentId from token, trying query param...');
+      const searchParams = request.nextUrl.searchParams;
+      agentId = searchParams.get('agentId') || undefined;
+      console.log('[API] agentId from query param:', agentId);
+    }
+    
+    console.log('[API] Calling itineraryService.getLeadItineraries with leadId and agentId...');
+    console.log('[API] Parameters:', { leadId, agentId: agentId || 'NOT PROVIDED' });
+    const itineraries = await itineraryService.getLeadItineraries(leadId, agentId);
+    console.log('[API] ✅ getLeadItineraries returned:', itineraries.length, 'itineraries');
+    console.log('[API] ⚠️ If this count is lower than expected, check backend logs for PRIMARY/FALLBACK query results');
     
     console.log('[API] /api/itineraries/leads/[leadId] - Returning itineraries:', {
       leadId,
@@ -33,9 +58,17 @@ export async function GET(
       console.log(`[API] Price for "${it.name}": total_price=${it.total_price} (type: ${typeof it.total_price})`);
     });
     
-    return NextResponse.json({ itineraries });
+    const response = { itineraries };
+    console.log('[API] Response object:', JSON.stringify(response, null, 2));
+    console.log('[API] Response itineraries count:', response.itineraries.length);
+    console.log('[API] ===== GET /api/itineraries/leads/[leadId] SUCCESS =====');
+    return NextResponse.json(response);
   } catch (error) {
-    console.error('Error fetching itineraries:', error);
+    console.error('[API] ❌ Error fetching itineraries:', error);
+    console.error('[API] Error type:', error instanceof Error ? error.constructor.name : typeof error);
+    console.error('[API] Error message:', error instanceof Error ? error.message : String(error));
+    console.error('[API] Error stack:', error instanceof Error ? error.stack : 'No stack');
+    console.error('[API] ===== GET /api/itineraries/leads/[leadId] ERROR =====');
     return NextResponse.json(
       { error: 'Failed to fetch itineraries', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }

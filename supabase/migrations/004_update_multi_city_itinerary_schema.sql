@@ -68,26 +68,12 @@ CREATE INDEX IF NOT EXISTS idx_multi_city_flights_order
 -- 5. ENABLE RLS ON FLIGHTS TABLE
 -- ============================================================================
 
-ALTER TABLE multi_city_package_day_flights ENABLE ROW LEVEL SECURITY;
+-- RLS disabled (not used in AWS RDS)
 
 -- Flight policies
-CREATE POLICY "Anyone can view flights for published packages"
-  ON multi_city_package_day_flights FOR SELECT
-  USING (EXISTS (
-    SELECT 1 FROM multi_city_package_day_plans dp
-    JOIN multi_city_packages p ON p.id = dp.package_id
-    WHERE dp.id = multi_city_package_day_flights.day_plan_id
-    AND (p.status = 'published' OR p.operator_id = auth.uid())
-  ));
+-- RLS Policy removed (not used in AWS RDS)
 
-CREATE POLICY "Operators can manage their package flights"
-  ON multi_city_package_day_flights FOR ALL
-  USING (EXISTS (
-    SELECT 1 FROM multi_city_package_day_plans dp
-    JOIN multi_city_packages p ON p.id = dp.package_id
-    WHERE dp.id = multi_city_package_day_flights.day_plan_id
-    AND p.operator_id = auth.uid()
-  ));
+-- RLS Policy removed (not used in AWS RDS)
 
 -- ============================================================================
 -- 6. UPDATE COMMENTS

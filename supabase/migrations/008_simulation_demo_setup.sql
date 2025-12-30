@@ -7,7 +7,7 @@
 -- 3. ~25 Packages for Indonesia (distributed across operators)
 -- 4. 2-3 Marketplace Leads with customer details
 --
--- Note: Operators must be created in auth.users via Supabase Dashboard
+-- Note: Users table in public schema
 -- See: OPERATOR_SETUP_INSTRUCTIONS.md
 -- ============================================================================
 
@@ -41,7 +41,7 @@ END $$;
 -- Create leads table if not exists
 CREATE TABLE IF NOT EXISTS leads (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    agent_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    agent_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     
     -- Customer Information (revealed after purchase)
     customer_name TEXT NOT NULL,
@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS leads (
     source lead_source DEFAULT 'MARKETPLACE',
     priority lead_priority DEFAULT 'MEDIUM',
     stage lead_stage DEFAULT 'NEW',
-    assigned_to UUID REFERENCES auth.users(id),
+    assigned_to UUID REFERENCES users(id),
     
     -- Additional Information
     requirements TEXT,
@@ -105,28 +105,22 @@ CREATE INDEX IF NOT EXISTS idx_leads_created_at ON leads(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_leads_purchased ON leads(purchased_from_marketplace) WHERE purchased_from_marketplace = TRUE;
 
 -- Enable RLS
-ALTER TABLE leads ENABLE ROW LEVEL SECURITY;
+-- RLS disabled (not used in AWS RDS)
 
 -- RLS Policies
-DROP POLICY IF EXISTS "Agents can view own leads" ON leads;
-CREATE POLICY "Agents can view own leads"
-    ON leads FOR SELECT
-    USING (agent_id = auth.uid());
+-- DROP POLICY removed (RLS not used)
+-- RLS Policy removed (not used in AWS RDS)
 
-DROP POLICY IF EXISTS "Agents can create leads" ON leads;
-CREATE POLICY "Agents can create leads"
-    ON leads FOR INSERT
-    WITH CHECK (agent_id = auth.uid());
+-- DROP POLICY removed (RLS not used)
+-- RLS Policy removed (not used in AWS RDS)
 
-DROP POLICY IF EXISTS "Agents can update own leads" ON leads;
-CREATE POLICY "Agents can update own leads"
-    ON leads FOR UPDATE
-    USING (agent_id = auth.uid());
+-- DROP POLICY removed (RLS not used)
+-- RLS Policy removed (not used in AWS RDS)
 
 -- ============================================================================
 -- PART 2: CREATE TOUR OPERATORS IN USERS TABLE
 -- ============================================================================
--- Note: These operators must FIRST be created in auth.users via Supabase Dashboard
+-- Note: Users table in public schema
 -- After creating in auth.users, their UUIDs will be inserted here
 -- See OPERATOR_SETUP_INSTRUCTIONS.md for detailed steps
 -- ============================================================================
@@ -164,7 +158,7 @@ CREATE POLICY "Agents can update own leads"
 -- ============================================================================
 -- PART 3: CREATE PACKAGES FOR OPERATOR 1 - BALI ADVENTURE TOURS
 -- ============================================================================
--- Note: Replace {OPERATOR_1_UUID} with actual operator UUID after creating in auth.users
+-- Note: Users table in public schema
 -- ============================================================================
 
 -- Helper function to get operator UUID by email
@@ -175,7 +169,7 @@ DECLARE
     operator_uuid UUID;
 BEGIN
     SELECT id INTO operator_uuid
-    FROM auth.users
+    FROM users
     WHERE email = operator_email
     LIMIT 1;
     
@@ -194,7 +188,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- This allows flexible setup - operators just need to exist in auth.users
 -- ============================================================================
 
--- NOTE: Before running package inserts, ensure all 5 operators are created in auth.users
+-- Note: Users table in public schema
 -- Run the package inserts section only after operators exist
 
 -- ============================================================================

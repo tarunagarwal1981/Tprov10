@@ -98,70 +98,25 @@ CREATE INDEX IF NOT EXISTS idx_multi_city_pricing_rows_display_order
 -- 5. ENABLE ROW LEVEL SECURITY FOR PRICING ROWS
 -- ============================================================================
 
-ALTER TABLE multi_city_pricing_rows ENABLE ROW LEVEL SECURITY;
+-- RLS disabled (not used in AWS RDS)
 
 -- Drop existing policies if they exist
-DROP POLICY IF EXISTS "Operators can view their own pricing rows" ON multi_city_pricing_rows;
-DROP POLICY IF EXISTS "Operators can create pricing rows" ON multi_city_pricing_rows;
-DROP POLICY IF EXISTS "Operators can update their own pricing rows" ON multi_city_pricing_rows;
-DROP POLICY IF EXISTS "Operators can delete their own pricing rows" ON multi_city_pricing_rows;
-DROP POLICY IF EXISTS "Public can view pricing rows for published tours" ON multi_city_pricing_rows;
+-- DROP POLICY removed (RLS not used)
+-- DROP POLICY removed (RLS not used)
+-- DROP POLICY removed (RLS not used)
+-- DROP POLICY removed (RLS not used)
+-- DROP POLICY removed (RLS not used)
 
 -- Pricing rows policies
-CREATE POLICY "Operators can view their own pricing rows"
-  ON multi_city_pricing_rows FOR SELECT
-  USING (
-    pricing_package_id IN (
-      SELECT id FROM multi_city_pricing_packages 
-      WHERE package_id IN (
-        SELECT id FROM multi_city_packages WHERE operator_id = auth.uid()
-      )
-    )
-  );
+-- RLS Policy removed (not used in AWS RDS)
 
-CREATE POLICY "Operators can create pricing rows"
-  ON multi_city_pricing_rows FOR INSERT
-  WITH CHECK (
-    pricing_package_id IN (
-      SELECT id FROM multi_city_pricing_packages 
-      WHERE package_id IN (
-        SELECT id FROM multi_city_packages WHERE operator_id = auth.uid()
-      )
-    )
-  );
+-- RLS Policy removed (not used in AWS RDS)
 
-CREATE POLICY "Operators can update their own pricing rows"
-  ON multi_city_pricing_rows FOR UPDATE
-  USING (
-    pricing_package_id IN (
-      SELECT id FROM multi_city_pricing_packages 
-      WHERE package_id IN (
-        SELECT id FROM multi_city_packages WHERE operator_id = auth.uid()
-      )
-    )
-  );
+-- RLS Policy removed (not used in AWS RDS)
 
-CREATE POLICY "Operators can delete their own pricing rows"
-  ON multi_city_pricing_rows FOR DELETE
-  USING (
-    pricing_package_id IN (
-      SELECT id FROM multi_city_pricing_packages 
-      WHERE package_id IN (
-        SELECT id FROM multi_city_packages WHERE operator_id = auth.uid()
-      )
-    )
-  );
+-- RLS Policy removed (not used in AWS RDS)
 
-CREATE POLICY "Public can view pricing rows for published tours"
-  ON multi_city_pricing_rows FOR SELECT
-  USING (
-    pricing_package_id IN (
-      SELECT id FROM multi_city_pricing_packages 
-      WHERE package_id IN (
-        SELECT id FROM multi_city_packages WHERE status = 'published'
-      )
-    )
-  );
+-- RLS Policy removed (not used in AWS RDS)
 
 -- ============================================================================
 -- 6. CREATE TRIGGER FOR PRICING ROWS UPDATE TIMESTAMP

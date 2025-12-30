@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { query } from '@/lib/aws/lambda-database';
+import { query, queryOne } from '@/lib/aws/lambda-database';
 import { getUserIdFromToken } from '@/lib/auth/getUserIdFromToken';
 
 export const dynamic = 'force-dynamic';
@@ -100,6 +100,23 @@ export async function POST(
       );
     }
 
+    // Get the lead record to ensure it exists and get agent_id
+    const lead = await queryOne<{ id: string; agent_id: string }>(
+      'SELECT id, agent_id FROM leads WHERE id = $1',
+      [leadId]
+    );
+
+    if (!lead) {
+      return NextResponse.json(
+        { error: 'Lead not found' },
+        { status: 404 }
+      );
+    }
+
+    // Use agent_id from lead record if not provided in request body
+    // This ensures communications are always linked to the correct agent
+    const finalAgentId = agent_id || lead.agent_id || null;
+
     const result = await query<LeadCommunication>(
       `INSERT INTO lead_communications (
         lead_id, agent_id, sub_agent_id, communication_type, direction,
@@ -109,7 +126,7 @@ export async function POST(
       RETURNING *`,
       [
         leadId,
-        agent_id || null,
+        finalAgentId,
         sub_agent_id || null,
         communication_type,
         direction,

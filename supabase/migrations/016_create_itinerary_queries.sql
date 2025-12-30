@@ -9,7 +9,7 @@
 CREATE TABLE IF NOT EXISTS itinerary_queries (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     lead_id UUID NOT NULL,
-    agent_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    agent_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     
     -- Destinations (JSON array: [{"city": "Bali", "nights": 2}, ...])
     destinations JSONB NOT NULL DEFAULT '[]'::jsonb,
@@ -55,31 +55,18 @@ CREATE TRIGGER update_itinerary_queries_updated_at
     EXECUTE FUNCTION update_itinerary_queries_updated_at();
 
 -- Enable RLS (Row Level Security)
-ALTER TABLE itinerary_queries ENABLE ROW LEVEL SECURITY;
+-- RLS disabled (not used in AWS RDS)
 
 -- RLS Policies
 -- Agents can only see their own queries
-CREATE POLICY "Agents can view their own queries"
-    ON itinerary_queries
-    FOR SELECT
-    USING (auth.uid() = agent_id);
+-- RLS Policy removed (not used in AWS RDS)
 
 -- Agents can insert their own queries
-CREATE POLICY "Agents can insert their own queries"
-    ON itinerary_queries
-    FOR INSERT
-    WITH CHECK (auth.uid() = agent_id);
+-- RLS Policy removed (not used in AWS RDS)
 
 -- Agents can update their own queries
-CREATE POLICY "Agents can update their own queries"
-    ON itinerary_queries
-    FOR UPDATE
-    USING (auth.uid() = agent_id)
-    WITH CHECK (auth.uid() = agent_id);
+-- RLS Policy removed (not used in AWS RDS)
 
 -- Agents can delete their own queries
-CREATE POLICY "Agents can delete their own queries"
-    ON itinerary_queries
-    FOR DELETE
-    USING (auth.uid() = agent_id);
+-- RLS Policy removed (not used in AWS RDS)
 

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { FiMail, FiPhone, FiMessageCircle, FiVideo, FiX, FiCheck, FiClock } from 'react-icons/fi';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -34,7 +35,7 @@ const responseOptions = [
   { value: 'pending', label: 'Pending', color: 'bg-amber-100 text-amber-700 border-amber-200' },
 ];
 
-export function AddCommunicationForm({ leadId, open, onClose, onSuccess }: AddCommunicationFormProps) {
+export function AddCommunicationForm({ leadId, open, onClose, onSuccess }: AddCommunicationFormProps): React.ReactPortal | null {
   const toast = useToast();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -48,6 +49,51 @@ export function AddCommunicationForm({ leadId, open, onClose, onSuccess }: AddCo
     customer_response: '' as 'positive' | 'negative' | 'no_response' | 'pending' | '',
     response_notes: '',
   });
+
+  // Debug: Log when modal opens
+  React.useEffect(() => {
+    if (open) {
+      console.log('[AddCommunicationForm] Modal opened');
+      console.log('[AddCommunicationForm] Checking for blocking elements...');
+      
+      // Check for Dialog overlays
+      const dialogOverlays = document.querySelectorAll('[data-radix-dialog-overlay]');
+      const dialogContents = document.querySelectorAll('[data-radix-dialog-content]');
+      
+      console.log('[AddCommunicationForm] Dialog overlays found:', dialogOverlays.length);
+      console.log('[AddCommunicationForm] Dialog contents found:', dialogContents.length);
+      
+      dialogOverlays.forEach((overlay, idx) => {
+        const el = overlay as HTMLElement;
+        console.log(`[AddCommunicationForm] Overlay ${idx}:`, {
+          zIndex: window.getComputedStyle(el).zIndex,
+          pointerEvents: window.getComputedStyle(el).pointerEvents,
+          display: window.getComputedStyle(el).display,
+        });
+      });
+      
+      dialogContents.forEach((content, idx) => {
+        const el = content as HTMLElement;
+        console.log(`[AddCommunicationForm] Content ${idx}:`, {
+          zIndex: window.getComputedStyle(el).zIndex,
+          pointerEvents: window.getComputedStyle(el).pointerEvents,
+          display: window.getComputedStyle(el).display,
+        });
+      });
+      
+      // Check our modal z-index
+      setTimeout(() => {
+        const ourModal = document.querySelector('[data-add-communication-modal]');
+        if (ourModal) {
+          const el = ourModal as HTMLElement;
+          console.log('[AddCommunicationForm] Our modal:', {
+            zIndex: window.getComputedStyle(el).zIndex,
+            pointerEvents: window.getComputedStyle(el).pointerEvents,
+          });
+        }
+      }, 100);
+    }
+  }, [open]);
 
   if (!open) return null;
 
@@ -100,9 +146,33 @@ export function AddCommunicationForm({ leadId, open, onClose, onSuccess }: AddCo
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
-      <Card className="w-full max-w-2xl mx-4 bg-white shadow-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+  if (!open) {
+    return null;
+  }
+
+  const modalContent = (
+    <div 
+      data-add-communication-modal="true"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm" 
+      onClick={(e) => {
+        // Only close if clicking directly on the overlay, not on child elements
+        if (e.target === e.currentTarget) {
+          console.log('[AddCommunicationForm] Overlay clicked, closing modal');
+          onClose();
+        }
+      }}
+      style={{ pointerEvents: 'auto', zIndex: 100 }}
+    >
+      <Card 
+        className="w-full max-w-2xl mx-4 bg-white shadow-2xl max-h-[90vh] overflow-y-auto relative" 
+        onClick={(e) => e.stopPropagation()}
+        style={{ 
+          pointerEvents: 'auto', 
+          position: 'relative',
+          zIndex: 101,
+          isolation: 'isolate'
+        }}
+      >
         <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg font-semibold text-gray-900">Add Communication</CardTitle>
@@ -116,8 +186,8 @@ export function AddCommunicationForm({ leadId, open, onClose, onSuccess }: AddCo
             </Button>
           </div>
         </CardHeader>
-        <CardContent className="p-6">
-          <form onSubmit={handleSubmit} className="space-y-6">
+        <CardContent className="p-6" style={{ pointerEvents: 'auto', position: 'relative', zIndex: 102, isolation: 'isolate' }}>
+          <form onSubmit={handleSubmit} className="space-y-6" style={{ pointerEvents: 'auto', position: 'relative' }}>
             {/* Communication Type */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -195,6 +265,49 @@ export function AddCommunicationForm({ leadId, open, onClose, onSuccess }: AddCo
                   onChange={(e) => setFormData(prev => ({ ...prev, subject: e.target.value }))}
                   placeholder="Email subject"
                   className="w-full"
+                  style={{ pointerEvents: 'auto', zIndex: 103 }}
+                  onFocus={() => console.log('[AddCommunicationForm] Subject input focused')}
+                  onMouseDown={(e) => {
+                    console.log('[AddCommunicationForm] Subject input mousedown', {
+                      target: e.target,
+                      currentTarget: e.currentTarget,
+                      pointerEvents: window.getComputedStyle(e.currentTarget as HTMLElement).pointerEvents,
+                      zIndex: window.getComputedStyle(e.currentTarget as HTMLElement).zIndex,
+                    });
+                    e.stopPropagation();
+                    // Force focus
+                    setTimeout(() => {
+                      (e.currentTarget as HTMLInputElement)?.focus();
+                      console.log('[AddCommunicationForm] Forced focus on subject input');
+                    }, 0);
+                  }}
+                  onClick={(e) => {
+                    console.log('[AddCommunicationForm] Subject input clicked', {
+                      target: e.target,
+                      currentTarget: e.currentTarget,
+                      pointerEvents: window.getComputedStyle(e.currentTarget as HTMLElement).pointerEvents,
+                    });
+                    e.stopPropagation();
+                    // Force focus
+                    (e.currentTarget as HTMLInputElement)?.focus();
+                    console.log('[AddCommunicationForm] Forced focus on subject input (click)');
+                  }}
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    console.log('[AddCommunicationForm] Subject input pointerdown');
+                  }}
+                  onKeyDown={(e) => {
+                    console.log('[AddCommunicationForm] Keydown on subject:', e.key);
+                    e.stopPropagation();
+                  }}
+                  onKeyPress={(e) => {
+                    console.log('[AddCommunicationForm] Keypress on subject:', e.key);
+                    e.stopPropagation();
+                  }}
+                  onKeyUp={(e) => {
+                    console.log('[AddCommunicationForm] Keyup on subject:', e.key);
+                    e.stopPropagation();
+                  }}
                 />
               </div>
             )}
@@ -212,6 +325,49 @@ export function AddCommunicationForm({ leadId, open, onClose, onSuccess }: AddCo
                 rows={4}
                 className="w-full"
                 required
+                style={{ pointerEvents: 'auto', zIndex: 103 }}
+                onFocus={() => console.log('[AddCommunicationForm] Content textarea focused')}
+                onMouseDown={(e) => {
+                  console.log('[AddCommunicationForm] Content textarea mousedown', {
+                    target: e.target,
+                    currentTarget: e.currentTarget,
+                    pointerEvents: window.getComputedStyle(e.currentTarget as HTMLElement).pointerEvents,
+                    zIndex: window.getComputedStyle(e.currentTarget as HTMLElement).zIndex,
+                  });
+                  e.stopPropagation();
+                  // Force focus
+                  setTimeout(() => {
+                    (e.currentTarget as HTMLTextAreaElement)?.focus();
+                    console.log('[AddCommunicationForm] Forced focus on content textarea');
+                  }, 0);
+                }}
+                onClick={(e) => {
+                  console.log('[AddCommunicationForm] Content textarea clicked', {
+                    target: e.target,
+                    currentTarget: e.currentTarget,
+                    pointerEvents: window.getComputedStyle(e.currentTarget as HTMLElement).pointerEvents,
+                  });
+                  e.stopPropagation();
+                  // Force focus
+                  (e.currentTarget as HTMLTextAreaElement)?.focus();
+                  console.log('[AddCommunicationForm] Forced focus on content textarea (click)');
+                }}
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  console.log('[AddCommunicationForm] Content textarea pointerdown');
+                }}
+                onKeyDown={(e) => {
+                  console.log('[AddCommunicationForm] Keydown on content:', e.key);
+                  e.stopPropagation();
+                }}
+                onKeyPress={(e) => {
+                  console.log('[AddCommunicationForm] Keypress on content:', e.key);
+                  e.stopPropagation();
+                }}
+                onKeyUp={(e) => {
+                  console.log('[AddCommunicationForm] Keyup on content:', e.key);
+                  e.stopPropagation();
+                }}
               />
             </div>
 
@@ -227,6 +383,19 @@ export function AddCommunicationForm({ leadId, open, onClose, onSuccess }: AddCo
                   value={formData.sent_at}
                   onChange={(e) => setFormData(prev => ({ ...prev, sent_at: e.target.value }))}
                   className="w-full"
+                  style={{ pointerEvents: 'auto', zIndex: 103 }}
+                  onKeyDown={(e) => {
+                    console.log('[AddCommunicationForm] Keydown on sent_at:', e.key);
+                    e.stopPropagation();
+                  }}
+                  onKeyPress={(e) => {
+                    console.log('[AddCommunicationForm] Keypress on sent_at:', e.key);
+                    e.stopPropagation();
+                  }}
+                  onKeyUp={(e) => {
+                    console.log('[AddCommunicationForm] Keyup on sent_at:', e.key);
+                    e.stopPropagation();
+                  }}
                 />
               </div>
               {formData.direction === 'inbound' && (
@@ -240,6 +409,19 @@ export function AddCommunicationForm({ leadId, open, onClose, onSuccess }: AddCo
                     value={formData.received_at}
                     onChange={(e) => setFormData(prev => ({ ...prev, received_at: e.target.value }))}
                     className="w-full"
+                    style={{ pointerEvents: 'auto', zIndex: 103 }}
+                    onKeyDown={(e) => {
+                      console.log('[AddCommunicationForm] Keydown on received_at:', e.key);
+                      e.stopPropagation();
+                    }}
+                    onKeyPress={(e) => {
+                      console.log('[AddCommunicationForm] Keypress on received_at:', e.key);
+                      e.stopPropagation();
+                    }}
+                    onKeyUp={(e) => {
+                      console.log('[AddCommunicationForm] Keyup on received_at:', e.key);
+                      e.stopPropagation();
+                    }}
                   />
                 </div>
               )}
@@ -286,6 +468,19 @@ export function AddCommunicationForm({ leadId, open, onClose, onSuccess }: AddCo
                   placeholder="Add any additional notes about the customer's response..."
                   rows={3}
                   className="w-full"
+                  style={{ pointerEvents: 'auto', zIndex: 103 }}
+                  onKeyDown={(e) => {
+                    console.log('[AddCommunicationForm] Keydown on response_notes:', e.key);
+                    e.stopPropagation();
+                  }}
+                  onKeyPress={(e) => {
+                    console.log('[AddCommunicationForm] Keypress on response_notes:', e.key);
+                    e.stopPropagation();
+                  }}
+                  onKeyUp={(e) => {
+                    console.log('[AddCommunicationForm] Keyup on response_notes:', e.key);
+                    e.stopPropagation();
+                  }}
                 />
               </div>
             )}
@@ -323,5 +518,12 @@ export function AddCommunicationForm({ leadId, open, onClose, onSuccess }: AddCo
       </Card>
     </div>
   );
+
+  // Render in portal to ensure it's above all other modals
+  if (typeof window === 'undefined') {
+    return null;
+  }
+  
+  return createPortal(modalContent, document.body);
 }
 

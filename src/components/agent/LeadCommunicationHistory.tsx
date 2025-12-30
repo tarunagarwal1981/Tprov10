@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/useToast';
+import { getAccessToken } from '@/lib/auth/getAccessToken';
 import { AddCommunicationForm } from './AddCommunicationForm';
 
 interface LeadCommunication {
@@ -130,12 +131,21 @@ export function LeadCommunicationHistory({ leadId }: LeadCommunicationHistoryPro
   const fetchCommunications = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/leads/${leadId}/communications`);
+      const accessToken = getAccessToken();
+      const response = await fetch(`/api/leads/${leadId}/communications`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken || ''}`,
+        },
+      });
       if (response.ok) {
         const { communications: comms } = await response.json();
         setCommunications(comms || []);
       } else {
-        toast.error('Failed to fetch communication history');
+        if (response.status === 401) {
+          toast.error('Authentication required. Please log in again.');
+        } else {
+          toast.error('Failed to fetch communication history');
+        }
       }
     } catch (error) {
       console.error('Error fetching communications:', error);

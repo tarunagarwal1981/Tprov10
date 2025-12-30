@@ -10,7 +10,7 @@
 CREATE TABLE IF NOT EXISTS itineraries (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     lead_id UUID NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
-    agent_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    agent_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     
     -- Itinerary Details
     name TEXT NOT NULL DEFAULT 'Itinerary #1',
@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS itinerary_items (
     -- Package Information
     package_type TEXT NOT NULL CHECK (package_type IN ('activity', 'transfer', 'multi_city', 'multi_city_hotel', 'fixed_departure')),
     package_id UUID NOT NULL,
-    operator_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    operator_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     
     -- Package Details (denormalized for quick access)
     package_title TEXT NOT NULL,
@@ -115,108 +115,36 @@ CREATE INDEX IF NOT EXISTS idx_itinerary_items_package_type ON itinerary_items(p
 CREATE INDEX IF NOT EXISTS idx_itinerary_items_operator_id ON itinerary_items(operator_id);
 
 -- Row Level Security (RLS)
-ALTER TABLE itineraries ENABLE ROW LEVEL SECURITY;
-ALTER TABLE itinerary_days ENABLE ROW LEVEL SECURITY;
-ALTER TABLE itinerary_items ENABLE ROW LEVEL SECURITY;
+-- RLS disabled (not used in AWS RDS)
+-- RLS disabled (not used in AWS RDS)
+-- RLS disabled (not used in AWS RDS)
 
 -- RLS Policies for itineraries
-CREATE POLICY "Agents can view their own itineraries"
-    ON itineraries FOR SELECT
-    USING (auth.uid() = agent_id);
+-- RLS Policy removed (not used in AWS RDS)
 
-CREATE POLICY "Agents can create their own itineraries"
-    ON itineraries FOR INSERT
-    WITH CHECK (auth.uid() = agent_id);
+-- RLS Policy removed (not used in AWS RDS)
 
-CREATE POLICY "Agents can update their own itineraries"
-    ON itineraries FOR UPDATE
-    USING (auth.uid() = agent_id);
+-- RLS Policy removed (not used in AWS RDS)
 
-CREATE POLICY "Agents can delete their own itineraries"
-    ON itineraries FOR DELETE
-    USING (auth.uid() = agent_id);
+-- RLS Policy removed (not used in AWS RDS)
 
 -- RLS Policies for itinerary_days
-CREATE POLICY "Agents can view days of their own itineraries"
-    ON itinerary_days FOR SELECT
-    USING (
-        EXISTS (
-            SELECT 1 FROM itineraries 
-            WHERE itineraries.id = itinerary_days.itinerary_id 
-            AND itineraries.agent_id = auth.uid()
-        )
-    );
+-- RLS Policy removed (not used in AWS RDS)
 
-CREATE POLICY "Agents can create days for their own itineraries"
-    ON itinerary_days FOR INSERT
-    WITH CHECK (
-        EXISTS (
-            SELECT 1 FROM itineraries 
-            WHERE itineraries.id = itinerary_days.itinerary_id 
-            AND itineraries.agent_id = auth.uid()
-        )
-    );
+-- RLS Policy removed (not used in AWS RDS)
 
-CREATE POLICY "Agents can update days of their own itineraries"
-    ON itinerary_days FOR UPDATE
-    USING (
-        EXISTS (
-            SELECT 1 FROM itineraries 
-            WHERE itineraries.id = itinerary_days.itinerary_id 
-            AND itineraries.agent_id = auth.uid()
-        )
-    );
+-- RLS Policy removed (not used in AWS RDS)
 
-CREATE POLICY "Agents can delete days of their own itineraries"
-    ON itinerary_days FOR DELETE
-    USING (
-        EXISTS (
-            SELECT 1 FROM itineraries 
-            WHERE itineraries.id = itinerary_days.itinerary_id 
-            AND itineraries.agent_id = auth.uid()
-        )
-    );
+-- RLS Policy removed (not used in AWS RDS)
 
 -- RLS Policies for itinerary_items
-CREATE POLICY "Agents can view items of their own itineraries"
-    ON itinerary_items FOR SELECT
-    USING (
-        EXISTS (
-            SELECT 1 FROM itineraries 
-            WHERE itineraries.id = itinerary_items.itinerary_id 
-            AND itineraries.agent_id = auth.uid()
-        )
-    );
+-- RLS Policy removed (not used in AWS RDS)
 
-CREATE POLICY "Agents can create items for their own itineraries"
-    ON itinerary_items FOR INSERT
-    WITH CHECK (
-        EXISTS (
-            SELECT 1 FROM itineraries 
-            WHERE itineraries.id = itinerary_items.itinerary_id 
-            AND itineraries.agent_id = auth.uid()
-        )
-    );
+-- RLS Policy removed (not used in AWS RDS)
 
-CREATE POLICY "Agents can update items of their own itineraries"
-    ON itinerary_items FOR UPDATE
-    USING (
-        EXISTS (
-            SELECT 1 FROM itineraries 
-            WHERE itineraries.id = itinerary_items.itinerary_id 
-            AND itineraries.agent_id = auth.uid()
-        )
-    );
+-- RLS Policy removed (not used in AWS RDS)
 
-CREATE POLICY "Agents can delete items of their own itineraries"
-    ON itinerary_items FOR DELETE
-    USING (
-        EXISTS (
-            SELECT 1 FROM itineraries 
-            WHERE itineraries.id = itinerary_items.itinerary_id 
-            AND itineraries.agent_id = auth.uid()
-        )
-    );
+-- RLS Policy removed (not used in AWS RDS)
 
 -- Function to update itinerary updated_at timestamp
 CREATE OR REPLACE FUNCTION update_itinerary_updated_at()

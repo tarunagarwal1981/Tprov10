@@ -1,6 +1,6 @@
 /**
  * Activity Package Hook
- * Provides React hooks for managing activity packages with Supabase integration
+ * Provides React hooks for managing activity packages with AWS integration
  */
 
 import { useState, useCallback, useEffect } from 'react';
@@ -20,7 +20,7 @@ import {
   type ActivityPackageListResponse,
   type ActivityPackageFilters,
   type ActivityPackageListOptions,
-} from '@/lib/supabase/activity-packages';
+} from '@/lib/api/activity-packages';
 import type { ActivityPackageFormData } from '@/lib/types/activity-package';
 import { useAuth } from '@/context/CognitoAuthContext';
 
@@ -243,7 +243,7 @@ export const useActivityPackage = (
     try {
       const filters: ActivityPackageFilters = {
         ...options.filters,
-        operator_id: user.id, // Only load packages for current user
+        operatorId: user.id, // Only load packages for current user
       };
 
       const { data: packagesData, error: loadError } = await listActivityPackages({
@@ -259,10 +259,10 @@ export const useActivityPackage = (
       if (packagesData) {
         setPackages(packagesData.packages);
         setPagination({
-          page: packagesData.page,
-          limit: packagesData.limit,
-          total: packagesData.total,
-          totalPages: packagesData.total_pages,
+          page: packagesData.page || 1,
+          limit: packagesData.limit || 20,
+          total: packagesData.total || 0,
+          totalPages: packagesData.total_pages || 0,
         });
         return true;
       }
@@ -336,7 +336,7 @@ export const useActivityPackage = (
         // Update the package by removing the image
         const updatedPackage = {
           ...activityPackage,
-          images: activityPackage.images.filter(img => img.id !== imageId),
+          images: (activityPackage.images || []).filter((img: any) => img.id !== imageId),
         };
         setActivityPackage(updatedPackage);
         return true;

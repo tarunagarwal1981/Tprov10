@@ -124,118 +124,43 @@ CREATE INDEX IF NOT EXISTS idx_multi_city_pricing_vehicles_capacity
 -- 6. ENABLE ROW LEVEL SECURITY
 -- ============================================================================
 
-ALTER TABLE multi_city_pricing_packages ENABLE ROW LEVEL SECURITY;
-ALTER TABLE multi_city_pricing_vehicles ENABLE ROW LEVEL SECURITY;
+-- RLS disabled (not used in AWS RDS)
+-- RLS disabled (not used in AWS RDS)
 
 -- Drop existing policies if they exist
-DROP POLICY IF EXISTS "Operators can view their own pricing packages" ON multi_city_pricing_packages;
-DROP POLICY IF EXISTS "Operators can create pricing packages" ON multi_city_pricing_packages;
-DROP POLICY IF EXISTS "Operators can update their own pricing packages" ON multi_city_pricing_packages;
-DROP POLICY IF EXISTS "Operators can delete their own pricing packages" ON multi_city_pricing_packages;
-DROP POLICY IF EXISTS "Public can view pricing packages for published tours" ON multi_city_pricing_packages;
+-- DROP POLICY removed (RLS not used)
+-- DROP POLICY removed (RLS not used)
+-- DROP POLICY removed (RLS not used)
+-- DROP POLICY removed (RLS not used)
+-- DROP POLICY removed (RLS not used)
 
-DROP POLICY IF EXISTS "Operators can view their own pricing vehicles" ON multi_city_pricing_vehicles;
-DROP POLICY IF EXISTS "Operators can create pricing vehicles" ON multi_city_pricing_vehicles;
-DROP POLICY IF EXISTS "Operators can update their own pricing vehicles" ON multi_city_pricing_vehicles;
-DROP POLICY IF EXISTS "Operators can delete their own pricing vehicles" ON multi_city_pricing_vehicles;
-DROP POLICY IF EXISTS "Public can view vehicles for published tours" ON multi_city_pricing_vehicles;
+-- DROP POLICY removed (RLS not used)
+-- DROP POLICY removed (RLS not used)
+-- DROP POLICY removed (RLS not used)
+-- DROP POLICY removed (RLS not used)
+-- DROP POLICY removed (RLS not used)
 
 -- Pricing packages policies
-CREATE POLICY "Operators can view their own pricing packages"
-  ON multi_city_pricing_packages FOR SELECT
-  USING (
-    package_id IN (
-      SELECT id FROM multi_city_packages WHERE operator_id = auth.uid()
-    )
-  );
+-- RLS Policy removed (not used in AWS RDS)
 
-CREATE POLICY "Operators can create pricing packages"
-  ON multi_city_pricing_packages FOR INSERT
-  WITH CHECK (
-    package_id IN (
-      SELECT id FROM multi_city_packages WHERE operator_id = auth.uid()
-    )
-  );
+-- RLS Policy removed (not used in AWS RDS)
 
-CREATE POLICY "Operators can update their own pricing packages"
-  ON multi_city_pricing_packages FOR UPDATE
-  USING (
-    package_id IN (
-      SELECT id FROM multi_city_packages WHERE operator_id = auth.uid()
-    )
-  );
+-- RLS Policy removed (not used in AWS RDS)
 
-CREATE POLICY "Operators can delete their own pricing packages"
-  ON multi_city_pricing_packages FOR DELETE
-  USING (
-    package_id IN (
-      SELECT id FROM multi_city_packages WHERE operator_id = auth.uid()
-    )
-  );
+-- RLS Policy removed (not used in AWS RDS)
 
-CREATE POLICY "Public can view pricing packages for published tours"
-  ON multi_city_pricing_packages FOR SELECT
-  USING (
-    package_id IN (
-      SELECT id FROM multi_city_packages WHERE status = 'published'
-    )
-  );
+-- RLS Policy removed (not used in AWS RDS)
 
 -- Vehicles policies
-CREATE POLICY "Operators can view their own pricing vehicles"
-  ON multi_city_pricing_vehicles FOR SELECT
-  USING (
-    pricing_package_id IN (
-      SELECT id FROM multi_city_pricing_packages 
-      WHERE package_id IN (
-        SELECT id FROM multi_city_packages WHERE operator_id = auth.uid()
-      )
-    )
-  );
+-- RLS Policy removed (not used in AWS RDS)
 
-CREATE POLICY "Operators can create pricing vehicles"
-  ON multi_city_pricing_vehicles FOR INSERT
-  WITH CHECK (
-    pricing_package_id IN (
-      SELECT id FROM multi_city_pricing_packages 
-      WHERE package_id IN (
-        SELECT id FROM multi_city_packages WHERE operator_id = auth.uid()
-      )
-    )
-  );
+-- RLS Policy removed (not used in AWS RDS)
 
-CREATE POLICY "Operators can update their own pricing vehicles"
-  ON multi_city_pricing_vehicles FOR UPDATE
-  USING (
-    pricing_package_id IN (
-      SELECT id FROM multi_city_pricing_packages 
-      WHERE package_id IN (
-        SELECT id FROM multi_city_packages WHERE operator_id = auth.uid()
-      )
-    )
-  );
+-- RLS Policy removed (not used in AWS RDS)
 
-CREATE POLICY "Operators can delete their own pricing vehicles"
-  ON multi_city_pricing_vehicles FOR DELETE
-  USING (
-    pricing_package_id IN (
-      SELECT id FROM multi_city_pricing_packages 
-      WHERE package_id IN (
-        SELECT id FROM multi_city_packages WHERE operator_id = auth.uid()
-      )
-    )
-  );
+-- RLS Policy removed (not used in AWS RDS)
 
-CREATE POLICY "Public can view vehicles for published tours"
-  ON multi_city_pricing_vehicles FOR SELECT
-  USING (
-    pricing_package_id IN (
-      SELECT id FROM multi_city_pricing_packages 
-      WHERE package_id IN (
-        SELECT id FROM multi_city_packages WHERE status = 'published'
-      )
-    )
-  );
+-- RLS Policy removed (not used in AWS RDS)
 
 -- ============================================================================
 -- 7. CREATE TRIGGERS

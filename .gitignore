@@ -51,3 +51,44 @@ Thumbs.db
 *-key.pem
 dbeaver-ec2-key
 *.key
+
+# AWS CLI and binaries
+/aws/
+awscliv2.zip
+*.zip
+
+# Lambda build artifacts
+lambda/**/node_modules/
+lambda/**/*.zip
+lambda/**/function.zip
+
+# Binary files
+*.so
+*.dylib
+*.dll
+*.exe
+*.bin
+
+# AWS credential files (contain secrets)
+check-aws-costs.js
+check-additional-costs.js
+check-eip-usage-comprehensive.js
+check-rds-simple.js
+check-rds-specs.js
+verify-region-check.js
+test-credentials.js
+check-costs-terminal.js
+check-eip-associations.js
+check-rds-costs.js
+check-rds-memory-usage.js
+release-unattached-eips.js
+analyze-rds-snapshots.js
+delete-old-snapshots.js
+downsize-rds-instance.js
+DOWNSIZE_CONFIRMATION.md
+EIP_RELEASE_SUMMARY.md
+RDS_COST_CHECKLIST.md
+RDS_COST_SUMMARY.md
+check-aws-costs-local.sh
+check-aws-costs-manual.md
+check-costs-env.js

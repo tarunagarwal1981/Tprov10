@@ -17,7 +17,7 @@ DECLARE
     operator_uuid UUID;
 BEGIN
     SELECT id INTO operator_uuid
-    FROM auth.users
+    FROM users
     WHERE email = operator_email
     LIMIT 1;
     
@@ -465,7 +465,7 @@ SELECT
     u.email as operator_email,
     COUNT(DISTINCT ap.id) as activity_packages,
     COUNT(DISTINCT tp.id) as transfer_packages
-FROM auth.users u
+FROM users u
 LEFT JOIN activity_packages ap ON ap.operator_id = u.id AND ap.status = 'published'
 LEFT JOIN transfer_packages tp ON tp.operator_id = u.id AND tp.status = 'published'
 WHERE u.email IN (
