@@ -181,11 +181,18 @@ export function LeadCommunicationModal({ leadId, open, onClose }: LeadCommunicat
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onClose}>
+      <Dialog open={open} onOpenChange={(isOpen) => {
+        // Prevent closing when nested modal is open
+        if (!isOpen && showAddForm) {
+          return;
+        }
+        onClose();
+      }}>
         <DialogContent 
           size="lg" 
           className="max-h-[80vh] flex flex-col p-0 bg-white border-gray-200"
           overlayVariant="subtle"
+          closeOnOverlayClick={!showAddForm}
         >
           <DialogHeader className="px-4 pt-4 pb-3 border-b border-gray-200 bg-white">
             <DialogTitle className="text-base font-semibold text-gray-900">Communications</DialogTitle>

@@ -108,12 +108,21 @@ export function AddCommunicationForm({ leadId, open, onClose, onSuccess }: AddCo
   const modalContent = (
     <div 
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm" 
-      onClick={onClose}
+      onClick={(e) => {
+        // Only close if clicking directly on the overlay, not on child elements
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
       style={{ pointerEvents: 'auto' }}
     >
       <Card 
         className="w-full max-w-2xl mx-4 bg-white shadow-2xl max-h-[90vh] overflow-y-auto relative z-[101]" 
-        onClick={(e) => e.stopPropagation()}
+        onClick={(e) => {
+          e.stopPropagation();
+          e.preventDefault();
+        }}
+        onMouseDown={(e) => e.stopPropagation()}
         style={{ pointerEvents: 'auto' }}
       >
         <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50 border-b border-gray-200">
