@@ -118,10 +118,7 @@ export function AddCommunicationForm({ leadId, open, onClose, onSuccess }: AddCo
     >
       <Card 
         className="w-full max-w-2xl mx-4 bg-white shadow-2xl max-h-[90vh] overflow-y-auto relative z-[101]" 
-        onClick={(e) => {
-          e.stopPropagation();
-          e.preventDefault();
-        }}
+        onClick={(e) => e.stopPropagation()}
         onMouseDown={(e) => e.stopPropagation()}
         style={{ pointerEvents: 'auto' }}
       >
