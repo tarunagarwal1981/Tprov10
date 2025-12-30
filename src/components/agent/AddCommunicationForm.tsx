@@ -114,13 +114,17 @@ export function AddCommunicationForm({ leadId, open, onClose, onSuccess }: AddCo
           onClose();
         }
       }}
-      style={{ pointerEvents: 'auto' }}
+      style={{ pointerEvents: 'auto', zIndex: 100 }}
     >
       <Card 
-        className="w-full max-w-2xl mx-4 bg-white shadow-2xl max-h-[90vh] overflow-y-auto relative z-[101]" 
+        className="w-full max-w-2xl mx-4 bg-white shadow-2xl max-h-[90vh] overflow-y-auto relative" 
         onClick={(e) => e.stopPropagation()}
-        onMouseDown={(e) => e.stopPropagation()}
-        style={{ pointerEvents: 'auto', position: 'relative' }}
+        style={{ 
+          pointerEvents: 'auto', 
+          position: 'relative',
+          zIndex: 101,
+          isolation: 'isolate'
+        }}
       >
         <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50 border-b border-gray-200">
           <div className="flex items-center justify-between">
@@ -135,8 +139,8 @@ export function AddCommunicationForm({ leadId, open, onClose, onSuccess }: AddCo
             </Button>
           </div>
         </CardHeader>
-        <CardContent className="p-6">
-          <form onSubmit={handleSubmit} className="space-y-6">
+        <CardContent className="p-6" style={{ pointerEvents: 'auto', position: 'relative', zIndex: 102, isolation: 'isolate' }}>
+          <form onSubmit={handleSubmit} className="space-y-6" style={{ pointerEvents: 'auto', position: 'relative' }}>
             {/* Communication Type */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -214,6 +218,7 @@ export function AddCommunicationForm({ leadId, open, onClose, onSuccess }: AddCo
                   onChange={(e) => setFormData(prev => ({ ...prev, subject: e.target.value }))}
                   placeholder="Email subject"
                   className="w-full"
+                  style={{ pointerEvents: 'auto', zIndex: 103 }}
                 />
               </div>
             )}
@@ -231,6 +236,7 @@ export function AddCommunicationForm({ leadId, open, onClose, onSuccess }: AddCo
                 rows={4}
                 className="w-full"
                 required
+                style={{ pointerEvents: 'auto', zIndex: 103 }}
               />
             </div>
 
@@ -246,6 +252,7 @@ export function AddCommunicationForm({ leadId, open, onClose, onSuccess }: AddCo
                   value={formData.sent_at}
                   onChange={(e) => setFormData(prev => ({ ...prev, sent_at: e.target.value }))}
                   className="w-full"
+                  style={{ pointerEvents: 'auto', zIndex: 103 }}
                 />
               </div>
               {formData.direction === 'inbound' && (
@@ -259,6 +266,7 @@ export function AddCommunicationForm({ leadId, open, onClose, onSuccess }: AddCo
                     value={formData.received_at}
                     onChange={(e) => setFormData(prev => ({ ...prev, received_at: e.target.value }))}
                     className="w-full"
+                    style={{ pointerEvents: 'auto', zIndex: 103 }}
                   />
                 </div>
               )}
@@ -305,6 +313,7 @@ export function AddCommunicationForm({ leadId, open, onClose, onSuccess }: AddCo
                   placeholder="Add any additional notes about the customer's response..."
                   rows={3}
                   className="w-full"
+                  style={{ pointerEvents: 'auto', zIndex: 103 }}
                 />
               </div>
             )}

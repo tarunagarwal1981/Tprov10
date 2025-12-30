@@ -131,24 +131,32 @@ export function LeadCommunicationModal({ leadId, open, onClose }: LeadCommunicat
   // Disable pointer events on Dialog overlay and content when nested modal is open
   useEffect(() => {
     if (showAddForm && typeof window !== 'undefined') {
-      const overlay = document.querySelector('[data-radix-dialog-overlay]');
-      const content = document.querySelector('[data-radix-dialog-content]');
-      
-      if (overlay) {
-        (overlay as HTMLElement).style.pointerEvents = 'none';
-      }
-      if (content) {
-        (content as HTMLElement).style.pointerEvents = 'none';
-      }
+      // Use a small delay to ensure Dialog elements are rendered
+      const timer = setTimeout(() => {
+        const overlay = document.querySelector('[data-radix-dialog-overlay]');
+        const content = document.querySelector('[data-radix-dialog-content]');
+        
+        if (overlay) {
+          (overlay as HTMLElement).style.pointerEvents = 'none';
+          (overlay as HTMLElement).style.zIndex = '49';
+        }
+        if (content) {
+          (content as HTMLElement).style.pointerEvents = 'none';
+          (content as HTMLElement).style.zIndex = '49';
+        }
+      }, 10);
       
       return () => {
+        clearTimeout(timer);
         const overlay = document.querySelector('[data-radix-dialog-overlay]');
         const content = document.querySelector('[data-radix-dialog-content]');
         if (overlay) {
           (overlay as HTMLElement).style.pointerEvents = '';
+          (overlay as HTMLElement).style.zIndex = '';
         }
         if (content) {
           (content as HTMLElement).style.pointerEvents = '';
+          (content as HTMLElement).style.zIndex = '';
         }
       };
     }
