@@ -77,40 +77,9 @@ BEGIN
     END IF;
 END $$;
 
--- Phone number validation (allows international format)
--- First, update any invalid phone numbers to NULL or fix them
--- Then add constraint only if all data is valid
-DO $$
-DECLARE
-    invalid_count INTEGER;
-BEGIN
-    -- Count invalid phone numbers (not matching pattern or empty strings)
-    SELECT COUNT(*) INTO invalid_count
-    FROM leads
-    WHERE customer_phone IS NOT NULL 
-      AND customer_phone != ''
-      AND customer_phone !~ '^\+?[1-9]\d{1,14}$';
-    
-    -- If there are invalid phone numbers, set them to NULL
-    IF invalid_count > 0 THEN
-        UPDATE leads
-        SET customer_phone = NULL
-        WHERE customer_phone IS NOT NULL 
-          AND customer_phone != ''
-          AND customer_phone !~ '^\+?[1-9]\d{1,14}$';
-        
-        RAISE NOTICE 'Updated % invalid phone numbers to NULL', invalid_count;
-    END IF;
-    
-    -- Now add the constraint if it doesn't exist
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint 
-        WHERE conname = 'check_phone_format'
-    ) THEN
-        ALTER TABLE leads ADD CONSTRAINT check_phone_format 
-          CHECK (customer_phone IS NULL OR customer_phone = '' OR customer_phone ~ '^\+?[1-9]\d{1,14}$');
-    END IF;
-END $$;
+-- Phone number validation removed - allowing any format for international compatibility
+-- Phone numbers can be in any format depending on the country
+-- No constraint is added to allow flexibility for various international formats
 
 -- Date validation (to_date >= from_date)
 DO $$

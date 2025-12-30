@@ -85,14 +85,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Phone format validation (international format)
-    const phoneRegex = /^\+?[1-9]\d{1,14}$/;
-    if (customer_phone && !phoneRegex.test(customer_phone.replace(/\s|-|\(|\)/g, ''))) {
-      return NextResponse.json(
-        { error: 'Invalid phone number format. Use international format (e.g., +1234567890)' },
-        { status: 400 }
-      );
-    }
+    // Phone number validation removed - allowing any format for international compatibility
+    // Phone numbers can be in any format depending on the country
 
     // Date validation
     if (from_date && to_date) {
@@ -243,12 +237,6 @@ export async function POST(request: NextRequest) {
       if (error.message.includes('check_email_format')) {
         return NextResponse.json(
           { error: 'Invalid email format' },
-          { status: 400 }
-        );
-      }
-      if (error.message.includes('check_phone_format')) {
-        return NextResponse.json(
-          { error: 'Invalid phone number format' },
           { status: 400 }
         );
       }
