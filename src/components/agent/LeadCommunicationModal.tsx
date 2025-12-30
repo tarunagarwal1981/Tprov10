@@ -133,10 +133,13 @@ export function LeadCommunicationModal({ leadId, open, onClose }: LeadCommunicat
     if (showAddForm && typeof window !== 'undefined') {
       console.log('[LeadCommunicationModal] Nested modal opened, disabling Dialog pointer events');
       
-      // Use a small delay to ensure Dialog elements are rendered
-      const timer = setTimeout(() => {
-        const overlay = document.querySelector('[data-radix-dialog-overlay]');
-        const content = document.querySelector('[data-radix-dialog-content]');
+      // Use a longer delay and try multiple times to find Dialog elements
+      const findAndDisable = () => {
+        // Try multiple selectors
+        const overlay = document.querySelector('[data-radix-dialog-overlay]') || 
+                       document.querySelector('[role="dialog"]')?.parentElement?.querySelector('[data-state]');
+        const content = document.querySelector('[data-radix-dialog-content]') || 
+                       document.querySelector('[role="dialog"]');
         
         console.log('[LeadCommunicationModal] Found overlay:', !!overlay);
         console.log('[LeadCommunicationModal] Found content:', !!content);
@@ -146,6 +149,7 @@ export function LeadCommunicationModal({ leadId, open, onClose }: LeadCommunicat
           const before = window.getComputedStyle(el).pointerEvents;
           el.style.pointerEvents = 'none';
           el.style.zIndex = '49';
+          el.style.userSelect = 'none';
           console.log('[LeadCommunicationModal] Overlay pointer-events changed:', before, '->', 'none');
           console.log('[LeadCommunicationModal] Overlay z-index set to 49');
         }
@@ -154,39 +158,77 @@ export function LeadCommunicationModal({ leadId, open, onClose }: LeadCommunicat
           const before = window.getComputedStyle(el).pointerEvents;
           el.style.pointerEvents = 'none';
           el.style.zIndex = '49';
+          el.style.userSelect = 'none';
           console.log('[LeadCommunicationModal] Content pointer-events changed:', before, '->', 'none');
           console.log('[LeadCommunicationModal] Content z-index set to 49');
         }
         
-        // Check for any other elements that might be blocking
-        const allFixedElements = document.querySelectorAll('[style*="position: fixed"], [style*="position:fixed"]');
-        console.log('[LeadCommunicationModal] Found fixed elements:', allFixedElements.length);
-        allFixedElements.forEach((el, idx) => {
+        // Also disable all Radix Dialog portals
+        const portals = document.querySelectorAll('[data-radix-portal]');
+        console.log('[LeadCommunicationModal] Found Radix portals:', portals.length);
+        portals.forEach((portal, idx) => {
+          const el = portal as HTMLElement;
+          const zIndex = window.getComputedStyle(el).zIndex;
+          if (parseInt(zIndex) >= 50 && parseInt(zIndex) < 100) {
+            el.style.pointerEvents = 'none';
+            console.log(`[LeadCommunicationModal] Disabled portal ${idx} with z-index ${zIndex}`);
+          }
+        });
+        
+        // Check for any other elements that might be blocking - find by z-index
+        const allElements = Array.from(document.querySelectorAll('*'));
+        const blockingElements = allElements.filter(el => {
+          const style = window.getComputedStyle(el);
+          const zIndex = parseInt(style.zIndex);
+          return style.position === 'fixed' && zIndex >= 50 && zIndex < 100;
+        });
+        
+        console.log('[LeadCommunicationModal] Found potentially blocking fixed elements:', blockingElements.length);
+        blockingElements.forEach((el, idx) => {
           const htmlEl = el as HTMLElement;
           const zIndex = window.getComputedStyle(htmlEl).zIndex;
           const pointerEvents = window.getComputedStyle(htmlEl).pointerEvents;
-          if (parseInt(zIndex) >= 50 && parseInt(zIndex) < 100) {
-            console.log(`[LeadCommunicationModal] Fixed element ${idx} might be blocking:`, {
-              zIndex,
-              pointerEvents,
-              element: htmlEl,
-            });
+          console.log(`[LeadCommunicationModal] Blocking element ${idx}:`, {
+            zIndex,
+            pointerEvents,
+            tagName: htmlEl.tagName,
+            className: htmlEl.className,
+            id: htmlEl.id,
+            element: htmlEl,
+          });
+          
+          // Disable if it's not our nested modal
+          if (!htmlEl.closest('[data-add-communication-modal]')) {
+            htmlEl.style.pointerEvents = 'none';
+            htmlEl.style.zIndex = '49';
+            console.log(`[LeadCommunicationModal] Disabled blocking element ${idx}`);
           }
         });
-      }, 10);
+      };
+      
+      // Try immediately and with delays
+      findAndDisable();
+      const timer1 = setTimeout(findAndDisable, 10);
+      const timer2 = setTimeout(findAndDisable, 50);
+      const timer3 = setTimeout(findAndDisable, 100);
+      const timer4 = setTimeout(findAndDisable, 200);
       
       return () => {
-        clearTimeout(timer);
+        clearTimeout(timer1);
+        clearTimeout(timer2);
+        clearTimeout(timer3);
         console.log('[LeadCommunicationModal] Nested modal closed, re-enabling Dialog pointer events');
         const overlay = document.querySelector('[data-radix-dialog-overlay]');
         const content = document.querySelector('[data-radix-dialog-content]');
         if (overlay) {
           (overlay as HTMLElement).style.pointerEvents = '';
           (overlay as HTMLElement).style.zIndex = '';
+          (overlay as HTMLElement).style.userSelect = '';
         }
         if (content) {
           (content as HTMLElement).style.pointerEvents = '';
           (content as HTMLElement).style.zIndex = '';
+          (content as HTMLElement).style.userSelect = '';
         }
       };
     }

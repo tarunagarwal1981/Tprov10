@@ -274,6 +274,12 @@ export function AddCommunicationForm({ leadId, open, onClose, onSuccess }: AddCo
                       pointerEvents: window.getComputedStyle(e.currentTarget as HTMLElement).pointerEvents,
                       zIndex: window.getComputedStyle(e.currentTarget as HTMLElement).zIndex,
                     });
+                    e.stopPropagation();
+                    // Force focus
+                    setTimeout(() => {
+                      (e.currentTarget as HTMLInputElement)?.focus();
+                      console.log('[AddCommunicationForm] Forced focus on subject input');
+                    }, 0);
                   }}
                   onClick={(e) => {
                     console.log('[AddCommunicationForm] Subject input clicked', {
@@ -282,6 +288,13 @@ export function AddCommunicationForm({ leadId, open, onClose, onSuccess }: AddCo
                       pointerEvents: window.getComputedStyle(e.currentTarget as HTMLElement).pointerEvents,
                     });
                     e.stopPropagation();
+                    // Force focus
+                    (e.currentTarget as HTMLInputElement)?.focus();
+                    console.log('[AddCommunicationForm] Forced focus on subject input (click)');
+                  }}
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    console.log('[AddCommunicationForm] Subject input pointerdown');
                   }}
                 />
               </div>
@@ -309,6 +322,12 @@ export function AddCommunicationForm({ leadId, open, onClose, onSuccess }: AddCo
                     pointerEvents: window.getComputedStyle(e.currentTarget as HTMLElement).pointerEvents,
                     zIndex: window.getComputedStyle(e.currentTarget as HTMLElement).zIndex,
                   });
+                  e.stopPropagation();
+                  // Force focus
+                  setTimeout(() => {
+                    (e.currentTarget as HTMLTextAreaElement)?.focus();
+                    console.log('[AddCommunicationForm] Forced focus on content textarea');
+                  }, 0);
                 }}
                 onClick={(e) => {
                   console.log('[AddCommunicationForm] Content textarea clicked', {
@@ -317,6 +336,13 @@ export function AddCommunicationForm({ leadId, open, onClose, onSuccess }: AddCo
                     pointerEvents: window.getComputedStyle(e.currentTarget as HTMLElement).pointerEvents,
                   });
                   e.stopPropagation();
+                  // Force focus
+                  (e.currentTarget as HTMLTextAreaElement)?.focus();
+                  console.log('[AddCommunicationForm] Forced focus on content textarea (click)');
+                }}
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  console.log('[AddCommunicationForm] Content textarea pointerdown');
                 }}
               />
             </div>
