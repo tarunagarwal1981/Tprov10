@@ -296,6 +296,18 @@ export function AddCommunicationForm({ leadId, open, onClose, onSuccess }: AddCo
                     e.stopPropagation();
                     console.log('[AddCommunicationForm] Subject input pointerdown');
                   }}
+                  onKeyDown={(e) => {
+                    console.log('[AddCommunicationForm] Keydown on subject:', e.key);
+                    e.stopPropagation();
+                  }}
+                  onKeyPress={(e) => {
+                    console.log('[AddCommunicationForm] Keypress on subject:', e.key);
+                    e.stopPropagation();
+                  }}
+                  onKeyUp={(e) => {
+                    console.log('[AddCommunicationForm] Keyup on subject:', e.key);
+                    e.stopPropagation();
+                  }}
                 />
               </div>
             )}
@@ -344,6 +356,18 @@ export function AddCommunicationForm({ leadId, open, onClose, onSuccess }: AddCo
                   e.stopPropagation();
                   console.log('[AddCommunicationForm] Content textarea pointerdown');
                 }}
+                onKeyDown={(e) => {
+                  console.log('[AddCommunicationForm] Keydown on content:', e.key);
+                  e.stopPropagation();
+                }}
+                onKeyPress={(e) => {
+                  console.log('[AddCommunicationForm] Keypress on content:', e.key);
+                  e.stopPropagation();
+                }}
+                onKeyUp={(e) => {
+                  console.log('[AddCommunicationForm] Keyup on content:', e.key);
+                  e.stopPropagation();
+                }}
               />
             </div>
 
@@ -360,6 +384,18 @@ export function AddCommunicationForm({ leadId, open, onClose, onSuccess }: AddCo
                   onChange={(e) => setFormData(prev => ({ ...prev, sent_at: e.target.value }))}
                   className="w-full"
                   style={{ pointerEvents: 'auto', zIndex: 103 }}
+                  onKeyDown={(e) => {
+                    console.log('[AddCommunicationForm] Keydown on sent_at:', e.key);
+                    e.stopPropagation();
+                  }}
+                  onKeyPress={(e) => {
+                    console.log('[AddCommunicationForm] Keypress on sent_at:', e.key);
+                    e.stopPropagation();
+                  }}
+                  onKeyUp={(e) => {
+                    console.log('[AddCommunicationForm] Keyup on sent_at:', e.key);
+                    e.stopPropagation();
+                  }}
                 />
               </div>
               {formData.direction === 'inbound' && (
@@ -374,6 +410,18 @@ export function AddCommunicationForm({ leadId, open, onClose, onSuccess }: AddCo
                     onChange={(e) => setFormData(prev => ({ ...prev, received_at: e.target.value }))}
                     className="w-full"
                     style={{ pointerEvents: 'auto', zIndex: 103 }}
+                    onKeyDown={(e) => {
+                      console.log('[AddCommunicationForm] Keydown on received_at:', e.key);
+                      e.stopPropagation();
+                    }}
+                    onKeyPress={(e) => {
+                      console.log('[AddCommunicationForm] Keypress on received_at:', e.key);
+                      e.stopPropagation();
+                    }}
+                    onKeyUp={(e) => {
+                      console.log('[AddCommunicationForm] Keyup on received_at:', e.key);
+                      e.stopPropagation();
+                    }}
                   />
                 </div>
               )}
@@ -421,6 +469,18 @@ export function AddCommunicationForm({ leadId, open, onClose, onSuccess }: AddCo
                   rows={3}
                   className="w-full"
                   style={{ pointerEvents: 'auto', zIndex: 103 }}
+                  onKeyDown={(e) => {
+                    console.log('[AddCommunicationForm] Keydown on response_notes:', e.key);
+                    e.stopPropagation();
+                  }}
+                  onKeyPress={(e) => {
+                    console.log('[AddCommunicationForm] Keypress on response_notes:', e.key);
+                    e.stopPropagation();
+                  }}
+                  onKeyUp={(e) => {
+                    console.log('[AddCommunicationForm] Keyup on response_notes:', e.key);
+                    e.stopPropagation();
+                  }}
                 />
               </div>
             )}

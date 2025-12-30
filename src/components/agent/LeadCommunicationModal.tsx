@@ -235,6 +235,42 @@ export function LeadCommunicationModal({ leadId, open, onClose }: LeadCommunicat
     return undefined;
   }, [showAddForm]);
 
+  // Prevent Dialog from intercepting keyboard events when nested modal is open
+  useEffect(() => {
+    if (showAddForm && typeof window !== 'undefined') {
+      console.log('[LeadCommunicationModal] Setting up keyboard event prevention');
+      
+      const handleKeyDown = (e: KeyboardEvent) => {
+        // Allow keyboard events to pass through to nested modal
+        const target = e.target as HTMLElement;
+        if (target.closest('[data-add-communication-modal]')) {
+          // Event is in nested modal, allow it
+          return;
+        }
+        
+        // If event is on Dialog content, stop it from being handled by Dialog
+        const dialogContent = document.querySelector('[data-radix-dialog-content]');
+        if (dialogContent && dialogContent.contains(target)) {
+          console.log('[LeadCommunicationModal] Stopping keyboard event on Dialog:', e.key);
+          e.stopPropagation();
+        }
+      };
+
+      // Add listener in capture phase to intercept before Dialog handles it
+      document.addEventListener('keydown', handleKeyDown, true);
+      document.addEventListener('keypress', handleKeyDown, true);
+      document.addEventListener('keyup', handleKeyDown, true);
+      
+      return () => {
+        document.removeEventListener('keydown', handleKeyDown, true);
+        document.removeEventListener('keypress', handleKeyDown, true);
+        document.removeEventListener('keyup', handleKeyDown, true);
+        console.log('[LeadCommunicationModal] Removed keyboard event listeners');
+      };
+    }
+    return undefined;
+  }, [showAddForm]);
+
   const fetchCommunications = async () => {
     try {
       setLoading(true);
@@ -271,13 +307,17 @@ export function LeadCommunicationModal({ leadId, open, onClose }: LeadCommunicat
 
   return (
     <>
-      <Dialog open={open} onOpenChange={(isOpen) => {
-        // Prevent closing when nested modal is open
-        if (!isOpen && showAddForm) {
-          return;
-        }
-        onClose();
-      }}>
+      <Dialog 
+        open={open} 
+        onOpenChange={(isOpen) => {
+          // Prevent closing when nested modal is open
+          if (!isOpen && showAddForm) {
+            return;
+          }
+          onClose();
+        }}
+        modal={!showAddForm}
+      >
         <DialogContent 
           size="lg" 
           className="max-h-[80vh] flex flex-col p-0 bg-white border-gray-200"
