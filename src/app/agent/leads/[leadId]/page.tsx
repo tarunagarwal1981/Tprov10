@@ -1278,13 +1278,24 @@ export default function LeadDetailPage() {
                             }
                             try {
                               const accessToken = getAccessToken();
+                              if (!accessToken) {
+                                toast.error('Authentication required. Please log in again.');
+                                router.push('/login');
+                                return;
+                              }
+                              
                               const response = await fetch(`/api/itineraries/${itinerary.id}/pdf`, {
                                 headers: {
-                                  'Authorization': `Bearer ${accessToken || ''}`,
+                                  'Authorization': `Bearer ${accessToken}`,
                                 },
                               });
                               
                               if (!response.ok) {
+                                if (response.status === 401 || response.status === 403) {
+                                  toast.error('Authentication failed. Please log in again.');
+                                  router.push('/login');
+                                  return;
+                                }
                                 const error = await response.json().catch(() => ({ error: 'Failed to generate PDF' }));
                                 toast.error(error.error || `Failed to generate PDF (${response.status})`);
                                 return;

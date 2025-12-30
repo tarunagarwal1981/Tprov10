@@ -264,8 +264,8 @@ export const ItineraryPDF = ({ itinerary, lead, days, items, operatorDetails }: 
         </View>
       </Page>
 
-      {/* Day-by-Day Itinerary */}
-      {days.map((day) => {
+      {/* Day-by-Day Itinerary (for Create Itinerary) */}
+      {days.length > 0 && days.map((day) => {
         const timeSlots = day.time_slots || {
           morning: { time: '', activities: [], transfers: [] },
           afternoon: { time: '', activities: [], transfers: [] },
@@ -310,16 +310,6 @@ export const ItineraryPDF = ({ itinerary, lead, days, items, operatorDetails }: 
                     <Text style={styles.activityTitle}>
                       {item.package_title} ({type === 'activity' ? 'Activity' : 'Transfer'})
                     </Text>
-                    {operator && (
-                      <Text style={styles.operatorBadge}>
-                        Operator: {operator.name}
-                        {operator.email && ` | ${operator.email}`}
-                        {operator.phone && ` | ${operator.phone}`}
-                      </Text>
-                    )}
-                    <Text style={styles.priceBadge}>
-                      Price: {formatCurrency(item.total_price || item.unit_price || 0)}
-                    </Text>
                   </View>
                 </View>
               );
@@ -328,64 +318,32 @@ export const ItineraryPDF = ({ itinerary, lead, days, items, operatorDetails }: 
         );
       })}
 
-      {/* Pricing Summary */}
-      <Page size="A4" style={styles.page}>
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Pricing Summary</Text>
-          <View style={styles.table}>
-            <View style={[styles.tableRow, styles.tableHeader]}>
-              <Text style={styles.tableCell}>Item</Text>
-              <Text style={styles.tableCell}>Type</Text>
-              <Text style={styles.tableCell}>Operator</Text>
-              <Text style={[styles.tableCell, { textAlign: 'right' }]}>Price</Text>
-            </View>
+      {/* Package List (for Insert Itinerary - items without days) */}
+      {days.length === 0 && items.length > 0 && (
+        <Page size="A4" style={styles.page}>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Package Details</Text>
             {items.map((item) => {
-              const operator = operatorDetails[item.operator_id];
               return (
-                <View key={item.id} style={styles.tableRow}>
-                  <Text style={styles.tableCell}>{item.package_title}</Text>
-                  <Text style={styles.tableCell}>
-                    {item.package_type === 'activity' ? 'Activity' : 
-                     item.package_type === 'transfer' ? 'Transfer' : 
-                     item.package_type}
+                <View key={item.id} style={styles.activityItem}>
+                  <Text style={styles.activityTitle}>
+                    {item.package_title}
                   </Text>
-                  <Text style={styles.tableCell}>{operator?.name || 'Unknown'}</Text>
-                  <Text style={[styles.tableCell, { textAlign: 'right' }]}>
-                    {formatCurrency(item.total_price || item.unit_price || 0)}
+                  <Text style={styles.activityDetails}>
+                    Type: {item.package_type === 'activity' ? 'Activity' : 
+                           item.package_type === 'transfer' ? 'Transfer' : 
+                           item.package_type === 'multi_city' ? 'Multi-City Package' :
+                           item.package_type === 'multi_city_hotel' ? 'Multi-City Hotel Package' :
+                           item.package_type === 'fixed_departure' ? 'Fixed Departure Package' :
+                           item.package_type}
                   </Text>
                 </View>
               );
             })}
           </View>
-          <Text style={styles.totalPrice}>
-            Total: {formatCurrency(itinerary.total_price || 0)}
-          </Text>
-        </View>
+        </Page>
+      )}
 
-        {/* Operator Contact Information */}
-        {Object.keys(operatorDetails).length > 0 && (
-          <View style={[styles.section, { marginTop: 30 }]}>
-            <Text style={styles.sectionTitle}>Operator Contact Information</Text>
-            {Object.entries(operatorDetails).map(([operatorId, operator]) => (
-              <View key={operatorId} style={{ marginBottom: 15, padding: 10, backgroundColor: '#f9fafb' }}>
-                <Text style={styles.activityTitle}>{operator.name}</Text>
-                {operator.email && (
-                  <Text style={styles.activityDetails}>Email: {operator.email}</Text>
-                )}
-                {operator.phone && (
-                  <Text style={styles.activityDetails}>Phone: {operator.phone}</Text>
-                )}
-                {operator.website && (
-                  <Text style={styles.activityDetails}>Website: {operator.website}</Text>
-                )}
-                {operator.address && (
-                  <Text style={styles.activityDetails}>Address: {operator.address}</Text>
-                )}
-              </View>
-            ))}
-          </View>
-        )}
-      </Page>
     </Document>
   );
 };

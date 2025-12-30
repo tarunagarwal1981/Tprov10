@@ -18,10 +18,16 @@ export async function GET(
     const { itineraryId } = await params;
     const authHeader = request.headers.get('authorization');
     const token = authHeader?.replace('Bearer ', '') || '';
+    
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized - No token provided' }, { status: 401 });
+    }
+    
     const userId = await getUserIdFromToken(token);
     
     if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      console.error('[Itinerary PDF] Failed to get userId from token');
+      return NextResponse.json({ error: 'Unauthorized - Invalid token' }, { status: 401 });
     }
 
     // Fetch itinerary
