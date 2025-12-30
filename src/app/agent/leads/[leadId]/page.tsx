@@ -1127,12 +1127,12 @@ export default function LeadDetailPage() {
                           </div>
                         </div>
                       )}
-                      <div className="flex gap-2 pt-2 border-t">
+                      <div className="flex flex-wrap gap-2 pt-2 border-t">
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => router.push(`/agent/itineraries/${itinerary.id}/builder`)}
-                          className="flex-1"
+                          className="flex-1 min-w-[80px]"
                         >
                           <FiEye className="w-4 h-4 mr-1" />
                           View
@@ -1142,7 +1142,7 @@ export default function LeadDetailPage() {
                             variant="outline"
                             size="sm"
                             onClick={() => router.push(`/agent/leads/${leadId}/insert?itineraryId=${itinerary.id}&queryId=${itineraryQuery?.id || ''}`)}
-                            className="flex-1"
+                            className="flex-1 min-w-[120px]"
                           >
                             <FiPackage className="w-4 h-4 mr-1" />
                             Insert Packages
@@ -1159,7 +1159,7 @@ export default function LeadDetailPage() {
                                 toast.error('Query is not linked to this itinerary yet. Please wait...');
                               }
                             }}
-                            className="flex-1"
+                            className="flex-1 min-w-[100px]"
                             disabled={!itinerary.query_id}
                           >
                             <FiEye className="w-4 h-4 mr-1" />
@@ -1173,9 +1173,9 @@ export default function LeadDetailPage() {
                             e.stopPropagation();
                             handleGenerateInvoice(itinerary);
                           }}
-                          className="border-green-200 text-green-600 hover:bg-green-50 flex-shrink-0"
+                          className="border-green-200 text-green-600 hover:bg-green-50 flex-shrink-0 min-w-[40px]"
                           title="Generate Invoice"
-                          disabled={itinerary.is_locked || (itinerary.total_price ?? 0) <= 0}
+                          disabled={itinerary.is_locked}
                         >
                           <FiFileText className="w-4 h-4" />
                         </Button>
@@ -1186,7 +1186,7 @@ export default function LeadDetailPage() {
                             e.stopPropagation();
                             handleConfirmItinerary(itinerary.id);
                           }}
-                          className="border-emerald-200 text-emerald-600 hover:bg-emerald-50 flex-shrink-0"
+                          className="border-emerald-200 text-emerald-600 hover:bg-emerald-50 flex-shrink-0 min-w-[40px]"
                           title="Confirm Itinerary"
                           disabled={itinerary.is_locked || confirmingItineraryId === itinerary.id}
                         >
@@ -1199,7 +1199,7 @@ export default function LeadDetailPage() {
                             e.stopPropagation();
                             handleConfirmPayment(itinerary);
                           }}
-                          className="border-purple-200 text-purple-600 hover:bg-purple-50 flex-shrink-0"
+                          className="border-purple-200 text-purple-600 hover:bg-purple-50 flex-shrink-0 min-w-[40px]"
                           title="Confirm Payment"
                           disabled={itinerary.is_locked}
                         >
@@ -1241,7 +1241,7 @@ export default function LeadDetailPage() {
                               toast.error('Failed to download PDF');
                             }
                           }}
-                          className="border-blue-200 text-blue-600 hover:bg-blue-50 flex-shrink-0"
+                          className="border-blue-200 text-blue-600 hover:bg-blue-50 flex-shrink-0 min-w-[40px]"
                           title="Download PDF"
                         >
                           <FiDownload className="w-4 h-4" />
@@ -1253,7 +1253,7 @@ export default function LeadDetailPage() {
                             e.stopPropagation(); // Prevent card click
                             handleDeleteItinerary(itinerary.id, itinerary.name);
                           }}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50 flex-shrink-0"
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50 flex-shrink-0 min-w-[40px]"
                           title="Delete itinerary"
                         >
                           <FiTrash2 className="w-4 h-4" />
