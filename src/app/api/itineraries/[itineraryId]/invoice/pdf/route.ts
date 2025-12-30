@@ -25,18 +25,52 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Fetch invoice for this itinerary
-    const invoice = await queryOne<{
-      id: string;
-      invoice_number: string;
-      total_amount: number;
-      due_date: string | null;
-      status: string;
-      created_at: string;
-    }>(
-      'SELECT * FROM invoices WHERE itinerary_id = $1 ORDER BY created_at DESC LIMIT 1',
-      [itineraryId]
-    );
+    // Get invoiceId from query params if provided, otherwise get latest
+    const searchParams = request.nextUrl.searchParams;
+    const invoiceIdParam = searchParams.get('invoiceId');
+    
+    let invoice;
+    if (invoiceIdParam) {
+      invoice = await queryOne<{
+        id: string;
+        invoice_number: string;
+        total_amount: number;
+        subtotal: number | null;
+        tax_rate: number | null;
+        tax_amount: number | null;
+        due_date: string | null;
+        status: string;
+        created_at: string;
+        billing_address: any | null;
+        payment_terms: string | null;
+        notes: string | null;
+        currency: string | null;
+        line_items: any | null;
+      }>(
+        'SELECT * FROM invoices WHERE id = $1',
+        [invoiceIdParam]
+      );
+    } else {
+      invoice = await queryOne<{
+        id: string;
+        invoice_number: string;
+        total_amount: number;
+        subtotal: number | null;
+        tax_rate: number | null;
+        tax_amount: number | null;
+        due_date: string | null;
+        status: string;
+        created_at: string;
+        billing_address: any | null;
+        payment_terms: string | null;
+        notes: string | null;
+        currency: string | null;
+        line_items: any | null;
+      }>(
+        'SELECT * FROM invoices WHERE itinerary_id = $1 ORDER BY created_at DESC LIMIT 1',
+        [itineraryId]
+      );
+    }
 
     if (!invoice) {
       return NextResponse.json({ error: 'Invoice not found. Please create an invoice first.' }, { status: 404 });
@@ -68,18 +102,41 @@ export async function GET(
       [itinerary.lead_id]
     );
 
-    // Fetch items
-    const itemsResult = await query<{
+    // Fetch items (use line_items from invoice if available, otherwise fetch from itinerary)
+    let items: Array<{
       id: string;
       package_title: string;
       package_type: string;
       total_price: number | null;
       unit_price: number | null;
       quantity: number;
-    }>(
-      'SELECT id, package_title, package_type, total_price, unit_price, quantity FROM itinerary_items WHERE itinerary_id = $1',
-      [itineraryId]
-    );
+    }> = [];
+
+    if (invoice.line_items && Array.isArray(invoice.line_items)) {
+      // Use line items from invoice
+      items = invoice.line_items.map((item: any, index: number) => ({
+        id: item.id || `item-${index}`,
+        package_title: item.description || 'Item',
+        package_type: 'service',
+        total_price: item.total || 0,
+        unit_price: item.unit_price || 0,
+        quantity: item.quantity || 1,
+      }));
+    } else {
+      // Fallback to itinerary items
+      const itemsResult = await query<{
+        id: string;
+        package_title: string;
+        package_type: string;
+        total_price: number | null;
+        unit_price: number | null;
+        quantity: number;
+      }>(
+        'SELECT id, package_title, package_type, total_price, unit_price, quantity FROM itinerary_items WHERE itinerary_id = $1',
+        [itineraryId]
+      );
+      items = itemsResult.rows;
+    }
 
     // Generate PDF
     try {
@@ -92,9 +149,16 @@ export async function GET(
           invoice: {
             invoice_number: invoice.invoice_number,
             total_amount: invoice.total_amount,
+            subtotal: invoice.subtotal,
+            tax_rate: invoice.tax_rate,
+            tax_amount: invoice.tax_amount,
             due_date: invoice.due_date,
             status: invoice.status,
             created_at: invoice.created_at,
+            billing_address: invoice.billing_address,
+            payment_terms: invoice.payment_terms,
+            notes: invoice.notes,
+            currency: invoice.currency || 'USD',
           },
           itinerary: {
             id: itinerary.id,
@@ -106,7 +170,7 @@ export async function GET(
             customerEmail: lead?.customer_email || undefined,
             customerPhone: lead?.customer_phone || undefined,
           },
-          items: itemsResult.rows,
+          items: items,
         })
       );
 

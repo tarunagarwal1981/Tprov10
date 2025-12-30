@@ -108,15 +108,43 @@ const styles = StyleSheet.create({
   textRight: {
     textAlign: 'right',
   },
+  billingAddress: {
+    fontSize: 10,
+    marginBottom: 3,
+    lineHeight: 1.4,
+  },
+  notesSection: {
+    marginTop: 20,
+    padding: 10,
+    backgroundColor: '#f9fafb',
+    borderRadius: 4,
+  },
+  notesText: {
+    fontSize: 9,
+    lineHeight: 1.4,
+  },
 });
 
 interface InvoicePDFProps {
   invoice: {
     invoice_number: string;
     total_amount: number;
+    subtotal?: number | null;
+    tax_rate?: number | null;
+    tax_amount?: number | null;
     due_date: string | null;
     status: string;
     created_at: string;
+    billing_address?: {
+      street?: string;
+      city?: string;
+      state?: string;
+      zip?: string;
+      country?: string;
+    } | null;
+    payment_terms?: string | null;
+    notes?: string | null;
+    currency?: string | null;
   };
   itinerary: {
     id: string;
@@ -145,12 +173,18 @@ export const InvoicePDF = ({ invoice, itinerary, lead, items }: InvoicePDFProps)
     return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   };
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: number, currency: string = 'USD') => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'USD',
+      currency: currency,
     }).format(amount);
   };
+
+  const currency = invoice.currency || 'USD';
+  const subtotal = invoice.subtotal ?? invoice.total_amount;
+  const taxRate = invoice.tax_rate ?? 0;
+  const taxAmount = invoice.tax_amount ?? 0;
+  const totalAmount = invoice.total_amount;
 
   return (
     <Document>
@@ -172,10 +206,21 @@ export const InvoicePDF = ({ invoice, itinerary, lead, items }: InvoicePDFProps)
           {lead.customerName && (
             <Text style={styles.customerInfo}>{lead.customerName}</Text>
           )}
-          {lead.customerEmail && (
+          {invoice.billing_address?.street && (
+            <Text style={styles.billingAddress}>{invoice.billing_address.street}</Text>
+          )}
+          {invoice.billing_address?.city && invoice.billing_address?.state && (
+            <Text style={styles.billingAddress}>
+              {invoice.billing_address.city}, {invoice.billing_address.state} {invoice.billing_address.zip || ''}
+            </Text>
+          )}
+          {invoice.billing_address?.country && (
+            <Text style={styles.billingAddress}>{invoice.billing_address.country}</Text>
+          )}
+          {!invoice.billing_address?.street && lead.customerEmail && (
             <Text style={styles.customerInfo}>{lead.customerEmail}</Text>
           )}
-          {lead.customerPhone && (
+          {!invoice.billing_address?.street && lead.customerPhone && (
             <Text style={styles.customerInfo}>{lead.customerPhone}</Text>
           )}
           {itinerary.customer_id && (
@@ -212,10 +257,10 @@ export const InvoicePDF = ({ invoice, itinerary, lead, items }: InvoicePDFProps)
                 </Text>
                 <Text style={styles.tableCell}>{item.quantity}</Text>
                 <Text style={[styles.tableCell, styles.textRight]}>
-                  {formatCurrency(item.unit_price || 0)}
+                  {formatCurrency(item.unit_price || 0, currency)}
                 </Text>
                 <Text style={[styles.tableCell, styles.textRight]}>
-                  {formatCurrency(item.total_price || item.unit_price || 0)}
+                  {formatCurrency(item.total_price || item.unit_price || 0, currency)}
                 </Text>
               </View>
             ))}
@@ -226,30 +271,50 @@ export const InvoicePDF = ({ invoice, itinerary, lead, items }: InvoicePDFProps)
         <View style={styles.totalSection}>
           <View style={styles.totalRow}>
             <Text>Subtotal:</Text>
-            <Text>{formatCurrency(invoice.total_amount)}</Text>
+            <Text>{formatCurrency(subtotal, currency)}</Text>
           </View>
-          <View style={styles.totalRow}>
-            <Text>Tax:</Text>
-            <Text>{formatCurrency(0)}</Text>
-          </View>
+          {taxRate > 0 && (
+            <View style={styles.totalRow}>
+              <Text>Tax ({taxRate}%):</Text>
+              <Text>{formatCurrency(taxAmount, currency)}</Text>
+            </View>
+          )}
           <Text style={styles.totalAmount}>
-            Total: {formatCurrency(invoice.total_amount)}
+            Total: {formatCurrency(totalAmount, currency)}
           </Text>
         </View>
 
         {/* Payment Terms */}
-        <View style={styles.paymentTerms}>
-          <Text style={styles.sectionTitle}>Payment Terms:</Text>
-          <Text style={styles.paymentTermText}>
-            • Payment is due within 30 days of invoice date
-          </Text>
-          <Text style={styles.paymentTermText}>
-            • Please include invoice number with your payment
-          </Text>
-          <Text style={styles.paymentTermText}>
-            • For payment inquiries, please contact your travel agent
-          </Text>
-        </View>
+        {invoice.payment_terms && (
+          <View style={styles.paymentTerms}>
+            <Text style={styles.sectionTitle}>Payment Terms:</Text>
+            <Text style={styles.paymentTermText}>{invoice.payment_terms}</Text>
+          </View>
+        )}
+
+        {/* Notes */}
+        {invoice.notes && (
+          <View style={styles.notesSection}>
+            <Text style={styles.sectionTitle}>Notes:</Text>
+            <Text style={styles.notesText}>{invoice.notes}</Text>
+          </View>
+        )}
+
+        {/* Default Payment Terms if not provided */}
+        {!invoice.payment_terms && (
+          <View style={styles.paymentTerms}>
+            <Text style={styles.sectionTitle}>Payment Terms:</Text>
+            <Text style={styles.paymentTermText}>
+              • Payment is due within 30 days of invoice date
+            </Text>
+            <Text style={styles.paymentTermText}>
+              • Please include invoice number with your payment
+            </Text>
+            <Text style={styles.paymentTermText}>
+              • For payment inquiries, please contact your travel agent
+            </Text>
+          </View>
+        )}
 
         {/* Footer */}
         <View style={styles.footer}>
@@ -260,4 +325,3 @@ export const InvoicePDF = ({ invoice, itinerary, lead, items }: InvoicePDFProps)
     </Document>
   );
 };
-

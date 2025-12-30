@@ -135,7 +135,18 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
   const [itineraries, setItineraries] = useState<Record<string, Itinerary[]>>({});
   const [loadingItineraries, setLoadingItineraries] = useState<Set<string>>(new Set());
   const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
-  const [selectedItineraryForInvoice, setSelectedItineraryForInvoice] = useState<{ id: string; totalPrice: number } | null>(null);
+  const [selectedItineraryForInvoice, setSelectedItineraryForInvoice] = useState<{ 
+    id: string;
+    leadId: string;
+    totalPrice: number;
+    itineraryItems?: Array<{
+      id: string;
+      package_title: string;
+      total_price: number | null;
+      unit_price: number | null;
+      quantity: number;
+    }>;
+  } | null>(null);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [selectedItineraryForPayment, setSelectedItineraryForPayment] = useState<{ id: string; totalPrice: number } | null>(null);
   const [confirmingItineraryId, setConfirmingItineraryId] = useState<string | null>(null);
@@ -223,10 +234,36 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
   };
 
 
-  const handleGenerateInvoice = (itinerary: Itinerary) => {
+  const handleGenerateInvoice = async (itinerary: Itinerary, leadId: string) => {
+    // Fetch itinerary items for pre-filling line items
+    let itineraryItems: Array<{
+      id: string;
+      package_title: string;
+      total_price: number | null;
+      unit_price: number | null;
+      quantity: number;
+    }> = [];
+    
+    try {
+      const accessToken = getAccessToken();
+      const itemsResponse = await fetch(`/api/itineraries/${itinerary.id}/items`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken || ''}`,
+        },
+      });
+      if (itemsResponse.ok) {
+        const { items } = await itemsResponse.json();
+        itineraryItems = items || [];
+      }
+    } catch (error) {
+      console.error('Error fetching itinerary items:', error);
+    }
+    
     setSelectedItineraryForInvoice({
       id: itinerary.id,
+      leadId,
       totalPrice: itinerary.total_price ?? 0,
+      itineraryItems,
     });
     setInvoiceModalOpen(true);
   };
@@ -534,7 +571,7 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
                                         <Button
                                           variant="outline"
                                           size="sm"
-                                          onClick={() => handleGenerateInvoice(itinerary)}
+                                          onClick={() => handleGenerateInvoice(itinerary, lead.id)}
                                           disabled={itinerary.is_locked || (itinerary.total_price ?? 0) <= 0}
                                           className="text-[10px] h-7 px-2 py-1"
                                         >
@@ -621,6 +658,7 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
       {selectedItineraryForInvoice && (
         <GenerateInvoiceModal
           itineraryId={selectedItineraryForInvoice.id}
+          leadId={selectedItineraryForInvoice.leadId}
           totalPrice={selectedItineraryForInvoice.totalPrice}
           open={invoiceModalOpen}
           onClose={() => {
@@ -630,6 +668,8 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
           onSuccess={() => {
             onRefresh();
           }}
+          leadCustomerInfo={undefined}
+          itineraryItems={selectedItineraryForInvoice.itineraryItems}
         />
       )}
 

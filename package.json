@@ -18,6 +18,8 @@
     "migrate:payment": "ts-node --transpile-only scripts/run-payment-migration.ts",
     "migrate:payment:lambda": "ts-node --transpile-only scripts/run-payment-migration-via-lambda.ts",
     "migrate:communications:lambda": "ts-node --transpile-only scripts/run-lead-communications-migration-via-lambda.ts",
+    "migrate:invoice": "ts-node --transpile-only scripts/run-invoice-migration.ts",
+    "migrate:invoice:lambda": "ts-node --transpile-only scripts/run-invoice-migration-via-lambda.ts",
     "check:lead-itineraries": "ts-node --transpile-only scripts/check-lead-itineraries-db.ts"
   },
   "dependencies": {

@@ -83,7 +83,17 @@ export default function LeadDetailPage() {
   const [editingQueryForItinerary, setEditingQueryForItinerary] = useState<string | null>(null); // Track which itinerary's query is being edited
   const [assignLeadModalOpen, setAssignLeadModalOpen] = useState(false);
   const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
-  const [selectedItineraryForInvoice, setSelectedItineraryForInvoice] = useState<{ id: string; totalPrice: number } | null>(null);
+  const [selectedItineraryForInvoice, setSelectedItineraryForInvoice] = useState<{ 
+    id: string; 
+    totalPrice: number;
+    itineraryItems?: Array<{
+      id: string;
+      package_title: string;
+      total_price: number | null;
+      unit_price: number | null;
+      quantity: number;
+    }>;
+  } | null>(null);
   const [confirmingItineraryId, setConfirmingItineraryId] = useState<string | null>(null);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [selectedItineraryForPayment, setSelectedItineraryForPayment] = useState<{ id: string; totalPrice: number } | null>(null);
@@ -649,10 +659,35 @@ export default function LeadDetailPage() {
   };
 
   // Handle Generate Invoice
-  const handleGenerateInvoice = (itinerary: Itinerary) => {
+  const handleGenerateInvoice = async (itinerary: Itinerary) => {
+    // Fetch itinerary items for pre-filling line items
+    let itineraryItems: Array<{
+      id: string;
+      package_title: string;
+      total_price: number | null;
+      unit_price: number | null;
+      quantity: number;
+    }> = [];
+    
+    try {
+      const accessToken = getAccessToken();
+      const itemsResponse = await fetch(`/api/itineraries/${itinerary.id}/items`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken || ''}`,
+        },
+      });
+      if (itemsResponse.ok) {
+        const { items } = await itemsResponse.json();
+        itineraryItems = items || [];
+      }
+    } catch (error) {
+      console.error('Error fetching itinerary items:', error);
+    }
+    
     setSelectedItineraryForInvoice({
       id: itinerary.id,
       totalPrice: itinerary.total_price ?? 0,
+      itineraryItems,
     });
     setInvoiceModalOpen(true);
   };
@@ -1291,6 +1326,7 @@ export default function LeadDetailPage() {
       {selectedItineraryForInvoice && (
         <GenerateInvoiceModal
           itineraryId={selectedItineraryForInvoice.id}
+          leadId={leadId}
           totalPrice={selectedItineraryForInvoice.totalPrice}
           open={invoiceModalOpen}
           onClose={() => {
@@ -1300,6 +1336,13 @@ export default function LeadDetailPage() {
           onSuccess={() => {
             fetchLeadDataRef.current?.();
           }}
+          leadCustomerInfo={{
+            name: lead?.customerName,
+            email: lead?.customerEmail,
+            phone: lead?.customerPhone,
+            address: undefined, // Could be added if available in lead
+          }}
+          itineraryItems={selectedItineraryForInvoice.itineraryItems}
         />
       )}
 

@@ -27,107 +27,82 @@ interface BillingAddress {
   country: string;
 }
 
-interface GenerateInvoiceModalProps {
+interface Invoice {
+  id: string;
+  invoice_number: string;
+  total_amount: number;
+  subtotal: number | null;
+  tax_rate: number | null;
+  tax_amount: number | null;
+  status: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled';
+  due_date: string | null;
+  billing_address: BillingAddress | null;
+  payment_terms: string | null;
+  notes: string | null;
+  currency: string | null;
+  line_items: LineItem[] | null;
+}
+
+interface EditInvoiceModalProps {
+  invoice: Invoice;
   itineraryId: string;
-  leadId?: string;
-  totalPrice: number;
   open: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  leadCustomerInfo?: {
-    name?: string;
-    email?: string;
-    phone?: string;
-    address?: string;
-  };
-  itineraryItems?: Array<{
-    id: string;
-    package_title: string;
-    total_price: number | null;
-    unit_price: number | null;
-    quantity: number;
-  }>;
 }
 
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'INR', 'AUD', 'CAD', 'JPY', 'CNY'];
 
-export function GenerateInvoiceModal({
+export function EditInvoiceModal({
+  invoice,
   itineraryId,
-  leadId,
-  totalPrice,
   open,
   onClose,
   onSuccess,
-  leadCustomerInfo,
-  itineraryItems,
-}: GenerateInvoiceModalProps) {
+}: EditInvoiceModalProps) {
   const toast = useToast();
   const [loading, setLoading] = useState(false);
-  const [invoiceCreated, setInvoiceCreated] = useState(false);
-  const [invoiceId, setInvoiceId] = useState<string | null>(null);
+  const [invoiceUpdated, setInvoiceUpdated] = useState(false);
   
   const [formData, setFormData] = useState({
-    currency: 'USD',
-    billing_address: {
+    currency: invoice.currency || 'USD',
+    billing_address: invoice.billing_address || {
       street: '',
       city: '',
       state: '',
       zip: '',
       country: '',
     } as BillingAddress,
-    line_items: [] as LineItem[],
-    tax_rate: '0',
-    payment_terms: '',
-    notes: '',
-    due_date: '',
+    line_items: invoice.line_items || [] as LineItem[],
+    tax_rate: (invoice.tax_rate || 0).toString(),
+    payment_terms: invoice.payment_terms || '',
+    notes: invoice.notes || '',
+    due_date: invoice.due_date ? invoice.due_date.split('T')[0] : '',
+    status: invoice.status,
   });
 
-  // Initialize form data when modal opens
+  // Reset form when invoice changes
   useEffect(() => {
-    if (open && !invoiceCreated) {
-      // Pre-fill billing address from lead customer info
-      if (leadCustomerInfo?.address) {
-        // Try to parse address if it's a string
-        const addressParts = leadCustomerInfo.address.split(',');
-        if (addressParts.length >= 3) {
-          setFormData(prev => ({
-            ...prev,
-            billing_address: {
-              street: addressParts[0]?.trim() || '',
-              city: addressParts[1]?.trim() || '',
-              state: addressParts[2]?.trim() || '',
-              zip: addressParts[3]?.trim() || '',
-              country: addressParts[4]?.trim() || 'USA',
-            },
-          }));
-        }
-      }
-
-      // Pre-fill line items from itinerary items
-      if (itineraryItems && itineraryItems.length > 0) {
-        const items: LineItem[] = itineraryItems.map((item, index) => ({
-          id: `item-${index}`,
-          description: item.package_title,
-          quantity: item.quantity || 1,
-          unit_price: item.unit_price || item.total_price || 0,
-          total: item.total_price || item.unit_price || 0,
-        }));
-        setFormData(prev => ({ ...prev, line_items: items }));
-      } else {
-        // Add one default line item
-        setFormData(prev => ({
-          ...prev,
-          line_items: [{
-            id: 'item-0',
-            description: 'Travel Package',
-            quantity: 1,
-            unit_price: totalPrice,
-            total: totalPrice,
-          }],
-        }));
-      }
+    if (open && invoice) {
+      setFormData({
+        currency: invoice.currency || 'USD',
+        billing_address: invoice.billing_address || {
+          street: '',
+          city: '',
+          state: '',
+          zip: '',
+          country: '',
+        },
+        line_items: invoice.line_items || [],
+        tax_rate: (invoice.tax_rate || 0).toString(),
+        payment_terms: invoice.payment_terms || '',
+        notes: invoice.notes || '',
+        due_date: invoice.due_date ? invoice.due_date.split('T')[0] : '',
+        status: invoice.status,
+      });
+      setInvoiceUpdated(false);
     }
-  }, [open, invoiceCreated, leadCustomerInfo, itineraryItems, totalPrice]);
+  }, [open, invoice]);
 
   // Calculate totals
   const subtotal = formData.line_items.reduce((sum, item) => sum + item.total, 0);
@@ -199,15 +174,13 @@ export function GenerateInvoiceModal({
     setLoading(true);
     try {
       const accessToken = getAccessToken();
-      const response = await fetch('/api/invoices', {
-        method: 'POST',
+      const response = await fetch(`/api/invoices/${invoice.id}`, {
+        method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${accessToken || ''}`,
         },
         body: JSON.stringify({
-          itinerary_id: itineraryId,
-          lead_id: leadId,
           subtotal: subtotal,
           tax_rate: parseFloat(formData.tax_rate) || 0,
           tax_amount: taxAmount,
@@ -218,33 +191,32 @@ export function GenerateInvoiceModal({
           notes: formData.notes || null,
           currency: formData.currency,
           line_items: formData.line_items,
+          status: formData.status,
         }),
       });
 
       if (response.ok) {
-        const { invoice } = await response.json();
-        setInvoiceId(invoice.id);
-        setInvoiceCreated(true);
-        toast.success('Invoice created successfully');
+        setInvoiceUpdated(true);
+        toast.success('Invoice updated successfully');
         onSuccess();
       } else {
         const error = await response.json();
-        toast.error(error.error || 'Failed to create invoice');
+        toast.error(error.error || 'Failed to update invoice');
       }
     } catch (error) {
-      console.error('Error creating invoice:', error);
-      toast.error('Failed to create invoice');
+      console.error('Error updating invoice:', error);
+      toast.error('Failed to update invoice');
     } finally {
       setLoading(false);
     }
   };
 
   const handleDownloadPDF = async () => {
-    if (!itineraryId || !invoiceId) return;
+    if (!itineraryId || !invoice.id) return;
     
     try {
       const accessToken = getAccessToken();
-      const response = await fetch(`/api/itineraries/${itineraryId}/invoice/pdf?invoiceId=${invoiceId}`, {
+      const response = await fetch(`/api/itineraries/${itineraryId}/invoice/pdf?invoiceId=${invoice.id}`, {
         headers: {
           'Authorization': `Bearer ${accessToken || ''}`,
         },
@@ -255,7 +227,7 @@ export function GenerateInvoiceModal({
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `invoice-${invoiceId}.pdf`;
+        a.download = `invoice-${invoice.invoice_number}.pdf`;
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
@@ -278,7 +250,7 @@ export function GenerateInvoiceModal({
       <Card className="w-full max-w-4xl mx-auto bg-white shadow-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200 sticky top-0 z-10">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-lg font-semibold text-gray-900">Generate Invoice</CardTitle>
+            <CardTitle className="text-lg font-semibold text-gray-900">Edit Invoice - {invoice.invoice_number}</CardTitle>
             <Button
               variant="ghost"
               size="sm"
@@ -290,8 +262,25 @@ export function GenerateInvoiceModal({
           </div>
         </CardHeader>
         <CardContent className="p-6">
-          {!invoiceCreated ? (
+          {!invoiceUpdated ? (
             <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Status */}
+              <div>
+                <Label htmlFor="status">Status</Label>
+                <Select value={formData.status} onValueChange={(value: any) => setFormData(prev => ({ ...prev, status: value }))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="draft">Draft</SelectItem>
+                    <SelectItem value="sent">Sent</SelectItem>
+                    <SelectItem value="paid">Paid</SelectItem>
+                    <SelectItem value="overdue">Overdue</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               {/* Currency Selection */}
               <div>
                 <Label htmlFor="currency" className="block text-sm font-medium text-gray-700 mb-2">
@@ -522,12 +511,12 @@ export function GenerateInvoiceModal({
                   {loading ? (
                     <>
                       <FiFileText className="w-4 h-4 mr-2 animate-spin" />
-                      Creating...
+                      Updating...
                     </>
                   ) : (
                     <>
                       <FiFileText className="w-4 h-4 mr-2" />
-                      Create Invoice
+                      Update Invoice
                     </>
                   )}
                 </Button>
@@ -538,7 +527,7 @@ export function GenerateInvoiceModal({
               <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                 <div className="flex items-center gap-2 text-green-700">
                   <FiCheck className="w-5 h-5" />
-                  <p className="font-semibold">Invoice created successfully!</p>
+                  <p className="font-semibold">Invoice updated successfully!</p>
                 </div>
               </div>
 
@@ -565,3 +554,4 @@ export function GenerateInvoiceModal({
     </div>
   );
 }
+

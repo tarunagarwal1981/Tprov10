@@ -1,23 +1,32 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { FiFileText, FiDownload, FiMail, FiCheck, FiClock, FiX } from 'react-icons/fi';
+import { FiFileText, FiDownload, FiMail, FiCheck, FiClock, FiX, FiEdit2 } from 'react-icons/fi';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/useToast';
 import { useAuth } from '@/context/CognitoAuthContext';
 import { getAccessToken } from '@/lib/auth/getAccessToken';
+import { EditInvoiceModal } from '@/components/agent/EditInvoiceModal';
 
 interface Invoice {
   id: string;
   invoice_number: string;
   total_amount: number;
+  subtotal: number | null;
+  tax_rate: number | null;
+  tax_amount: number | null;
   status: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled';
   sent_at: string | null;
   paid_at: string | null;
   due_date: string | null;
   pdf_url: string | null;
+  billing_address: any | null;
+  payment_terms: string | null;
+  notes: string | null;
+  currency: string | null;
+  line_items: any | null;
   created_at: string;
 }
 
@@ -64,6 +73,8 @@ export function InvoiceList({ itineraryId }: InvoiceListProps) {
   const { user } = useAuth();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
+  const [editModalOpen, setEditModalOpen] = useState(false);
 
   useEffect(() => {
     fetchInvoices();
@@ -95,7 +106,7 @@ export function InvoiceList({ itineraryId }: InvoiceListProps) {
   const handleDownloadPDF = async (invoiceId: string, invoiceNumber: string) => {
     try {
       const accessToken = getAccessToken();
-      const response = await fetch(`/api/itineraries/${itineraryId}/invoice/pdf`, {
+      const response = await fetch(`/api/itineraries/${itineraryId}/invoice/pdf?invoiceId=${invoiceId}`, {
         headers: {
           'Authorization': `Bearer ${accessToken || ''}`,
         },
@@ -119,6 +130,17 @@ export function InvoiceList({ itineraryId }: InvoiceListProps) {
       console.error('Error downloading invoice PDF:', error);
       toast.error('Failed to download PDF');
     }
+  };
+
+  const handleEditInvoice = (invoice: Invoice) => {
+    setEditingInvoice(invoice);
+    setEditModalOpen(true);
+  };
+
+  const handleEditSuccess = () => {
+    fetchInvoices();
+    setEditModalOpen(false);
+    setEditingInvoice(null);
   };
 
   const handleMarkAsPaid = async (invoiceId: string) => {
@@ -185,10 +207,17 @@ export function InvoiceList({ itineraryId }: InvoiceListProps) {
                     </Badge>
                   </div>
                   <div className="flex items-center gap-4 text-sm">
-                    <span className="font-semibold text-gray-900">{formatCurrency(invoice.total_amount)}</span>
+                    <span className="font-semibold text-gray-900">
+                      {invoice.currency || 'USD'} {invoice.total_amount.toFixed(2)}
+                    </span>
                     {invoice.due_date && (
                       <span className="text-gray-600">
                         Due: {formatDate(invoice.due_date)}
+                      </span>
+                    )}
+                    {invoice.payment_terms && (
+                      <span className="text-gray-500 text-xs">
+                        Terms: {invoice.payment_terms}
                       </span>
                     )}
                     {invoice.sent_at && (
@@ -202,8 +231,18 @@ export function InvoiceList({ itineraryId }: InvoiceListProps) {
                   <Button
                     size="sm"
                     variant="outline"
+                    onClick={() => handleEditInvoice(invoice)}
+                    className="border-purple-200 text-purple-600 hover:bg-purple-50"
+                    title="Edit Invoice"
+                  >
+                    <FiEdit2 className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
                     onClick={() => handleDownloadPDF(invoice.id, invoice.invoice_number)}
                     className="border-blue-200 text-blue-600 hover:bg-blue-50"
+                    title="Download PDF"
                   >
                     <FiDownload className="w-4 h-4" />
                   </Button>
@@ -213,6 +252,7 @@ export function InvoiceList({ itineraryId }: InvoiceListProps) {
                       variant="outline"
                       onClick={() => handleMarkAsPaid(invoice.id)}
                       className="border-green-200 text-green-600 hover:bg-green-50"
+                      title="Mark as Paid"
                     >
                       <FiCheck className="w-4 h-4" />
                     </Button>
@@ -223,6 +263,20 @@ export function InvoiceList({ itineraryId }: InvoiceListProps) {
           </div>
         )}
       </CardContent>
+      
+      {/* Edit Invoice Modal */}
+      {editingInvoice && (
+        <EditInvoiceModal
+          invoice={editingInvoice}
+          itineraryId={itineraryId}
+          open={editModalOpen}
+          onClose={() => {
+            setEditModalOpen(false);
+            setEditingInvoice(null);
+          }}
+          onSuccess={handleEditSuccess}
+        />
+      )}
     </Card>
   );
 }
