@@ -277,6 +277,9 @@ export default function LeadDetailPage() {
                         return sum + payment.amount;
                       }, 0);
                       paymentsMap[itinerary.id] = { totalPaid, payments: paymentsData || [] };
+                    } else if (paymentsResponse.status === 403) {
+                      // 403 is expected if user doesn't have access - log but don't error
+                      console.log(`[LeadDetailPage] Payments API returned 403 for itinerary ${itinerary.id} - access denied`);
                     }
                     
                     // Fetch invoices
@@ -288,6 +291,9 @@ export default function LeadDetailPage() {
                     if (invoicesResponse.ok) {
                       const { invoices: invoicesData } = await invoicesResponse.json();
                       invoicesMap[itinerary.id] = invoicesData || [];
+                    } else if (invoicesResponse.status === 403) {
+                      // 403 is expected if user doesn't have access - log but don't error
+                      console.log(`[LeadDetailPage] Invoices API returned 403 for itinerary ${itinerary.id} - access denied`);
                     }
                   } catch (err) {
                     console.error(`Error fetching payments/invoices for itinerary ${itinerary.id}:`, err);

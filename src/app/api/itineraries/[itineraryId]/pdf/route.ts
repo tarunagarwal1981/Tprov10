@@ -64,9 +64,25 @@ export async function GET(
       return NextResponse.json({ error: 'Itinerary not found' }, { status: 404 });
     }
 
-    // Verify ownership
-    if (itinerary.agent_id !== userId) {
-      console.error('[Itinerary PDF] Access denied - userId:', userId, 'agent_id:', itinerary.agent_id);
+    // Verify ownership with detailed logging
+    console.log('[Itinerary PDF] Ownership check:', {
+      itineraryId,
+      agent_id: itinerary.agent_id,
+      userId,
+      agent_id_type: typeof itinerary.agent_id,
+      userId_type: typeof userId,
+      match: itinerary.agent_id === userId,
+      string_match: String(itinerary.agent_id) === String(userId),
+    });
+
+    // Use string comparison to handle UUID type mismatches
+    if (String(itinerary.agent_id) !== String(userId)) {
+      console.error('[Itinerary PDF] Access denied - userId mismatch:', {
+        agent_id: itinerary.agent_id,
+        userId,
+        agent_id_string: String(itinerary.agent_id),
+        userId_string: String(userId),
+      });
       return NextResponse.json({ error: 'Forbidden - You do not have access to this itinerary' }, { status: 403 });
     }
 

@@ -371,17 +371,26 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
                 <React.Fragment key={lead.id}>
                   <tr 
                     className="hover:bg-gray-50 transition-colors cursor-pointer"
+                    style={{ pointerEvents: 'auto' }}
                     onClick={(e) => {
-                      // Don't navigate if clicking on buttons or interactive elements
+                      // More robust click detection
                       const target = e.target as HTMLElement;
+                      console.log('[LeadsTable] Row clicked, target:', target.tagName, target.className);
+                      
+                      // Don't navigate if clicking on buttons or interactive elements
                       if (
                         target.closest('button') ||
                         target.closest('[role="button"]') ||
                         target.closest('a') ||
-                        target.closest('.no-navigate')
+                        target.closest('.no-navigate') ||
+                        target.closest('input') ||
+                        target.closest('select')
                       ) {
+                        console.log('[LeadsTable] Click blocked - interactive element');
                         return;
                       }
+                      
+                      console.log('[LeadsTable] Navigating to proposal page for lead:', lead.id);
                       router.push(`/agent/leads/${lead.id}/proposals/new`);
                     }}
                   >
@@ -409,10 +418,16 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap">
+                    <td 
+                      className="px-4 py-4 whitespace-nowrap"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <StageBadge stage={lead.stage} />
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap">
+                    <td 
+                      className="px-4 py-4 whitespace-nowrap"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <PriorityBadge priority={lead.priority} />
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -438,7 +453,10 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
                         'No communication'
                       )}
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm">
+                    <td 
+                      className="px-4 py-4 whitespace-nowrap text-sm"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       {lead.next_follow_up_date ? (
                         <div className="flex items-center gap-2">
                           <span className={isOverdueFollowUp ? 'text-red-600 font-semibold' : 'text-gray-900'}>
