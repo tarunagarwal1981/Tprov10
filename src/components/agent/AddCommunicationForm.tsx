@@ -120,7 +120,7 @@ export function AddCommunicationForm({ leadId, open, onClose, onSuccess }: AddCo
         className="w-full max-w-2xl mx-4 bg-white shadow-2xl max-h-[90vh] overflow-y-auto relative z-[101]" 
         onClick={(e) => e.stopPropagation()}
         onMouseDown={(e) => e.stopPropagation()}
-        style={{ pointerEvents: 'auto' }}
+        style={{ pointerEvents: 'auto', position: 'relative' }}
       >
         <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50 border-b border-gray-200">
           <div className="flex items-center justify-between">

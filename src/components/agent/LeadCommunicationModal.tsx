@@ -128,17 +128,27 @@ export function LeadCommunicationModal({ leadId, open, onClose }: LeadCommunicat
     }
   }, [open, leadId]);
 
-  // Disable pointer events on Dialog overlay when nested modal is open
+  // Disable pointer events on Dialog overlay and content when nested modal is open
   useEffect(() => {
     if (showAddForm && typeof window !== 'undefined') {
       const overlay = document.querySelector('[data-radix-dialog-overlay]');
+      const content = document.querySelector('[data-radix-dialog-content]');
+      
       if (overlay) {
         (overlay as HTMLElement).style.pointerEvents = 'none';
       }
+      if (content) {
+        (content as HTMLElement).style.pointerEvents = 'none';
+      }
+      
       return () => {
         const overlay = document.querySelector('[data-radix-dialog-overlay]');
+        const content = document.querySelector('[data-radix-dialog-content]');
         if (overlay) {
           (overlay as HTMLElement).style.pointerEvents = '';
+        }
+        if (content) {
+          (content as HTMLElement).style.pointerEvents = '';
         }
       };
     }
