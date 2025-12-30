@@ -48,6 +48,8 @@ export async function POST(request: NextRequest) {
       agentId = userId;
     }
 
+    console.log('[Create Lead] User info:', { userId, userRole: user.role, agentId, createdBySubAgentId });
+
     const body = await request.json();
     const {
       customer_name,
@@ -67,6 +69,14 @@ export async function POST(request: NextRequest) {
       remarks,
       status = 'published',
     } = body;
+
+    console.log('[Create Lead] Lead data:', { 
+      customer_name, 
+      customer_email, 
+      status, 
+      agentId,
+      createdBySubAgentId 
+    });
 
     // Validation
     if (!customer_name || !customer_email || !customer_phone || !origin || !adults) {
@@ -208,6 +218,7 @@ export async function POST(request: NextRequest) {
     }
 
     const leadId = result.rows[0].id;
+    console.log('[Create Lead] Lead created successfully:', { leadId, agentId, status });
 
     // Fetch the created lead to return
     const createdLead = await queryOne<{

@@ -48,7 +48,7 @@ const createLeadSchema = z.object({
   // Row 1: Contact Information
   customer_name: z.string().min(2, 'Name is required'),
   customer_email: z.string().email('Invalid email address'),
-  customer_phone: z.string().min(10, 'Phone number is required'),
+  customer_phone: z.string().min(1, 'Phone number is required'),
   
   // Row 2: Travel Details
   travel_month: z.string().optional(),

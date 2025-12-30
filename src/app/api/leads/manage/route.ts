@@ -67,20 +67,23 @@ export async function GET(request: NextRequest) {
 
     // Determine agent visibility based on role
     if (user.role === 'SUB_AGENT') {
-      // Sub-agents see leads owned by their parent agent
+      // Sub-agents see leads owned by their parent agent OR leads they created themselves
       if (user.parent_agent_id) {
-        whereConditions.push(`l.agent_id::text = $${paramIndex}`);
-        queryParams.push(user.parent_agent_id);
-        paramIndex++;
+        whereConditions.push(`(l.agent_id::text = $${paramIndex} OR l.created_by_sub_agent_id::text = $${paramIndex + 1})`);
+        queryParams.push(user.parent_agent_id); // Filter by parent_agent_id for ownership
+        queryParams.push(userId); // Also show leads created by this sub-agent
+        paramIndex += 2;
       } else {
         // Sub-agent without parent - should not happen, but handle gracefully
-        whereConditions.push(`l.agent_id::text = $${paramIndex}`);
+        whereConditions.push(`(l.agent_id::text = $${paramIndex} OR l.created_by_sub_agent_id::text = $${paramIndex})`);
         queryParams.push(userId);
         paramIndex++;
       }
     } else {
-      // Main agents see their own leads
-      whereConditions.push(`l.agent_id::text = $${paramIndex}`);
+      // Main agents see their own leads OR leads created by their sub-agents
+      whereConditions.push(`(l.agent_id::text = $${paramIndex} OR EXISTS (
+        SELECT 1 FROM users u WHERE u.parent_agent_id::text = $${paramIndex} AND l.created_by_sub_agent_id::text = u.id::text
+      ))`);
       queryParams.push(userId);
       paramIndex++;
     }
@@ -89,7 +92,9 @@ export async function GET(request: NextRequest) {
     // Backward compatibility: status IS NULL treated as 'published'
     whereConditions.push(`(l.status IS NULL OR l.status = 'published')`);
 
-    console.log('[Leads Manage] Query params:', { userId, userRole: user.role, status, search, page, limit, sortBy, sortOrder });
+    console.log('[Leads Manage] Query params:', { userId, userRole: user.role, parentAgentId: user.parent_agent_id, status, search, page, limit, sortBy, sortOrder });
+    console.log('[Leads Manage] Where conditions:', whereConditions);
+    console.log('[Leads Manage] Query params array:', queryParams);
 
     if (status) {
       whereConditions.push(`l.stage = $${paramIndex}`);
@@ -154,6 +159,7 @@ export async function GET(request: NextRequest) {
     queryParams.push(limit, offset);
 
     console.log('[Leads Manage] Executing query with params:', queryParams);
+    console.log('[Leads Manage] Final SQL query:', sqlQuery.replace(/\s+/g, ' ').trim());
     const result = await query<LeadWithAggregates>(sqlQuery, queryParams);
     console.log('[Leads Manage] Result count:', result.rows.length);
     if (result.rows.length > 0) {
