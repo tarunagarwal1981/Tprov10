@@ -62,6 +62,7 @@ export default function LeadsManagementPage() {
   const fetchLeads = async () => {
     if (!user?.id) return;
 
+    console.log('[LeadsManagementPage] 📥 Fetching leads...');
     setLoading(true);
     try {
       const accessToken = getAccessToken();
@@ -81,19 +82,31 @@ export default function LeadsManagementPage() {
 
       if (response.ok) {
         const data = await response.json();
+        console.log('[LeadsManagementPage] ✅ Leads fetched:', data.leads?.length || 0);
         setLeads(data.leads || []);
         setPagination(data.pagination || { page: 1, limit: 20, total: 0, totalPages: 0 });
       } else {
         const error = await response.json();
+        console.error('[LeadsManagementPage] ❌ Error fetching leads:', error);
         toast.error(error.error || 'Failed to fetch leads');
       }
     } catch (error) {
-      console.error('Error fetching leads:', error);
+      console.error('[LeadsManagementPage] ❌ Exception fetching leads:', error);
       toast.error('Failed to fetch leads');
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    console.log('[LeadsManagementPage] 🏠 PAGE MOUNTED');
+    console.log('[LeadsManagementPage] User ID:', user?.id);
+    console.log('[LeadsManagementPage] Initial loading state:', loading);
+  }, []);
+
+  useEffect(() => {
+    console.log('[LeadsManagementPage] 📊 Leads updated:', leads.length);
+  }, [leads.length]);
 
   useEffect(() => {
     fetchLeads();
@@ -110,8 +123,22 @@ export default function LeadsManagementPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Leads Management</h1>
-        <p className="text-gray-600">Manage all your leads, communications, and payments in one place</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Leads Management</h1>
+            <p className="text-gray-600">Manage all your leads, communications, and payments in one place</p>
+          </div>
+          <Button
+            onClick={() => {
+              console.log('[LeadsManagementPage] 🧪 TEST BUTTON CLICKED');
+              alert('Test button works! Page is interactive.');
+            }}
+            variant="outline"
+            className="bg-yellow-100 border-yellow-300 text-yellow-800 hover:bg-yellow-200"
+          >
+            🧪 Test Logging
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}

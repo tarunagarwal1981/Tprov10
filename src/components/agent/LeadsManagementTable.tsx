@@ -360,10 +360,16 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {leads.map((lead) => {
+            {leads.map((lead, index) => {
               const isExpanded = expandedRows.has(lead.id);
               const leadItineraries = itineraries[lead.id] || [];
               const isLoadingItineraries = loadingItineraries.has(lead.id);
+              
+              // Debug logging - log first row render
+              if (index === 0) {
+                console.log('[LeadsTable] 🎨 Rendering first row for lead:', lead.id);
+                console.log('[LeadsTable] Row onClick handler attached:', true);
+              }
               
               // Debug logging
               if (expandedRows.has(lead.id)) {
@@ -378,6 +384,7 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
                 <React.Fragment key={lead.id}>
                   <tr 
                     className="hover:bg-gray-50 transition-colors cursor-pointer"
+                    style={{ pointerEvents: 'auto' }}
                     onMouseEnter={() => {
                       console.log('[LeadsTable] 🖱️ Mouse ENTER row for lead:', lead.id);
                     }}
@@ -385,13 +392,16 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
                       console.log('[LeadsTable] 🖱️ Mouse LEAVE row for lead:', lead.id);
                     }}
                     onMouseDown={(e) => {
-                      console.log('[LeadsTable] 🖱️ Mouse DOWN on row for lead:', lead.id, 'button:', e.button);
+                      console.log('[LeadsTable] 🖱️ MOUSE DOWN on row for lead:', lead.id, 'button:', e.button);
+                      console.log('[LeadsTable] MouseDown target:', e.target);
                     }}
                     onMouseUp={(e) => {
-                      console.log('[LeadsTable] 🖱️ Mouse UP on row for lead:', lead.id, 'button:', e.button);
+                      console.log('[LeadsTable] 🖱️ MOUSE UP on row for lead:', lead.id, 'button:', e.button);
+                      console.log('[LeadsTable] MouseUp target:', e.target);
                     }}
                     onClick={(e) => {
-                      console.log('[LeadsTable] ===== ROW CLICK EVENT =====');
+                      console.log('[LeadsTable] ===== ROW CLICK EVENT FIRED =====');
+                      console.log('[LeadsTable] CLICK FIRED!');
                       console.log('[LeadsTable] Lead ID:', lead.id);
                       console.log('[LeadsTable] Event target:', e.target);
                       console.log('[LeadsTable] Current target:', e.currentTarget);
@@ -471,6 +481,19 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
                             <div className="text-xs text-gray-400 font-mono mt-1">{lead.customer_id}</div>
                           )}
                         </div>
+                        {/* Test button to verify events work */}
+                        {index === 0 && (
+                          <button
+                            onClick={(e) => {
+                              console.log('[LeadsTable] 🧪 TEST BUTTON IN TABLE CLICKED');
+                              e.stopPropagation();
+                              alert('Test button in table works!');
+                            }}
+                            className="ml-2 px-2 py-1 text-xs bg-green-100 text-green-800 rounded hover:bg-green-200"
+                          >
+                            TEST
+                          </button>
+                        )}
                       </div>
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap">
