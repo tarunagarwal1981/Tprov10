@@ -45,12 +45,12 @@ export async function getUserIdFromToken(token: string): Promise<string | null> 
     // This handles cases where Cognito fails due to network issues, timeouts, etc.
     console.log('[getUserIdFromToken] Cognito validation failed, trying phone auth session fallback:', error.name || error.message);
     
-    try {
-      // Try to decode as phone auth session (base64 encoded JSON)
-      const sessionData = JSON.parse(atob(token));
-      if (sessionData.authMethod === 'phone_otp' && sessionData.userId) {
-        console.log('[getUserIdFromToken] Using phone auth session userId:', sessionData.userId);
-        return sessionData.userId;
+      try {
+        // Try to decode as phone auth session (base64 encoded JSON)
+        const sessionData = JSON.parse(atob(token));
+        if (sessionData.authMethod === 'phone_otp' && sessionData.userId) {
+          console.log('[getUserIdFromToken] Using phone auth session userId:', sessionData.userId);
+          return sessionData.userId;
       } else {
         console.warn('[getUserIdFromToken] Phone auth session decoded but missing required fields');
         return null;

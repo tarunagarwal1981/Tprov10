@@ -184,28 +184,56 @@ export default function CreateLeadPage() {
     setIsSubmitting(true);
     try {
       const accessToken = getAccessToken();
+      const leadData = {
+        ...data,
+        status: 'published',
+      };
+      
+      console.log('[Create Lead Page] 🚀 Starting lead creation...');
+      console.log('[Create Lead Page] 📤 Sending lead data:', {
+        customer_name: leadData.customer_name,
+        customer_email: leadData.customer_email,
+        customer_phone: leadData.customer_phone,
+        origin: leadData.origin,
+        destinations: leadData.destinations,
+        status: leadData.status,
+        stage: 'NEW', // Will be set by backend
+        user_id: user?.id,
+        has_access_token: !!accessToken,
+      });
+      
       const response = await fetch('/api/leads/create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${accessToken || ''}`,
         },
-        body: JSON.stringify({
-          ...data,
-          status: 'published',
-        }),
+        body: JSON.stringify(leadData),
       });
+
+      console.log('[Create Lead Page] 📥 API Response status:', response.status, response.statusText);
 
       if (!response.ok) {
         const error = await response.json();
+        console.error('[Create Lead Page] ❌ API Error:', error);
         throw new Error(error.error || 'Failed to create lead');
       }
 
       const result = await response.json();
+      console.log('[Create Lead Page] ✅ Lead created successfully!', {
+        leadId: result.lead?.id,
+        agentId: result.lead?.agent_id,
+        status: result.lead?.status,
+        stage: result.lead?.stage || 'NEW',
+        customer_name: result.lead?.customer_name,
+        message: result.message,
+      });
+      
       toast.success('Lead created successfully!');
+      console.log('[Create Lead Page] 🔄 Redirecting to lead detail page:', `/agent/leads/${result.lead.id}`);
       router.push(`/agent/leads/${result.lead.id}`);
     } catch (error) {
-      console.error('Error creating lead:', error);
+      console.error('[Create Lead Page] ❌ Error creating lead:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to create lead');
     } finally {
       setIsSubmitting(false);
@@ -236,6 +264,15 @@ export default function CreateLeadPage() {
         status: 'draft',
       };
       
+      console.log('[Create Lead Page] 💾 Saving draft...');
+      console.log('[Create Lead Page] 📤 Draft data:', {
+        customer_name: payload.customer_name,
+        customer_email: payload.customer_email,
+        status: payload.status,
+        stage: 'NEW', // Will be set by backend
+        user_id: user?.id,
+      });
+      
       const response = await fetch('/api/leads/create', {
         method: 'POST',
         headers: {
@@ -245,15 +282,26 @@ export default function CreateLeadPage() {
         body: JSON.stringify(payload),
       });
 
+      console.log('[Create Lead Page] 📥 Draft API Response status:', response.status);
+
       if (!response.ok) {
         const error = await response.json();
+        console.error('[Create Lead Page] ❌ Draft API Error:', error);
         throw new Error(error.error || 'Failed to save draft');
       }
 
+      const result = await response.json();
+      console.log('[Create Lead Page] ✅ Draft saved successfully!', {
+        leadId: result.lead?.id,
+        status: result.lead?.status,
+        message: result.message,
+      });
+
       toast.success('Draft saved successfully!');
+      console.log('[Create Lead Page] 🔄 Redirecting to leads page');
       router.push('/agent/leads');
     } catch (error) {
-      console.error('Error saving draft:', error);
+      console.error('[Create Lead Page] ❌ Error saving draft:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to save draft');
     } finally {
       setIsSubmitting(false);

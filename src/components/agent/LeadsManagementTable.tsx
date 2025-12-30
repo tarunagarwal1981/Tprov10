@@ -125,12 +125,6 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
   const toast = useToast();
   const { user } = useAuth();
   
-  // Debug: Log when component renders
-  useEffect(() => {
-    console.log('[LeadsTable] 🔄 Component rendered with', leads.length, 'leads');
-    console.log('[LeadsTable] Loading state:', loading);
-  }, [leads.length, loading]);
-  
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [quickActionMenu, setQuickActionMenu] = useState<string | null>(null);
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
@@ -365,19 +359,6 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
               const leadItineraries = itineraries[lead.id] || [];
               const isLoadingItineraries = loadingItineraries.has(lead.id);
               
-              // Debug logging - log first row render
-              if (index === 0) {
-                console.log('[LeadsTable] 🎨 Rendering first row for lead:', lead.id);
-                console.log('[LeadsTable] Row onClick handler attached:', true);
-              }
-              
-              // Debug logging
-              if (expandedRows.has(lead.id)) {
-                console.log('[LeadsManagementTable] Render: Expanded row for leadId:', lead.id);
-                console.log('[LeadsManagementTable] Render: leadItineraries.length:', leadItineraries.length);
-                console.log('[LeadsManagementTable] Render: lead.itinerary_count:', lead.itinerary_count);
-                console.log('[LeadsManagementTable] Render: isLoadingItineraries:', isLoadingItineraries);
-              }
               const isOverdueFollowUp = isOverdue(lead.next_follow_up_date);
 
               return (
@@ -385,35 +366,8 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
                   <tr 
                     className="hover:bg-gray-50 transition-colors cursor-pointer"
                     style={{ pointerEvents: 'auto' }}
-                    onMouseEnter={() => {
-                      console.log('[LeadsTable] 🖱️ Mouse ENTER row for lead:', lead.id);
-                    }}
-                    onMouseLeave={() => {
-                      console.log('[LeadsTable] 🖱️ Mouse LEAVE row for lead:', lead.id);
-                    }}
-                    onMouseDown={(e) => {
-                      console.log('[LeadsTable] 🖱️ MOUSE DOWN on row for lead:', lead.id, 'button:', e.button);
-                      console.log('[LeadsTable] MouseDown target:', e.target);
-                    }}
-                    onMouseUp={(e) => {
-                      console.log('[LeadsTable] 🖱️ MOUSE UP on row for lead:', lead.id, 'button:', e.button);
-                      console.log('[LeadsTable] MouseUp target:', e.target);
-                    }}
                     onClick={(e) => {
-                      console.log('[LeadsTable] ===== ROW CLICK EVENT FIRED =====');
-                      console.log('[LeadsTable] CLICK FIRED!');
-                      console.log('[LeadsTable] Lead ID:', lead.id);
-                      console.log('[LeadsTable] Event target:', e.target);
-                      console.log('[LeadsTable] Current target:', e.currentTarget);
-                      console.log('[LeadsTable] Event type:', e.type);
-                      console.log('[LeadsTable] Event bubbles:', e.bubbles);
-                      console.log('[LeadsTable] Event cancelable:', e.cancelable);
-                      
                       const target = e.target as HTMLElement;
-                      console.log('[LeadsTable] Target tagName:', target.tagName);
-                      console.log('[LeadsTable] Target className:', target.className);
-                      console.log('[LeadsTable] Target id:', target.id);
-                      console.log('[LeadsTable] Target parentElement:', target.parentElement?.tagName);
                       
                       // Check for interactive elements
                       const isButton = target.tagName === 'BUTTON';
@@ -422,15 +376,6 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
                       const closestButton = target.closest('button');
                       const closestRoleButton = target.closest('[role="button"]');
                       const closestLink = target.closest('a');
-                      
-                      console.log('[LeadsTable] Click checks:', {
-                        isButton,
-                        isInput,
-                        isSelect,
-                        hasClosestButton: !!closestButton,
-                        hasClosestRoleButton: !!closestRoleButton,
-                        hasClosestLink: !!closestLink,
-                      });
                       
                       // Only block if clicking directly on interactive elements
                       if (
@@ -441,20 +386,9 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
                         closestRoleButton ||
                         closestLink
                       ) {
-                        console.log('[LeadsTable] ❌ Click BLOCKED - interactive element detected');
-                        console.log('[LeadsTable] Blocked by:', {
-                          isButton,
-                          isInput,
-                          isSelect,
-                          closestButton: closestButton?.tagName,
-                          closestRoleButton: closestRoleButton?.tagName,
-                          closestLink: closestLink?.tagName,
-                        });
                         return; // Let the button handle its own click
                       }
                       
-                      console.log('[LeadsTable] ✅ Click ALLOWED - navigating to proposal page');
-                      console.log('[LeadsTable] Navigation URL:', `/agent/leads/${lead.id}/proposals/new`);
                       router.push(`/agent/leads/${lead.id}/proposals/new`);
                     }}
                   >
@@ -462,7 +396,6 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
                       <div className="flex items-center gap-2">
                         <button
                           onClick={(e) => {
-                            console.log('[LeadsTable] 🔘 Expand/Collapse button clicked');
                             e.stopPropagation();
                             toggleRow(lead.id);
                           }}
@@ -481,19 +414,6 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
                             <div className="text-xs text-gray-400 font-mono mt-1">{lead.customer_id}</div>
                           )}
                         </div>
-                        {/* Test button to verify events work */}
-                        {index === 0 && (
-                          <button
-                            onClick={(e) => {
-                              console.log('[LeadsTable] 🧪 TEST BUTTON IN TABLE CLICKED');
-                              e.stopPropagation();
-                              alert('Test button in table works!');
-                            }}
-                            className="ml-2 px-2 py-1 text-xs bg-green-100 text-green-800 rounded hover:bg-green-200"
-                          >
-                            TEST
-                          </button>
-                        )}
                       </div>
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap">
@@ -543,7 +463,6 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
                           variant="ghost"
                           size="sm"
                           onClick={(e) => {
-                            console.log('[LeadsTable] 🔘 Actions menu button clicked');
                             e.stopPropagation();
                             const button = e.currentTarget;
                             const rect = button.getBoundingClientRect();

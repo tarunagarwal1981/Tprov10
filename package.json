@@ -20,7 +20,8 @@
     "migrate:communications:lambda": "ts-node --transpile-only scripts/run-lead-communications-migration-via-lambda.ts",
     "migrate:invoice": "ts-node --transpile-only scripts/run-invoice-migration.ts",
     "migrate:invoice:lambda": "ts-node --transpile-only scripts/run-invoice-migration-via-lambda.ts",
-    "check:lead-itineraries": "ts-node --transpile-only scripts/check-lead-itineraries-db.ts"
+    "check:lead-itineraries": "ts-node --transpile-only scripts/check-lead-itineraries-db.ts",
+    "debug:leads": "ts-node --transpile-only scripts/debug-leads.ts"
   },
   "dependencies": {
     "@aws-sdk/client-cognito-identity-provider": "^3.700.0",

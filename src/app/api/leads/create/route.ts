@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
       agentId = userId;
     }
 
-    console.log('[Create Lead] User info:', { userId, userRole: user.role, agentId, createdBySubAgentId });
+    console.log('[Create Lead] User info:', { userId, userRole: user.role, agentId, createdBySubAgentId, parentAgentId: user.parent_agent_id });
 
     const body = await request.json();
     const {
@@ -69,14 +69,6 @@ export async function POST(request: NextRequest) {
       remarks,
       status = 'published',
     } = body;
-
-    console.log('[Create Lead] Lead data:', { 
-      customer_name, 
-      customer_email, 
-      status, 
-      agentId,
-      createdBySubAgentId 
-    });
 
     // Validation
     if (!customer_name || !customer_email || !customer_phone || !origin || !adults) {
@@ -136,7 +128,59 @@ export async function POST(request: NextRequest) {
       destination = 'Not specified';
     }
 
+    // Log lead data after all variables are defined
+    console.log('[Create Lead] Lead data:', { 
+      customer_name, 
+      customer_email, 
+      customer_phone,
+      origin,
+      destination,
+      status, 
+      stage: 'NEW',
+      agentId,
+      createdBySubAgentId,
+      travelersCount,
+      lead_source,
+      services,
+      tags: tags.length > 0 ? tags : null
+    });
+
     // Insert lead into database
+    const insertParams = [
+      agentId,
+      customer_name.trim(),
+      customer_email.trim().toLowerCase(),
+      customer_phone.trim(),
+      origin.trim(),
+      destination,
+      travelersCount,
+      from_date || null,
+      to_date || null,
+      travel_month || null,
+      lead_source ? 'OTHER' : 'MANUAL',
+      lead_source || null,
+      assign_to || null,
+      services || null,
+      remarks || null,
+      tags.length > 0 ? tags : null,
+      'NEW', // stage - default for new agent-created leads
+      status,
+      createdBySubAgentId,
+    ];
+    
+    console.log('[Create Lead] 📝 About to execute INSERT');
+    console.log('[Create Lead] Parameter count:', insertParams.length, '(expected: 19)');
+    console.log('[Create Lead] Key parameters:', {
+      agentId,
+      customer_name: customer_name.trim(),
+      customer_email: customer_email.trim().toLowerCase(),
+      origin: origin.trim(),
+      destination,
+      stage: 'NEW',
+      status,
+      createdBySubAgentId,
+    });
+    
     const result = await query<{ id: string }>(
       `INSERT INTO leads (
         id,
@@ -156,6 +200,7 @@ export async function POST(request: NextRequest) {
         services,
         notes,
         tags,
+        stage,
         status,
         purchased_from_marketplace,
         is_purchased,
@@ -181,33 +226,15 @@ export async function POST(request: NextRequest) {
         $15,
         $16::text[],
         $17,
+        $18,
         false,
         false,
-        $18::uuid,
+        $19::uuid,
         NOW(),
         NOW()
       )
       RETURNING id`,
-      [
-        agentId,
-        customer_name.trim(),
-        customer_email.trim().toLowerCase(),
-        customer_phone.trim(),
-        origin.trim(),
-        destination,
-        travelersCount,
-        from_date || null,
-        to_date || null,
-        travel_month || null,
-        lead_source ? 'OTHER' : 'MANUAL',
-        lead_source || null,
-        assign_to || null,
-        services || null,
-        remarks || null,
-        tags.length > 0 ? tags : null,
-        status,
-        createdBySubAgentId,
-      ]
+      insertParams
     );
 
     if (!result.rows || result.rows.length === 0 || !result.rows[0]) {
@@ -218,7 +245,15 @@ export async function POST(request: NextRequest) {
     }
 
     const leadId = result.rows[0].id;
-    console.log('[Create Lead] Lead created successfully:', { leadId, agentId, status });
+    console.log('[Create Lead] Lead created successfully:', { 
+      leadId, 
+      agentId, 
+      status, 
+      stage: 'NEW',
+      createdBySubAgentId,
+      customer_name,
+      customer_email
+    });
 
     // Fetch the created lead to return
     const createdLead = await queryOne<{
@@ -241,28 +276,98 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    console.error('Error creating lead:', error);
+    console.error('[Create Lead] ❌ ERROR CREATING LEAD:', error);
     
-    // Handle database constraint violations
+    // Log detailed error information
+    let errorMessage = 'Unknown error';
+    let errorName = 'Unknown';
+    let errorDetails: any = {};
+    
     if (error instanceof Error) {
+      errorName = error.name;
+      errorMessage = error.message;
+      errorDetails = {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+      };
+      
+      // Log full error object for debugging
+      console.error('[Create Lead] Full error object:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+        ...(error as any).code && { code: (error as any).code },
+        ...(error as any).detail && { detail: (error as any).detail },
+        ...(error as any).hint && { hint: (error as any).hint },
+        ...(error as any).where && { where: (error as any).where },
+      });
+      
+      // Handle database constraint violations
       if (error.message.includes('check_email_format')) {
+        console.error('[Create Lead] Email format constraint violation');
         return NextResponse.json(
-          { error: 'Invalid email format' },
+          { error: 'Invalid email format', details: error.message },
           { status: 400 }
         );
       }
       if (error.message.includes('check_travel_dates')) {
+        console.error('[Create Lead] Travel dates constraint violation');
         return NextResponse.json(
-          { error: 'Invalid date range' },
+          { error: 'Invalid date range', details: error.message },
           { status: 400 }
         );
       }
+      if (error.message.includes('column') || error.message.includes('does not exist')) {
+        console.error('[Create Lead] Database column error - possible schema mismatch');
+        return NextResponse.json(
+          { 
+            error: 'Database schema error',
+            details: error.message,
+            hint: 'The database column may not exist. Please verify migrations were run.',
+          },
+          { status: 500 }
+        );
+      }
+      if (error.message.includes('parameter') || error.message.includes('$')) {
+        console.error('[Create Lead] SQL parameter error - parameter count mismatch');
+        return NextResponse.json(
+          { 
+            error: 'Database query error',
+            details: error.message,
+            hint: 'There may be a mismatch between SQL parameters and values provided.',
+          },
+          { status: 500 }
+        );
+      }
+      if ((error as any).code) {
+        // PostgreSQL error codes
+        const pgError = error as any;
+        console.error('[Create Lead] PostgreSQL error code:', pgError.code);
+        return NextResponse.json(
+          {
+            error: 'Database error',
+            details: error.message,
+            code: pgError.code,
+            hint: pgError.hint || undefined,
+            where: pgError.where || undefined,
+          },
+          { status: 500 }
+        );
+      }
+    } else {
+      // Non-Error object
+      errorDetails = { raw: error };
+      console.error('[Create Lead] Non-Error object caught:', error);
     }
 
+    // Return detailed error information
     return NextResponse.json(
       {
         error: 'Failed to create lead',
-        details: error instanceof Error ? error.message : 'Unknown error',
+        details: errorMessage,
+        errorType: errorName,
+        ...errorDetails,
       },
       { status: 500 }
     );
