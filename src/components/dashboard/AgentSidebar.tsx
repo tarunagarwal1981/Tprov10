@@ -136,6 +136,7 @@ export function AgentSidebar() {
 			enabled: true,
 			submenu: [
 				{ label: "All Leads", href: "/agent/leads" },
+				{ label: "Create Lead", href: "/agent/leads/create" },
 				{ label: "Active", href: "/agent/leads/active" },
 				{ label: "Contacted", href: "/agent/leads/contacted" },
 				{ label: "Converted", href: "/agent/leads/converted" },

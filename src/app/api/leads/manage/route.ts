@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { query } from '@/lib/aws/lambda-database';
+import { query, queryOne } from '@/lib/aws/lambda-database';
 import { getUserIdFromToken } from '@/lib/auth/getUserIdFromToken';
 
 export const dynamic = 'force-dynamic';
@@ -49,13 +49,47 @@ export async function GET(request: NextRequest) {
 
     const offset = (page - 1) * limit;
 
-    // Build WHERE clause
-    // Cast userId to UUID for comparison with agent_id (which is UUID type)
-    const whereConditions: string[] = ['l.agent_id::text = $1'];
-    const queryParams: any[] = [userId];
-    let paramIndex = 2;
+    // Get user's role and parent_agent_id to determine visibility
+    const user = await queryOne<{ role: string; parent_agent_id: string | null }>(
+      'SELECT role, parent_agent_id FROM users WHERE id = $1',
+      [userId]
+    );
 
-    console.log('[Leads Manage] Query params:', { userId, status, search, page, limit, sortBy, sortOrder });
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // Build WHERE clause based on user role
+    // CRITICAL: Maintain backward compatibility - existing functionality must not break
+    const whereConditions: string[] = [];
+    const queryParams: any[] = [];
+    let paramIndex = 1;
+
+    // Determine agent visibility based on role
+    if (user.role === 'SUB_AGENT') {
+      // Sub-agents see leads owned by their parent agent
+      if (user.parent_agent_id) {
+        whereConditions.push(`l.agent_id::text = $${paramIndex}`);
+        queryParams.push(user.parent_agent_id);
+        paramIndex++;
+      } else {
+        // Sub-agent without parent - should not happen, but handle gracefully
+        whereConditions.push(`l.agent_id::text = $${paramIndex}`);
+        queryParams.push(userId);
+        paramIndex++;
+      }
+    } else {
+      // Main agents see their own leads
+      whereConditions.push(`l.agent_id::text = $${paramIndex}`);
+      queryParams.push(userId);
+      paramIndex++;
+    }
+
+    // Exclude drafts from "All Leads" - only show published leads
+    // Backward compatibility: status IS NULL treated as 'published'
+    whereConditions.push(`(l.status IS NULL OR l.status = 'published')`);
+
+    console.log('[Leads Manage] Query params:', { userId, userRole: user.role, status, search, page, limit, sortBy, sortOrder });
 
     if (status) {
       whereConditions.push(`l.stage = $${paramIndex}`);
