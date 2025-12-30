@@ -124,6 +124,13 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
   const router = useRouter();
   const toast = useToast();
   const { user } = useAuth();
+  
+  // Debug: Log when component renders
+  useEffect(() => {
+    console.log('[LeadsTable] 🔄 Component rendered with', leads.length, 'leads');
+    console.log('[LeadsTable] Loading state:', loading);
+  }, [leads.length, loading]);
+  
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [quickActionMenu, setQuickActionMenu] = useState<string | null>(null);
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
@@ -371,16 +378,32 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
                 <React.Fragment key={lead.id}>
                   <tr 
                     className="hover:bg-gray-50 transition-colors cursor-pointer"
+                    onMouseEnter={() => {
+                      console.log('[LeadsTable] 🖱️ Mouse ENTER row for lead:', lead.id);
+                    }}
+                    onMouseLeave={() => {
+                      console.log('[LeadsTable] 🖱️ Mouse LEAVE row for lead:', lead.id);
+                    }}
+                    onMouseDown={(e) => {
+                      console.log('[LeadsTable] 🖱️ Mouse DOWN on row for lead:', lead.id, 'button:', e.button);
+                    }}
+                    onMouseUp={(e) => {
+                      console.log('[LeadsTable] 🖱️ Mouse UP on row for lead:', lead.id, 'button:', e.button);
+                    }}
                     onClick={(e) => {
                       console.log('[LeadsTable] ===== ROW CLICK EVENT =====');
                       console.log('[LeadsTable] Lead ID:', lead.id);
                       console.log('[LeadsTable] Event target:', e.target);
                       console.log('[LeadsTable] Current target:', e.currentTarget);
+                      console.log('[LeadsTable] Event type:', e.type);
+                      console.log('[LeadsTable] Event bubbles:', e.bubbles);
+                      console.log('[LeadsTable] Event cancelable:', e.cancelable);
                       
                       const target = e.target as HTMLElement;
                       console.log('[LeadsTable] Target tagName:', target.tagName);
                       console.log('[LeadsTable] Target className:', target.className);
                       console.log('[LeadsTable] Target id:', target.id);
+                      console.log('[LeadsTable] Target parentElement:', target.parentElement?.tagName);
                       
                       // Check for interactive elements
                       const isButton = target.tagName === 'BUTTON';
