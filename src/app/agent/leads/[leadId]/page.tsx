@@ -1179,6 +1179,68 @@ export default function LeadDetailPage() {
                         >
                           <FiFileText className="w-4 h-4" />
                         </Button>
+                        {/* Invoice Download Button - Show if invoices exist */}
+                        {(() => {
+                          const invoices = itineraryInvoices[itinerary.id];
+                          return invoices && invoices.length > 0;
+                        })() && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              // Get the latest invoice or let user select
+                              const invoices = itineraryInvoices[itinerary.id];
+                              if (!invoices || invoices.length === 0) {
+                                toast.error('No invoices available');
+                                return;
+                              }
+                              const latestInvoice = invoices[0]; // Assuming sorted by date
+                              
+                              try {
+                                const accessToken = getAccessToken();
+                                const response = await fetch(`/api/itineraries/${itinerary.id}/invoice/pdf?invoiceId=${latestInvoice.id}`, {
+                                  headers: {
+                                    'Authorization': `Bearer ${accessToken || ''}`,
+                                  },
+                                });
+                                
+                                if (!response.ok) {
+                                  const error = await response.json().catch(() => ({ error: 'Failed to generate PDF' }));
+                                  toast.error(error.error || `Failed to generate PDF (${response.status})`);
+                                  return;
+                                }
+                                
+                                // Check if response is actually a PDF
+                                const contentType = response.headers.get('content-type');
+                                if (!contentType || !contentType.includes('application/pdf')) {
+                                  const errorText = await response.text();
+                                  console.error('Expected PDF but got:', contentType, errorText);
+                                  toast.error('Server returned invalid response');
+                                  return;
+                                }
+                                
+                                const blob = await response.blob();
+                                const url = window.URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = `invoice-${latestInvoice.invoice_number}.pdf`;
+                                document.body.appendChild(a);
+                                a.click();
+                                window.URL.revokeObjectURL(url);
+                                document.body.removeChild(a);
+                                toast.success('Invoice PDF downloaded');
+                              } catch (error) {
+                                console.error('Error downloading invoice PDF:', error);
+                                toast.error('Failed to download invoice PDF. Please try again.');
+                              }
+                            }}
+                            className="border-orange-200 text-orange-600 hover:bg-orange-50 flex-shrink-0 min-w-[40px]"
+                            title="Download Invoice PDF"
+                          >
+                            <FiDownload className="w-4 h-4" />
+                          </Button>
+                        )}
                         <Button
                           variant="outline"
                           size="sm"
@@ -1221,24 +1283,35 @@ export default function LeadDetailPage() {
                                   'Authorization': `Bearer ${accessToken || ''}`,
                                 },
                               });
-                              if (response.ok) {
-                                const blob = await response.blob();
-                                const url = window.URL.createObjectURL(blob);
-                                const a = document.createElement('a');
-                                a.href = url;
-                                a.download = `itinerary-${itinerary.customer_id || itinerary.id}.pdf`;
-                                document.body.appendChild(a);
-                                a.click();
-                                window.URL.revokeObjectURL(url);
-                                document.body.removeChild(a);
-                                toast.success('Itinerary PDF downloaded');
-                              } else {
-                                const error = await response.json();
-                                toast.error(error.error || 'Failed to generate PDF');
+                              
+                              if (!response.ok) {
+                                const error = await response.json().catch(() => ({ error: 'Failed to generate PDF' }));
+                                toast.error(error.error || `Failed to generate PDF (${response.status})`);
+                                return;
                               }
+                              
+                              // Check if response is actually a PDF
+                              const contentType = response.headers.get('content-type');
+                              if (!contentType || !contentType.includes('application/pdf')) {
+                                const errorText = await response.text();
+                                console.error('Expected PDF but got:', contentType, errorText);
+                                toast.error('Server returned invalid response');
+                                return;
+                              }
+                              
+                              const blob = await response.blob();
+                              const url = window.URL.createObjectURL(blob);
+                              const a = document.createElement('a');
+                              a.href = url;
+                              a.download = `itinerary-${itinerary.customer_id || itinerary.id}.pdf`;
+                              document.body.appendChild(a);
+                              a.click();
+                              window.URL.revokeObjectURL(url);
+                              document.body.removeChild(a);
+                              toast.success('Itinerary PDF downloaded');
                             } catch (error) {
                               console.error('Error downloading PDF:', error);
-                              toast.error('Failed to download PDF');
+                              toast.error('Failed to download PDF. Please try again.');
                             }
                           }}
                           className="border-blue-200 text-blue-600 hover:bg-blue-50 flex-shrink-0 min-w-[40px]"
