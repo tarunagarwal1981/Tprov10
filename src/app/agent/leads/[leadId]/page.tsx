@@ -810,13 +810,13 @@ export default function LeadDetailPage() {
   }
 
   return (
-    <div className="p-4 lg:p-6 max-w-7xl mx-auto">
+    <div className="p-1 lg:p-1.5 max-w-7xl mx-auto">
       {/* Breadcrumb */}
-      <div className="mb-6">
+      <div className="mb-1.5">
         <Button
           variant="ghost"
           onClick={() => router.push('/agent/leads')}
-          className="mb-4"
+          className="mb-1"
         >
           <FiArrowLeft className="w-4 h-4 mr-2" />
           Back to Leads
@@ -824,17 +824,17 @@ export default function LeadDetailPage() {
         <h1 className="text-2xl font-bold text-gray-900">Query #{leadId.slice(-8)}</h1>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-1.5">
         {/* Left Column - Lead Details Panel */}
-        <div className="lg:col-span-1 space-y-4">
+        <div className="lg:col-span-1 space-y-1">
           {/* Lead Information */}
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Lead Information</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-1">
               {/* Stage and Priority */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-1">
                 <div>
                   <label className="text-xs text-gray-500 mb-1 block">Stage</label>
                   <LeadStageSelector
@@ -909,7 +909,7 @@ export default function LeadDetailPage() {
                   <span>{lead.travelersCount} travelers</span>
                 </div>
               )}
-              <div className="pt-3 border-t border-gray-200 mt-3">
+              <div className="pt-1 border-t border-gray-200 mt-1">
                 <Button
                   variant="outline"
                   size="sm"
@@ -943,12 +943,12 @@ export default function LeadDetailPage() {
         </div>
 
         {/* Right Column - Proposals Section */}
-        <div className="lg:col-span-2 space-y-4">
+        <div className="lg:col-span-2 space-y-1">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold text-gray-900">Proposals</h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
             {/* Existing Itineraries - Each with its own query */}
             {itineraries.map((itinerary) => {
               const itineraryQuery = queries[itinerary.id];
@@ -970,7 +970,7 @@ export default function LeadDetailPage() {
               console.log(`[LeadDetailPage] Price for "${itinerary.name}": total_price=${itinerary.total_price}, displayPrice=${displayPrice}, formatted=$${displayPrice.toFixed(2)}`);
               
               return (
-                <div key={itinerary.id} className="space-y-4">
+                <div key={itinerary.id} className="space-y-1">
                   <Card className="hover:shadow-lg transition-shadow">
                     <CardHeader>
                       <div className="flex items-start justify-between">
@@ -1011,7 +1011,7 @@ export default function LeadDetailPage() {
                     <CardContent className="space-y-4">
                       {/* Query Details for this itinerary */}
                       {itineraryQuery ? (
-                        <div className="bg-gray-50 p-3 rounded-md space-y-2 text-sm">
+                        <div className="bg-gray-50 p-1 rounded-md space-y-2 text-sm">
                           <div className="flex items-center justify-between mb-2">
                             <span className="font-medium text-gray-700">Query Details</span>
                             <Button
@@ -1041,12 +1041,12 @@ export default function LeadDetailPage() {
                           )}
                         </div>
                       ) : (
-                        <div className="bg-yellow-50 p-3 rounded-md text-sm text-yellow-700">
+                        <div className="bg-yellow-50 p-1 rounded-md text-sm text-yellow-700">
                           No query data. Click &quot;Edit Query&quot; to add query details.
                         </div>
                       )}
                       
-                      <div className="flex items-center gap-4 text-sm text-gray-600">
+                      <div className="flex items-center gap-1 text-sm text-gray-600">
                         <span>{itinerary.adults_count} Adults</span>
                         {itinerary.children_count > 0 && (
                           <span>{itinerary.children_count} Children</span>
@@ -1054,7 +1054,7 @@ export default function LeadDetailPage() {
                       </div>
                       {/* Payment Summary */}
                       {itineraryPayments[itinerary.id] && (
-                        <div className="space-y-2 pt-2 border-t">
+                        <div className="space-y-0.5 pt-0.5 border-t">
                           <div className="flex items-center justify-between text-sm">
                             <span className="text-gray-600">Paid:</span>
                             <span className="font-semibold text-green-600">
@@ -1082,7 +1082,7 @@ export default function LeadDetailPage() {
                       {(() => {
                         const invoices = itineraryInvoices[itinerary.id];
                         return invoices && invoices.length > 0 ? (
-                          <div className="pt-2 border-t flex flex-wrap gap-2">
+                          <div className="pt-0.5 border-t flex flex-wrap gap-0.5">
                             {invoices.map((invoice) => (
                               <Badge
                                 key={invoice.id}
@@ -1095,7 +1095,7 @@ export default function LeadDetailPage() {
                         ) : null;
                       })()}
                       
-                      <div className="flex items-center justify-between pt-2 border-t">
+                      <div className="flex items-center justify-between pt-0.5 border-t">
                         <span className="text-sm text-gray-600">Total Price</span>
                         <span className="text-xl font-bold text-green-600">
                           ${displayPrice.toFixed(2)}
@@ -1103,10 +1103,10 @@ export default function LeadDetailPage() {
                       </div>
                       {/* Option 2: ID in footer with copy icon */}
                       {itinerary.customer_id && (
-                        <div className="flex items-center justify-between pt-2 border-t text-xs">
+                        <div className="flex items-center justify-between pt-0.5 border-t text-xs">
                           <span className="text-gray-500">Reference ID:</span>
-                          <div className="flex items-center gap-2">
-                            <code className="text-gray-600 font-mono bg-gray-50 px-2 py-1 rounded">
+                          <div className="flex items-center gap-0.5">
+                            <code className="text-gray-600 font-mono bg-gray-50 px-0.5 py-0.5 rounded">
                               {itinerary.customer_id}
                             </code>
                             <Button
@@ -1127,7 +1127,7 @@ export default function LeadDetailPage() {
                           </div>
                         </div>
                       )}
-                      <div className="flex flex-wrap gap-2 pt-2 border-t">
+                      <div className="flex flex-wrap gap-0.5 pt-0.5 border-t">
                         <Button
                           variant="ghost"
                           size="sm"
@@ -1273,7 +1273,7 @@ export default function LeadDetailPage() {
                 setQueryModalOpen(true);
               }}
             >
-              <CardContent className="flex flex-col items-center justify-center py-8">
+              <CardContent className="flex flex-col items-center justify-center py-2">
                 <FiPlus className="w-12 h-12 text-gray-400 mb-2" />
                 <p className="text-gray-600 font-medium">Insert Itinerary</p>
                 <p className="text-xs text-gray-400 mt-1">Create new itinerary with packages</p>
@@ -1288,7 +1288,7 @@ export default function LeadDetailPage() {
                 setQueryModalOpen(true);
               }}
             >
-              <CardContent className="flex flex-col items-center justify-center py-8">
+              <CardContent className="flex flex-col items-center justify-center py-2">
                 <FiPlus className="w-12 h-12 text-gray-400 mb-2" />
                 <p className="text-gray-600 font-medium">Create Itinerary</p>
                 <p className="text-xs text-gray-400 mt-1">Build custom itinerary from scratch</p>
