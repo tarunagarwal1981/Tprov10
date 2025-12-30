@@ -369,11 +369,29 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
 
               return (
                 <React.Fragment key={lead.id}>
-                  <tr className="hover:bg-gray-50 transition-colors">
+                  <tr 
+                    className="hover:bg-gray-50 transition-colors cursor-pointer"
+                    onClick={(e) => {
+                      // Don't navigate if clicking on buttons or interactive elements
+                      const target = e.target as HTMLElement;
+                      if (
+                        target.closest('button') ||
+                        target.closest('[role="button"]') ||
+                        target.closest('a') ||
+                        target.closest('.no-navigate')
+                      ) {
+                        return;
+                      }
+                      router.push(`/agent/leads/${lead.id}/proposals/new`);
+                    }}
+                  >
                     <td className="px-4 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => toggleRow(lead.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleRow(lead.id);
+                          }}
                           className="p-1 hover:bg-gray-200 rounded"
                         >
                           {isExpanded ? (
@@ -438,6 +456,7 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
                           variant="ghost"
                           size="sm"
                           onClick={(e) => {
+                            e.stopPropagation();
                             const button = e.currentTarget;
                             const rect = button.getBoundingClientRect();
                             if (quickActionMenu === lead.id) {

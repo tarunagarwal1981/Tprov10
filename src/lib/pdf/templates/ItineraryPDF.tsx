@@ -154,7 +154,6 @@ interface ItineraryPDFProps {
     adults_count: number;
     children_count: number;
     infants_count: number;
-    total_price: number;
     currency: string;
   };
   lead: {
