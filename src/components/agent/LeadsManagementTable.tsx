@@ -372,21 +372,56 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
                   <tr 
                     className="hover:bg-gray-50 transition-colors cursor-pointer"
                     onClick={(e) => {
+                      console.log('[LeadsTable] ===== ROW CLICK EVENT =====');
+                      console.log('[LeadsTable] Lead ID:', lead.id);
+                      console.log('[LeadsTable] Event target:', e.target);
+                      console.log('[LeadsTable] Current target:', e.currentTarget);
+                      
                       const target = e.target as HTMLElement;
+                      console.log('[LeadsTable] Target tagName:', target.tagName);
+                      console.log('[LeadsTable] Target className:', target.className);
+                      console.log('[LeadsTable] Target id:', target.id);
+                      
+                      // Check for interactive elements
+                      const isButton = target.tagName === 'BUTTON';
+                      const isInput = target.tagName === 'INPUT';
+                      const isSelect = target.tagName === 'SELECT';
+                      const closestButton = target.closest('button');
+                      const closestRoleButton = target.closest('[role="button"]');
+                      const closestLink = target.closest('a');
+                      
+                      console.log('[LeadsTable] Click checks:', {
+                        isButton,
+                        isInput,
+                        isSelect,
+                        hasClosestButton: !!closestButton,
+                        hasClosestRoleButton: !!closestRoleButton,
+                        hasClosestLink: !!closestLink,
+                      });
                       
                       // Only block if clicking directly on interactive elements
                       if (
-                        target.tagName === 'BUTTON' ||
-                        target.tagName === 'INPUT' ||
-                        target.tagName === 'SELECT' ||
-                        target.closest('button') ||
-                        target.closest('[role="button"]') ||
-                        target.closest('a')
+                        isButton ||
+                        isInput ||
+                        isSelect ||
+                        closestButton ||
+                        closestRoleButton ||
+                        closestLink
                       ) {
+                        console.log('[LeadsTable] ❌ Click BLOCKED - interactive element detected');
+                        console.log('[LeadsTable] Blocked by:', {
+                          isButton,
+                          isInput,
+                          isSelect,
+                          closestButton: closestButton?.tagName,
+                          closestRoleButton: closestRoleButton?.tagName,
+                          closestLink: closestLink?.tagName,
+                        });
                         return; // Let the button handle its own click
                       }
                       
-                      // Navigate for all other clicks
+                      console.log('[LeadsTable] ✅ Click ALLOWED - navigating to proposal page');
+                      console.log('[LeadsTable] Navigation URL:', `/agent/leads/${lead.id}/proposals/new`);
                       router.push(`/agent/leads/${lead.id}/proposals/new`);
                     }}
                   >
@@ -394,6 +429,7 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
                       <div className="flex items-center gap-2">
                         <button
                           onClick={(e) => {
+                            console.log('[LeadsTable] 🔘 Expand/Collapse button clicked');
                             e.stopPropagation();
                             toggleRow(lead.id);
                           }}
@@ -461,6 +497,7 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
                           variant="ghost"
                           size="sm"
                           onClick={(e) => {
+                            console.log('[LeadsTable] 🔘 Actions menu button clicked');
                             e.stopPropagation();
                             const button = e.currentTarget;
                             const rect = button.getBoundingClientRect();
