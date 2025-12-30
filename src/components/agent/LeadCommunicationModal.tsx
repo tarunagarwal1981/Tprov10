@@ -131,23 +131,53 @@ export function LeadCommunicationModal({ leadId, open, onClose }: LeadCommunicat
   // Disable pointer events on Dialog overlay and content when nested modal is open
   useEffect(() => {
     if (showAddForm && typeof window !== 'undefined') {
+      console.log('[LeadCommunicationModal] Nested modal opened, disabling Dialog pointer events');
+      
       // Use a small delay to ensure Dialog elements are rendered
       const timer = setTimeout(() => {
         const overlay = document.querySelector('[data-radix-dialog-overlay]');
         const content = document.querySelector('[data-radix-dialog-content]');
         
+        console.log('[LeadCommunicationModal] Found overlay:', !!overlay);
+        console.log('[LeadCommunicationModal] Found content:', !!content);
+        
         if (overlay) {
-          (overlay as HTMLElement).style.pointerEvents = 'none';
-          (overlay as HTMLElement).style.zIndex = '49';
+          const el = overlay as HTMLElement;
+          const before = window.getComputedStyle(el).pointerEvents;
+          el.style.pointerEvents = 'none';
+          el.style.zIndex = '49';
+          console.log('[LeadCommunicationModal] Overlay pointer-events changed:', before, '->', 'none');
+          console.log('[LeadCommunicationModal] Overlay z-index set to 49');
         }
         if (content) {
-          (content as HTMLElement).style.pointerEvents = 'none';
-          (content as HTMLElement).style.zIndex = '49';
+          const el = content as HTMLElement;
+          const before = window.getComputedStyle(el).pointerEvents;
+          el.style.pointerEvents = 'none';
+          el.style.zIndex = '49';
+          console.log('[LeadCommunicationModal] Content pointer-events changed:', before, '->', 'none');
+          console.log('[LeadCommunicationModal] Content z-index set to 49');
         }
+        
+        // Check for any other elements that might be blocking
+        const allFixedElements = document.querySelectorAll('[style*="position: fixed"], [style*="position:fixed"]');
+        console.log('[LeadCommunicationModal] Found fixed elements:', allFixedElements.length);
+        allFixedElements.forEach((el, idx) => {
+          const htmlEl = el as HTMLElement;
+          const zIndex = window.getComputedStyle(htmlEl).zIndex;
+          const pointerEvents = window.getComputedStyle(htmlEl).pointerEvents;
+          if (parseInt(zIndex) >= 50 && parseInt(zIndex) < 100) {
+            console.log(`[LeadCommunicationModal] Fixed element ${idx} might be blocking:`, {
+              zIndex,
+              pointerEvents,
+              element: htmlEl,
+            });
+          }
+        });
       }, 10);
       
       return () => {
         clearTimeout(timer);
+        console.log('[LeadCommunicationModal] Nested modal closed, re-enabling Dialog pointer events');
         const overlay = document.querySelector('[data-radix-dialog-overlay]');
         const content = document.querySelector('[data-radix-dialog-content]');
         if (overlay) {

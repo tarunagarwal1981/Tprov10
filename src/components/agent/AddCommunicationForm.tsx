@@ -50,6 +50,51 @@ export function AddCommunicationForm({ leadId, open, onClose, onSuccess }: AddCo
     response_notes: '',
   });
 
+  // Debug: Log when modal opens
+  React.useEffect(() => {
+    if (open) {
+      console.log('[AddCommunicationForm] Modal opened');
+      console.log('[AddCommunicationForm] Checking for blocking elements...');
+      
+      // Check for Dialog overlays
+      const dialogOverlays = document.querySelectorAll('[data-radix-dialog-overlay]');
+      const dialogContents = document.querySelectorAll('[data-radix-dialog-content]');
+      
+      console.log('[AddCommunicationForm] Dialog overlays found:', dialogOverlays.length);
+      console.log('[AddCommunicationForm] Dialog contents found:', dialogContents.length);
+      
+      dialogOverlays.forEach((overlay, idx) => {
+        const el = overlay as HTMLElement;
+        console.log(`[AddCommunicationForm] Overlay ${idx}:`, {
+          zIndex: window.getComputedStyle(el).zIndex,
+          pointerEvents: window.getComputedStyle(el).pointerEvents,
+          display: window.getComputedStyle(el).display,
+        });
+      });
+      
+      dialogContents.forEach((content, idx) => {
+        const el = content as HTMLElement;
+        console.log(`[AddCommunicationForm] Content ${idx}:`, {
+          zIndex: window.getComputedStyle(el).zIndex,
+          pointerEvents: window.getComputedStyle(el).pointerEvents,
+          display: window.getComputedStyle(el).display,
+        });
+      });
+      
+      // Check our modal z-index
+      setTimeout(() => {
+        const ourModal = document.querySelector('[data-add-communication-modal]');
+        if (ourModal) {
+          const el = ourModal as HTMLElement;
+          console.log('[AddCommunicationForm] Our modal:', {
+            zIndex: window.getComputedStyle(el).zIndex,
+            pointerEvents: window.getComputedStyle(el).pointerEvents,
+          });
+        }
+      }, 100);
+    }
+  }, [open]);
+
   if (!open) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -107,10 +152,12 @@ export function AddCommunicationForm({ leadId, open, onClose, onSuccess }: AddCo
 
   const modalContent = (
     <div 
+      data-add-communication-modal="true"
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm" 
       onClick={(e) => {
         // Only close if clicking directly on the overlay, not on child elements
         if (e.target === e.currentTarget) {
+          console.log('[AddCommunicationForm] Overlay clicked, closing modal');
           onClose();
         }
       }}
@@ -219,6 +266,23 @@ export function AddCommunicationForm({ leadId, open, onClose, onSuccess }: AddCo
                   placeholder="Email subject"
                   className="w-full"
                   style={{ pointerEvents: 'auto', zIndex: 103 }}
+                  onFocus={() => console.log('[AddCommunicationForm] Subject input focused')}
+                  onMouseDown={(e) => {
+                    console.log('[AddCommunicationForm] Subject input mousedown', {
+                      target: e.target,
+                      currentTarget: e.currentTarget,
+                      pointerEvents: window.getComputedStyle(e.currentTarget as HTMLElement).pointerEvents,
+                      zIndex: window.getComputedStyle(e.currentTarget as HTMLElement).zIndex,
+                    });
+                  }}
+                  onClick={(e) => {
+                    console.log('[AddCommunicationForm] Subject input clicked', {
+                      target: e.target,
+                      currentTarget: e.currentTarget,
+                      pointerEvents: window.getComputedStyle(e.currentTarget as HTMLElement).pointerEvents,
+                    });
+                    e.stopPropagation();
+                  }}
                 />
               </div>
             )}
@@ -237,6 +301,23 @@ export function AddCommunicationForm({ leadId, open, onClose, onSuccess }: AddCo
                 className="w-full"
                 required
                 style={{ pointerEvents: 'auto', zIndex: 103 }}
+                onFocus={() => console.log('[AddCommunicationForm] Content textarea focused')}
+                onMouseDown={(e) => {
+                  console.log('[AddCommunicationForm] Content textarea mousedown', {
+                    target: e.target,
+                    currentTarget: e.currentTarget,
+                    pointerEvents: window.getComputedStyle(e.currentTarget as HTMLElement).pointerEvents,
+                    zIndex: window.getComputedStyle(e.currentTarget as HTMLElement).zIndex,
+                  });
+                }}
+                onClick={(e) => {
+                  console.log('[AddCommunicationForm] Content textarea clicked', {
+                    target: e.target,
+                    currentTarget: e.currentTarget,
+                    pointerEvents: window.getComputedStyle(e.currentTarget as HTMLElement).pointerEvents,
+                  });
+                  e.stopPropagation();
+                }}
               />
             </div>
 
