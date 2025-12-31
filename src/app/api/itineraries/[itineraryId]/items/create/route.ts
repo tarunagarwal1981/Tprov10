@@ -140,8 +140,39 @@ export async function POST(
       );
     }
 
-    // Note: No need to verify operator exists - the database foreign key constraint will enforce it
-    // The operatorId comes from the activity/transfer package, and the FK constraint ensures it exists
+    // Verify operator_id exists in users table
+    // Handle TEXT to UUID comparison by casting both sides
+    console.log('[Create Item] Verifying operator_id exists in users table:', operatorId);
+    try {
+      const operatorCheck = await query<{ id: string }>(
+        `SELECT id FROM users WHERE id::text = $1 LIMIT 1`,
+        [operatorId]
+      );
+      
+      if (!operatorCheck.rows || operatorCheck.rows.length === 0) {
+        console.error('[Create Item] Operator not found in users table:', operatorId);
+        return NextResponse.json(
+          { 
+            error: 'Invalid operator',
+            details: `The operator with ID ${operatorId} does not exist in the system`,
+            operator_id: operatorId,
+            suggestion: 'Please contact support to add this operator to the system'
+          },
+          { status: 400 }
+        );
+      }
+      console.log('[Create Item] ✅ Operator verified in users table');
+    } catch (operatorCheckError) {
+      console.error('[Create Item] Error checking operator:', operatorCheckError);
+      return NextResponse.json(
+        { 
+          error: 'Failed to validate operator',
+          details: 'Unable to verify operator in the system',
+          operator_id: operatorId
+        },
+        { status: 500 }
+      );
+    }
 
     const totalPrice = unitPrice * quantity;
 
@@ -346,8 +377,14 @@ export async function POST(
           errorDetails.errorType = 'UUID_TYPE_MISMATCH';
           errorDetails.suggestion = 'Parameter type mismatch - ensure all UUID parameters are valid UUID strings';
         }
-        if (errorStr.includes('foreign key')) {
+        if (errorStr.includes('foreign key') || errorStr.includes('violates foreign key constraint')) {
           errorDetails.errorType = 'FOREIGN_KEY_VIOLATION';
+          // Check if it's related to operator_id
+          if (errorStr.includes('operator_id') || errorDetails.errorConstraint?.includes('operator')) {
+            errorDetails.errorType = 'OPERATOR_NOT_FOUND';
+            errorDetails.userMessage = `The operator with ID ${operatorId} does not exist in the system`;
+            errorDetails.suggestion = 'Please contact support to add this operator to the system';
+          }
         }
         if (errorStr.includes('not null')) {
           errorDetails.errorType = 'NOT_NULL_VIOLATION';
@@ -359,20 +396,41 @@ export async function POST(
       
       // Return more detailed error to help debug
       const errorMessage = dbError instanceof Error ? dbError.message : String(dbError);
+      
+      // Provide user-friendly error messages based on error type
+      let userFriendlyError = 'Failed to create itinerary item';
+      let userFriendlyDetails = errorMessage;
+      
+      if (errorDetails.errorType === 'OPERATOR_NOT_FOUND') {
+        userFriendlyError = 'Invalid operator';
+        userFriendlyDetails = errorDetails.userMessage || `The operator with ID ${operatorId} does not exist in the system`;
+      } else if (errorDetails.errorType === 'FOREIGN_KEY_VIOLATION') {
+        userFriendlyError = 'Data integrity error';
+        userFriendlyDetails = 'The provided data references a record that does not exist. Please verify all IDs are correct.';
+      } else if (errorDetails.errorType === 'NOT_NULL_VIOLATION') {
+        userFriendlyError = 'Missing required data';
+        userFriendlyDetails = 'Some required fields are missing. Please check your input.';
+      }
+      
       return NextResponse.json(
         { 
-          error: 'Failed to create itinerary item', 
-          details: errorMessage,
-          debug: {
-            dayId: dayId || null,
-            itineraryId,
-            packageType,
-            hasDayId: !!dayId,
-            operatorId,
-            packageId,
-            errorType: errorDetails.errorType,
-            errorCode: errorDetails.errorCode,
-          }
+          error: userFriendlyError,
+          details: userFriendlyDetails,
+          ...(errorDetails.suggestion && { suggestion: errorDetails.suggestion }),
+          ...(errorDetails.errorType === 'OPERATOR_NOT_FOUND' && { operator_id: operatorId }),
+          // Include debug info only in development
+          ...(process.env.NODE_ENV === 'development' && {
+            debug: {
+              dayId: dayId || null,
+              itineraryId,
+              packageType,
+              hasDayId: !!dayId,
+              operatorId,
+              packageId,
+              errorType: errorDetails.errorType,
+              errorCode: errorDetails.errorCode,
+            }
+          })
         },
         { status: 500 }
       );

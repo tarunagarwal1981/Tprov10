@@ -541,7 +541,28 @@ export default function CreateItineraryPage() {
 
       if (!itemResponse.ok) {
         const error = await itemResponse.json();
-        throw new Error(error.error || 'Failed to add activity');
+        // Provide user-friendly error messages
+        let errorMessage = error.error || 'Failed to add activity';
+        
+        if (error.details) {
+          errorMessage = error.details;
+        }
+        
+        // Handle specific error types
+        if (error.error === 'Invalid operator') {
+          errorMessage = `Unable to add activity: ${error.details || 'The operator for this activity is not registered in the system.'}`;
+          if (error.suggestion) {
+            errorMessage += ` ${error.suggestion}`;
+          }
+        } else if (error.error === 'Data integrity error') {
+          errorMessage = `Unable to add activity: ${error.details || 'There was a problem with the activity data.'}`;
+        } else if (error.error === 'Missing required data') {
+          errorMessage = `Unable to add activity: ${error.details || 'Some required information is missing.'}`;
+        }
+        
+        console.error('[CreateItineraryPage] Error adding activity:', error);
+        toast.error(errorMessage);
+        throw new Error(errorMessage);
       }
 
       const { item: newItem } = await itemResponse.json();
@@ -657,7 +678,28 @@ export default function CreateItineraryPage() {
 
       if (!itemResponse.ok) {
         const error = await itemResponse.json();
-        throw new Error(error.error || 'Failed to add transfer');
+        // Provide user-friendly error messages
+        let errorMessage = error.error || 'Failed to add transfer';
+        
+        if (error.details) {
+          errorMessage = error.details;
+        }
+        
+        // Handle specific error types
+        if (error.error === 'Invalid operator') {
+          errorMessage = `Unable to add transfer: ${error.details || 'The operator for this transfer is not registered in the system.'}`;
+          if (error.suggestion) {
+            errorMessage += ` ${error.suggestion}`;
+          }
+        } else if (error.error === 'Data integrity error') {
+          errorMessage = `Unable to add transfer: ${error.details || 'There was a problem with the transfer data.'}`;
+        } else if (error.error === 'Missing required data') {
+          errorMessage = `Unable to add transfer: ${error.details || 'Some required information is missing.'}`;
+        }
+        
+        console.error('[CreateItineraryPage] Error adding transfer:', error);
+        toast.error(errorMessage);
+        throw new Error(errorMessage);
       }
 
       const { item: newItem } = await itemResponse.json();
