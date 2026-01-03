@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
         ap.destination_city, ap.destination_country, ap.created_at, ap.published_at,
         ap.duration_hours, ap.duration_minutes
        FROM activity_packages ap
-       WHERE ap.operator_id::text = $1
+       WHERE ap.operator_id = $1
        ORDER BY ap.created_at DESC`,
       [operatorId]
     );
@@ -204,7 +204,7 @@ export async function GET(request: NextRequest) {
         tp.id, tp.title, tp.short_description, tp.status, tp.base_price, tp.currency,
         tp.destination_city, tp.destination_country, tp.created_at, tp.published_at
        FROM transfer_packages tp
-       WHERE tp.operator_id::text = $1
+       WHERE tp.operator_id = $1
        ORDER BY tp.created_at DESC`,
       [operatorId]
     );
@@ -240,7 +240,7 @@ export async function GET(request: NextRequest) {
         mcp.id, mcp.title, mcp.short_description, mcp.status, mcp.base_price, mcp.currency,
         mcp.destination_region, mcp.total_cities, mcp.total_nights, mcp.created_at, mcp.published_at
        FROM multi_city_packages mcp
-       WHERE mcp.operator_id::text = $1
+       WHERE mcp.operator_id = $1
        ORDER BY mcp.created_at DESC`,
       [operatorId]
     );
@@ -398,7 +398,7 @@ export async function GET(request: NextRequest) {
         mchp.id, mchp.title, mchp.short_description, mchp.status, mchp.base_price, mchp.currency,
         mchp.destination_region, mchp.total_cities, mchp.total_nights, mchp.created_at, mchp.published_at
        FROM multi_city_hotel_packages mchp
-       WHERE mchp.operator_id::text = $1
+       WHERE mchp.operator_id = $1
        ORDER BY mchp.created_at DESC`,
       [operatorId]
     );
@@ -446,7 +446,7 @@ export async function GET(request: NextRequest) {
         fdfp.id, fdfp.title, fdfp.short_description, fdfp.status, fdfp.base_price, fdfp.currency,
         fdfp.destination_region, fdfp.created_at, fdfp.published_at
        FROM fixed_departure_flight_packages fdfp
-       WHERE fdfp.operator_id::text = $1
+       WHERE fdfp.operator_id = $1
        ORDER BY fdfp.created_at DESC`,
       [operatorId]
     );

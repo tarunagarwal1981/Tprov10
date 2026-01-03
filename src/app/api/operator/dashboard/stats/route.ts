@@ -25,19 +25,19 @@ export async function GET(request: NextRequest) {
       query<any>(
         `SELECT id, status, base_price 
          FROM activity_packages 
-         WHERE operator_id::text = $1`,
+         WHERE operator_id = $1`,
         [operatorId]
       ),
       query<any>(
         `SELECT id, status, base_price 
          FROM multi_city_packages 
-         WHERE operator_id::text = $1`,
+         WHERE operator_id = $1`,
         [operatorId]
       ),
       query<any>(
         `SELECT id, status, base_price 
          FROM transfer_packages 
-         WHERE operator_id::text = $1`,
+         WHERE operator_id = $1`,
         [operatorId]
       ),
       query<any>(

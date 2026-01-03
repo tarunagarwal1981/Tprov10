@@ -234,7 +234,6 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
     }
   };
 
-
   const handleGenerateInvoice = async (itinerary: Itinerary, leadId: string) => {
     // Fetch itinerary items for pre-filling line items
     let itineraryItems: Array<{

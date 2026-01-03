@@ -141,16 +141,36 @@ export async function POST(
     }
 
     // Verify operator_id exists in users table
-    // Handle TEXT to UUID comparison by casting both sides
-    console.log('[Create Item] Verifying operator_id exists in users table:', operatorId);
+    // Both users.id and operator_id are now UUID type - direct comparison
+    console.log('[Create Item] ===== OPERATOR VALIDATION START =====');
+    console.log('[Create Item] operatorId:', {
+      value: operatorId,
+      type: typeof operatorId,
+      isString: typeof operatorId === 'string',
+      length: typeof operatorId === 'string' ? operatorId.length : 'N/A',
+      isUUID: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(operatorId))
+    });
+    
     try {
+      const validationQuery = `SELECT id FROM users WHERE id = $1 LIMIT 1`;
+      console.log('[Create Item] Validation query:', validationQuery);
+      console.log('[Create Item] Validation query params:', [operatorId]);
+      console.log('[Create Item] Executing validation query...');
+      
       const operatorCheck = await query<{ id: string }>(
-        `SELECT id FROM users WHERE id::text = $1 LIMIT 1`,
+        validationQuery,
         [operatorId]
       );
       
+      console.log('[Create Item] Validation query result:', {
+        hasRows: !!operatorCheck.rows,
+        rowCount: operatorCheck.rows?.length || 0,
+        firstRow: operatorCheck.rows?.[0] || null
+      });
+      
       if (!operatorCheck.rows || operatorCheck.rows.length === 0) {
-        console.error('[Create Item] Operator not found in users table:', operatorId);
+        console.error('[Create Item] ❌ Operator not found in users table:', operatorId);
+        console.log('[Create Item] ===== OPERATOR VALIDATION END (NOT FOUND) =====');
         return NextResponse.json(
           { 
             error: 'Invalid operator',
@@ -162,13 +182,24 @@ export async function POST(
         );
       }
       console.log('[Create Item] ✅ Operator verified in users table');
-    } catch (operatorCheckError) {
-      console.error('[Create Item] Error checking operator:', operatorCheckError);
+      console.log('[Create Item] Operator details:', operatorCheck.rows[0]);
+      console.log('[Create Item] ===== OPERATOR VALIDATION END (SUCCESS) =====');
+    } catch (operatorCheckError: any) {
+      console.error('[Create Item] ===== OPERATOR VALIDATION ERROR =====');
+      console.error('[Create Item] Error type:', typeof operatorCheckError);
+      console.error('[Create Item] Error message:', operatorCheckError?.message);
+      console.error('[Create Item] Error stack:', operatorCheckError?.stack);
+      console.error('[Create Item] Error code:', operatorCheckError?.code);
+      console.error('[Create Item] Error detail:', operatorCheckError?.detail);
+      console.error('[Create Item] Full error object:', JSON.stringify(operatorCheckError, Object.getOwnPropertyNames(operatorCheckError)));
+      console.error('[Create Item] ===== OPERATOR VALIDATION ERROR END =====');
       return NextResponse.json(
         { 
           error: 'Failed to validate operator',
           details: 'Unable to verify operator in the system',
-          operator_id: operatorId
+          operator_id: operatorId,
+          errorMessage: operatorCheckError?.message,
+          errorCode: operatorCheckError?.code
         },
         { status: 500 }
       );
@@ -180,7 +211,7 @@ export async function POST(
     const maxOrderResult = await query<{ max_order: number }>(
       `SELECT COALESCE(MAX(display_order), 0) as max_order 
        FROM itinerary_items 
-       WHERE itinerary_id::text = $1`,
+       WHERE itinerary_id = $1`,
       [itineraryId]
     );
 
@@ -191,12 +222,13 @@ export async function POST(
     // PostgreSQL will automatically cast JSON string to JSONB
     const configValue = configuration ? JSON.stringify(configuration) : '{}';
     
+    // operatorId is already a UUID string, use directly
     const insertValues = [
         itineraryId,
         dayId || null, // Use null if dayId is not provided
         packageType,
         packageId,
-        operatorId,
+        operatorId, // UUID type
         packageTitle,
         packageImageUrl || null, // Allow null for image URL
         configValue,
@@ -229,7 +261,8 @@ export async function POST(
       // Generate UUID explicitly for id column (in case default isn't working)
       // Handle null dayId - use conditional query since PostgreSQL can't cast NULL to UUID
       // Use CAST() syntax for UUID parameters - this works better with Lambda database service
-      // CAST() ensures proper type conversion before FK constraint validation
+      // Note: itinerary_id, day_id, package_id are TEXT columns (not UUID)
+      // Only operator_id is UUID and needs casting
       const insertQuery = dayId
         ? `INSERT INTO itinerary_items (
             id, itinerary_id, day_id, package_type, package_id, operator_id,
@@ -237,19 +270,19 @@ export async function POST(
             quantity, total_price, display_order, notes
           ) VALUES (
             gen_random_uuid(), 
-            CAST($1 AS uuid), 
-            CAST($2 AS uuid), 
-            $3, 
-            CAST($4 AS uuid), 
+            $1::text, 
+            $2::text, 
+            $3::text, 
+            $4::text, 
             CAST($5 AS uuid), 
-            $6, 
-            $7, 
+            $6::text, 
+            $7::text, 
             $8::jsonb, 
-            $9, 
-            $10, 
-            $11, 
-            $12, 
-            $13
+            $9::numeric, 
+            $10::integer, 
+            $11::numeric, 
+            $12::integer, 
+            $13::text
           )
           RETURNING *`
         : `INSERT INTO itinerary_items (
@@ -258,19 +291,19 @@ export async function POST(
             quantity, total_price, display_order, notes
           ) VALUES (
             gen_random_uuid(), 
-            CAST($1 AS uuid), 
+            $1::text, 
             NULL, 
-            $2, 
-            CAST($3 AS uuid), 
+            $2::text, 
+            $3::text, 
             CAST($4 AS uuid), 
-            $5, 
-            $6, 
+            $5::text, 
+            $6::text, 
             $7::jsonb, 
-            $8, 
-            $9, 
-            $10, 
-            $11, 
-            $12
+            $8::numeric, 
+            $9::integer, 
+            $10::numeric, 
+            $11::integer, 
+            $12::text
           )
           RETURNING *`;
       
@@ -281,7 +314,7 @@ export async function POST(
             itineraryId,
             packageType,
             packageId,
-            operatorId,
+            operatorId, // UUID type
             packageTitle,
             packageImageUrl || null,
             configValue,
@@ -292,31 +325,39 @@ export async function POST(
             notes || null,
           ];
       
+      console.log('[Create Item] ===== INSERT QUERY PREPARATION =====');
       console.log('[Create Item] Using query', dayId ? 'with dayId' : 'without dayId (NULL)');
       console.log('[Create Item] Query params count:', queryParams.length);
-      console.log('[Create Item] Query params details:', queryParams.map((p, i) => ({
-        index: i + 1,
-        value: p === null ? 'NULL' : (typeof p === 'string' && p.length > 50 ? p.substring(0, 50) + '...' : p),
-        type: typeof p,
-        isNull: p === null,
-        isUndefined: p === undefined,
-        isString: typeof p === 'string',
-        stringLength: typeof p === 'string' ? p.length : 'N/A',
-      })));
-      console.log('[Create Item] SQL Query (first 500 chars):', insertQuery.substring(0, 500));
-      console.log('[Create Item] About to execute INSERT query...');
+      console.log('[Create Item] Full SQL Query:');
+      console.log(insertQuery);
+      console.log('[Create Item] Query params details:');
+      queryParams.forEach((p, i) => {
+        const paramValue = p === null ? 'NULL' : (typeof p === 'string' && p.length > 50 ? p.substring(0, 50) + '...' : p);
+        console.log(`  [${i + 1}] ${paramValue} (${typeof p}${p === null ? ', NULL' : ''}${typeof p === 'string' ? `, length: ${p.length}` : ''})`);
+      });
+      
       // Log operatorId position (it's at index 4 when dayId exists, or index 3 when it doesn't)
       const operatorIdIndex = dayId ? 4 : 3;
-      console.log('[Create Item] OperatorId in queryParams:', {
-        index: operatorIdIndex,
+      console.log('[Create Item] OperatorId parameter details:', {
+        parameterIndex: operatorIdIndex + 1,
+        sqlPosition: dayId ? '$5' : '$4',
         value: queryParams[operatorIdIndex],
         type: typeof queryParams[operatorIdIndex],
+        isString: typeof queryParams[operatorIdIndex] === 'string',
+        stringValue: String(queryParams[operatorIdIndex]),
+        stringLength: typeof queryParams[operatorIdIndex] === 'string' ? queryParams[operatorIdIndex].length : 'N/A',
+        isUUID: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(queryParams[operatorIdIndex]))
       });
+      
+      console.log('[Create Item] About to execute INSERT query...');
+      console.log('[Create Item] ===== EXECUTING INSERT =====');
       
       insertResult = await query<any>(
         insertQuery,
         queryParams
       );
+      
+      console.log('[Create Item] ===== INSERT QUERY COMPLETED =====');
       
       console.log('[Create Item] INSERT query executed successfully');
       console.log('[Create Item] Insert result received:', {
@@ -338,11 +379,29 @@ export async function POST(
         firstRowEntries: firstRow ? Object.entries(firstRow).map(([k, v]) => [k, typeof v === 'string' && v.length > 50 ? v.substring(0, 50) + '...' : v]) : [],
         fullResult: JSON.stringify(insertResult, null, 2),
       });
-    } catch (dbError) {
+    } catch (dbError: any) {
       console.error('[Create Item] ===== DATABASE ERROR CAUGHT =====');
       console.error('[Create Item] Error object:', dbError);
       console.error('[Create Item] Error type:', typeof dbError);
       console.error('[Create Item] Is Error instance:', dbError instanceof Error);
+      console.error('[Create Item] Error constructor:', dbError?.constructor?.name);
+      console.error('[Create Item] Error name:', dbError?.name);
+      console.error('[Create Item] Error message:', dbError?.message);
+      console.error('[Create Item] Error code:', dbError?.code);
+      console.error('[Create Item] Error detail:', dbError?.detail);
+      console.error('[Create Item] Error hint:', dbError?.hint);
+      console.error('[Create Item] Error constraint:', dbError?.constraint);
+      console.error('[Create Item] Error table:', dbError?.table);
+      console.error('[Create Item] Error column:', dbError?.column);
+      console.error('[Create Item] Error position:', dbError?.position);
+      console.error('[Create Item] Error internalPosition:', dbError?.internalPosition);
+      console.error('[Create Item] Error internalQuery:', dbError?.internalQuery);
+      console.error('[Create Item] Error where:', dbError?.where);
+      console.error('[Create Item] Error schema:', dbError?.schema);
+      console.error('[Create Item] Error dataType:', dbError?.dataType);
+      console.error('[Create Item] Error stack:', dbError?.stack);
+      console.error('[Create Item] Full error string:', String(dbError));
+      console.error('[Create Item] Error JSON:', JSON.stringify(dbError, Object.getOwnPropertyNames(dbError)));
       
       const errorDetails: any = {
         error: dbError instanceof Error ? dbError.message : String(dbError),
