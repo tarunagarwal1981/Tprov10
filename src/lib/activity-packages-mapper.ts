@@ -99,14 +99,16 @@ export function formDataToDatabase(
     health_safety_requirements: policies.healthSafety?.requirements || [],
     health_safety_additional_info: policies.healthSafety?.additionalInfo || null,
     // Pricing (defaults - actual pricing comes from pricingOptions)
-    base_price: formData.pricing?.basePrice || 0,
+    // Note: basePrice, priceType, childPrice, infantPrice, groupDiscounts, and seasonalPricing
+    // are deprecated and not in the PricingInfo type. They are set to defaults here.
+    base_price: 0,
     currency: formData.pricing?.currency || 'USD',
-    price_type: formData.pricing?.priceType || 'PERSON',
-    child_price_type: formData.pricing?.childPriceType || null,
-    child_price_value: formData.pricing?.childPriceValue || null,
-    infant_price: formData.pricing?.infantPrice || null,
-    group_discounts: formData.pricing?.groupDiscounts || [],
-    seasonal_pricing: formData.pricing?.seasonalPricing || [],
+    price_type: 'PERSON',
+    child_price_type: null,
+    child_price_value: null,
+    infant_price: null,
+    group_discounts: [],
+    seasonal_pricing: [],
     // Dynamic Pricing (defaults)
     dynamic_pricing_enabled: false,
     dynamic_pricing_base_multiplier: 1.0,
