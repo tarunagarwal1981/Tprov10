@@ -6,7 +6,7 @@
  * They have been moved here to remove Supabase dependencies.
  */
 
-import type { ActivityPackageFormData } from '@/lib/types/activity-package';
+import type { ActivityPackageFormData, PoliciesRestrictions } from '@/lib/types/activity-package';
 
 // #region agent log
 const logDebug = (location: string, message: string, data: any) => {
@@ -31,7 +31,7 @@ export function formDataToDatabase(
 
   const basicInfo = formData.basicInformation || {};
   const activityDetails = formData.activityDetails || {};
-  const policies = formData.policiesRestrictions || {};
+  const policies: Partial<PoliciesRestrictions> = formData.policiesRestrictions || {};
   const variants = formData.packageVariants || {};
   const faq = formData.faq || {};
   
