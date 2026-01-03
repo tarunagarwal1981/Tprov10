@@ -175,7 +175,7 @@ export function LeadCommunicationHistory({ leadId }: LeadCommunicationHistoryPro
   if (loading) {
     return (
       <Card>
-        <CardContent className="p-6">
+        <CardContent className="p-1.5">
           <div className="flex items-center justify-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
           </div>
@@ -187,9 +187,9 @@ export function LeadCommunicationHistory({ leadId }: LeadCommunicationHistoryPro
   return (
     <Card className="border-gray-200 shadow-sm">
       <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50 border-b border-gray-200">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <CardTitle className="text-lg font-semibold text-gray-900">Communication History</CardTitle>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-0.5 flex-wrap">
             <Button
               variant="outline"
               size="sm"
@@ -202,20 +202,20 @@ export function LeadCommunicationHistory({ leadId }: LeadCommunicationHistoryPro
             <Button
               size="sm"
               onClick={handleAddCommunication}
-              className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white"
+              className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white text-xs whitespace-nowrap"
             >
               Add Communication
             </Button>
           </div>
         </div>
         {showFilters && (
-          <div className="mt-4 flex items-center gap-4 flex-wrap">
-            <div className="flex items-center gap-2">
+          <div className="mt-1 flex items-center gap-1 flex-wrap">
+            <div className="flex items-center gap-0.5">
               <label className="text-xs text-gray-600">Type:</label>
               <select
                 value={filters.type}
                 onChange={(e) => setFilters(prev => ({ ...prev, type: e.target.value }))}
-                className="text-xs border border-gray-300 rounded px-2 py-1"
+                className="text-xs border border-gray-300 rounded px-0.5 py-0.5"
               >
                 <option value="">All</option>
                 <option value="email">Email</option>
@@ -226,12 +226,12 @@ export function LeadCommunicationHistory({ leadId }: LeadCommunicationHistoryPro
                 <option value="other">Other</option>
               </select>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-0.5">
               <label className="text-xs text-gray-600">Direction:</label>
               <select
                 value={filters.direction}
                 onChange={(e) => setFilters(prev => ({ ...prev, direction: e.target.value }))}
-                className="text-xs border border-gray-300 rounded px-2 py-1"
+                className="text-xs border border-gray-300 rounded px-0.5 py-0.5"
               >
                 <option value="">All</option>
                 <option value="outbound">Outbound</option>
@@ -252,10 +252,10 @@ export function LeadCommunicationHistory({ leadId }: LeadCommunicationHistoryPro
           </div>
         )}
       </CardHeader>
-      <CardContent className="p-6">
+      <CardContent className="p-1.5">
         {filteredCommunications.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-500 mb-4">No communications recorded yet</p>
+          <div className="text-center py-3">
+            <p className="text-gray-500 mb-1">No communications recorded yet</p>
             <Button
               size="sm"
               onClick={handleAddCommunication}
@@ -265,15 +265,15 @@ export function LeadCommunicationHistory({ leadId }: LeadCommunicationHistoryPro
             </Button>
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-1.5">
             {Object.entries(groupedCommunications).map(([dateKey, comms]) => (
-              <div key={dateKey} className="space-y-4">
-                <div className="flex items-center gap-2">
+              <div key={dateKey} className="space-y-1">
+                <div className="flex items-center gap-0.5">
                   <div className="h-px bg-gray-300 flex-1"></div>
-                  <h3 className="text-sm font-semibold text-gray-700 px-2">{dateKey}</h3>
+                  <h3 className="text-sm font-semibold text-gray-700 px-0.5">{dateKey}</h3>
                   <div className="h-px bg-gray-300 flex-1"></div>
                 </div>
-                <div className="relative pl-8 space-y-4">
+                <div className="relative pl-8 space-y-1">
                   {/* Vertical line */}
                   <div className="absolute left-3 top-0 bottom-0 w-0.5 bg-gradient-to-b from-blue-200 via-purple-200 to-blue-200"></div>
                   
@@ -283,7 +283,7 @@ export function LeadCommunicationHistory({ leadId }: LeadCommunicationHistoryPro
                     const responseColor = getResponseBadgeColor(comm.customer_response);
                     
                     return (
-                      <div key={comm.id} className="relative flex items-start gap-4 group">
+                      <div key={comm.id} className="relative flex items-start gap-1 group">
                         {/* Timeline dot */}
                         <div className={`absolute left-0 w-6 h-6 rounded-full ${iconColor} border-2 border-white shadow-sm flex items-center justify-center z-10`}>
                           <Icon className="w-3 h-3" />
@@ -291,9 +291,9 @@ export function LeadCommunicationHistory({ leadId }: LeadCommunicationHistoryPro
                         
                         {/* Content card */}
                         <Card className="flex-1 border-gray-200 hover:shadow-md transition-shadow bg-white">
-                          <CardContent className="p-4">
-                            <div className="flex items-start justify-between mb-2">
-                              <div className="flex items-center gap-2 flex-wrap">
+                          <CardContent className="p-1">
+                            <div className="flex items-start justify-between mb-0.5">
+                              <div className="flex items-center gap-0.5 flex-wrap">
                                 <Badge variant="outline" className={`text-xs ${iconColor}`}>
                                   {comm.communication_type.replace('_', ' ')}
                                 </Badge>
@@ -312,15 +312,15 @@ export function LeadCommunicationHistory({ leadId }: LeadCommunicationHistoryPro
                             </div>
                             
                             {comm.subject && (
-                              <h4 className="text-sm font-semibold text-gray-900 mb-1">{comm.subject}</h4>
+                              <h4 className="text-sm font-semibold text-gray-900 mb-0.5">{comm.subject}</h4>
                             )}
                             
                             {comm.content && (
-                              <p className="text-sm text-gray-700 mb-2 whitespace-pre-wrap">{comm.content}</p>
+                              <p className="text-sm text-gray-700 mb-0.5 whitespace-pre-wrap">{comm.content}</p>
                             )}
                             
                             {comm.response_notes && (
-                              <div className="mt-2 p-2 bg-gray-50 rounded border border-gray-200">
+                              <div className="mt-0.5 p-0.5 bg-gray-50 rounded border border-gray-200">
                                 <p className="text-xs text-gray-600">
                                   <span className="font-medium">Response Notes:</span> {comm.response_notes}
                                 </p>

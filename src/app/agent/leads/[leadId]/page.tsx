@@ -83,7 +83,17 @@ export default function LeadDetailPage() {
   const [editingQueryForItinerary, setEditingQueryForItinerary] = useState<string | null>(null); // Track which itinerary's query is being edited
   const [assignLeadModalOpen, setAssignLeadModalOpen] = useState(false);
   const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
-  const [selectedItineraryForInvoice, setSelectedItineraryForInvoice] = useState<{ id: string; totalPrice: number } | null>(null);
+  const [selectedItineraryForInvoice, setSelectedItineraryForInvoice] = useState<{ 
+    id: string; 
+    totalPrice: number;
+    itineraryItems?: Array<{
+      id: string;
+      package_title: string;
+      total_price: number | null;
+      unit_price: number | null;
+      quantity: number;
+    }>;
+  } | null>(null);
   const [confirmingItineraryId, setConfirmingItineraryId] = useState<string | null>(null);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [selectedItineraryForPayment, setSelectedItineraryForPayment] = useState<{ id: string; totalPrice: number } | null>(null);
@@ -267,6 +277,9 @@ export default function LeadDetailPage() {
                         return sum + payment.amount;
                       }, 0);
                       paymentsMap[itinerary.id] = { totalPaid, payments: paymentsData || [] };
+                    } else if (paymentsResponse.status === 403) {
+                      // 403 is expected if user doesn't have access - log but don't error
+                      console.log(`[LeadDetailPage] Payments API returned 403 for itinerary ${itinerary.id} - access denied`);
                     }
                     
                     // Fetch invoices
@@ -278,6 +291,9 @@ export default function LeadDetailPage() {
                     if (invoicesResponse.ok) {
                       const { invoices: invoicesData } = await invoicesResponse.json();
                       invoicesMap[itinerary.id] = invoicesData || [];
+                    } else if (invoicesResponse.status === 403) {
+                      // 403 is expected if user doesn't have access - log but don't error
+                      console.log(`[LeadDetailPage] Invoices API returned 403 for itinerary ${itinerary.id} - access denied`);
                     }
                   } catch (err) {
                     console.error(`Error fetching payments/invoices for itinerary ${itinerary.id}:`, err);
@@ -649,10 +665,35 @@ export default function LeadDetailPage() {
   };
 
   // Handle Generate Invoice
-  const handleGenerateInvoice = (itinerary: Itinerary) => {
+  const handleGenerateInvoice = async (itinerary: Itinerary) => {
+    // Fetch itinerary items for pre-filling line items
+    let itineraryItems: Array<{
+      id: string;
+      package_title: string;
+      total_price: number | null;
+      unit_price: number | null;
+      quantity: number;
+    }> = [];
+    
+    try {
+      const accessToken = getAccessToken();
+      const itemsResponse = await fetch(`/api/itineraries/${itinerary.id}/items`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken || ''}`,
+        },
+      });
+      if (itemsResponse.ok) {
+        const { items } = await itemsResponse.json();
+        itineraryItems = items || [];
+      }
+    } catch (error) {
+      console.error('Error fetching itinerary items:', error);
+    }
+    
     setSelectedItineraryForInvoice({
       id: itinerary.id,
       totalPrice: itinerary.total_price ?? 0,
+      itineraryItems,
     });
     setInvoiceModalOpen(true);
   };
@@ -775,13 +816,13 @@ export default function LeadDetailPage() {
   }
 
   return (
-    <div className="p-4 lg:p-6 max-w-7xl mx-auto">
+    <div className="p-1 lg:p-1.5 max-w-7xl mx-auto">
       {/* Breadcrumb */}
-      <div className="mb-6">
+      <div className="mb-1.5">
         <Button
           variant="ghost"
           onClick={() => router.push('/agent/leads')}
-          className="mb-4"
+          className="mb-1"
         >
           <FiArrowLeft className="w-4 h-4 mr-2" />
           Back to Leads
@@ -789,17 +830,17 @@ export default function LeadDetailPage() {
         <h1 className="text-2xl font-bold text-gray-900">Query #{leadId.slice(-8)}</h1>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-1.5">
         {/* Left Column - Lead Details Panel */}
-        <div className="lg:col-span-1 space-y-4">
+        <div className="lg:col-span-1 space-y-1">
           {/* Lead Information */}
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Lead Information</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-1">
               {/* Stage and Priority */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-1">
                 <div>
                   <label className="text-xs text-gray-500 mb-1 block">Stage</label>
                   <LeadStageSelector
@@ -874,7 +915,7 @@ export default function LeadDetailPage() {
                   <span>{lead.travelersCount} travelers</span>
                 </div>
               )}
-              <div className="pt-3 border-t border-gray-200 mt-3">
+              <div className="pt-1 border-t border-gray-200 mt-1">
                 <Button
                   variant="outline"
                   size="sm"
@@ -908,12 +949,12 @@ export default function LeadDetailPage() {
         </div>
 
         {/* Right Column - Proposals Section */}
-        <div className="lg:col-span-2 space-y-4">
+        <div className="lg:col-span-2 space-y-1">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold text-gray-900">Proposals</h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
             {/* Existing Itineraries - Each with its own query */}
             {itineraries.map((itinerary) => {
               const itineraryQuery = queries[itinerary.id];
@@ -935,7 +976,7 @@ export default function LeadDetailPage() {
               console.log(`[LeadDetailPage] Price for "${itinerary.name}": total_price=${itinerary.total_price}, displayPrice=${displayPrice}, formatted=$${displayPrice.toFixed(2)}`);
               
               return (
-                <div key={itinerary.id} className="space-y-4">
+                <div key={itinerary.id} className="space-y-1">
                   <Card className="hover:shadow-lg transition-shadow">
                     <CardHeader>
                       <div className="flex items-start justify-between">
@@ -976,7 +1017,7 @@ export default function LeadDetailPage() {
                     <CardContent className="space-y-4">
                       {/* Query Details for this itinerary */}
                       {itineraryQuery ? (
-                        <div className="bg-gray-50 p-3 rounded-md space-y-2 text-sm">
+                        <div className="bg-gray-50 p-1 rounded-md space-y-2 text-sm">
                           <div className="flex items-center justify-between mb-2">
                             <span className="font-medium text-gray-700">Query Details</span>
                             <Button
@@ -1006,12 +1047,12 @@ export default function LeadDetailPage() {
                           )}
                         </div>
                       ) : (
-                        <div className="bg-yellow-50 p-3 rounded-md text-sm text-yellow-700">
+                        <div className="bg-yellow-50 p-1 rounded-md text-sm text-yellow-700">
                           No query data. Click &quot;Edit Query&quot; to add query details.
                         </div>
                       )}
                       
-                      <div className="flex items-center gap-4 text-sm text-gray-600">
+                      <div className="flex items-center gap-1 text-sm text-gray-600">
                         <span>{itinerary.adults_count} Adults</span>
                         {itinerary.children_count > 0 && (
                           <span>{itinerary.children_count} Children</span>
@@ -1019,7 +1060,7 @@ export default function LeadDetailPage() {
                       </div>
                       {/* Payment Summary */}
                       {itineraryPayments[itinerary.id] && (
-                        <div className="space-y-2 pt-2 border-t">
+                        <div className="space-y-0.5 pt-0.5 border-t">
                           <div className="flex items-center justify-between text-sm">
                             <span className="text-gray-600">Paid:</span>
                             <span className="font-semibold text-green-600">
@@ -1047,7 +1088,7 @@ export default function LeadDetailPage() {
                       {(() => {
                         const invoices = itineraryInvoices[itinerary.id];
                         return invoices && invoices.length > 0 ? (
-                          <div className="pt-2 border-t flex flex-wrap gap-2">
+                          <div className="pt-0.5 border-t flex flex-wrap gap-0.5">
                             {invoices.map((invoice) => (
                               <Badge
                                 key={invoice.id}
@@ -1060,7 +1101,7 @@ export default function LeadDetailPage() {
                         ) : null;
                       })()}
                       
-                      <div className="flex items-center justify-between pt-2 border-t">
+                      <div className="flex items-center justify-between pt-0.5 border-t">
                         <span className="text-sm text-gray-600">Total Price</span>
                         <span className="text-xl font-bold text-green-600">
                           ${displayPrice.toFixed(2)}
@@ -1068,10 +1109,10 @@ export default function LeadDetailPage() {
                       </div>
                       {/* Option 2: ID in footer with copy icon */}
                       {itinerary.customer_id && (
-                        <div className="flex items-center justify-between pt-2 border-t text-xs">
+                        <div className="flex items-center justify-between pt-0.5 border-t text-xs">
                           <span className="text-gray-500">Reference ID:</span>
-                          <div className="flex items-center gap-2">
-                            <code className="text-gray-600 font-mono bg-gray-50 px-2 py-1 rounded">
+                          <div className="flex items-center gap-0.5">
+                            <code className="text-gray-600 font-mono bg-gray-50 px-0.5 py-0.5 rounded">
                               {itinerary.customer_id}
                             </code>
                             <Button
@@ -1092,12 +1133,12 @@ export default function LeadDetailPage() {
                           </div>
                         </div>
                       )}
-                      <div className="flex gap-2 pt-2 border-t">
+                      <div className="flex flex-wrap gap-0.5 pt-0.5 border-t">
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => router.push(`/agent/itineraries/${itinerary.id}/builder`)}
-                          className="flex-1"
+                          className="flex-1 min-w-[80px]"
                         >
                           <FiEye className="w-4 h-4 mr-1" />
                           View
@@ -1107,7 +1148,7 @@ export default function LeadDetailPage() {
                             variant="outline"
                             size="sm"
                             onClick={() => router.push(`/agent/leads/${leadId}/insert?itineraryId=${itinerary.id}&queryId=${itineraryQuery?.id || ''}`)}
-                            className="flex-1"
+                            className="flex-1 min-w-[120px]"
                           >
                             <FiPackage className="w-4 h-4 mr-1" />
                             Insert Packages
@@ -1124,7 +1165,7 @@ export default function LeadDetailPage() {
                                 toast.error('Query is not linked to this itinerary yet. Please wait...');
                               }
                             }}
-                            className="flex-1"
+                            className="flex-1 min-w-[100px]"
                             disabled={!itinerary.query_id}
                           >
                             <FiEye className="w-4 h-4 mr-1" />
@@ -1138,12 +1179,74 @@ export default function LeadDetailPage() {
                             e.stopPropagation();
                             handleGenerateInvoice(itinerary);
                           }}
-                          className="border-green-200 text-green-600 hover:bg-green-50 flex-shrink-0"
+                          className="border-green-200 text-green-600 hover:bg-green-50 flex-shrink-0 min-w-[40px]"
                           title="Generate Invoice"
-                          disabled={itinerary.is_locked || (itinerary.total_price ?? 0) <= 0}
+                          disabled={itinerary.is_locked}
                         >
                           <FiFileText className="w-4 h-4" />
                         </Button>
+                        {/* Invoice Download Button - Show if invoices exist */}
+                        {(() => {
+                          const invoices = itineraryInvoices[itinerary.id];
+                          return invoices && invoices.length > 0;
+                        })() && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              // Get the latest invoice or let user select
+                              const invoices = itineraryInvoices[itinerary.id];
+                              if (!invoices || invoices.length === 0) {
+                                toast.error('No invoices available');
+                                return;
+                              }
+                              const latestInvoice = invoices[0]; // Assuming sorted by date
+                              
+                              try {
+                                const accessToken = getAccessToken();
+                                const response = await fetch(`/api/itineraries/${itinerary.id}/invoice/pdf?invoiceId=${latestInvoice.id}`, {
+                                  headers: {
+                                    'Authorization': `Bearer ${accessToken || ''}`,
+                                  },
+                                });
+                                
+                                if (!response.ok) {
+                                  const error = await response.json().catch(() => ({ error: 'Failed to generate PDF' }));
+                                  toast.error(error.error || `Failed to generate PDF (${response.status})`);
+                                  return;
+                                }
+                                
+                                // Check if response is actually a PDF
+                                const contentType = response.headers.get('content-type');
+                                if (!contentType || !contentType.includes('application/pdf')) {
+                                  const errorText = await response.text();
+                                  console.error('Expected PDF but got:', contentType, errorText);
+                                  toast.error('Server returned invalid response');
+                                  return;
+                                }
+                                
+                                const blob = await response.blob();
+                                const url = window.URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = `invoice-${latestInvoice.invoice_number}.pdf`;
+                                document.body.appendChild(a);
+                                a.click();
+                                window.URL.revokeObjectURL(url);
+                                document.body.removeChild(a);
+                                toast.success('Invoice PDF downloaded');
+                              } catch (error) {
+                                console.error('Error downloading invoice PDF:', error);
+                                toast.error('Failed to download invoice PDF. Please try again.');
+                              }
+                            }}
+                            className="border-orange-200 text-orange-600 hover:bg-orange-50 flex-shrink-0 min-w-[40px]"
+                            title="Download Invoice PDF"
+                          >
+                            <FiDownload className="w-4 h-4" />
+                          </Button>
+                        )}
                         <Button
                           variant="outline"
                           size="sm"
@@ -1151,7 +1254,7 @@ export default function LeadDetailPage() {
                             e.stopPropagation();
                             handleConfirmItinerary(itinerary.id);
                           }}
-                          className="border-emerald-200 text-emerald-600 hover:bg-emerald-50 flex-shrink-0"
+                          className="border-emerald-200 text-emerald-600 hover:bg-emerald-50 flex-shrink-0 min-w-[40px]"
                           title="Confirm Itinerary"
                           disabled={itinerary.is_locked || confirmingItineraryId === itinerary.id}
                         >
@@ -1164,7 +1267,7 @@ export default function LeadDetailPage() {
                             e.stopPropagation();
                             handleConfirmPayment(itinerary);
                           }}
-                          className="border-purple-200 text-purple-600 hover:bg-purple-50 flex-shrink-0"
+                          className="border-purple-200 text-purple-600 hover:bg-purple-50 flex-shrink-0 min-w-[40px]"
                           title="Confirm Payment"
                           disabled={itinerary.is_locked}
                         >
@@ -1181,32 +1284,54 @@ export default function LeadDetailPage() {
                             }
                             try {
                               const accessToken = getAccessToken();
+                              if (!accessToken) {
+                                toast.error('Authentication required. Please log in again.');
+                                router.push('/login');
+                                return;
+                              }
+                              
                               const response = await fetch(`/api/itineraries/${itinerary.id}/pdf`, {
                                 headers: {
-                                  'Authorization': `Bearer ${accessToken || ''}`,
+                                  'Authorization': `Bearer ${accessToken}`,
                                 },
                               });
-                              if (response.ok) {
-                                const blob = await response.blob();
-                                const url = window.URL.createObjectURL(blob);
-                                const a = document.createElement('a');
-                                a.href = url;
-                                a.download = `itinerary-${itinerary.customer_id || itinerary.id}.pdf`;
-                                document.body.appendChild(a);
-                                a.click();
-                                window.URL.revokeObjectURL(url);
-                                document.body.removeChild(a);
-                                toast.success('Itinerary PDF downloaded');
-                              } else {
-                                const error = await response.json();
-                                toast.error(error.error || 'Failed to generate PDF');
+                              
+                              if (!response.ok) {
+                                if (response.status === 401 || response.status === 403) {
+                                  toast.error('Authentication failed. Please log in again.');
+                                  router.push('/login');
+                                  return;
+                                }
+                                const error = await response.json().catch(() => ({ error: 'Failed to generate PDF' }));
+                                toast.error(error.error || `Failed to generate PDF (${response.status})`);
+                                return;
                               }
+                              
+                              // Check if response is actually a PDF
+                              const contentType = response.headers.get('content-type');
+                              if (!contentType || !contentType.includes('application/pdf')) {
+                                const errorText = await response.text();
+                                console.error('Expected PDF but got:', contentType, errorText);
+                                toast.error('Server returned invalid response');
+                                return;
+                              }
+                              
+                              const blob = await response.blob();
+                              const url = window.URL.createObjectURL(blob);
+                              const a = document.createElement('a');
+                              a.href = url;
+                              a.download = `itinerary-${itinerary.customer_id || itinerary.id}.pdf`;
+                              document.body.appendChild(a);
+                              a.click();
+                              window.URL.revokeObjectURL(url);
+                              document.body.removeChild(a);
+                              toast.success('Itinerary PDF downloaded');
                             } catch (error) {
                               console.error('Error downloading PDF:', error);
-                              toast.error('Failed to download PDF');
+                              toast.error('Failed to download PDF. Please try again.');
                             }
                           }}
-                          className="border-blue-200 text-blue-600 hover:bg-blue-50 flex-shrink-0"
+                          className="border-blue-200 text-blue-600 hover:bg-blue-50 flex-shrink-0 min-w-[40px]"
                           title="Download PDF"
                         >
                           <FiDownload className="w-4 h-4" />
@@ -1218,7 +1343,7 @@ export default function LeadDetailPage() {
                             e.stopPropagation(); // Prevent card click
                             handleDeleteItinerary(itinerary.id, itinerary.name);
                           }}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50 flex-shrink-0"
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50 flex-shrink-0 min-w-[40px]"
                           title="Delete itinerary"
                         >
                           <FiTrash2 className="w-4 h-4" />
@@ -1238,7 +1363,7 @@ export default function LeadDetailPage() {
                 setQueryModalOpen(true);
               }}
             >
-              <CardContent className="flex flex-col items-center justify-center py-8">
+              <CardContent className="flex flex-col items-center justify-center py-2">
                 <FiPlus className="w-12 h-12 text-gray-400 mb-2" />
                 <p className="text-gray-600 font-medium">Insert Itinerary</p>
                 <p className="text-xs text-gray-400 mt-1">Create new itinerary with packages</p>
@@ -1253,7 +1378,7 @@ export default function LeadDetailPage() {
                 setQueryModalOpen(true);
               }}
             >
-              <CardContent className="flex flex-col items-center justify-center py-8">
+              <CardContent className="flex flex-col items-center justify-center py-2">
                 <FiPlus className="w-12 h-12 text-gray-400 mb-2" />
                 <p className="text-gray-600 font-medium">Create Itinerary</p>
                 <p className="text-xs text-gray-400 mt-1">Build custom itinerary from scratch</p>
@@ -1291,6 +1416,7 @@ export default function LeadDetailPage() {
       {selectedItineraryForInvoice && (
         <GenerateInvoiceModal
           itineraryId={selectedItineraryForInvoice.id}
+          leadId={leadId}
           totalPrice={selectedItineraryForInvoice.totalPrice}
           open={invoiceModalOpen}
           onClose={() => {
@@ -1300,6 +1426,13 @@ export default function LeadDetailPage() {
           onSuccess={() => {
             fetchLeadDataRef.current?.();
           }}
+          leadCustomerInfo={{
+            name: lead?.customerName,
+            email: lead?.customerEmail,
+            phone: lead?.customerPhone,
+            address: undefined, // Could be added if available in lead
+          }}
+          itineraryItems={selectedItineraryForInvoice.itineraryItems}
         />
       )}
 

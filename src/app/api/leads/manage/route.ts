@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { query } from '@/lib/aws/lambda-database';
+import { query, queryOne } from '@/lib/aws/lambda-database';
 import { getUserIdFromToken } from '@/lib/auth/getUserIdFromToken';
 
 export const dynamic = 'force-dynamic';
@@ -22,7 +22,7 @@ interface LeadWithAggregates {
   total_paid: number;
   last_communication_at: string | null;
   last_communication_type: string | null;
-  assigned_to: string | null;
+  assigned_to?: string | null; // Optional - may not exist in all database schemas
 }
 
 /**
@@ -33,6 +33,7 @@ export async function GET(request: NextRequest) {
   try {
     const authHeader = request.headers.get('authorization');
     const token = authHeader?.replace('Bearer ', '') || '';
+    
     const userId = await getUserIdFromToken(token);
     
     if (!userId) {
@@ -49,15 +50,52 @@ export async function GET(request: NextRequest) {
 
     const offset = (page - 1) * limit;
 
-    // Build WHERE clause
-    // Cast userId to UUID for comparison with agent_id (which is UUID type)
-    const whereConditions: string[] = ['l.agent_id::text = $1'];
-    const queryParams: any[] = [userId];
-    let paramIndex = 2;
+    // Get user's role and parent_agent_id to determine visibility
+    const user = await queryOne<{ role: string; parent_agent_id: string | null }>(
+      'SELECT role, parent_agent_id FROM users WHERE id = $1',
+      [userId]
+    );
 
-    console.log('[Leads Manage] Query params:', { userId, status, search, page, limit, sortBy, sortOrder });
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // Build WHERE clause based on user role
+    // CRITICAL: Maintain backward compatibility - existing functionality must not break
+    const whereConditions: string[] = [];
+    const queryParams: any[] = [];
+    let paramIndex = 1;
+
+    // Determine agent visibility based on role
+    if (user.role === 'SUB_AGENT') {
+      // Sub-agents see leads owned by their parent agent OR leads they created themselves
+      if (user.parent_agent_id) {
+        whereConditions.push(`(l.agent_id::text = $${paramIndex} OR l.created_by_sub_agent_id::text = $${paramIndex + 1})`);
+        queryParams.push(user.parent_agent_id); // Filter by parent_agent_id for ownership
+        queryParams.push(userId); // Also show leads created by this sub-agent
+        paramIndex += 2;
+      } else {
+        // Sub-agent without parent - should not happen, but handle gracefully
+        whereConditions.push(`(l.agent_id::text = $${paramIndex} OR l.created_by_sub_agent_id::text = $${paramIndex})`);
+        queryParams.push(userId);
+        paramIndex++;
+      }
+    } else {
+      // Main agents see their own leads OR leads created by their sub-agents
+      whereConditions.push(`(l.agent_id::text = $${paramIndex} OR EXISTS (
+        SELECT 1 FROM users u WHERE u.parent_agent_id::text = $${paramIndex} AND l.created_by_sub_agent_id::text = u.id::text
+      ))`);
+      queryParams.push(userId);
+      paramIndex++;
+    }
+
+    // Exclude drafts from "All Leads" - only show published leads
+    // Backward compatibility: status IS NULL treated as 'published'
+    whereConditions.push(`(l.status IS NULL OR l.status = 'published')`);
 
     if (status) {
+      // Note: 'status' query param actually filters by 'stage' (NEW, CONTACTED, etc.)
+      // This is different from lead 'status' (draft/published)
       whereConditions.push(`l.stage = $${paramIndex}`);
       queryParams.push(status);
       paramIndex++;
@@ -74,9 +112,18 @@ export async function GET(request: NextRequest) {
     }
 
     const whereClause = whereConditions.join(' AND ');
+    
+    // Safety check: WHERE clause should never be empty
+    if (!whereClause || whereClause.trim() === '') {
+      return NextResponse.json(
+        { error: 'Invalid query: WHERE clause is empty' },
+        { status: 500 }
+      );
+    }
 
     // Build ORDER BY clause
-    let orderByClause = 'l.created_at DESC';
+    // Note: Now that we use a subquery, we can safely use aliases in ORDER BY
+    let orderByClause = 'created_at DESC';
     if (sortBy === 'value') {
       orderByClause = `total_value ${sortOrder.toUpperCase()}`;
     } else if (sortBy === 'last_communication') {
@@ -84,47 +131,44 @@ export async function GET(request: NextRequest) {
     } else if (sortBy === 'follow_up') {
       orderByClause = `next_follow_up_date ${sortOrder.toUpperCase()} NULLS LAST`;
     } else if (sortBy === 'created_at') {
-      orderByClause = `l.created_at ${sortOrder.toUpperCase()}`;
+      orderByClause = `created_at ${sortOrder.toUpperCase()}`;
     }
 
     // Main query with aggregations
+    // Use a subquery to allow ORDER BY on aliases (PostgreSQL requirement with GROUP BY)
     const sqlQuery = `
-      SELECT 
-        l.id,
-        l.customer_id,
-        l.customer_name,
-        l.customer_email,
-        l.customer_phone,
-        l.destination,
-        l.stage,
-        l.priority,
-        l.next_follow_up_date,
-        l.last_contacted_at,
-        l.created_at,
-        l.assigned_to,
-        COALESCE(COUNT(DISTINCT i.id), 0)::integer as itinerary_count,
-        COALESCE(SUM(i.total_price), 0)::decimal as total_value,
-        COALESCE(SUM(ip.amount) FILTER (WHERE ip.payment_type != 'refund'), 0)::decimal as total_paid,
-        MAX(lc.created_at) as last_communication_at,
-        MAX(lc.communication_type) as last_communication_type
-      FROM leads l
-      LEFT JOIN itineraries i ON i.lead_id::text = l.id::text
-      LEFT JOIN itinerary_payments ip ON ip.itinerary_id::text = i.id::text
-      LEFT JOIN lead_communications lc ON lc.lead_id::text = l.id::text
-      WHERE ${whereClause}
-      GROUP BY l.id
+      SELECT * FROM (
+        SELECT 
+          l.id,
+          l.customer_id,
+          l.customer_name,
+          l.customer_email,
+          l.customer_phone,
+          l.destination,
+          l.stage,
+          l.priority,
+          l.next_follow_up_date,
+          l.last_contacted_at,
+          l.created_at,
+          COALESCE(COUNT(DISTINCT i.id), 0)::integer as itinerary_count,
+          COALESCE(SUM(i.total_price), 0)::decimal as total_value,
+          COALESCE(SUM(ip.amount) FILTER (WHERE ip.payment_type != 'refund'), 0)::decimal as total_paid,
+          MAX(lc.created_at) as last_communication_at,
+          MAX(lc.communication_type) as last_communication_type
+        FROM leads l
+        LEFT JOIN itineraries i ON i.lead_id::text = l.id::text
+        LEFT JOIN itinerary_payments ip ON ip.itinerary_id::text = i.id::text
+        LEFT JOIN lead_communications lc ON lc.lead_id::text = l.id::text
+        WHERE ${whereClause}
+        GROUP BY l.id
+      ) as aggregated_leads
       ORDER BY ${orderByClause}
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
     `;
 
     queryParams.push(limit, offset);
-
-    console.log('[Leads Manage] Executing query with params:', queryParams);
+    
     const result = await query<LeadWithAggregates>(sqlQuery, queryParams);
-    console.log('[Leads Manage] Result count:', result.rows.length);
-    if (result.rows.length > 0) {
-      console.log('[Leads Manage] Sample lead IDs:', result.rows.slice(0, 3).map(r => r.id));
-    }
 
     // Check if there are purchased leads that don't have entries in leads table
     // This handles old purchases made before automatic lead creation was implemented
@@ -138,7 +182,6 @@ export async function GET(request: NextRequest) {
     const missingLeadsCount = purchasedLeadsCheck.rows[0]?.count || 0;
     
     if (missingLeadsCount > 0) {
-      console.log(`[Leads Manage] Found ${missingLeadsCount} purchased leads without entries in leads table. Syncing...`);
       
       // Get the missing lead IDs
       const missingLeads = await query<{ lead_id: string }>(
@@ -157,7 +200,6 @@ export async function GET(request: NextRequest) {
       for (const missingLead of missingLeads.rows) {
         try {
           await ensureLeadFromPurchase(missingLead.lead_id, userId);
-          console.log(`[Leads Manage] Created lead for purchase: ${missingLead.lead_id}`);
         } catch (error: any) {
           console.error(`[Leads Manage] Failed to create lead for ${missingLead.lead_id}:`, error.message);
         }
@@ -165,7 +207,6 @@ export async function GET(request: NextRequest) {
 
       // Re-query after syncing
       const resultAfterSync = await query<LeadWithAggregates>(sqlQuery, queryParams);
-      console.log('[Leads Manage] Result count after sync:', resultAfterSync.rows.length);
       
       // Get total count for pagination after sync
       const countQuery = `
@@ -198,8 +239,6 @@ export async function GET(request: NextRequest) {
     const countResult = await query<{ total: number }>(countQuery, countParams);
     const total = countResult.rows[0]?.total || 0;
 
-    console.log('[Leads Manage] Total leads count:', total);
-
     return NextResponse.json({
       leads: result.rows,
       pagination: {
@@ -210,17 +249,12 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Error fetching leads for management:', error);
+    console.error('[Leads Manage] Error fetching leads:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     const errorCode = (error as any)?.code;
     const errorDetail = (error as any)?.detail;
-    
-    console.error('Error details:', {
-      message: errorMessage,
-      code: errorCode,
-      detail: errorDetail,
-      stack: error instanceof Error ? error.stack : undefined,
-    });
+    const errorHint = (error as any)?.hint;
+    const errorPosition = (error as any)?.position;
     
     return NextResponse.json(
       { 
@@ -228,6 +262,8 @@ export async function GET(request: NextRequest) {
         details: errorMessage,
         code: errorCode,
         detail: errorDetail,
+        hint: errorHint,
+        position: errorPosition,
       },
       { status: 500 }
     );

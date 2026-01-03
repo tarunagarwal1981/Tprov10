@@ -541,7 +541,28 @@ export default function CreateItineraryPage() {
 
       if (!itemResponse.ok) {
         const error = await itemResponse.json();
-        throw new Error(error.error || 'Failed to add activity');
+        // Provide user-friendly error messages
+        let errorMessage = error.error || 'Failed to add activity';
+        
+        if (error.details) {
+          errorMessage = error.details;
+        }
+        
+        // Handle specific error types
+        if (error.error === 'Invalid operator') {
+          errorMessage = `Unable to add activity: ${error.details || 'The operator for this activity is not registered in the system.'}`;
+          if (error.suggestion) {
+            errorMessage += ` ${error.suggestion}`;
+          }
+        } else if (error.error === 'Data integrity error') {
+          errorMessage = `Unable to add activity: ${error.details || 'There was a problem with the activity data.'}`;
+        } else if (error.error === 'Missing required data') {
+          errorMessage = `Unable to add activity: ${error.details || 'Some required information is missing.'}`;
+        }
+        
+        console.error('[CreateItineraryPage] Error adding activity:', error);
+        toast.error(errorMessage);
+        throw new Error(errorMessage);
       }
 
       const { item: newItem } = await itemResponse.json();
@@ -657,7 +678,28 @@ export default function CreateItineraryPage() {
 
       if (!itemResponse.ok) {
         const error = await itemResponse.json();
-        throw new Error(error.error || 'Failed to add transfer');
+        // Provide user-friendly error messages
+        let errorMessage = error.error || 'Failed to add transfer';
+        
+        if (error.details) {
+          errorMessage = error.details;
+        }
+        
+        // Handle specific error types
+        if (error.error === 'Invalid operator') {
+          errorMessage = `Unable to add transfer: ${error.details || 'The operator for this transfer is not registered in the system.'}`;
+          if (error.suggestion) {
+            errorMessage += ` ${error.suggestion}`;
+          }
+        } else if (error.error === 'Data integrity error') {
+          errorMessage = `Unable to add transfer: ${error.details || 'There was a problem with the transfer data.'}`;
+        } else if (error.error === 'Missing required data') {
+          errorMessage = `Unable to add transfer: ${error.details || 'Some required information is missing.'}`;
+        }
+        
+        console.error('[CreateItineraryPage] Error adding transfer:', error);
+        toast.error(errorMessage);
+        throw new Error(errorMessage);
       }
 
       const { item: newItem } = await itemResponse.json();
@@ -892,29 +934,56 @@ export default function CreateItineraryPage() {
                   }
                   try {
                     const accessToken = getAccessToken();
+                    if (!accessToken) {
+                      toast.error('Authentication required. Please log in again.');
+                      router.push('/login');
+                      return;
+                    }
+                    
                     const response = await fetch(`/api/itineraries/${itinerary.id}/pdf`, {
                       headers: {
-                        'Authorization': `Bearer ${accessToken || ''}`,
+                        'Authorization': `Bearer ${accessToken}`,
                       },
                     });
-                    if (response.ok) {
-                      const blob = await response.blob();
-                      const url = window.URL.createObjectURL(blob);
-                      const a = document.createElement('a');
-                      a.href = url;
-                      a.download = `itinerary-${itinerary.customer_id || itinerary.id}.pdf`;
-                      document.body.appendChild(a);
-                      a.click();
-                      window.URL.revokeObjectURL(url);
-                      document.body.removeChild(a);
-                      toast.success('Itinerary PDF downloaded');
-                    } else {
-                      const error = await response.json();
-                      toast.error(error.error || 'Failed to generate PDF');
+                    
+                    if (!response.ok) {
+                      if (response.status === 401 || response.status === 403) {
+                        toast.error('Authentication failed. Please log in again.');
+                        router.push('/login');
+                        return;
+                      }
+                      if (response.status === 404) {
+                        const error = await response.json().catch(() => ({ error: 'Itinerary not found' }));
+                        toast.error(error.error || 'Itinerary not found');
+                        return;
+                      }
+                      const error = await response.json().catch(() => ({ error: 'Failed to generate PDF' }));
+                      toast.error(error.error || `Failed to generate PDF (${response.status})`);
+                      return;
                     }
+                    
+                    // Check if response is actually a PDF
+                    const contentType = response.headers.get('content-type');
+                    if (!contentType || !contentType.includes('application/pdf')) {
+                      const errorText = await response.text();
+                      console.error('Expected PDF but got:', contentType, errorText);
+                      toast.error('Server returned invalid response');
+                      return;
+                    }
+                    
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `itinerary-${itinerary.customer_id || itinerary.id}.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    toast.success('Itinerary PDF downloaded');
                   } catch (error) {
                     console.error('Error downloading PDF:', error);
-                    toast.error('Failed to download PDF');
+                    toast.error('Failed to download PDF. Please try again.');
                   }
                 }}
                 className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white"
@@ -1360,29 +1429,56 @@ export default function CreateItineraryPage() {
                   }
                   try {
                     const accessToken = getAccessToken();
+                    if (!accessToken) {
+                      toast.error('Authentication required. Please log in again.');
+                      router.push('/login');
+                      return;
+                    }
+                    
                     const response = await fetch(`/api/itineraries/${itinerary.id}/pdf`, {
                       headers: {
-                        'Authorization': `Bearer ${accessToken || ''}`,
+                        'Authorization': `Bearer ${accessToken}`,
                       },
                     });
-                    if (response.ok) {
-                      const blob = await response.blob();
-                      const url = window.URL.createObjectURL(blob);
-                      const a = document.createElement('a');
-                      a.href = url;
-                      a.download = `itinerary-${itinerary.customer_id || itinerary.id}.pdf`;
-                      document.body.appendChild(a);
-                      a.click();
-                      window.URL.revokeObjectURL(url);
-                      document.body.removeChild(a);
-                      toast.success('Itinerary PDF downloaded');
-                    } else {
-                      const error = await response.json();
-                      toast.error(error.error || 'Failed to generate PDF');
+                    
+                    if (!response.ok) {
+                      if (response.status === 401 || response.status === 403) {
+                        toast.error('Authentication failed. Please log in again.');
+                        router.push('/login');
+                        return;
+                      }
+                      if (response.status === 404) {
+                        const error = await response.json().catch(() => ({ error: 'Itinerary not found' }));
+                        toast.error(error.error || 'Itinerary not found');
+                        return;
+                      }
+                      const error = await response.json().catch(() => ({ error: 'Failed to generate PDF' }));
+                      toast.error(error.error || `Failed to generate PDF (${response.status})`);
+                      return;
                     }
+                    
+                    // Check if response is actually a PDF
+                    const contentType = response.headers.get('content-type');
+                    if (!contentType || !contentType.includes('application/pdf')) {
+                      const errorText = await response.text();
+                      console.error('Expected PDF but got:', contentType, errorText);
+                      toast.error('Server returned invalid response');
+                      return;
+                    }
+                    
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `itinerary-${itinerary.customer_id || itinerary.id}.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    toast.success('Itinerary PDF downloaded');
                   } catch (error) {
                     console.error('Error downloading PDF:', error);
-                    toast.error('Failed to download PDF');
+                    toast.error('Failed to download PDF. Please try again.');
                   }
                 }}
                 className="border-blue-200 text-blue-600 hover:bg-blue-50"

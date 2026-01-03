@@ -124,6 +124,7 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
   const router = useRouter();
   const toast = useToast();
   const { user } = useAuth();
+  
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [quickActionMenu, setQuickActionMenu] = useState<string | null>(null);
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
@@ -135,7 +136,18 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
   const [itineraries, setItineraries] = useState<Record<string, Itinerary[]>>({});
   const [loadingItineraries, setLoadingItineraries] = useState<Set<string>>(new Set());
   const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
-  const [selectedItineraryForInvoice, setSelectedItineraryForInvoice] = useState<{ id: string; totalPrice: number } | null>(null);
+  const [selectedItineraryForInvoice, setSelectedItineraryForInvoice] = useState<{ 
+    id: string;
+    leadId: string;
+    totalPrice: number;
+    itineraryItems?: Array<{
+      id: string;
+      package_title: string;
+      total_price: number | null;
+      unit_price: number | null;
+      quantity: number;
+    }>;
+  } | null>(null);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [selectedItineraryForPayment, setSelectedItineraryForPayment] = useState<{ id: string; totalPrice: number } | null>(null);
   const [confirmingItineraryId, setConfirmingItineraryId] = useState<string | null>(null);
@@ -222,11 +234,36 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
     }
   };
 
-
-  const handleGenerateInvoice = (itinerary: Itinerary) => {
+  const handleGenerateInvoice = async (itinerary: Itinerary, leadId: string) => {
+    // Fetch itinerary items for pre-filling line items
+    let itineraryItems: Array<{
+      id: string;
+      package_title: string;
+      total_price: number | null;
+      unit_price: number | null;
+      quantity: number;
+    }> = [];
+    
+    try {
+      const accessToken = getAccessToken();
+      const itemsResponse = await fetch(`/api/itineraries/${itinerary.id}/items`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken || ''}`,
+        },
+      });
+      if (itemsResponse.ok) {
+        const { items } = await itemsResponse.json();
+        itineraryItems = items || [];
+      }
+    } catch (error) {
+      console.error('Error fetching itinerary items:', error);
+    }
+    
     setSelectedItineraryForInvoice({
       id: itinerary.id,
+      leadId,
       totalPrice: itinerary.total_price ?? 0,
+      itineraryItems,
     });
     setInvoiceModalOpen(true);
   };
@@ -316,27 +353,51 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {leads.map((lead) => {
+            {leads.map((lead, index) => {
               const isExpanded = expandedRows.has(lead.id);
               const leadItineraries = itineraries[lead.id] || [];
               const isLoadingItineraries = loadingItineraries.has(lead.id);
               
-              // Debug logging
-              if (expandedRows.has(lead.id)) {
-                console.log('[LeadsManagementTable] Render: Expanded row for leadId:', lead.id);
-                console.log('[LeadsManagementTable] Render: leadItineraries.length:', leadItineraries.length);
-                console.log('[LeadsManagementTable] Render: lead.itinerary_count:', lead.itinerary_count);
-                console.log('[LeadsManagementTable] Render: isLoadingItineraries:', isLoadingItineraries);
-              }
               const isOverdueFollowUp = isOverdue(lead.next_follow_up_date);
 
               return (
                 <React.Fragment key={lead.id}>
-                  <tr className="hover:bg-gray-50 transition-colors">
+                  <tr 
+                    className="hover:bg-gray-50 transition-colors cursor-pointer"
+                    style={{ pointerEvents: 'auto' }}
+                    onClick={(e) => {
+                      const target = e.target as HTMLElement;
+                      
+                      // Check for interactive elements
+                      const isButton = target.tagName === 'BUTTON';
+                      const isInput = target.tagName === 'INPUT';
+                      const isSelect = target.tagName === 'SELECT';
+                      const closestButton = target.closest('button');
+                      const closestRoleButton = target.closest('[role="button"]');
+                      const closestLink = target.closest('a');
+                      
+                      // Only block if clicking directly on interactive elements
+                      if (
+                        isButton ||
+                        isInput ||
+                        isSelect ||
+                        closestButton ||
+                        closestRoleButton ||
+                        closestLink
+                      ) {
+                        return; // Let the button handle its own click
+                      }
+                      
+                      router.push(`/agent/leads/${lead.id}/proposals/new`);
+                    }}
+                  >
                     <td className="px-4 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => toggleRow(lead.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleRow(lead.id);
+                          }}
                           className="p-1 hover:bg-gray-200 rounded"
                         >
                           {isExpanded ? (
@@ -401,6 +462,7 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
                           variant="ghost"
                           size="sm"
                           onClick={(e) => {
+                            e.stopPropagation();
                             const button = e.currentTarget;
                             const rect = button.getBoundingClientRect();
                             if (quickActionMenu === lead.id) {
@@ -534,7 +596,7 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
                                         <Button
                                           variant="outline"
                                           size="sm"
-                                          onClick={() => handleGenerateInvoice(itinerary)}
+                                          onClick={() => handleGenerateInvoice(itinerary, lead.id)}
                                           disabled={itinerary.is_locked || (itinerary.total_price ?? 0) <= 0}
                                           className="text-[10px] h-7 px-2 py-1"
                                         >
@@ -621,6 +683,7 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
       {selectedItineraryForInvoice && (
         <GenerateInvoiceModal
           itineraryId={selectedItineraryForInvoice.id}
+          leadId={selectedItineraryForInvoice.leadId}
           totalPrice={selectedItineraryForInvoice.totalPrice}
           open={invoiceModalOpen}
           onClose={() => {
@@ -630,6 +693,8 @@ export function LeadsManagementTable({ leads, loading, onRefresh }: LeadsManagem
           onSuccess={() => {
             onRefresh();
           }}
+          leadCustomerInfo={undefined}
+          itineraryItems={selectedItineraryForInvoice.itineraryItems}
         />
       )}
 

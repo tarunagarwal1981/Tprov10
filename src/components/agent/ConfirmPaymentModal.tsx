@@ -153,7 +153,7 @@ export function ConfirmPaymentModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
-      <Card className="w-full max-w-lg mx-4 bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <Card className="w-full max-w-lg mx-2 sm:mx-4 bg-white shadow-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg font-semibold text-gray-900">Confirm Payment</CardTitle>
@@ -167,7 +167,7 @@ export function ConfirmPaymentModal({
             </Button>
           </div>
         </CardHeader>
-        <CardContent className="p-6">
+        <CardContent className="p-4 sm:p-6">
           {/* Payment Summary */}
           <div className="bg-gray-50 rounded-lg p-4 mb-6">
             <div className="flex items-center justify-between mb-2">

@@ -189,6 +189,14 @@ export interface LeadDB {
   is_purchased: boolean;
   purchased_from_marketplace: boolean;
   
+  // Agent-Created Lead Fields (NEW)
+  status?: 'draft' | 'published' | 'archived';
+  source_custom?: string;
+  services?: string[];
+  travel_month?: string;
+  origin?: string;
+  created_by_sub_agent_id?: string | null;
+  
   // Follow-up
   next_follow_up_date?: string;
   last_contacted_at?: string;

@@ -60,8 +60,10 @@ export default function LeadsManagementPage() {
   });
 
   const fetchLeads = async () => {
-    if (!user?.id) return;
-
+    if (!user?.id) {
+      return;
+    }
+    
     setLoading(true);
     try {
       const accessToken = getAccessToken();
@@ -73,7 +75,9 @@ export default function LeadsManagementPage() {
       queryParams.append('sortBy', filters.sortBy);
       queryParams.append('sortOrder', filters.sortOrder);
 
-      const response = await fetch(`/api/leads/manage?${queryParams.toString()}`, {
+      const apiUrl = `/api/leads/manage?${queryParams.toString()}`;
+
+      const response = await fetch(apiUrl, {
         headers: {
           'Authorization': `Bearer ${accessToken || ''}`,
         },
@@ -88,12 +92,12 @@ export default function LeadsManagementPage() {
         toast.error(error.error || 'Failed to fetch leads');
       }
     } catch (error) {
-      console.error('Error fetching leads:', error);
       toast.error('Failed to fetch leads');
     } finally {
       setLoading(false);
     }
   };
+
 
   useEffect(() => {
     fetchLeads();
@@ -110,8 +114,12 @@ export default function LeadsManagementPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Leads Management</h1>
-        <p className="text-gray-600">Manage all your leads, communications, and payments in one place</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Leads Management</h1>
+            <p className="text-gray-600">Manage all your leads, communications, and payments in one place</p>
+          </div>
+        </div>
       </div>
 
       {/* Filters */}

@@ -40,32 +40,26 @@ export async function getUserIdFromToken(token: string): Promise<string | null> 
 
     return dbUser.id;
   } catch (error: any) {
-    // Not a valid Cognito token, try phone auth session
-    // Catch any Cognito-related errors and try phone auth session fallback
-    const isCognitoError = 
-      error.name === 'NotAuthorizedException' || 
-      error.name === 'InvalidParameterException' ||
-      error.message?.includes('Invalid Access Token') ||
-      error.message?.includes('Invalid token');
+    // Cognito validation failed, try phone auth session as fallback
+    // Always attempt phone auth fallback regardless of error type
+    // This handles cases where Cognito fails due to network issues, timeouts, etc.
+    console.log('[getUserIdFromToken] Cognito validation failed, trying phone auth session fallback:', error.name || error.message);
     
-    if (isCognitoError) {
       try {
         // Try to decode as phone auth session (base64 encoded JSON)
         const sessionData = JSON.parse(atob(token));
         if (sessionData.authMethod === 'phone_otp' && sessionData.userId) {
           console.log('[getUserIdFromToken] Using phone auth session userId:', sessionData.userId);
           return sessionData.userId;
-        }
-      } catch (e) {
-        // Not a phone auth session either
-        console.warn('[getUserIdFromToken] Token is neither Cognito token nor phone auth session');
+      } else {
+        console.warn('[getUserIdFromToken] Phone auth session decoded but missing required fields');
         return null;
       }
+    } catch (e) {
+      // Not a phone auth session either
+      console.warn('[getUserIdFromToken] Token is neither Cognito token nor phone auth session. Cognito error:', error.name || error.message);
+      return null;
     }
-    // For non-Cognito errors, return null instead of throwing
-    // This allows the calling code to handle the error gracefully
-    console.warn('[getUserIdFromToken] Unexpected error:', error.name, error.message);
-    return null;
   }
 }
 
