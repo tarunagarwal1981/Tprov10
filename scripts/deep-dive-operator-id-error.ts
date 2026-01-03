@@ -5,7 +5,7 @@
 import { LambdaClient, InvokeCommand } from '@aws-sdk/client-lambda';
 
 const AWS_ACCESS_KEY_ID = process.env.AWS_ACCESS_KEY_ID;
-const AWS_SECRET_ACCESS_KEY = process.env.AWS_SECRET_ACCESS_KEY || '/0KocZx7f1XpkrvFe6mREMRCS5etRya/+xnnOn7y';
+const AWS_SECRET_ACCESS_KEY = process.env.AWS_SECRET_ACCESS_KEY;
 const AWS_REGION = process.env.AWS_REGION || 'us-east-1';
 const LAMBDA_FUNCTION_NAME = process.env.DATABASE_LAMBDA_NAME || 'travel-app-database-service';
 
